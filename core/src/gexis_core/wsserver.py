@@ -1518,6 +1518,24 @@ class StateServer:
             return web.json_response({"error": str(exc)}, status=409)
         return web.json_response({"record": record.to_json() if record else None})
 
+    async def _handle_group_enter(self, request: web.Request) -> web.Response:
+        """**Join another group, as a whole** (ADR-0166 decision 11): this
+        player, not grouped, asks the leader of `{"leader": "<id>"}` to add
+        it. The group's view follows on `/state` once the leader has."""
+        if (refusal := self._no_multiroom()) is not None:
+            return refusal
+        try:
+            leader = (await request.json())["leader"]
+        except (ValueError, KeyError, TypeError):
+            leader = None
+        if not isinstance(leader, str) or not leader:
+            return web.json_response({"error": 'body must be {"leader": "<id>"}'}, status=400)
+        try:
+            await self._multiroom.enter(leader)
+        except GroupError as exc:
+            return web.json_response({"error": str(exc)}, status=409)
+        return web.json_response({"ok": True})
+
     async def _handle_group_volume(self, request: web.Request) -> web.Response:
         """**The *All* slider** (ADR-0166 D6): `percent`, and the members'
         levels when the drag began as `from` (optional)."""
@@ -3378,6 +3396,7 @@ class StateServer:
         app.router.add_post("/group/remove", self._handle_group_change)
         app.router.add_post("/group/leave", self._handle_group_change)
         app.router.add_post("/group/undo", self._handle_group_change)
+        app.router.add_post("/group/enter", self._handle_group_enter)
         app.router.add_post("/group/volume", self._handle_group_volume)
         app.router.add_post("/group/mute", self._handle_group_mute)
         app.router.add_post("/group/members/{id}/volume", self._handle_group_member_volume)

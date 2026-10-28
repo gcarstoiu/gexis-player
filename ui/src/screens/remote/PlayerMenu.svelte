@@ -11,6 +11,12 @@
   this one - the leader gone's note, and Leave group (not for the leader) and
   Undo group; then *Other players*, each with Join. A player older than
   multiroom has no Join and says why.
+
+  ADR-0166 decision 11 (George, 2026-10-28): **another group shows as a
+  group** - its players together, its leader tagged, what it plays - in the
+  block's shape, neutral rather than this group's teal; joined whole with
+  *Join this group* from a player in no group, never raided a player at a
+  time.
 -->
 <script>
   import mark from '../../assets/gexis-mark.svg';
@@ -18,14 +24,17 @@
   import { FILLED } from './icons.js';
   import GroupGlyph from '../../lib/GroupGlyph.svelte';
   import {
-    group, groupHead, groupSub, joinPlayer, joinable, leaveGroup, memberStatus, otherStatus, removePlayer, silentNote,
+    enterGroup, group, groupHead, groupSub, joinPlayer, joinable, leaveGroup, memberStatus, othersByGroup, otherStatus,
+    removePlayer, silentNote,
   } from '../../lib/group.svelte.js';
 
   let { open = false, me = null, others = [], here = null, onclose = () => {}, onundo = () => {}, onsay = () => {} } = $props();
 
   const g = $derived($group);
   const inGroup = $derived(new Set((g?.members ?? []).map((m) => m.id)));
-  const rest = $derived(others.filter((p) => !inGroup.has(p.id)));
+  const split = $derived(othersByGroup(others, inGroup));
+  const rest = $derived(split.loose);
+  const otherGroups = $derived(split.groups);
   const leading = $derived(!!g?.members.find((m) => m.me)?.leads);
   //: Joined from here and not yet in the group: said at once.
   let joining = $state(new Set());
@@ -52,6 +61,20 @@
   }
   function leave() {
     leaveGroup().catch(told('Not left'));
+  }
+  //: Another group asked to take this player, until this player is in it.
+  let entering = $state(null);
+  $effect(() => {
+    if (g && entering) entering = null;
+  });
+  function enter(event, og) {
+    event.preventDefault();
+    event.stopPropagation();
+    entering = og.id;
+    enterGroup(og.leader).catch((error) => {
+      entering = null;
+      told('Not joined')(error);
+    });
   }
 </script>
 
@@ -94,7 +117,7 @@
           <button class="wide wide--undo" type="button" onclick={onundo}>Undo group</button>
         </div>
       </div>
-      {#if rest.length}<div class="head head--others">Other players</div>{/if}
+      {#if rest.length || otherGroups.length}<div class="head head--others">Other players</div>{/if}
     {:else}
       <div class="row is-current">
         <img src={mark} alt="" />
@@ -105,6 +128,34 @@
         <svg class="check" viewBox="0 0 24 24" aria-hidden="true"><path d={FILLED.check} /></svg>
       </div>
     {/if}
+    {#each otherGroups as og (og.id)}
+      <div class="group group--other">
+        <div class="group__head">
+          <GroupGlyph size={20} ink="var(--ink-quiet)" />
+          <span class="text">
+            <span class="group__title">{og.title}</span>
+            <span class="state">{og.status}</span>
+          </span>
+        </div>
+        {#each og.members as m (m.id)}
+          <svelte:element this={m.url ? 'a' : 'div'} class="row row--member" class:is-off={!m.listed}
+                          href={m.url ?? undefined}>
+            <img src={mark} alt="" />
+            <span class="text">
+              <span class="name">{m.name}{#if m.leads && m.listed}<span class="leads leads--other">Leads</span>{/if}</span>
+              {#if !m.listed}<span class="state is-off">Not reachable</span>{/if}
+            </span>
+          </svelte:element>
+        {/each}
+        {#if !g && og.canEnter}
+          <div class="group__buttons">
+            <button class="wide wide--join" type="button" disabled={entering === og.id} onclick={(e) => enter(e, og)}>
+              {entering === og.id ? 'Joining · catching up' : 'Join this group'}
+            </button>
+          </div>
+        {/if}
+      </div>
+    {/each}
     {#each rest as p (p.url)}
       <a class="row row--other" href={p.url}>
         <img src={mark} alt="" />
@@ -315,6 +366,31 @@
   }
   .wide--undo {
     color: var(--group-undo-ink);
+  }
+  /* Another group (decision 11): the block's shape, neutral, not ours. */
+  .group--other {
+    background: rgba(233, 238, 242, 0.04);
+    border-color: rgba(233, 238, 242, 0.12);
+  }
+  .group--other .group__title {
+    color: var(--ink);
+  }
+  /* Its players carry a name only (the head says what they play). */
+  .group--other .row--member {
+    min-height: 48px;
+  }
+  .leads--other {
+    background: rgba(233, 238, 242, 0.08);
+    color: var(--ink-muted);
+  }
+  .wide--join {
+    background: var(--group-join-ground);
+    border-color: var(--group-join-line);
+    color: var(--group-ink);
+  }
+  .wide--join:disabled {
+    cursor: default;
+    opacity: 0.8;
   }
   .wide:active {
     transform: scale(0.97);

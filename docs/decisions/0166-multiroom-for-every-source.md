@@ -64,6 +64,15 @@ of rate) and [ADR-0164](0164-the-phone-remote.md) (the phone remote).
     design): Gexis players synced in a Lyrion app (Material, Lyrion's web
     page) are grouped in Gexis too, and unsynced there they leave it - one
     group, whichever side made it; every source then follows it.
+11. **Another group is a group** (George, 2026-10-28, after the build: seen
+    from a player in no group, a group's players showed as loose players,
+    each with Join): it shows as a group - its players together, its leader
+    tagged, what it plays - and is joined whole, from a player in no group
+    (*Join this group*: that group's leader adds this player). Its players
+    are not joined one by one from outside it. **Amends C1**: joining no
+    longer takes a player out of another group, as no Join is offered on
+    one; a player in a group joins another only after leaving or undoing
+    its own.
 
 ## Proposed (technical)
 

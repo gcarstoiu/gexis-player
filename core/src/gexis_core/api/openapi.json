@@ -6168,6 +6168,86 @@
         ]
       }
     },
+    "/group/enter": {
+      "post": {
+        "operationId": "group_enter",
+        "tags": [
+          "Multiroom"
+        ],
+        "summary": "Join another group, as a whole",
+        "description": "This player, in no group, asks the leader of another group (its lasting `id`, the `leader` of that group in `/players`) to add it: the leader's own join, so that group stays as it was, with this player more (ADR-0166 decision 11). This player's view of the group follows on `/state` once the leader has added it.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "leader"
+                ],
+                "properties": {
+                  "leader": {
+                    "type": "string",
+                    "description": "The other group's leader, by its lasting id."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The leader was asked and took it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The body is not JSON or `leader` is missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Not joined: this player is in a group already, that player leads no group, or it did not take this player.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Multiroom is not wired up in this core.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-gexis-stability": "stable",
+        "x-gexis-adr": [
+          "ADR-0166"
+        ]
+      }
+    },
     "/group/remove": {
       "post": {
         "operationId": "group_remove",

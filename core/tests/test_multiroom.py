@@ -105,6 +105,9 @@ class Player:
                 if player_id in net_.off:
                     return False
                 net_.posts.append((self.member.id, player_id, path, body))
+                if path == "/group/join":
+                    # Decision 11: asked to add a player, the leader really does.
+                    await net_.players[player_id].room.join(body["player"])
                 return True
 
         async def stop_source():
@@ -207,6 +210,38 @@ async def test_a_player_with_the_equaliser_on_plays_earlier_by_what_it_holds(tmp
     assert living.snap.latency == 46, "two chunks of 1024 at 44.1 kHz"
     assert kitchen.snap.latency == 0
     assert asked, "the leader's own client asked too"
+
+
+async def test_a_player_alone_joins_another_group_as_a_whole(tmp_path):
+    """ADR-0166 decision 11 (George, 2026-10-28): from a player in no group,
+    another group is joined whole - its leader adds this player, and the
+    group stays as it was with one player more."""
+    net = Net(tmp_path)
+    office, garage, study = net.add("office", "Office"), net.add("garage", "Garage"), net.add("study", "Study")
+    office.play("spotify")
+    await net.settle()
+    await office.room.join("garage")
+    await net.settle()
+    study.play("lms")
+    await study.room.enter("office")
+    await net.settle()
+    for p in (office, garage, study):
+        assert p.room.record is not None and p.room.record.leader == "office"
+        assert {m.id for m in p.room.record.members} == {"office", "garage", "study"}
+    assert study.stopped == ["lms"], "C1: the joining player's own music stops"
+    assert ("study", "office", "/group/join", {"player": "study"}) in net.posts
+
+
+async def test_joining_another_group_is_refused_when_grouped_or_not_a_leader(tmp_path):
+    net = Net(tmp_path)
+    office, garage, study = net.add("office", "Office"), net.add("garage", "Garage"), net.add("study", "Study")
+    await net.settle()
+    await office.room.join("garage")
+    await net.settle()
+    with pytest.raises(mr.GroupError, match="does not lead"):
+        await study.room.enter("garage")
+    with pytest.raises(mr.GroupError, match="leave it first"):
+        await garage.room.enter("office")
 
 
 async def test_a_source_started_on_a_member_makes_it_the_leader_and_stops_the_old_ones(tmp_path):

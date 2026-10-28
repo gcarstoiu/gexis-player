@@ -221,6 +221,24 @@ class Multiroom:
     async def remove(self, player_id: str) -> Record:
         return await self.group.remove(player_id)
 
+    async def enter(self, leader_id: str) -> None:
+        """**Another group, joined as a whole** (ADR-0166 decision 11): this
+        player, alone, asks that group's leader to add it - the leader's own
+        Join, so the leader's group stays as it was, with one player more.
+        The record arrives from the leader, as for any join."""
+        if self.group.record is not None:
+            raise GroupError("this player is in a group: leave it first")
+        me = self.group.me
+        if not me:
+            raise GroupError("this player has no id yet")
+        status = self._players.status_of(leader_id) or self._statuses.get(leader_id) or {}
+        summary = status.get("group") or {}
+        if summary.get("leader") != leader_id:
+            raise GroupError("that player does not lead a group")
+        if not await self._post(leader_id, "/group/join", {"player": me}):
+            raise GroupError(f"{status.get('name') or 'that group'} did not take this player")
+        logger.info("multiroom: asked %s to add this player to its group", status.get("name") or leader_id)
+
     async def leave(self) -> Record:
         record = self.group.record
         if record is not None and record.leader == self.group.me:
