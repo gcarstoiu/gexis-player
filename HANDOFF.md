@@ -20,48 +20,40 @@ and the ideas as Must / Should / Could. It follows `docs/DEVELOPMENT.md`'s
 phases; change it when a phase opens, closes or moves, and show George first. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 1.8.0 on Testing, 1.7.0 on Stable** (2026-10-28:
-Testing serial 58 read back with a good signature; Stable serial 11). 1.8.0
-carries Phase 22 (multiroom) and the sideways scroll on sliders; PR #87
-merged by George the same day, `main` merged into `docs` and `next`,
-`release-1.8.0`, `ph-multiroom` and `ph-phone-controls` and their worktrees
-gone. Image `image/deploy/2026-10-28-gexis-player-v1.8.0.img`; build output
-`~/projects/gexis-release-out/r1.8.0`. The detail of both releases is in the
-archive (2026-10-27, 1.7.0; 2026-10-28, 1.8.0). A release worktree needs
-its pi-gen submodule initialised before `make image`.
+**Current release: 1.9.0 on Testing, 1.7.0 on Stable** (2026-10-28:
+Testing serial 59 read back with a good signature; Stable serial 11). 1.9.0
+carries Phase 23 (AirPlay 2, marked *Limited testing*) and the group-latency
+fix; **PR #88 (`release-1.9.0` into `main`) open, for George to merge** - do
+not push `next` while its checks run. Release worktree
+`~/projects/gexis-player-r190`; image
+`image/deploy/2026-10-28-gexis-player-v1.9.0.img` (149 checks passed); build
+output `~/projects/gexis-release-out/r1.9.0`. 1.8.0's story is in the
+archive (2026-10-28). A release worktree needs its pi-gen submodule
+initialised before `make image`.
 **Before the next Stable promotion, remind George** (his request,
 2026-10-28; to-do `ph22-eq-check`): a group heard in sync with the
 equaliser on at one player only. 1.8.0 plays such a player about 46 ms late
-(lesson 85); the fix, `c913bdc6`, is on `next` (merged at George's word,
-not yet heard), not in 1.8.0 - promoting 1.8.0 as it is ships the offset.
-On sofapi it is installed (core `1.8.0+git18.66947eb`, the AirPlay preview
-with it) and not yet running: restart `gexis-core` there before the check,
-once nobody is playing.
+(lesson 85); the fix, `c913bdc6`, is in 1.9.0 (not yet heard): promote 1.9.0,
+not 1.8.0, once it is heard. On sofapi the fixed core is installed
+(`1.8.0+git18.66947eb`) and not yet running: restart `gexis-core` there
+before the check, once nobody is playing.
 **R2D2's `/` fills up**: Docker's containerd store keeps images on `/`, not
 in `/home/docker`, and pi-gen rebuilds its 1.16 GB build image on every
 image build; check `df -h /` before one (1.9 GB free after 1.8.0's, 213 MB at its lowest while pi-gen rebuilt).
 **Now: Phase 23, AirPlay 2** (`ph-airplay`, started 2026-10-28; George:
-a plugin, offered in first use).
-[ADR-0167](docs/decisions/0167-airplay-2-as-a-plugin.md) proposed: George's
-decisions 1-8 (his acceptance of Claude's recommendations); open: on or off
-for a player that updates, the Apple device for the tests. Debian trixie
-has no AirPlay 2 receiver (`shairport-sync` 4.3.7 is classic only, no
-`nqptp`), so Shairport Sync 5.6.2 and NQPTP 1.2.9 are built by us
-(`packaging/shairport-sync`, `packaging/nqptp`; their build libraries are
-installed by the build itself, not in the builder image, for want of space
-on `/`). Built on `ph-airplay` (worktree `~/projects/gexis-player-ph-airplay`,
-pushed): the `gexis-airplay` package, the contract's `artwork` event (T9),
-AirPlay in *Make it yours*, the documents and Legal and credits (OpenCV,
-NumPy and the two models added: the notices check now reads `packaging/`).
-**The adapter** is in `~/projects/gexis-airplay`, committed locally only:
-its 0.1.0 tarball sits in the build cache under its checksum, and goes to
-GitHub as the release asset (repository and release approved by George)
-once the preview passes. **Preview 1** (2026-10-28) on sofapi (Fixed) and
-guestpi (variable): installed, AirPlay switched on through the API (an
-updated player has it off), receiver, NQPTP and plugin up, announced under
-the device name; not yet played to - waiting for George's Apple device.
-Owed by George: the device, ADR-0022's AirPlay row, the Legal wording, Open
-1. Upstream's source, read for the ADR, is in
+a plugin, offered in first use) - **in 1.9.0 on Testing, marked *Limited
+testing*** (George: released before it is tried, no Apple device yet).
+[ADR-0167](docs/decisions/0167-airplay-2-as-a-plugin.md) accepted: George's
+decisions 1-9, off for a player that updates, ADR-0022's row, the Legal and
+credits wording. Shairport Sync 5.6.2 and NQPTP 1.2.9 are built by us
+(`packaging/shairport-sync`, `packaging/nqptp`: Debian trixie has no AirPlay
+2 receiver; their build libraries are installed by the build itself, for
+want of space on `/`). The adapter is public, `gcarstoiu/gexis-airplay`
+v0.1.0 (local copy `~/projects/gexis-airplay`). **Open:** a test with an
+Apple device (to-do `ph23-test`), then T1-T9 put to George and the tag
+removed; whatever the test shows is fixed then. Tried without one: the
+receiver, NQPTP and plugin up on sofapi and guestpi, announced under the
+device name. Upstream's source, read for the ADR, is in
 `~/projects/scratch/ph23/upstream`.
 **Phase 22, multiroom for every source**, in 1.8.0 on Testing.
 [ADR-0166](docs/decisions/0166-multiroom-for-every-source.md): George's
