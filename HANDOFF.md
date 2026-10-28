@@ -44,8 +44,8 @@ George the same day. Built: core (`group.py`, `multiroom.py`,
 `snapcast.py`, the grouped chain in `outputs.py`, Lyrion's sync in the LMS
 adapter, the `/group` routes), the UI on the phone, the panel and the bars,
 the manual's section 6, the FAQ, the technical guide, README, the plugin
-manual. **Preview 9** (player `1.7.0+git48.4c0e262`, ui `git47.8073640`,
-core `git45.4525bd5`, system `git38.d9a696d`, Debian's `snapserver` and
+manual. **Preview 10** (core and player `1.7.0+git50.e7b0139`, ui
+`git47.8073640`, system `git38.d9a696d`, Debian's `snapserver` and
 `snapclient` 0.31.0-1 installed from the downloaded files) on sofapi, the
 bar, guestpi and bedroompi, the branch's head. George's findings so far,
 each fixed: a group of sofapi and the bar did not play (preview 5,
@@ -58,8 +58,13 @@ slider took a touchpad's sideways scroll - now every slider does (preview
 8, ADR-0121 amended, Claude's S1-S3 confirmed by George); and the lead's
 mute seemed not to work at the first tap (preview 9: the phone, back from
 sleep, still held a socket sofapi had closed, so the mutes were done but
-never shown - a page back after more than 5 s opens a fresh one). The
-leader fix is checked by a test only: George's cast is the device check. The integration's join and unjoin: its `multiroom` branch
+never shown - a page back after more than 5 s opens a fresh one); and the
+bar silent after a cast to sofapi (preview 10: the half-minute round
+rewrote its chain when sofapi missed a round, and the client stopped for
+the rewrite was never started again; LESSONS 83). The plugin guide and
+contract carry what an uploaded test renderer taught (leave a cast session
+before letting go; read the device name as systemd's form). The leader fix
+is checked by a test only: George's cast is the device check. The integration's join and unjoin: its `multiroom` branch
 (`9744bb3`), for its release after the player's. **Open:** the measurement
 with George (the delay, the rooms by ear, an hour without a dropout, the
 cost with the equaliser and the visualiser, the gaps); Lyrion's half on a
@@ -78,7 +83,7 @@ The wiki Roadmap shows Phases 20 and 21 done and the Harmony Hub ideas
 to `~/.gnupg-gexis-release`, which no longer exists.
 
 **The players**: sofapi, the bar (ShelvesPi), guestpi and bedroompi on
-Phase 22's preview 9 (2026-10-28, above).
+Phase 22's preview 10 (2026-10-28, above).
 
 **The test venv imports the core from `~/projects/gexis-player-next`** (an
 editable install): in another worktree run the suite with `PYTHONPATH=src`
