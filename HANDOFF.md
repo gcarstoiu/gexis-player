@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-10-27 (on R2D2).
+Last updated: 2026-10-28 (on R2D2).
 
 ## Start here
 
@@ -34,17 +34,30 @@ archive (2026-10-27, 1.7.0).
 **R2D2's `/` fills up**: Docker's containerd store keeps images on `/`, not
 in `/home/docker`, and pi-gen rebuilds its 1.16 GB build image on every
 image build; check `df -h /` before one (1.9 GB free after 1.7.0's).
-**Now: Phase 22, multiroom for every source** (`ph-multiroom`, started
-2026-10-27; George moved multiroom, then AirPlay 2, before room correction,
-which cannot be tried yet: 22-25 are now multiroom, AirPlay 2, room
-correction for the bass, for the full range).
-[ADR-0166](docs/decisions/0166-multiroom-for-every-source.md) proposed the
-same day from George's nine answers (one group, Lyrion's sync for Lyrion,
-Snapcast for every other source and plugin; the shortest delay; the source's
-rate); Claude's C1-C6 confirmed by him (ADR accepted); the wiki Roadmap shows the
-new order (pushed with his OK). **Next:** the grouping drawn in Claude Design
-from `design/briefs/22-multiroom.md` (George hands it over), then the build;
-the measurement with it (ADR-0166 *Measured before it is called done*).
+**Now: Phase 22, multiroom for every source** (`ph-multiroom`, worktree
+`~/projects/gexis-player-ph-multiroom`; started 2026-10-27, designed and
+built 2026-10-28). [ADR-0166](docs/decisions/0166-multiroom-for-every-source.md):
+George's decisions 1-10 (10, 2026-10-28: Lyrion's syncs are Gexis groups),
+C1-C6 confirmed, D1 as Finding 139 found it, the design `design/source/22/`
+(picks 1a, 2a, 3a), and Claude's build decisions B1-B12 **waiting for
+George's confirmation**. Built: core (`group.py`, `multiroom.py`,
+`snapcast.py`, the grouped chain in `outputs.py`, Lyrion's sync in the LMS
+adapter, the `/group` routes), the UI on the phone, the panel and the bars,
+the manual's section 6, the FAQ, the technical guide, README, the plugin
+manual. **Preview 3** (`1.7.0+git41.7f7eab5`, core and player; ui
+`git39.a3dc6a3`, system `git38.d9a696d`, Debian's `snapserver` and
+`snapclient` 0.31.0-1 installed from the downloaded files) on sofapi, the
+bar, guestpi and bedroompi; `8aedb1db` (Lyrion plays on when a group forms)
+is newer than it. The integration's join and unjoin: its `multiroom` branch
+(`9744bb3`), for its release after the player's. **Open:** the measurement
+with George (the delay, the rooms by ear, an hour without a dropout, the
+cost with the equaliser and the visualiser, the gaps); Lyrion's half on a
+test server waits for George - the test players cannot reach the Lyrion in
+Docker here (gexis-test-lms) through R2D2's firewall, and a reverse SSH
+tunnel was refused by the session's safety check. **To put back:** guestpi's
+and bedroompi's `lms_server` point at that unreachable test server
+(originals in `~/projects/scratch/ph22/restore/`), and the container
+`gexis-test-lms` (Lyrion 9.1.2, on `/`) goes before the next image build.
 The wiki Roadmap shows Phases 20 and 21 done and the Harmony Hub ideas
 (pushed 2026-10-27 with his OK).
 
@@ -53,8 +66,8 @@ The wiki Roadmap shows Phases 20 and 21 done and the Harmony Hub ideas
 `GEXIS_RELEASE_GNUPGHOME=~/projects/gexis-release-key`; the scripts default
 to `~/.gnupg-gexis-release`, which no longer exists.
 
-**The players**: sofapi core 1.7.0, ui and player `1.7.0+git5.5596698`
-(2026-10-27); ShelvesPi 1.5.0; bedroompi `preview-1023` as last recorded.
+**The players**: sofapi, the bar (ShelvesPi), guestpi and bedroompi on
+Phase 22's preview 3 (2026-10-28, above).
 
 **The test venv imports the core from `~/projects/gexis-player-next`** (an
 editable install): in another worktree run the suite with `PYTHONPATH=src`

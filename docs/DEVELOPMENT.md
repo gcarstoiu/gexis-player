@@ -3420,6 +3420,21 @@ possible; the source's own rate; Home Assistant's join and unjoin. Claude's
 C1-C6, confirmed by him the same day. The grouping is drawn in Claude
 Design first: the brief is `design/briefs/22-multiroom.md`.
 
+**Designed and built 2026-10-28.** Claude Design's export is
+`design/source/22/` (George's picks 1a, 2a, 3a); George's answers that day:
+Lyrion's syncs are Gexis groups (decision 10), the preview on all four test
+players, Lyrion's test on a Lyrion server of Claude's. Finding 139 (the first
+probe, guestpi) changed D1: a second loopback, a pipe per rate fed by
+`arecord`, FLAC at 32 bits, the units the player's own and Debian's masked.
+Built on `ph-multiroom` (core, UI on the phone, the panel and the bars, the
+documents); preview 3 on sofapi, the bar, guestpi and bedroompi. The
+integration's join and unjoin on its `multiroom` branch, for its release
+after the player's. **Open:** the measurement (ADR-0166 *Measured before it
+is called done*, with George by ear), and Lyrion's half on a test server,
+which waits for George (the test players cannot reach one on the
+development machine through its firewall, and a reverse tunnel was refused
+by the session's safety check).
+
 **Acceptance (draft):**
 
 1. From the phone and the panel, players are joined into a group and the

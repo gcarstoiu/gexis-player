@@ -3,7 +3,8 @@
 **Status:** **Accepted** 2026-10-27 (George: his answers, and C1-C6
 confirmed the same day; C3 he called an edge case). Amended 2026-10-28:
 the design back from Claude Design (`design/source/22/`), decision 10 and
-where it is measured, George's answers that day. Phase 22
+where it is measured, George's answers that day; D1 as Finding 139 found
+it, and C5's wording mended. Phase 22
 (`ph-multiroom`), started the same day (George: multiroom, then AirPlay 2, before room correction, which
 cannot be tried yet). The experience is George's, from his answers the same
 day (*Decided*); the technical decisions are proposed, and confirmed or
@@ -75,6 +76,27 @@ own output chain: its equaliser, its volume control, its meters. Lossless
 (FLAC or plain PCM, chosen by the measurement); bit-perfect to each
 member's chain.
 
+*As amended 2026-10-28* ([Finding 139](../findings/139-snapcast-on-a-loopback-first-probe.md),
+Debian's 0.31.0 on guestpi): snapserver's own ALSA source holds the
+loopback's capture, which fixes the rate for the next stream, and removing
+one at runtime ends the server. So the loopback is a second card of
+`snd-aloop`, **Multiroom**, beside the equaliser's; the server declares one
+pipe per rate (44.1 to 384 kHz, 32 bits); while something plays into the
+loopback the core runs `arecord` from its capture into that rate's pipe and
+moves the clients to it, and stops it when the stream ends, so the next
+opens at its own rate. `output` pads every integer format to 32 bits on the
+way in, as the equaliser's chain does (float refused); FLAC at 32 bits
+arrived sample-identical in the probe. The chain a grouped player plays to
+alone is `gexis_group_in`, which its client plays into; a card that cannot
+take 32 bits is given its widest by the client (`--sampleformat *:24:*`,
+padding undone exactly). The units are the player's own,
+`gexis-snapserver` and `gexis-snapclient`, started by the core only;
+Debian's `snapserver` and `snapclient` units, which their packages enable
+and start, are masked by `gexis-system`, which ships the masks. The server
+answers its control port on loopback only, serves no web page, and is kept
+off the system bus, so it announces nothing on the network; the members are
+given the leader's address.
+
 **D2 — Lyrion through Lyrion.** While the group plays Lyrion, the core syncs
 the members' Squeezelite players to the leader's through the Lyrion server
 (`sync`, and `sync -` to undo); Snapcast is idle. A member on a different
@@ -127,7 +149,9 @@ their outputs at the new rate.
   PCM only, so where Lyrion goes through Snapcast (C3) a DSD track plays as
   PCM or not at all - which, the measurement says.
 - **C5 — Grouped, the meters and the visualiser on each player show its own
-  output**, after its own equaliser, as when it plays alone.
+  output**, as when it plays alone. (*Wording mended 2026-10-28*: it said
+  "after its own equaliser"; alone, the meter reads the music before the
+  equaliser, ADR-0162 D4, and grouped it does the same.)
 - **C6 — The grouping is drawn in Claude Design first**: the phone's player
   list (join, leave, the group), the panel's place for it, and the grouped
   mark on Now Playing; a brief once this record is accepted.
@@ -149,6 +173,49 @@ play control. Its rules, beyond the decisions above:
 - Each member keeps its own equaliser.
 - The leader gone: the others fall silent and stay grouped (C2); its panel
   shows Home.
+
+## Claude's decisions in the build (2026-10-28, for George to confirm)
+
+- **B1 — A change reaches the members at once**, and each player puts it in
+  force after, in the order the changes were made: an undo reached the
+  leader 26 s late while the asker restarted its renderers (guestpi and
+  bedroompi). Of two changes made at once to one group, the later wins.
+- **B2 — Forming or leaving a group restarts a renderer only when one plays
+  or holds the device**, and not Squeezelite playing Lyrion when its own
+  chain is unchanged (one Lyrion server). So joining a player that plays
+  Spotify, Bluetooth or Plexamp to a group interrupts it a moment, as the
+  equaliser's switch does; a player that was idle is not touched.
+- **B3 — Undo keeps the music on the leader without a cut**: it plays on
+  through its own server until the stream ends, then plays alone.
+- **B4 — Every member runs its server**, idle (about 1.5 % of a core
+  measured), so a source started on any of them leads at once.
+- **B5 — The buffer is 400 ms** until the measurement (D7); the manual and
+  the FAQ say *about 0.4 seconds*.
+- **B6 — A member's card that cannot take the stream's rate** is given its
+  highest by the client's resampler, as the equaliser and Squeezelite's
+  own do; one that cannot take 32 bits, its widest (padding undone exactly).
+- **B7 — Lyrion's apps set each player's own volume** in a group (Lyrion's
+  sync group has its own); Spotify's and a volume-handing plugin's move the
+  group (D6).
+- **B8 — Lyrion's sync is kept as the group is while grouped** (one
+  server), so Lyrion started on any member plays on all; the leader switches
+  the members' players on while Lyrion plays there. Of a sync made in a
+  Lyrion app, Lyrion's master (or the first Gexis player synced) makes the
+  group here; a player unsynced there leaves (the leader hands the lead on
+  first).
+- **B9 — A player older than multiroom** is listed without Join, its state
+  followed by *Update to join*.
+- **B10 — The group is not in a backup**: a restored player plays alone; a
+  reflashed member, still in the others' group, is given the group again
+  when it is next seen.
+- **B11 — Home Assistant's unjoin of the leader undoes its group**, as the
+  design gives the leader no Leave.
+- **B12 — The UI's choices where the drawing is silent or production
+  differs** are listed in `design/IMPLEMENTED-DIFFERENTLY.md` (*Multiroom*):
+  among them, the panel's and the bar's group controls offered only when
+  another player is found; *or* in the leader-gone note; the bar's progress
+  row moved up when grouped; no new way to the group from Home on a member
+  whose leader is off.
 
 ## Settings (ADR-0022)
 
