@@ -216,7 +216,27 @@ six test rounds to hand over cleanly. Each of these cost one:
 - **A kill takes all of you.** Receiver and adapter are one unit, so a kill
   restarts both; the source is gone for about four seconds and comes back
   without its state. Keep what must survive in `$STATE_DIRECTORY`, and let
-  your controller's session carry the position.
+  your controller's session carry the position - if the session survives
+  (next point).
+- **Leave a cast session yourself before you let go** (2026-10-28). A
+  receiver that a phone app controls through the app's own servers - a cast
+  session - must end that session when another source takes over. Left to the
+  player's kill, it never ends: the app stays attached to a receiver that is
+  gone, so its next play pauses the phone's own player and goes nowhere, and
+  nothing sounds anywhere. The player always kills with SIGKILL, so no
+  shutdown code of yours runs then. On `release`, have your receiver leave
+  its session - many do so on SIGTERM - and close the card, and declare a
+  `polite_grace` long enough for both, so the player waits instead of
+  killing.
+- **A clean exit is not restarted.** Your unit is `Restart=on-failure`. If
+  you end your receiver yourself, start it again from your own run script;
+  exiting with 0 leaves the source down until the player restarts.
+- **Read `device-name.env` as systemd's format, and write JSON with a JSON
+  library** (2026-10-28). The name is double-quoted there, with `\` and `"`
+  escaped (the contract, *A row may name an environment variable*). A plugin that took the value as it
+  stands pasted the quotes into its `announce` message, which no longer
+  parsed: the player announced nothing, and the receiver ran with no phone
+  able to find it.
 - **Your caches count against your memory.** 1 GB is everything your unit
   holds, including in-memory caches. A receiver measured at 380-410 MB before
   its track cache filled reached 507 MB; a cache allowed 512 MB of its own

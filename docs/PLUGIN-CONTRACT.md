@@ -247,9 +247,12 @@ Each carries an `id`; the plugin answers exactly once:
   channel. `result: true` means its API confirmed the action — **not** that
   the device is free. The core checks that separately, and for Plexamp the
   two are fourteen seconds apart.
-- **`signal_stop`** is process-level escalation, `force` being SIGKILL rather
-  than SIGTERM. A plugin that has nothing to do here may answer `true`; the
-  core also has the unit name and can act itself.
+- **`signal_stop`** is process-level escalation. `force` tells the rungs
+  apart, but the core's own signal to the unit is always SIGKILL (ADR-0091),
+  so no shutdown handler runs then. A plugin that must do something before it
+  goes - leave a cast session its controller holds, say - does it on
+  `release`, within its `polite_grace`. A plugin that has nothing to do here
+  may answer `true`; the core also has the unit name and can act itself.
 - **`device_freed`** and **`restart_after_release`** are the two hooks that
   exist because of measured races, not design (Findings 013 §1 and 014).
   Default: do nothing, answer `true`.
