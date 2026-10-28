@@ -146,7 +146,7 @@ Taken from `Adapter` and `Capabilities` as they are. The prose for each is in
 | `unit` | string | The systemd unit whose process opens the device. The release ladder attributes a still-busy device to it (`alsa.device_held_by`) |
 | `release_action` | `pause` \| `disconnect` | ADR-0010/0027 |
 | `release_ladder` | object, optional | Per-renderer override. **Plexamp needs one** — its device is not free for 14 s after a polite stop ([Finding 077](findings/077-plexamp-on-gexis.md)) |
-| `capabilities.audio_connection` | string | `output` for everything today (ADR-0009) |
+| `capabilities.audio_connection` | string | `output` for everything today (ADR-0009); in a group of players `output` reaches the group, with nothing asked of the plugin (ADR-0166) |
 | `capabilities.acquisition_events` | array of strings | The *names* of what this renderer treats as taking the device, so an accountability UI has something to point at |
 | `capabilities.supports_artwork` | bool | Whether it can ever supply one, not whether this track has one |
 | `capabilities.supports_sample_rate` | bool | As above |

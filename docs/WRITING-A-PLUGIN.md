@@ -152,7 +152,11 @@ equaliser first (ADR-0162), so a plugin is equalised like every other source
 without doing anything. Open it at your stream's own rate, in an integer
 format (S16, S24 or S32): the equaliser follows them. Float is refused with
 the equaliser on, as under software volume, so a plugin that prefers it
-falls back to an integer format.
+falls back to an integer format. In a group of players (ADR-0166) `output` goes
+to the group's loopback instead, and your renderer plays in every room of
+the group with nothing more to do; the same integer formats apply, and
+releasing must still close `output`. A renderer that hands its volume over
+moves the whole group when its own app's slider moves.
 
 **The four messages that matter:**
 

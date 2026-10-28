@@ -620,6 +620,69 @@ by its card id, `on`, the setting (`sel`, `from`) and the bands; and the
 owner's list. `/state` carries it as `equaliser`; the routes are in
 [api.md](api.md).
 
+## Multiroom: a group of players
+
+ADR-0166, Finding 139. Alone, nothing below exists. In a group, on every
+member, the leader included:
+
+```text
+renderer → pcm.output (linear to S32_LE) → hw:Multiroom,0,0
+           hw:Multiroom,1,0 → arecord (while it plays) → /run/gexis-snap/<rate> → snapserver
+leader's snapserver → network (FLAC, 32 bits) → each member's snapclient → gexis_group_in → meter → [equaliser] → volume → card
+```
+
+- **The loopback** is a second card of `snd-aloop`, by its id `Multiroom`
+  (`enable=1,1 id=Loopback,Multiroom`). A player updated since its last boot
+  has the options and not the card: the core loads the module, or loads it
+  again with the renderers and CamillaDSP stopped
+  (`Snapcast.ensure_card`). It is never an output (`outputs.OURS`); in a
+  group arbitration asks who holds *its* playback node, and with Lyrion's
+  own sync also the chain Squeezelite plays to (`alsa.set_also_card`).
+- **`output.conf` in a group** (`outputs._grouped`): `output` pads every
+  integer format to 32 bits into the group's loopback (float refused, as the
+  equaliser's chain refuses it). The chain the player had alone becomes
+  `gexis_group_in`, the meter first, so the visualiser shows this player's
+  own output as alone (C5). `output_wait` keeps Squeezelite's own chain
+  where every member uses one Lyrion server (`BUT_LYRION`, Lyrion's own sync
+  plays Lyrion); elsewhere (`ALL`, C3) it goes into the loopback too, through
+  `linear`, so native DSD is refused there rather than sent as PCM noise.
+- **The server** (`gexis-snapserver.service`, Debian's `snapserver`
+  0.31.0) runs on every member, so whichever a source starts on leads at
+  once. Its configuration is the core's (`/run/gexis/snapserver.conf`): no
+  HTTP, its JSON-RPC on `127.0.0.1:1705` only, the stream port 1704 for the
+  members, and one pipe stream per rate, 44.1 to 384 kHz at 32 bits. Its own
+  ALSA source cannot be used: it holds the capture, which fixes the next
+  stream's rate, and removing such a stream at runtime ends the server
+  (Finding 139). It is kept off the system bus, so it announces nothing.
+- **The feeder** (`snapcast.Snapcast`) watches the loopback's controls as
+  the equaliser does (`alsactl monitor hw:Multiroom`, *PCM Slave* on
+  device 1). When a stream starts it runs `arecord` from the capture at that
+  rate into the rate's pipe (opened read-write: the server closes it between
+  reads) and moves the server's clients to that stream (`Group.SetStream`
+  over one kept control connection); when the stream ends `arecord` stops
+  and the capture is let go, so the next stream opens at its own rate.
+- **The client** (`gexis-snapclient.service`, Debian's `snapclient`) plays
+  from the leader's address (the leader's own from `127.0.0.1`), as
+  `--hostID` the player's lasting id, into `gexis_group_in`, with `--mixer
+  none`: each player's level is its own control's, never Snapcast's. A card
+  that cannot take 32 bits is asked for its widest (`--sampleformat *:24:*`
+  or `*:16:*`; padding is undone exactly). The client lets its card go after
+  5 s without audio.
+- **Lyrion in a group** of one Lyrion server: the leader keeps Lyrion's sync
+  as the group is (`<leader> sync <member>`, and `<member> sync -` out), and
+  switches every member's player on while Lyrion plays there. Each member's
+  own Squeezelite plays to its own chain, and its client is stopped while
+  Lyrion is its active source, so Squeezelite has the card.
+- **The units are the player's own.** Debian's `snapserver.service` and
+  `snapclient.service` enable and start themselves on install, and the
+  client would play to ALSA's default, which is `output`: `gexis-system`
+  ships their masks (`/etc/systemd/system/<unit> -> /dev/null`) and its
+  postinst stops them too.
+- **Measured so far** (Finding 139, guestpi, silent): through FLAC at 32
+  bits the samples arrived unchanged over 4 s at 96 kHz; the delay, how far
+  apart the rooms are, the CPU over an hour and the gaps are for the
+  phase's measurement.
+
 ## Meters and the visualiser
 
 ```mermaid

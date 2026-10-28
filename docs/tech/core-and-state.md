@@ -717,3 +717,59 @@ first 16 hex digits of SHA-256 over `gexis:` and
 headless; `/players` is `{self, others}`, each other
 with the `url` of its page by name. `PlayerSwitcher.svelte` draws it on the
 phone only.
+
+## A group of players (ADR-0166)
+
+`group.py` keeps the group; `multiroom.py` puts it in force here;
+`snapcast.py` runs Snapcast (the audio is in
+[audio-path.md](audio-path.md#multiroom-a-group-of-players)).
+
+- **One record, kept by every member** (`group.Record`): the group's id, a
+  revision, the leader's id, the members (lasting id, name, mDNS name,
+  port), and when and by whom it last changed. It is kept in
+  `/var/lib/gexis/group.json` (and the chain it was put in, in
+  `group-chain.json`), so a restart comes up grouped. A change - join,
+  remove, leave, undo, a source starting on a member (`lead`) - is kept under
+  the lock, sent at once to every member old and new (`POST /group/record`),
+  and put in force here after, one change at a time in order (`_worker`): a
+  member is never kept waiting on this player's own chain rewrite. Of two
+  records for one group the later change wins (`accepts`: revision, then
+  time, then author). A player joined from another group leaves it first. A
+  member that was off is sent the record when the next search for players
+  finds it (`reconcile`, every 30 s).
+- **What a change does here** (`Multiroom._apply`): into a group, the
+  group's loopback is made, `output.conf` rewritten for the group (renderers
+  restarted only if one plays or holds the device), the server started and
+  the client pointed at the leader; a joined player's own source stops first
+  (C1). The leader moving: the old one's source stops, every client moves.
+  Out of a group: the client and server stop and the chain is the player's
+  own again - except on a leader still playing, which plays on through its
+  own server until the stream ends (*the music stays on the leader*).
+- **A source started on a member leads** (D4): the supervisor's
+  `on_active_change` reaches `Multiroom.on_local_active`, which claims the
+  lead; a member's own source still active after another leads is stopped
+  (`_settle`), unless it is Lyrion playing in the group's own sync.
+- **The members' states, live** (`group.Peers`): one WebSocket to each other
+  member's `/state`. From them: each member's level, mute and Fixed for the
+  group volume, who is reachable (C2: the leader gone, the group is
+  *silent*), who is still catching up (the leader's server knows whose
+  client has connected), and on a member the leader's playback, mirrored
+  into this player's state while nothing of its own plays
+  (`StateStore.set_mirror`): `active`, `metadata` (the leader's pictures by
+  its address), `capabilities`, `controls` and `queue` are the leader's, and
+  a transport command goes to the leader.
+- **The group volume** (D6): the *All* slider sends a target and the
+  members' levels as the drag began; every reachable Variable member moves
+  by the target less their mean, within 0-100 (`group.step_levels`), and a
+  muted one is unmuted. A level reported by the leader's source from its
+  own app (Spotify's slider), not by our own send, moves the others by the
+  same step (`on_source_volume`); Lyrion's apps set each player's own.
+- **Lyrion's syncs are groups** (decision 10): the LMS adapter reports its
+  player's `sync_master` and `sync_slaves` from the status push; a sync seen
+  that was not ours (6 s after our own commands are ours) groups the Gexis
+  players synced (Lyrion's master acts), and a player unsynced there leaves.
+- `/state` carries the group as `group` (`group.view`); `/player/status` adds
+  `multiroom` (the group API's version: a player without it cannot be
+  joined), `port`, `group` (id, revision, leader, members' names), `lyrion`
+  (its server's id and its player's) and its `volume` and `fixed`.
+
