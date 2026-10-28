@@ -1,0 +1,18 @@
+[Unit]
+Description=NQPTP, AirPlay 2's timing for Gexis Player's receiver (ADR-0167)
+Documentation=https://github.com/mikebrady/nqptp
+# Upstream's unit, bound to the receiver: it runs while AirPlay is switched
+# on, and stops with it.
+PartOf=gexis-shairport-sync.service
+Wants=network-online.target
+After=network.target network-online.target
+Before=gexis-shairport-sync.service
+
+[Service]
+ExecStart=/usr/bin/nqptp
+# One per host, on UDP 319 and 320 (its README), which need the capability.
+DynamicUser=yes
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+LimitRTPRIO=6
+Restart=on-failure
+RestartSec=2

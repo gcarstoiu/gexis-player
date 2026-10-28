@@ -41,6 +41,8 @@ inputs() {
 			image/stage-gexis/03-core/files/components/plexamp.env ;;
 		beszel-hub) echo packaging/beszel-hub image/stage-gexis/07-beszel/files/beszel-hub.service \
 			image/stage-gexis/07-beszel/files/plugin-hub.json ;;
+		# ADR-0167: the adapter's pin and our units, configuration and hook.
+		airplay) echo packaging/airplay image/stage-gexis/13-airplay ;;
 		*) echo . ;;   # the release, and components that carry their own
 	esac
 }
@@ -109,7 +111,7 @@ reused=""
 # The skin packs (ADR-0111) are built with the rest, and the release carries
 # them all; the image installs none (decision 9: 01-packages leaves them out).
 SKIN_PACKS="skins-1920x1080 skins-1280x400 skins-1480x320 skins-800x480 skins-1280x800"
-for pkg in ${*:-core ui system wallpapers skins $SKIN_PACKS peppyalsa peppy-engines go-librespot squeezelite camilladsp beszel-agent beszel-hub lyrion-server plexamp player}; do
+for pkg in ${*:-core ui system wallpapers skins $SKIN_PACKS peppyalsa peppy-engines go-librespot squeezelite camilladsp beszel-agent beszel-hub lyrion-server plexamp nqptp shairport-sync airplay player}; do
 	case "$pkg" in
 		skins|skins-*|wallpapers)
 			ver=$(version_for "$pkg")

@@ -169,6 +169,7 @@ Taken from `Adapter` and `Capabilities` as they are. The prose for each is in
 {"t": "volume", "value": 62, "steps": 100}
 {"t": "row", "key": "claim_token", "state": "done", "text": "Claimed"}
 {"t": "announce", "services": [{"type": "_radio-foo._tcp", "port": 8200, "txt": {"id": "abc"}}]}
+{"t": "artwork", "type": "image/jpeg", "data": "<base64>"}
 ```
 
 - **`acquire`** — a deliberate acquisition (ADR-0010's table as amended by
@@ -221,6 +222,18 @@ Taken from `Adapter` and `Capabilities` as they are. The prose for each is in
   logged. The announcement lasts while the plugin is connected: it goes when
   the plugin disconnects, so a plugin sends it again after reconnecting. A
   core older than this logs the event and ignores it.
+- **`artwork`** — *added 2026-10-28* ([ADR-0167](decisions/0167-airplay-2-as-a-plugin.md)).
+  A cover that reaches the plugin as a picture rather than an address
+  (AirPlay's, from the Apple device). `type` is `image/jpeg` or `image/png`,
+  `data` the picture in base64, at most 1 MiB decoded and within the line's
+  1 MiB with it. The core keeps the last two per plugin, in memory, and
+  serves each at `/plugins/<id>/artwork/<key>`, the key being the first 16
+  hexadecimal digits of the picture's sha256: the plugin names that path as
+  its `metadata`'s `artwork`, after the `artwork` event, on the same
+  connection. They go when the plugin disconnects, so it sends the cover
+  again after reconnecting. A cover that is not a JPEG or PNG within the
+  size is refused and logged. A core older than this answers it with an
+  error.
 
 ## Core → plugin
 

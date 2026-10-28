@@ -2151,6 +2151,9 @@
                     <span class="row__text">
                       <span class="row__label">
                         <span class="row__name">{r.kind === 'share' ? 'Add share' : r.label}</span>
+                        <!-- ADR-0167: a few words a plugin puts beside its name
+                             (AirPlay's Limited testing), in the Tested tag's look. -->
+                        {#if r.tag}<span class="row__tag">{r.tag}</span>{/if}
                         {#if pending(r)}<span class="dot dot--sm"></span>{/if}
                       </span>
                       <!-- A plugin's version, and the program it runs (George, 2026-10-12). -->
@@ -3591,6 +3594,18 @@
   .row__name {
     font-size: 18px;
     font-weight: 600;
+  }
+  .row__tag {
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--ink-quiet);
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(233, 238, 242, 0.14);
+    white-space: nowrap;
   }
   .row--danger .row__name {
     color: var(--accent-warn);

@@ -39,6 +39,14 @@ def test_a_manifest_is_read_whether_or_not_the_plugin_runs(tmp_path):
     assert found[0].label == "Plexamp Active"
 
 
+def test_a_tag_is_read_and_published_and_a_long_one_dropped(tmp_path):
+    _install(tmp_path, {**GOOD, "tag": " Limited testing "})
+    _install(tmp_path, {**GOOD, "id": "other", "unit": "other.service", "tag": "x" * 25})
+    found = {p.id: p for p in plugins.installed(tmp_path)}
+    assert found["plexamp"].tag == "Limited testing"
+    assert found["other"].tag is None
+
+
 def test_the_mark_is_found_beside_the_manifest(tmp_path):
     _install(tmp_path, GOOD, with_mark=True)
     plugin = plugins.installed(tmp_path)[0]

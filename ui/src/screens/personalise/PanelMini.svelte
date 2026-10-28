@@ -12,6 +12,7 @@
   import lyrionIcon from '../../assets/icon-lyrion.svg';
   import spotifyIcon from '../../assets/icon-spotify.png';
   import btIcon from '../../assets/icon-bluetooth.png';
+  import airplayIcon from '../../assets/icon-airplay.png';
 
   let p = $props();
 
@@ -51,8 +52,8 @@ const cond = c => ({ sunDisplay: c === 'sun' || c === 'part' ? 'block' : 'none',
     };
   }
   function waitHome(p) {
-    const mk = p.marks || [], N = { lyr: ['Lyrion', 'Starts on play'], plex: ['Plexamp', 'Listening'], spo: ['Spotify', 'Listening'], bt: ['Bluetooth', 'Pairable'] };
-    const tiles = ['lyr', 'plex', 'spo', 'bt'].filter(k => mk.includes(k)).map(k => { const lead = k === 'lyr'; return { name: N[k][0], status: N[k][1], isLyr: lead, isPlex: k === 'plex', isSpo: k === 'spo', isBt: k === 'bt',
+    const mk = p.marks || [], N = { lyr: ['Lyrion', 'Starts on play'], plex: ['Plexamp', 'Listening'], spo: ['Spotify', 'Listening'], air: ['AirPlay', 'Listening'], bt: ['Bluetooth', 'Pairable'] };
+    const tiles = ['lyr', 'plex', 'spo', 'air', 'bt'].filter(k => mk.includes(k)).map(k => { const lead = k === 'lyr'; return { name: N[k][0], status: N[k][1], isLyr: lead, isPlex: k === 'plex', isSpo: k === 'spo', isAir: k === 'air', isBt: k === 'bt',
       border: lead ? 'rgba(126,214,188,0.5)' : 'rgba(233,238,242,0.14)', markBg: lead ? 'rgba(126,214,188,0.1)' : 'rgba(233,238,242,0.08)', statusInk: lead ? '#7ed6bc' : 'rgba(233,238,242,0.6)' }; });
     return { wTiles: tiles, wCols: Math.max(tiles.length, 3), wServices: tiles.length > 0, wNone: !tiles.length, wWall: !p.black };
   }
@@ -64,7 +65,7 @@ const cond = c => ({ sunDisplay: c === 'sun' || c === 'part' ? 'block' : 'none',
       wallSrc: p.wallSrc || calm, photoSrc: p.photo || '', clockDisplay: p.clock === false ? 'none' : 'block', clockFlex: p.clock === false ? 'none' : 'flex', weatherFlex: p.weather === false ? 'none' : 'flex',
       ...idle(p), ...waitHome(p),
       spin: anim ? 'fuSpin ' + (rpm === 45 ? '1.33s' : '1.8s') + ' linear infinite' : 'none', reel: anim ? 'fuSpin 2.4s linear infinite' : 'none',
-      marks: (p.marks || []).map(m => ({ isLyr: m === 'lyr', isSpo: m === 'spo', isBt: m === 'bt', isPlex: m === 'plex' }))
+      marks: (p.marks || []).map(m => ({ isLyr: m === 'lyr', isSpo: m === 'spo', isAir: m === 'air', isBt: m === 'bt', isPlex: m === 'plex' }))
     };
     KINDS.forEach(k => { o[cap(k)] = kind === k; });
     Object.keys(CYC).forEach(k => { if (all) o[cap(k)] = true; o['c' + k] = all ? 'fuCycle 8s linear ' + CYC[k] + ' infinite' : 'none'; });
@@ -125,6 +126,7 @@ const cond = c => ({ sunDisplay: c === 'sun' || c === 'part' ? 'block' : 'none',
                 <div style="position:relative;width:5.625cqw;height:5.625cqw;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;background:{m.markBg};"><span style="position:absolute;inset:-0.47cqw;border-radius:50%;border:0.16cqw solid {m.border};animation:npRing 2800ms ease-out infinite;"></span>
                   {#if m.isLyr}<img src={lyrionIcon} alt="" style="display:block;width:3.9844cqw;height:2.9688cqw;" />{/if}
                   {#if m.isSpo}<img src={spotifyIcon} alt="" style="display:block;width:2.9688cqw;height:2.9688cqw;opacity:0.8;" />{/if}
+                  {#if m.isAir}<img src={airplayIcon} alt="" style="display:block;width:2.9688cqw;height:2.9688cqw;opacity:0.8;" />{/if}
                   {#if m.isBt}<img src={btIcon} alt="" style="display:block;width:2.9688cqw;height:2.9688cqw;opacity:0.8;" />{/if}
                   {#if m.isPlex}<span style="font-size:2.6cqw;font-weight:800;color:rgba(233,238,242,0.8);line-height:1;">P</span>{/if}
                 </div>

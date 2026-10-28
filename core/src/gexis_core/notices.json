@@ -64,7 +64,8 @@
         {
           "heading": "Trademarks",
           "paragraphs": [
-            "Names and logos such as Spotify, Plex and Plexamp, Bluetooth, Lyrion, Raspberry Pi and HiFiBerry are trademarks of their owners. They are used here only to name the service or product they belong to. Their use does not mean that any of their owners endorses this player, or is affiliated with it."
+            "Names and logos such as Spotify, Plex and Plexamp, AirPlay, Bluetooth, Lyrion, Raspberry Pi and HiFiBerry are trademarks of their owners. They are used here only to name the service or product they belong to. Their use does not mean that any of their owners endorses this player, or is affiliated with it.",
+            "AirPlay is a trademark of Apple Inc., registered in the U.S. and other countries and regions."
           ]
         }
       ]
@@ -335,6 +336,42 @@
       ]
     },
     {
+      "name": "Shairport Sync",
+      "group": "renderer",
+      "role": "Receives AirPlay 2 from an iPhone, iPad or Mac.",
+      "author": "Mike Brady and contributors",
+      "licence": "MIT-style; parts under BSD-3-Clause, MIT and ISC (its COPYING and LICENSES)",
+      "url": "https://github.com/mikebrady/shairport-sync",
+      "arrives": "Built from its source, at a pinned commit, when the packages are built",
+      "sources": [
+        "github.com/mikebrady/shairport-sync"
+      ]
+    },
+    {
+      "name": "NQPTP",
+      "group": "renderer",
+      "role": "Keeps AirPlay 2 in time with the Apple device and other speakers.",
+      "author": "Mike Brady",
+      "licence": "GPL-2.0-only",
+      "url": "https://github.com/mikebrady/nqptp",
+      "arrives": "Built from its source, at a pinned commit, when the packages are built",
+      "sources": [
+        "github.com/mikebrady/nqptp"
+      ]
+    },
+    {
+      "name": "gexis-airplay",
+      "group": "renderer",
+      "role": "Connects Shairport Sync to the player.",
+      "author": "George Carstoiu",
+      "licence": "GPL-3.0-or-later",
+      "url": "https://github.com/gcarstoiu/gexis-airplay",
+      "arrives": "Fetched from its release when the packages are built, checked against a pinned checksum",
+      "sources": [
+        "github.com/gcarstoiu/gexis-airplay"
+      ]
+    },
+    {
       "name": "Beszel agent and hub",
       "group": "system",
       "role": "Optional system monitoring: the agent reports, the hub keeps the history. Both off unless you switch them on.",
@@ -391,7 +428,8 @@
       "url": "https://github.com/foonerd/peppy_screensaver",
       "arrives": "Fetched at a pinned commit when the image and the 1280 × 800 skins are built; its designs reimplemented in our own code",
       "sources": [
-        "codeload.github.com/foonerd/peppy_screensaver"
+        "codeload.github.com/foonerd/peppy_screensaver",
+        "raw.githubusercontent.com/foonerd/peppy_screensaver"
       ]
     },
     {
@@ -523,6 +561,16 @@
       "credit": false
     },
     {
+      "name": "AirPlay mark",
+      "group": "marks",
+      "role": "Shows that an Apple device is playing over AirPlay.",
+      "author": "Gexis Player",
+      "licence": "Gexis's own drawing, GPL-3.0-or-later; not Apple's AirPlay logo",
+      "url": "https://github.com/gcarstoiu/gexis-player/tree/main/design/marks",
+      "arrives": "Included in the player",
+      "credit": false
+    },
+    {
       "name": "Plex chevron",
       "group": "marks",
       "role": "Shows that Plexamp is playing.",
@@ -578,6 +626,27 @@
       "arrives": "Installed from PyPI when the image is built",
       "packages": [
         "aiohttp"
+      ]
+    },
+    {
+      "name": "OpenCV and NumPy",
+      "group": "core",
+      "role": "Find the faces and subjects in a background picture, so it is cropped around them.",
+      "author": "OpenCV team and contributors; NumPy developers",
+      "licence": "Apache-2.0 (OpenCV); BSD-3-Clause (NumPy)",
+      "url": "https://opencv.org",
+      "arrives": "Python packages in the core's environment, at pinned versions"
+    },
+    {
+      "name": "YuNet and YOLOX-S models",
+      "group": "core",
+      "role": "The face and subject detectors OpenCV runs on the background pictures.",
+      "author": "The OpenCV model zoo's contributors",
+      "licence": "MIT (YuNet); Apache-2.0 (YOLOX-S)",
+      "url": "https://github.com/opencv/opencv_zoo",
+      "arrives": "Fetched at a pinned commit when the packages are built, each file checked",
+      "sources": [
+        "github.com/opencv/opencv_zoo"
       ]
     },
     {
