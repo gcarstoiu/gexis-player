@@ -55,7 +55,7 @@ jumped back with the members at different levels (preview 6, B13); Spotify
 cast to the leader after Lyrion played on the bar alone (preview 7: the
 leader's client, stopped for Lyrion's sync, was not started again); and no
 slider took a touchpad's sideways scroll - now every slider does (preview
-8, ADR-0121 amended, Claude's S1-S3 **waiting for George**). The leader
+8, ADR-0121 amended, Claude's S1-S3 confirmed by George). The leader
 fix is checked by a test only: George's cast is the device check. The integration's join and unjoin: its `multiroom` branch
 (`9744bb3`), for its release after the player's. **Open:** the measurement
 with George (the delay, the rooms by ear, an hour without a dropout, the

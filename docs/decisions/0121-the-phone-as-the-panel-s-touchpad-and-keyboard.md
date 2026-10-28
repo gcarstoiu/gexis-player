@@ -275,7 +275,7 @@ with the fingers and every slider that the D-pad moves takes it. Checked from
 mocked data on the phone, the panel, the bar and through the touchpad's
 socket; on the four test players as preview 8.
 
-Claude's choices, for George to confirm:
+Claude's choices, confirmed by George the same day:
 
 - **S1 - An upright band takes the up-and-down scroll** (the panel's and the
   bar's equaliser): a sideways one cannot follow it. Nothing under the bands
