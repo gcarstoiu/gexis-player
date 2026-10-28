@@ -71,8 +71,8 @@ proven on guestpi and bedroompi; B2 amended, confirmed by George;
 LESSONS 84 - the silence was first put down to the phone app, wrongly).
 After that fix, one phone app over Bluetooth still delivers silence:
 recorded straight from BlueALSA (bluealsa-aplay stopped for 4 s), every
-sample was zero - the phone sends digital zeros; a control recording of
-another app the same way is owed. The plugin guide and
+sample was zero, where another app recorded the same way read -1.2 dBFS
+peak and no zero sample: the phone sends digital zeros for that app. The plugin guide and
 contract carry what an uploaded test renderer taught (leave a cast session
 before letting go; read the device name as systemd's form). The leader fix
 is checked by a test only: George's cast is the device check. The integration's join and unjoin: its `multiroom` branch
