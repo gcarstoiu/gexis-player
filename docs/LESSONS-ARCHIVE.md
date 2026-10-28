@@ -1659,3 +1659,18 @@ nothing is heard.
 **Rule:** where a design keeps things in step, test it with the members
 different in what lies after the point it keeps in step - one with the
 equaliser, one without; one USB DAC, one on the board.
+
+**86. A source that started always played** (2026-10-28, Phase 22). After
+the evening's preview was installed, the bar's core was restarted while it
+was a member of sofapi's group, nothing playing on either. Three seconds
+later its log said "lms started here; this player leads the group", and the
+group's record moved the lead to the bar. Lyrion's player came up as the
+bar's active source at the core's start; `on_local_active` took the lead on
+that edge, decision 4's "a source started on a member", and the check that
+exempts Lyrion playing in the group's own sync needs the leader's state,
+not yet known three seconds after a start. The multiroom tests' players
+played by becoming active and nothing else, so active and playing were one
+state there, and no test could have shown a source that came up silent.
+**Rule:** let a fake's states be as many as the real one's - active is not
+playing, connected is not ready - and test the edge between them.
+
