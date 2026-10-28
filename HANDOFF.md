@@ -63,11 +63,11 @@ bar silent after a cast to sofapi (preview 10: the half-minute round
 rewrote its chain when sofapi missed a round, and the client stopped for
 the rewrite was never started again; LESSONS 83); and a cast just after an
 undo restarted mid-start (preview 11: alone only once nothing holds the
-device, B3 amended **for George to confirm**); and every Bluetooth stream
+device, B3 amended, confirmed by George); and every Bluetooth stream
 silent on sofapi after it left a group (preview 12: an idle renderer keeps
 the ALSA configuration it read first, so bluealsa-aplay went on writing
 into the group's loopback; the idle renderers now restart on a rewrite,
-proven on guestpi and bedroompi; B2 amended **for George to confirm**;
+proven on guestpi and bedroompi; B2 amended, confirmed by George;
 LESSONS 84 - the silence was first put down to the phone app, wrongly).
 After that fix, one phone app over Bluetooth still delivers silence:
 recorded straight from BlueALSA (bluealsa-aplay stopped for 4 s), every
