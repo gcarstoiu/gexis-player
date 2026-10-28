@@ -3,7 +3,8 @@
 **Status:** **Accepted** 2026-10-27 (George: his answers, and C1-C6
 confirmed the same day; C3 he called an edge case). Amended 2026-10-28:
 the design back from Claude Design (`design/source/22/`), decision 10 and
-where it is measured, George's answers that day. Phase 22
+where it is measured, George's answers that day; D1 as Finding 139 found
+it, and C5's wording mended. Phase 22
 (`ph-multiroom`), started the same day (George: multiroom, then AirPlay 2, before room correction, which
 cannot be tried yet). The experience is George's, from his answers the same
 day (*Decided*); the technical decisions are proposed, and confirmed or
@@ -75,6 +76,27 @@ own output chain: its equaliser, its volume control, its meters. Lossless
 (FLAC or plain PCM, chosen by the measurement); bit-perfect to each
 member's chain.
 
+*As amended 2026-10-28* ([Finding 139](../findings/139-snapcast-on-a-loopback-first-probe.md),
+Debian's 0.31.0 on guestpi): snapserver's own ALSA source holds the
+loopback's capture, which fixes the rate for the next stream, and removing
+one at runtime ends the server. So the loopback is a second card of
+`snd-aloop`, **Multiroom**, beside the equaliser's; the server declares one
+pipe per rate (44.1 to 384 kHz, 32 bits); while something plays into the
+loopback the core runs `arecord` from its capture into that rate's pipe and
+moves the clients to it, and stops it when the stream ends, so the next
+opens at its own rate. `output` pads every integer format to 32 bits on the
+way in, as the equaliser's chain does (float refused); FLAC at 32 bits
+arrived sample-identical in the probe. The chain a grouped player plays to
+alone is `gexis_group_in`, which its client plays into; a card that cannot
+take 32 bits is given its widest by the client (`--sampleformat *:24:*`,
+padding undone exactly). The units are the player's own,
+`gexis-snapserver` and `gexis-snapclient`, started by the core only;
+Debian's `snapserver` and `snapclient` units, which their packages enable
+and start, are masked by `gexis-system`, which ships the masks. The server
+answers its control port on loopback only, serves no web page, and is kept
+off the system bus, so it announces nothing on the network; the members are
+given the leader's address.
+
 **D2 — Lyrion through Lyrion.** While the group plays Lyrion, the core syncs
 the members' Squeezelite players to the leader's through the Lyrion server
 (`sync`, and `sync -` to undo); Snapcast is idle. A member on a different
@@ -127,7 +149,9 @@ their outputs at the new rate.
   PCM only, so where Lyrion goes through Snapcast (C3) a DSD track plays as
   PCM or not at all - which, the measurement says.
 - **C5 — Grouped, the meters and the visualiser on each player show its own
-  output**, after its own equaliser, as when it plays alone.
+  output**, as when it plays alone. (*Wording mended 2026-10-28*: it said
+  "after its own equaliser"; alone, the meter reads the music before the
+  equaliser, ADR-0162 D4, and grouped it does the same.)
 - **C6 — The grouping is drawn in Claude Design first**: the phone's player
   list (join, leave, the group), the panel's place for it, and the grouped
   mark on Now Playing; a brief once this record is accepted.
