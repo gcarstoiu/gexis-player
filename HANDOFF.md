@@ -38,9 +38,23 @@ a plugin, offered in first use).
 decisions 1-8 (his acceptance of Claude's recommendations); open: on or off
 for a player that updates, the Apple device for the tests. Debian trixie
 has no AirPlay 2 receiver (`shairport-sync` 4.3.7 is classic only, no
-`nqptp`), so Shairport Sync 5.6.2 and NQPTP 1.2.9 are built by us; the
-adapter lives in `gcarstoiu/gexis-airplay`. Upstream's source, read for the
-ADR, is in `~/projects/scratch/ph23/upstream`.
+`nqptp`), so Shairport Sync 5.6.2 and NQPTP 1.2.9 are built by us
+(`packaging/shairport-sync`, `packaging/nqptp`; their build libraries are
+installed by the build itself, not in the builder image, for want of space
+on `/`). Built on `ph-airplay` (worktree `~/projects/gexis-player-ph-airplay`,
+pushed): the `gexis-airplay` package, the contract's `artwork` event (T9),
+AirPlay in *Make it yours*, the documents and Legal and credits (OpenCV,
+NumPy and the two models added: the notices check now reads `packaging/`).
+**The adapter** is in `~/projects/gexis-airplay`, committed locally only:
+its 0.1.0 tarball sits in the build cache under its checksum, and goes to
+GitHub as the release asset (repository and release approved by George)
+once the preview passes. **Preview 1** (2026-10-28) on sofapi (Fixed) and
+guestpi (variable): installed, AirPlay switched on through the API (an
+updated player has it off), receiver, NQPTP and plugin up, announced under
+the device name; not yet played to - waiting for George's Apple device.
+Owed by George: the device, ADR-0022's AirPlay row, the Legal wording, Open
+1. Upstream's source, read for the ADR, is in
+`~/projects/scratch/ph23/upstream`.
 **Phase 22, multiroom for every source**, in 1.8.0 on Testing.
 [ADR-0166](docs/decisions/0166-multiroom-for-every-source.md): George's
 decisions 1-10, C1-C6, the design `design/source/22/`, Claude's build
