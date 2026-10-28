@@ -124,7 +124,10 @@ class Player:
 
         lms = None
         if lyrion:
-            lms = type("Lms", (), {"player_id": lyrion[1], "server_id": lyrion[0], "sync_group": (None, ())})()
+            async def told(_self, player=None):
+                return True
+            lms = type("Lms", (), {"player_id": lyrion[1], "server_id": lyrion[0], "sync_group": (None, ()),
+                                   "power_on": told, "sync_with": told, "unsync": told})()
         self.room = Room(store=self.store, players=FakePlayers(net), snap=self.snap, me=lambda: member,
                          local_active=lambda: self.active, stop_source=stop_source, rechain=rechain,
                          chain_card=lambda: ("sndrpihifiberry", True, True), set_own_volume=set_volume,
@@ -272,6 +275,25 @@ async def test_one_lyrion_server_for_every_member_keeps_squeezelite_on_its_own_c
     await net.settle()
     assert kitchen.snap.host is None and kitchen.room.record.leader == "living", \
         "the group plays Lyrion already: its sync, not a new leader"
+
+
+async def test_the_leader_hears_a_source_it_starts_after_lyrion(tmp_path):
+    """sofapi and the bar, 2026-10-28: Spotify cast to the leader after
+    Lyrion played on the bar and not on the leader, whose client Lyrion's
+    sync had stopped."""
+    net = Net(tmp_path)
+    living = net.add("living", "Living Room", lyrion=("server-uuid", "player-a"))
+    kitchen = net.add("kitchen", "Kitchen", lyrion=("server-uuid", "player-b"))
+    await net.settle()
+    await living.room.join("kitchen")
+    await net.settle()
+    living.play("lms")
+    await net.settle()
+    assert living.snap.host is None, "Squeezelite plays to the card itself"
+    living.play("spotify")
+    await net.settle()
+    assert living.room.record.leader == "living"
+    assert living.snap.host == "127.0.0.1"
 
 
 def test_a_leaders_relative_pictures_are_made_reachable():

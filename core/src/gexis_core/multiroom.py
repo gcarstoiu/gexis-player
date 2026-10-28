@@ -330,6 +330,11 @@ class Multiroom:
             if record.leader == me:
                 asyncio.ensure_future(self._lms_follow())
         if record.leader == me:
+            if not lyrion_here:
+                # It hears its own source through the group's server: Lyrion's
+                # sync had the client let go of the card (sofapi, 2026-10-28:
+                # Spotify after Lyrion played on the bar alone).
+                asyncio.ensure_future(self._listen())
             return
         leader_state = self.peers.states.get(record.leader) or {}
         leader_up = self.peers.reachable.get(record.leader, False)
