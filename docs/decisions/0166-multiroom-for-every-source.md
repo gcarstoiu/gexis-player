@@ -175,7 +175,7 @@ play control. Its rules, beyond the decisions above:
 - The leader gone: the others fall silent and stay grouped (C2); its panel
   shows Home.
 
-## Claude's decisions in the build (2026-10-28, for George to confirm)
+## Claude's decisions in the build (2026-10-28, confirmed by George the same day)
 
 - **B1 — A change reaches the members at once**, and each player puts it in
   force after, in the order the changes were made: an undo reached the

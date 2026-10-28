@@ -871,7 +871,7 @@ Fixed volume).
 
 Built from `source/22` (picks 1a, 2a, 3a; ADR-0166). Production wins under
 the additions, as the design asks; what the build decided where the drawing
-is silent or production differs, for George to confirm:
+is silent or production differs, confirmed by George (2026-10-28):
 
 - **[S]** The panel's *Other players* row and the bar's *Group* button are
   offered only when another Gexis player is found on the network (or this
