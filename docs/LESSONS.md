@@ -439,6 +439,14 @@ to the phone app. Before a design leans on how another program behaves,
 search the lessons and the code for it; and before blaming the other end,
 look at where our own process writes.
 
+**85. A group tested with every member alike** (2026-10-28, Phase 22).
+"The equaliser in a group is fine" was tried with the equaliser set the same
+on every member, so what CamillaDSP adds after the Snapcast client was added
+everywhere and cancelled out. With it on at sofapi and off at the bar, sofapi
+played about 46 ms late, and George heard it. Where a design keeps things in
+step, test it with the members different in what lies after the point it
+keeps in step.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target, the check quietly

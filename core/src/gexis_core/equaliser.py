@@ -345,6 +345,17 @@ def chunksize(rate: int) -> int:
     return 1024 if rate <= 48000 else 2048 if rate <= 96000 else 4096
 
 
+def latency_ms(rate: int) -> float:
+    """**How long CamillaDSP holds a sample** at the rate it plays (ADR-0166
+    D7 as amended): the chunk it waits to fill, then what it leaves in the
+    card's buffer when the next chunk arrives - its `target_level`, which
+    defaults to the chunk size (CamillaDSP 4.1.3's README) and which rate
+    adjust holds it at. About 43-46 ms up to 192 kHz, half that above (the
+    chunk stays 4096). A resampler's own delay, when the card lacks the
+    rate, is not in it."""
+    return 2 * chunksize(rate) * 1000 / rate
+
+
 def filter_name(band: int) -> str:
     return f"band_{BANDS[band]}"
 

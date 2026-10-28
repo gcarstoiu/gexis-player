@@ -101,7 +101,7 @@ from gexis_core import snapcast
 from gexis_core import eq_engine
 from gexis_core.eq_engine import EqEngine
 from gexis_core.players import own_id
-from gexis_core.equaliser import Equaliser
+from gexis_core.equaliser import Equaliser, latency_ms as eq_latency_ms
 from gexis_core.setup_network import SetupNetwork
 from gexis_core.setup_flow import SetupFlow
 from gexis_core.adapters.plugin import PluginAdapter
@@ -4890,6 +4890,20 @@ async def main() -> None:
         plug = outputs.needs_plug(output.card) is True
         return output.card, bool(eq_on or plug or outputs.widens(output.card)), bool(eq_on or plug)
 
+    def _group_after_client(rate: int | None) -> float:
+        """ADR-0166 D7 as amended: what comes after this player's client and
+        Snapcast cannot see - CamillaDSP's hold on every sample while the
+        equaliser is on, at the rate it plays to the card (the card's
+        highest where it lacks the stream's). None but that: the card's own
+        delay is for the measurement."""
+        output = _with_software(outputs.in_force(settings.value("output_device"))[0])
+        if output is None or not outputs.eq_in_path(output.card):
+            return 0.0
+        playing = rate or 44100
+        if outputs.takes_rate(output.card, playing) is False:
+            playing = outputs.top_rate(output.card) or playing
+        return eq_latency_ms(playing)
+
     #: The renderers were stopped for the loopback's reload: the next chain
     #: rewrite starts them again, whether or not anything played.
     group_renderers_stopped = {"value": False}
@@ -4913,7 +4927,7 @@ async def main() -> None:
         set_own_volume=set_volume, set_own_mute=set_mute,
         screen=lambda: settings.value("headless") is not True,
         lms=lms, lms_on=lambda: renderer_enabled("lms"),
-        before_reload=_before_loopback_reload)
+        before_reload=_before_loopback_reload, after_client=_group_after_client)
     outputs.group_in_path = lambda: multiroom.chain
     state_server.multiroom = multiroom
     lms.on_sync_change(multiroom.on_lyrion_sync)

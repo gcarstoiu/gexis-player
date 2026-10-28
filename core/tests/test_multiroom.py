@@ -42,6 +42,7 @@ class Snap:
 
     async def listen(self, host, host_id="", sampleformat=None, latency_ms=0):
         self.host = host
+        self.latency = latency_ms
 
     @property
     def listening(self):
@@ -80,7 +81,7 @@ class FakePlayers:
 class Player:
     """One simulated player: its store, its source, its multiroom."""
 
-    def __init__(self, net, member: Member, tmp_path, lyrion=None):
+    def __init__(self, net, member: Member, tmp_path, lyrion=None, after_client=None):
         self.member = member
         self.store = StateStore({"spotify": CAPS, "lms": CAPS},
                                 sources=({"id": "spotify", "name": "Spotify"}, {"id": "lms", "name": "Lyrion"}))
@@ -133,6 +134,7 @@ class Player:
                          local_active=lambda: self.active, stop_source=stop_source, rechain=rechain,
                          chain_card=lambda: ("sndrpihifiberry", True, True), set_own_volume=set_volume,
                          set_own_mute=set_mute, screen=lambda: True, lms=lms, lms_on=lambda: bool(lyrion),
+                         after_client=after_client or (lambda rate: 0.0),
                          group_path=tmp_path / f"{member.id}.json",
                          chain_path=tmp_path / f"{member.id}-chain.json", peers=FakePeers())
 
@@ -153,8 +155,8 @@ class Net:
         self.off: set[str] = set()
         self.posts = []
 
-    def add(self, pid, name, lyrion=None) -> Player:
-        player = Player(self, Member(pid, name, f"{pid}.local"), self.tmp, lyrion)
+    def add(self, pid, name, lyrion=None, after_client=None) -> Player:
+        player = Player(self, Member(pid, name, f"{pid}.local"), self.tmp, lyrion, after_client)
         self.players[pid] = player
         return player
 
@@ -181,6 +183,30 @@ async def test_joining_puts_both_players_in_the_groups_chain_and_the_member_play
     assert living.snap.host == "127.0.0.1" and kitchen.snap.host == "living.local"
     view = kitchen.store.state.group
     assert [m["id"] for m in view["members"]] == ["living", "kitchen"] and view["leader"] == "living"
+
+
+async def test_a_player_with_the_equaliser_on_plays_earlier_by_what_it_holds(tmp_path):
+    """sofapi, 2026-10-28: with its equaliser on it played about 46 ms behind
+    the bar. Snapcast keeps the clients in time at the device each opens;
+    CamillaDSP's hold comes after it, so it is that client's latency, and
+    only that client's."""
+    from gexis_core import equaliser as eq
+    net = Net(tmp_path)
+    asked = []
+
+    def eq_on(rate):
+        asked.append(rate)
+        return eq.latency_ms(rate or 44100)
+    living = net.add("living", "Living Room", after_client=eq_on)
+    kitchen = net.add("kitchen", "Kitchen")
+    kitchen.play("spotify")
+    await net.settle()
+    await living.room.join("kitchen")
+    await net.settle()
+    assert living.snap.host == "127.0.0.1" and kitchen.snap.host == "living.local"
+    assert living.snap.latency == 46, "two chunks of 1024 at 44.1 kHz"
+    assert kitchen.snap.latency == 0
+    assert asked, "the leader's own client asked too"
 
 
 async def test_a_source_started_on_a_member_makes_it_the_leader_and_stops_the_old_ones(tmp_path):

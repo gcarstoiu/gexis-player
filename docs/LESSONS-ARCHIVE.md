@@ -1643,3 +1643,19 @@ lessons and the code for it; one program behaving as predicted does not make
 the rule. And before blaming the other end, look at where our own process
 writes - the device it holds open, not the name it logs.
 
+**85. A group tested with every member alike** (2026-10-28, Phase 22). In
+the evening, with sofapi leading the bar on Spotify, George heard the two
+rooms apart, and in time once he switched sofapi's equaliser off. Snapcast
+reported both clients connected, on the same stream, with no latency set on
+either. Snapcast keeps its clients in time at the device each opens; on
+sofapi that was the loopback in front of CamillaDSP, which then held each
+sample for a chunk and its target level (1024 + 1024 frames at 44.1 kHz,
+about 46 ms; the USB card's buffer read 1010-2001 frames), before the USB
+adapter and the optical DAC. The bar, equaliser off, played straight to its
+card. ADR-0166's D7 had left every client's latency to a measurement not yet
+made, so each was 0, and the earlier test of the equaliser in a group had it
+set alike on the members, where the delay is the same everywhere and
+nothing is heard.
+**Rule:** where a design keeps things in step, test it with the members
+different in what lies after the point it keeps in step - one with the
+equaliser, one without; one USB DAC, one on the board.

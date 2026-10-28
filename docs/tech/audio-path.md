@@ -680,7 +680,12 @@ leader's snapserver → network (FLAC, 32 bits) → each member's snapclient →
   none`: each player's level is its own control's, never Snapcast's. A card
   that cannot take 32 bits is asked for its widest (`--sampleformat *:24:*`
   or `*:16:*`; padding is undone exactly). The client lets its card go after
-  5 s without audio.
+  5 s without audio. **Its `--latency` is what follows it** (ADR-0166 D7 as
+  amended): Snapcast keeps clients in time at the device each opens, so a
+  player whose equaliser is on gets CamillaDSP's hold, two chunks at the
+  rate it plays to the card (about 46 ms at 44.1 kHz,
+  `equaliser.latency_ms`), and plays that much earlier; else 0. A card's own
+  delay is not counted.
 - **Lyrion in a group** of one Lyrion server: the leader keeps Lyrion's sync
   as the group is (`<leader> sync <member>`, and `<member> sync -` out), and
   switches every member's player on while Lyrion plays there. Each member's
