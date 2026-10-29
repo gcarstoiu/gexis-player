@@ -1,15 +1,16 @@
 # ADR-0168 — A plugin catalogue
 
-**Status:** **Proposed** 2026-10-29, for Phase 24 (`ph-plugin-catalogue`),
-brought forward that day before room correction (George). What a user and
-an author see and may do is George's to decide (*Owed*, seven questions);
-the technical shape is Claude's proposal. Builds on
+**Status:** **Accepted** 2026-10-29 (George: the seven questions as
+recommended, and no setting). Phase 24 (`ph-plugin-catalogue`), brought
+forward that day before room correction (George). What a user and an author
+see and may do is George's (*Decided*); the technical shape is Claude's
+proposal, confirmed or changed by the phase's measurements. Builds on
 [ADR-0106](0106-plugins-you-install-and-update.md) (uploaded plugins: the
 checks, the folder, the sandbox, the notice),
 [ADR-0108](0108-how-a-release-is-published-and-found.md) (a signed file a
 device trusts, with a serial that only increases) and
 [ADR-0086](0086-a-plugin-declares-itself-in-a-manifest.md) (the manifest).
-Once accepted it amends ADR-0106's *Not in this record*.
+It amends ADR-0106's *Not in this record*.
 
 ## Context
 
@@ -57,7 +58,7 @@ Once accepted it amends ADR-0106's *Not in this record*.
    player's code at a pinned commit, so that a listed plugin is one an
    upload would accept; the id is free and not one of ours; a listed
    version is only ever added, never changed.
-3. **Then read by a person** (Owed 2): the source at the version's tag
+3. **Then read by a person** (decision 2): the source at the version's tag
    against its summary, what it asks of the sandbox, and a name that does
    not pass for ours or for someone else's product.
 4. **Published signed.** After a merge, `publish.sh`, run locally as a
@@ -79,17 +80,16 @@ Once accepted it amends ADR-0106's *Not in this record*.
 6. **Settings → Plugins → More plugins** lists what suits this player - its
    contract, its release, aarch64 - each with its mark, name, summary,
    author, licence, source and the manifest's tag if it has one.
-7. **Install** shows a notice (Owed 6), downloads with the download row's
+7. **Install** shows a notice (decision 6), downloads with the download row's
    progress and Retry, checks the size and sha256, and hands the archive to
    `uploads.install`: the same checks, folder and sandbox as an upload. The
    plugin's row says *from the catalogue* instead of *uploaded*; it arrives
    off, and installing restarts the core, as an upload does (ADR-0106,
    decided).
-8. **Updates**: a newer listed version shows on the plugin's row (Owed 4);
+8. **Updates**: a newer listed version shows on the plugin's row (decision 4);
    the previous version stays for one step back. Only listed versions are
-   offered, so a player never installs bytes nobody read (if Owed 3 is
-   *every version*).
-9. **Withdrawn and blocked** (Owed 5): the catalogue can withdraw a version
+   offered, so a player never installs bytes nobody read (decision 3).
+9. **Withdrawn and blocked** (decision 5): the catalogue can withdraw a version
    or a plugin, with a reason. *Withdrawn*: not offered, and marked on the
    row of a player that has it. *Blocked*: also switched off on every player
    that has it, with the reason - for a plugin found to do harm.
@@ -109,42 +109,35 @@ Once accepted it amends ADR-0106's *Not in this record*.
     from the phone, an update to a second version, withdrawn, blocked, and a
     restore.
 
-## Owed (George)
+## Decided (George, 2026-10-29)
 
-1. **Other authors' plugins listed.** The catalogue lists plugins by other
-   authors once they pass the checks and a person's reading; listed means
-   checked, not made or vouched for. This lifts ADR-0106's "we do not list
-   other people's plugins". *Recommended: yes - it is what the phase is
-   for.*
-2. **Who merges a listing.** *Recommended: George, on a review note Claude
-   writes on each pull request*, as with release PRs. Or Claude merges once
-   the checks pass and the reading finds nothing, and tells George.
-3. **Every version read, or the plugin once.** *Recommended: every version*:
-   a player installs only listed versions, pinned by checksum, as ADR-0106
-   decided for ours. Or Lyrion's way: read once when listed, then each
-   version its author publishes reaches users unread - quicker for authors,
-   and a plugin can change after it was read.
-4. **Updates: a tap, or automatic.** *Recommended: a tap on the plugin's row
-   in this phase*; automatic, following *Updates: Automatic*, later if
-   wanted.
-5. **A withdrawn plugin on a player that has it.** *Recommended: the two
-   levels in 9* - withdrawn marks it, blocked also switches it off.
-6. **The notice before installing from the catalogue.** The upload's notice
-   is George's own wording. *Proposed:* "This plugin is not part of Gexis
+Asked one at a time; each answered as Claude recommended.
+
+1. **Other authors' plugins are listed** once they pass the checks and a
+   person's reading. Listed means checked, not made or vouched for by Gexis
+   Player. This lifts ADR-0106's "we do not list other people's plugins".
+2. **George merges a listing**, on a review note Claude writes on each pull
+   request, as with release PRs.
+3. **Every version is read**: each is its own pull request, pinned by its
+   checksum, and a player installs only listed versions. Not Lyrion's way
+   (read once, later versions unread).
+4. **An update is a tap on the plugin's row**; nothing updates by itself in
+   this phase.
+5. **Two levels when a plugin is pulled**: *withdrawn* is no longer offered
+   and is marked on the row of a player that has it, which keeps running it;
+   *blocked*, for a plugin found to do harm, is also switched off on every
+   player that has it, with the reason.
+6. **The notice before installing**: "This plugin is not part of Gexis
    Player. It was checked before it was listed, and is installed and run at
    your own risk and responsibility."
-7. **Where, and how it looks.** *Recommended: on the panel and the bars as
-   well as the phone* (installing needs no file picker), *built from the
-   Plugins page's own rows* - a row per plugin, the download row, the switch
-   - without a design round; or a brief for Claude Design first.
+7. **On the phone, the panel and the bars, built from the Plugins page's own
+   rows** (a row per plugin, the download row, the switch), without a design
+   round.
 
-## Settings (ADR-0022), to propose for the inventory
+## Settings (ADR-0022)
 
-Not appended until George confirms:
-- **[N] More plugins shown** (`plugins.catalogue`, on): off hides the
-  catalogue for an owner who wants only what ships.
-- **[?] Updates for catalogue plugins** (Manual / Automatic): only if Owed 4
-  chooses automatic.
+None. A switch to hide *More plugins* was offered and declined (George,
+2026-10-29): it is always there. With decision 4, no update setting either.
 
 ## Measured before it is called done
 

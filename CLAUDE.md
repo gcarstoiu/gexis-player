@@ -10,6 +10,8 @@ Custom high-fidelity music player distribution for Raspberry Pi 4.
   case: every entry is a mistake already made that looked like a normal
   result at the time. The full stories are in `docs/LESSONS-ARCHIVE.md`;
   a new lesson goes there in full and here as its rule.
+- `docs/BUILD-TRAPS.md` — before any build or release: what has gone wrong
+  building and releasing
 - `docs/ARCHITECTURE.md` — layer model and requirements
 - `docs/decisions/` — numbered ADRs, one per decision. Use
   `docs/decisions/README.md` as the index (one line each; longer summaries

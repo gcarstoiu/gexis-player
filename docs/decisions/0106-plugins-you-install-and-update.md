@@ -154,3 +154,11 @@ plugin is listed as *needs uploading again*, with its settings waiting.
   plugin runs as `gexis-uploaded-<kind>@<id>.service`
   (`core/src/gexis_core/uploads.py`; the templates in
   `image/stage-gexis/03-core/files/`, packaged by `packaging/core/build.sh`).
+
+## Amended 2026-10-29 (ADR-0168)
+
+*Not in this record*'s first point is lifted: a catalogue lists other
+authors' plugins once they pass its checks and a person's reading
+([ADR-0168](0168-a-plugin-catalogue.md), George). They install through this
+record's checks, folder and sandbox, after a notice of their own; listed
+means checked, not made or vouched for. Signing by authors stays out.
