@@ -546,7 +546,10 @@ pieces in code:
   `origin: catalogue` in `plugins-known.json` - so a restore installs it
   from the catalogue again. A *withdrawn* plugin is marked on its row; a
   *blocked* one is switched off at once (the core restarts once, so its row
-  says why) and its switch refuses to turn it on.
+  says why) and its switch refuses to turn it on (the registry's
+  `restrictions`, so the row says why and a write of on is a 409). A
+  release built without the key reads nothing and says `keyed: false`;
+  *More plugins* is not offered there.
 - **The Lyrion Server's network shares** (`lyrion_shares.py`, the
   `lyrion-server.shares` list row): each SMB or NFS share is mounted
   read-only under `/mnt/gexis-shares/`, with a 30 s limit per mount. One

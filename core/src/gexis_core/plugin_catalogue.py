@@ -353,6 +353,10 @@ class Service:
         async with self._lock:
             if older_than and self.checked and time.time() - self.checked < older_than:
                 return
+            if not self.keyed:
+                # A release built without the key has no catalogue to trust.
+                self.error = "this player has no catalogue key"
+                return
             try:
                 async with self._session() as session:
                     data, signature = await download(session, self.url)
@@ -366,9 +370,19 @@ class Service:
                 return
         await self.enforce()
 
+    @property
+    def keyed(self) -> bool:
+        return self.keyring.is_file()
+
     def blocked(self) -> dict[str, str]:
         mine = {k: v for k, v in self.installed().items() if k in self.from_catalogue()}
         return blocked(self.catalogue, mine)
+
+    def switch_unavailable(self, plugin_id: str) -> dict:
+        """What the plugin's switch cannot be set to (the registry's
+        `restrictions`): on, while it is blocked."""
+        why = self.blocked().get(plugin_id)
+        return {True: f"Blocked in the plugin catalogue, and switched off: {why.rstrip('.')}"} if why else {}
 
     async def enforce(self) -> list[str]:
         """Every blocked plugin from the catalogue, switched off."""
@@ -380,6 +394,9 @@ class Service:
 
     def view(self) -> dict:
         return {
+            #: False on a release built without the key: *More plugins* is
+            #: not offered there.
+            "keyed": self.keyed,
             "available": self.catalogue is not None,
             "serial": self.catalogue.serial if self.catalogue else None,
             "date": self.catalogue.date if self.catalogue else None,

@@ -2728,7 +2728,13 @@ async def main() -> None:
                       # ADR-0141 D2: a port with nothing on it cannot take the
                       # screen - greyed, with why, in the picker.
                       "screen_port": lambda: {_port_label(p.connector): "Nothing connected"
-                                              for p in screen_detect.ports() if not p.connected}},
+                                              for p in screen_detect.ports() if not p.connected},
+                      # ADR-0168 decision 5: a blocked plugin's switch does
+                      # not turn on, and says why.
+                      **{f"{plugin.id}.enabled":
+                         (lambda plugin_id=plugin.id: catalogue.switch_unavailable(plugin_id))
+                         for plugin in installed_plugins
+                         if plugin.catalogue and plugin.enabled_row is None}},
         options={
             "skin_corpus": skins_offered,
             # ADR-0055 §1: discovered, not written down. Re-read on every

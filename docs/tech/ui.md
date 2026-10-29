@@ -89,6 +89,16 @@ flowchart LR
   opens or Settings is left; a set the core refuses puts the copy back
   (2026-10-16, as the standby times do). Each tap used to wait for its
   write and a full reload, 0.4-0.65 s on sofapi.
+- **More plugins** (ADR-0168): Settings reads `GET /plugins/catalogue`
+  with every settings read - for the row on the Plugins page, shown only
+  while the core says `keyed`, and each plugin's *Update to …* - with
+  `?refresh=1` when the page opens, and every second while one of its
+  `jobs` runs or an install started here has not ended. That covers the
+  restart an install makes: the reads fail until the core is back, and the
+  install has ended once the core answers without the job and with the
+  version installed. Its page is a `.picker` over Settings, a tile per
+  listed plugin; the download is in the tile, and in the plugin's own row
+  on the Plugins page for an update or a restore's install.
 - **Settings' requests end** (George, 2026-10-12). One the player took but
   never answered used to leave a sheet spinning; Settings' requests now go
   through `ask()` in `lib/settings.js`, which aborts one

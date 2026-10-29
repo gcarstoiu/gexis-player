@@ -16,6 +16,7 @@ from aiohttp.test_utils import TestClient, TestServer
 
 from gexis_core import plugin_catalogue as pc
 from gexis_core import plugins, settings_registry, uploads
+from gexis_core.settings import SettingsStore
 from gexis_core.state import StateStore
 from gexis_core.wsserver import StateServer
 
@@ -275,6 +276,41 @@ async def test_a_failed_read_keeps_the_last_good_catalogue(key, tmp_path):
     await svc.refresh()
     view = svc.view()
     assert view["available"] and view["serial"] == 2 and "404" in view["error"]
+
+
+async def test_a_release_without_the_key_reads_nothing_and_says_so(key, tmp_path):
+    keyring, sign = key
+    cat = index(entry(listed(archive())))
+    served = {URL: cat, URL + ".sig": sign(cat)}
+    svc, _ = service(key, tmp_path, served)
+    svc.keyring = tmp_path / "none.gpg"
+    asked = []
+    svc.session = lambda: (asked.append(1), Session(served))[1]
+    await svc.refresh()
+    view = svc.view()
+    assert asked == [] and view["keyed"] is False and not view["available"]
+
+
+async def test_a_blocked_plugins_switch_refuses_on_with_the_reason(key, tmp_path):
+    keyring, sign = key
+    cat = index(entry(listed(archive(), blocked="It sends what it hears.")))
+    svc, _ = service(key, tmp_path, {URL: cat, URL + ".sig": sign(cat)},
+                     installed={"hello": "0.1.0"}, from_catalogue={"hello"})
+    assert svc.switch_unavailable("hello") == {}
+    await svc.refresh()
+    assert svc.switch_unavailable("hello") == {
+        True: "Blocked in the plugin catalogue, and switched off: It sends what it hears"}
+    base = plugins.parse({"id": "hello", "name": "Hello", "kind": "service",
+                          "unit": "gexis-uploaded-service@hello.service"})
+    from dataclasses import replace
+    registry = settings_registry.Settings.with_plugins(
+        settings_registry.load_registry(), [replace(base, uploaded=True, catalogue=True)])
+    settings = settings_registry.Settings(
+        SettingsStore(tmp_path / "s.db"), registry=registry, wired={"hello.enabled": None},
+        restrictions={"hello.enabled": lambda: svc.switch_unavailable("hello")})
+    with pytest.raises(settings_registry.Locked, match="It sends what it hears"):
+        settings.set("hello.enabled", True)
+    assert settings.set("hello.enabled", False) is False
 
 
 async def test_a_restore_installs_the_version_it_had_while_it_is_offered(key, tmp_path):

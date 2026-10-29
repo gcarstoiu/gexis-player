@@ -13394,11 +13394,16 @@
       "PluginCatalogue": {
         "type": "object",
         "required": [
+          "keyed",
           "available",
           "plugins",
           "jobs"
         ],
         "properties": {
+          "keyed": {
+            "type": "boolean",
+            "description": "Whether this release carries the catalogue key. Without it there is no catalogue, and More plugins is not offered."
+          },
           "available": {
             "type": "boolean",
             "description": "Whether this player has a catalogue it has verified."
