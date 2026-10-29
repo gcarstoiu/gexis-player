@@ -3530,7 +3530,10 @@ installs through the upload's checks and sandbox and offers listed updates.
    2026-10-29** on `ph-plugin-catalogue`, checked from mocked data on all
    three, not yet on a player (ADR-0168, *Built: the screens*).
 4. **The first listing**: the sample plugins from a repository of their own,
-   end to end.
+   end to end. **Under way 2026-10-29**: `gcarstoiu/gexis-sample-plugins`
+   public, listed by two pull requests that pass the check, for George to
+   merge; publishing and the test on a player wait for the catalogue key
+   (ADR-0168, *Built: the first listing*).
 5. **The public documents**: the manual, the FAQ, the technical guide, the
    plugin manual (how to get listed), the README.
 6. **A preview** on the test players, George's tests, then a release.
