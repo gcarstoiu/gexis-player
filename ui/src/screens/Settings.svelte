@@ -5167,6 +5167,13 @@
     padding: 16px;
     background: var(--bg-scrim);
   }
+  /* Inside the phone's remote (ADR-0164) Settings is one half of a track
+     slid by half its width, and a fixed dialog was centred on the track:
+     half off the screen, its title and Cancel out of reach (found
+     2026-10-29). There it covers Settings' own area instead. */
+  .settings.is-flat .ask {
+    position: absolute;
+  }
   .ask__card {
     width: min(560px, 100%);
     padding: 24px 22px 28px;
