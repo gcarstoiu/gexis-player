@@ -2059,7 +2059,7 @@ registry advertises.
 > unit), `docs/PLUGIN-CONTRACT.md` at version 1, and Findings 075-080.
 
 **Themes left this phase on 2026-09-25** (George): *"Themes to be cut out and
-have its own phase at the end of the current list."* They are **Phase 28** (`ph-themes`), and
+have its own phase at the end of the current list."* They are **Phase 25** (`ph-themes`), and
 he restated it on the day the phase closed: *"I stated before that themes are
 out and have their own phase at the end of the list."*
 
@@ -2179,7 +2179,7 @@ the exercise.
    extends to it, whether it ships in the image or installs on demand, and
    what it costs in memory and CPU on a Pi 4 that is already frame-limited.
    None of that is settled by adding it to this list.
-4. ~~Theme engine.~~ **Moved to Phase 28** (`ph-themes`; numbered 14 until 2026-10-13, 16 until 2026-10-14, 17 until 2026-10-15, 18 until 2026-10-19, 20 until 2026-10-20, 21 until 2026-10-21, 22 and 23 until 2026-10-25, 27 until 2026-10-26), 2026-09-25.
+4. ~~Theme engine.~~ **Moved to Phase 25** (`ph-themes`; numbered 14 until 2026-10-13, 16 until 2026-10-14, 17 until 2026-10-15, 18 until 2026-10-19, 20 until 2026-10-20, 21 until 2026-10-21, 22 and 23 until 2026-10-25, 27 until 2026-10-26, 28 until 2026-10-29), 2026-09-25.
 
 ### What closing this means, and what it deliberately does not
 
@@ -3492,9 +3492,91 @@ NQPTP built by us, the adapter in `gcarstoiu/gexis-airplay`.
 8. Measured: what it costs a Pi 4, playing and idle; an hour without a
    dropout on Wi-Fi.
 
-### Phase 24 — Room correction for the bass, with a USB microphone
+### Phase 24 — Plugin catalogue
 
-**ID:** `ph-room-correction` · numbered 24 on 2026-10-27, after multiroom and AirPlay 2 (George: no room correction can be tried yet); numbered 22 on 2026-10-26; 21 from 2026-10-25, 20 from 2026-10-24, 19 from 2026-10-21 (18 from 2026-10-19, 16 from 2026-10-15, 15 from 2026-10-14).
+**ID:** `ph-plugin-catalogue` · numbered 24 on 2026-10-29, brought forward before room correction with themes (George: room correction still cannot be auditioned); added 2026-10-25 as 25; numbered 26 on 2026-10-26.
+
+**Added 2026-10-25** (George, with AirPlay 2). An index on GitHub that the
+player lists, so a developer's plugin reaches users without waiting for a
+release (ADR-0106: plugins installed and updated today come with the release
+or as an uploaded file).
+
+**An ADR before anything is built.** It must settle: the index's format and
+how it is signed; what a plugin needs to be listed, and who checks it; how
+the player lists, installs and updates from it.
+
+**Started 2026-10-29** with its plan,
+[ADR-0168](decisions/0168-a-plugin-catalogue.md), proposed, seven questions
+owed to George. In short: a public repository, `gcarstoiu/gexis-plugins`,
+one file per plugin; listed by a pull request, checked (the upload's own
+checks among them) and then read by a person; published as a signed index
+with a key of its own; on the player, *More plugins* in Settings → Plugins
+installs through the upload's checks and sandbox and offers listed updates.
+
+**The plan, in order**, once the ADR is accepted:
+
+1. **The catalogue repository**: the entry's schema, the checks on a pull
+   request, the guide for authors, `publish.sh` and the catalogue key.
+2. **The core**: read and verify the index; install, update, withdraw and
+   restore through `uploads`.
+3. **The screens**: *More plugins* on the phone, the panel and the bars; the
+   plugin's row (from the catalogue, an update, withdrawn).
+4. **The first listing**: the sample plugins from a repository of their own,
+   end to end.
+5. **The public documents**: the manual, the FAQ, the technical guide, the
+   plugin manual (how to get listed), the README.
+6. **A preview** on the test players, George's tests, then a release.
+
+**Acceptance (draft, with the ADR)**
+
+1. An author's plugin is listed by a pull request; the checks refuse an
+   archive that differs from its checksum or that an upload would refuse.
+2. The player lists the plugins that suit it, on the phone, the panel and
+   the bars, and installs one with progress and Retry; it runs under the
+   upload's sandbox.
+3. A newer listed version is offered and installed; the previous one is kept
+   for one step back.
+4. A withdrawn plugin is marked; a blocked one is switched off, with the
+   reason.
+5. A bad signature, a lower serial or a changed archive installs nothing.
+6. After a restore, a plugin from the catalogue is installed from it again.
+7. The public documents are current, the plugin manual with how to get
+   listed.
+
+### Phase 25 — Themes
+
+**ID:** `ph-themes` · numbered 25 on 2026-10-29, brought forward before room correction with the plugin catalogue (George); 28 from 2026-10-26 (27 from 2026-10-25, 23 earlier that day, 22 from 2026-10-21, 21 from 2026-10-20, 20 from 2026-10-19, 18 from 2026-10-15, 17 from 2026-10-14, 16 from 2026-10-13; was 14).
+
+**Cut out of Phase 10 on 2026-09-25** (George): *"Themes to be cut out and have
+its own phase at the end of the current list."* It was that phase's criterion
+4, beside the plugin contract, and it has nothing to do with one: the contract
+is about processes and a theme is a set of values.
+
+**A decision is owed before anything is built.**
+[ADR-0016](decisions/0016-plugins-as-separate-processes.md) says plugins are
+**separate processes** and lists themes among the things plugins provide.
+**A theme has no process.** It is `ui/src/styles/tokens.css` — roughly forty
+CSS custom properties on `:root`, every value of which "appears in the design
+rather than being invented". So either ADR-0016 is amended, or "plugin" gains
+a class that ships data and never runs. Nothing here should be built until
+that is settled.
+
+**Acceptance**
+
+1. **The decision above**, as an ADR.
+2. **Theme engine.** The `theme` row already exists in ADR-0022's inventory,
+   `surfaced: false`, offering **Deep Teal / Faded 80s / Graphite** — Deep Teal
+   being what ships. Surfacing it is the visible half.
+3. **A theme is a set of token overrides, not a second stylesheet.** The
+   tokens file is the design's, copied rather than invented, and a theme that
+   forked it would drift from the design on the next export
+   (`docs/DEVELOPMENT.md`'s own rule: accuracy is checked against a picture).
+4. **The visualiser is not themed by this.** PeppyMeter skins are ADR-0051's
+   separate corpus with their own picker, and share no tokens with the panel.
+
+### Phase 26 — Room correction for the bass, with a USB microphone
+
+**ID:** `ph-room-correction` · numbered 26 on 2026-10-29, after the plugin catalogue and themes (George: it still cannot be auditioned); numbered 24 on 2026-10-27, after multiroom and AirPlay 2 (George: no room correction can be tried yet); numbered 22 on 2026-10-26; 21 from 2026-10-25, 20 from 2026-10-24, 19 from 2026-10-21 (18 from 2026-10-19, 16 from 2026-10-15, 15 from 2026-10-14).
 **Since 2026-10-25** it builds on Phase 20's filter stage (`ph-equaliser`):
 where the filter runs and what it changes are settled there, and this ADR
 starts from them.
@@ -3506,7 +3588,7 @@ around the listening seat, averaged** (3-5 within about half a metre of the
 head): below that frequency the response changes most from place to place,
 so one position would fit the microphone's spot and miss the listener's head.
 Mostly cuts, no deep boosts into nulls. The full range, with more positions
-and a target curve, is Phase 25 (`ph-room-correction-full`). Finding 124's
+and a target curve, is Phase 27 (`ph-room-correction-full`). Finding 124's
 first tier.
 
 **Added 2026-10-14** (George: *"let's add another phase about room
@@ -3555,12 +3637,12 @@ Pi, and the microphones (miniDSP UMIK-1 first).
 4. Every source plays through the correction with no audible gap or
    dropout, and the visualiser keeps working.
 
-### Phase 25 — Room correction for the full range
+### Phase 27 — Room correction for the full range
 
-**ID:** `ph-room-correction-full` · numbered 25 on 2026-10-27, after multiroom and AirPlay 2 (George: no room correction can be tried yet); added 2026-10-20 as 19, split from `ph-room-correction`; numbered 20 on 2026-10-21, 21 on 2026-10-24, 22 on 2026-10-25, 23 on 2026-10-26.
+**ID:** `ph-room-correction-full` · numbered 27 on 2026-10-29, with Phase 26; numbered 25 on 2026-10-27, after multiroom and AirPlay 2 (George: no room correction can be tried yet); added 2026-10-20 as 19, split from `ph-room-correction`; numbered 20 on 2026-10-21, 21 on 2026-10-24, 22 on 2026-10-25, 23 on 2026-10-26.
 
 **Added 2026-10-20** (George, splitting room correction in two). After the
-bass (Phase 24, `ph-room-correction`): correction above the Schroeder
+bass (Phase 26, `ph-room-correction`): correction above the Schroeder
 frequency, from **more positions across the listening area**, towards a
 target curve, and gentle - above the bass what is heard is mostly the
 speakers and their reflections, which the ear blends, and a correction of
@@ -3571,7 +3653,7 @@ tier: DRC-FIR first, then our own design after the Dirac paper and Carini).
 **An ADR before anything is built.** It must settle: how many positions and
 where; the target curve and how it is chosen; how much correction above the
 bass, smoothed how; whether the time-domain part comes in this phase or a
-later one; what it costs a Pi 4 beside Phase 24's filter.
+later one; what it costs a Pi 4 beside Phase 26's filter.
 
 **Acceptance (draft):**
 
@@ -3579,26 +3661,11 @@ later one; what it costs a Pi 4 beside Phase 24's filter.
    the response before and after, per position and averaged.
 2. The averaged response is measurably closer to the target than without,
    and no position is measurably worse - recorded as a finding.
-3. It builds on Phase 24's correction: on and off, A/B, one per output.
+3. It builds on Phase 26's correction: on and off, A/B, one per output.
 
-### Phase 26 — Plugin catalogue
+### Phase 28 — Internet radio without Lyrion
 
-**ID:** `ph-plugin-catalogue` · added 2026-10-25 as 25; numbered 26 on 2026-10-26.
-
-**Added 2026-10-25** (George, with AirPlay 2). An index on GitHub that the
-player lists, so a developer's plugin reaches users without waiting for a
-release (ADR-0106: plugins installed and updated today come with the release
-or as an uploaded file).
-
-**An ADR before anything is built.** It must settle: the index's format and
-how it is signed; what a plugin needs to be listed, and who checks it; how
-the player lists, installs and updates from it.
-
-**Acceptance:** drafted with its ADR.
-
-### Phase 27 — Internet radio without Lyrion
-
-**ID:** `ph-radio` · added 2026-10-25 as 26; numbered 27 on 2026-10-26.
+**ID:** `ph-radio` · numbered 28 on 2026-10-29 (the plugin catalogue and themes brought forward); added 2026-10-25 as 26; numbered 27 on 2026-10-26.
 
 **Added 2026-10-25** (George, with AirPlay 2; it was a Should idea). A radio
 directory for players that only stream, with no Lyrion server: today the
@@ -3609,37 +3676,6 @@ station plays and shows on Now Playing; favourites; how it sits beside
 Lyrion's Radio on a player that has both.
 
 **Acceptance:** drafted with its ADR.
-
-### Phase 28 — Themes
-
-**ID:** `ph-themes` · numbered 28 on 2026-10-26 (27 from 2026-10-25, 23 earlier that day, 22 from 2026-10-21, 21 from 2026-10-20, 20 from 2026-10-19, 18 from 2026-10-15, 17 from 2026-10-14, 16 from 2026-10-13; was 14).
-
-**Cut out of Phase 10 on 2026-09-25** (George): *"Themes to be cut out and have
-its own phase at the end of the current list."* It was that phase's criterion
-4, beside the plugin contract, and it has nothing to do with one: the contract
-is about processes and a theme is a set of values.
-
-**A decision is owed before anything is built.**
-[ADR-0016](decisions/0016-plugins-as-separate-processes.md) says plugins are
-**separate processes** and lists themes among the things plugins provide.
-**A theme has no process.** It is `ui/src/styles/tokens.css` — roughly forty
-CSS custom properties on `:root`, every value of which "appears in the design
-rather than being invented". So either ADR-0016 is amended, or "plugin" gains
-a class that ships data and never runs. Nothing here should be built until
-that is settled.
-
-**Acceptance**
-
-1. **The decision above**, as an ADR.
-2. **Theme engine.** The `theme` row already exists in ADR-0022's inventory,
-   `surfaced: false`, offering **Deep Teal / Faded 80s / Graphite** — Deep Teal
-   being what ships. Surfacing it is the visible half.
-3. **A theme is a set of token overrides, not a second stylesheet.** The
-   tokens file is the design's, copied rather than invented, and a theme that
-   forked it would drift from the design on the next export
-   (`docs/DEVELOPMENT.md`'s own rule: accuracy is checked against a picture).
-4. **The visualiser is not themed by this.** PeppyMeter skins are ADR-0051's
-   separate corpus with their own picker, and share no tokens with the panel.
 
 ### Phase 29 — The library answers for itself
 

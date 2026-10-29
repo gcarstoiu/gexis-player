@@ -1,7 +1,7 @@
-# Brief for Claude Design — Themes (Phase 28)
+# Brief for Claude Design — Themes (Phase 25)
 
 Written 2026-10-28 for George to hand to Claude Design, to draw several
-themes from. Background, if you want it: `docs/DEVELOPMENT.md`, Phase 28
+themes from. Background, if you want it: `docs/DEVELOPMENT.md`, Phase 25
 (`ph-themes`); how a theme ships and is chosen is decided in its ADR, after
 these designs.
 
@@ -101,5 +101,5 @@ as its own piece of work, not a swap of values.
 ## Not for this round
 
 How themes ship (built in, or a file a user adds), how one is chosen in
-Settings, and how many there are: decided in Phase 28's ADR once the designs
+Settings, and how many there are: decided in Phase 25's ADR once the designs
 are in.

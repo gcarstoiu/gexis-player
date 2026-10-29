@@ -266,8 +266,8 @@ Rough, and subject to change:
   card. A ten-band equaliser with presets and your own settings. The phone as
   a remote, with a touchpad or a D-pad for the screen. Multiroom for every
   source. AirPlay 2 from an iPhone, iPad or Mac.
-- 🔜 **Next:** room correction with a USB microphone.
-- 🎨 **Later:** room correction for the full range; a plugin catalogue, internet radio without a Lyrion server, themes. With Plex switched on, your own Plex server fills in
+- 🔜 **Next:** a plugin catalogue, then themes.
+- 🎨 **Later:** room correction with a USB microphone, for the bass and then the full range; internet radio without a Lyrion server. With Plex switched on, your own Plex server fills in
   the artist and album information other sources leave out.
 - 💭 **Maybe:** the DAC's own filter and polarity options.
 
