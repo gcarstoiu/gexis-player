@@ -3523,7 +3523,8 @@ installs through the upload's checks and sandbox and offers listed updates.
    **Done 2026-10-29** except the key, which waits for George:
    `gcarstoiu/gexis-plugins`, public, GPL-3.0-or-later (ADR-0168, *Built*).
 2. **The core**: read and verify the index; install, update, withdraw and
-   restore through `uploads`.
+   restore through `uploads`. **Built 2026-10-29** on `ph-plugin-catalogue`,
+   not yet run on a player (ADR-0168, *Built: the player's side*).
 3. **The screens**: *More plugins* on the phone, the panel and the bars; the
    plugin's row (from the catalogue, an update, withdrawn).
 4. **The first listing**: the sample plugins from a repository of their own,

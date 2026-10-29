@@ -522,8 +522,12 @@ two pages side by side. Settings is `Settings.svelte` with
 `switcher={false}` and `flat` (its pages, choosers and the equaliser editor
 on the modals' solid `--bg-panel`, no weave or veil), mounted on its first
 visit; while it shows, the remote's own `--bg-panel` layer fades in over its
-background, behind the top bar too. During setup, first use and
-*Personalise*, `FirstUsePage` takes the page instead, as before.
+background, behind the top bar too. The two pages are one track slid by
+half its width, so nothing inside Settings may be `position: fixed`: its
+confirm, its progress card and the update dialog are `absolute` there
+(`.settings.is-flat`), over Settings' own area, as its sheets are (found
+2026-10-29: fixed, they sat half off the screen). During setup, first use
+and *Personalise*, `FirstUsePage` takes the page instead, as before.
 
 The Remote page, **with a screen** (`RemoteScreen.svelte`): the cover
 (`RemoteCover.svelte`: the renderer's or the core's found one, else the

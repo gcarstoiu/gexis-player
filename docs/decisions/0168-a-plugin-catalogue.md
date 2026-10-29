@@ -150,6 +150,29 @@ throwaway key, and a changed file failed its signature. **The catalogue key
 waits for George** (asked the same day: not yet); until it exists nothing
 is published. Not yet run: the check on a real pull request (plan step 4).
 
+## Built: the player's side (plan step 2, 2026-10-29)
+
+On `ph-plugin-catalogue`: `core/src/gexis_core/plugin_catalogue.py` and
+`GET /plugins/catalogue` (`?refresh=1`), `POST /plugins/catalogue/install`.
+Proposals 5-10 as written, with these settled in building:
+- **A version's age is its place in the list**, newest last; the
+  catalogue's check refuses a new version put before a listed one.
+- **A plugin uploaded here under a listed id** shows as *uploaded* and is
+  not replaced from the catalogue; an upload over a catalogue plugin makes
+  it an upload.
+- **Blocked during a run**: switched off at once, and the core restarted
+  once so the row says why; its switch refuses to turn it on.
+- **After a restore**, one plugin a start is installed again, since each
+  install restarts the core.
+- **The key**: the core package carries `gexis-catalogue.gpg` only once
+  `packaging/keys/gexis-catalogue.asc` exists; without it there is no
+  catalogue on the player.
+Shown: 19 tests (a real key, gpgv as on the device; the network faked),
+two of them seen to fail with the serial check or the checksum check
+removed; the suite, 2,837 passed. **Not yet run on a player**, nor the
+start-up wiring in `__main__.py` (the blocked switch-off before uploaded
+plugins start, the refused switch), which no unit test reaches.
+
 ## Settings (ADR-0022)
 
 None. A switch to hide *More plugins* was offered and declined (George,
