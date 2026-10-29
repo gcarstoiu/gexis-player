@@ -11,8 +11,10 @@ takes you from an empty folder to a plugin installed from a phone.
   (uploads and the sandbox), [ADR-0086](decisions/0086-a-plugin-declares-itself-in-a-manifest.md)
   (the manifest), [ADR-0088](decisions/0088-a-plugins-settings-reach-its-unit-as-environment.md)
   (settings as environment).
-- **Two working examples** are in the repository: `tools/sample-plugin/` (a
-  service) and `tools/sample-renderer/` (a renderer that plays a tone).
+- **Two working examples** are in
+  [gexis-sample-plugins](https://github.com/gcarstoiu/gexis-sample-plugins):
+  `hello/` (a service) and `tone/` (a renderer that plays a tone), each
+  published as the plugin catalogue lists a plugin.
 
 **A plugin you upload is not part of Gexis Player.** The person who installs it
 is told so, and that it runs at their own risk and responsibility. What the
@@ -92,7 +94,9 @@ Things that follow from this:
 - **A program that expects `$HOME`** should be given one there:
   `export HOME=$STATE_DIRECTORY`.
 - **A program that wants a config file** writes it into `$STATE_DIRECTORY`
-  at start. `tools/sample-renderer/tone.py` shows the shape.
+  at start. The sample renderer's
+  [`tone.py`](https://github.com/gcarstoiu/gexis-sample-plugins/blob/main/tone/tone.py)
+  shows the shape.
 
 ## 4. Talking to the player
 
@@ -196,9 +200,11 @@ volume of its own that the core does not manage, hold it at full level while
 `fixed` is true - otherwise its slider would still lower the sound on a
 player whose owner set the level on the amplifier (ADR-0137).
 
-`tools/sample-renderer/` is a complete renderer in about a hundred lines of
-Python: it plays a generated tone through `output` when the panel's button is
-pressed, and stops when another source takes over.
+The sample renderer,
+[`tone/`](https://github.com/gcarstoiu/gexis-sample-plugins/tree/main/tone),
+is a complete renderer in about a hundred lines of Python: it plays a
+generated tone through `output` when the panel's button is pressed, and stops
+when another source takes over.
 
 ### What a real renderer taught us
 
@@ -341,5 +347,7 @@ sudo ls -la /var/lib/gexis/plugins/hello/         # versions and `current`
 - **No sound from a renderer**: you opened a card by number or `default`
   instead of `output`, or you did not send `acquire` first.
 
-`tools/sample-plugin/hello.py` prints what the sandbox allows and refuses when
-it starts, which is a quick way to see the environment for yourself.
+The sample service,
+[`hello/hello.py`](https://github.com/gcarstoiu/gexis-sample-plugins/blob/main/hello/hello.py),
+prints what the sandbox allows and refuses when it starts, which is a quick
+way to see the environment for yourself.
