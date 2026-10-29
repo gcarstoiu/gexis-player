@@ -3526,7 +3526,9 @@ installs through the upload's checks and sandbox and offers listed updates.
    restore through `uploads`. **Built 2026-10-29** on `ph-plugin-catalogue`,
    not yet run on a player (ADR-0168, *Built: the player's side*).
 3. **The screens**: *More plugins* on the phone, the panel and the bars; the
-   plugin's row (from the catalogue, an update, withdrawn).
+   plugin's row (from the catalogue, an update, withdrawn). **Built
+   2026-10-29** on `ph-plugin-catalogue`, checked from mocked data on all
+   three, not yet on a player (ADR-0168, *Built: the screens*).
 4. **The first listing**: the sample plugins from a repository of their own,
    end to end.
 5. **The public documents**: the manual, the FAQ, the technical guide, the

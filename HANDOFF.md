@@ -44,11 +44,17 @@ cannot be auditioned (George, 2026-10-29).
 (George's seven answers, each as recommended; no setting). Plan step 1
 done: `gcarstoiu/gexis-plugins` public, GPL-3.0-or-later (local copy
 `~/projects/gexis-plugins`; ADR-0168, *Built*). **The catalogue key waits
-for George** (not yet, 2026-10-29); nothing is published before it. Step
-2, the core, built on `ph-plugin-catalogue` (worktree
-`~/projects/gexis-player-ph-plugin-catalogue`), not yet on a player. Next:
-step 3, the screens. The wiki Roadmap
-shows the new order (pushed 2026-10-29 with George's OK).
+for George** (not yet, 2026-10-29); nothing is published before it. Steps
+2 and 3, the core and the screens, built on `ph-plugin-catalogue` (worktree
+`~/projects/gexis-player-ph-plugin-catalogue`), checked from mocked data
+(`~/projects/scratch/ph24`: `run.sh` with `catalogue_layout.py` and
+`shots.py`), not yet on a player. Step 3's choices wait for George
+(ADR-0168, *Built: the screens*). Next: step 4, the first listing. The wiki
+Roadmap shows the new order (pushed 2026-10-29 with George's OK).
+**Found in step 3, fixed apart**: on a phone the confirm, its progress card
+and the update dialog sat half off the screen (since 1.7.0); branch
+`fix-remote-dialogs` (worktree `~/projects/gexis-player-fix-remote-dialogs`),
+merged into the phase branch, into `next` after George's test.
 
 **Phase 23, AirPlay 2** (`ph-airplay`), in 1.9.0 and 1.9.1 on Testing,
 marked *Limited testing* (no Apple device yet).
