@@ -544,7 +544,8 @@ pieces in code:
   its lowest release), refuses an archive that is not the listed one (size,
   sha256), and installs it as an upload (`uploads.install`), recording
   `origin: catalogue` in `plugins-known.json` - so a restore installs it
-  from the catalogue again. A *withdrawn* plugin is marked on its row; a
+  from the catalogue again: every such plugin downloaded and installed in
+  turn, then the core restarted once. A *withdrawn* plugin is marked on its row; a
   *blocked* one is switched off at once (the core restarts once, so its row
   says why) and its switch refuses to turn it on (the registry's
   `restrictions`, so the row says why and a write of on is a 409). A

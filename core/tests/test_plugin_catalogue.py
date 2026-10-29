@@ -198,18 +198,22 @@ async def test_only_the_listed_archive_is_taken():
 
 def service(key, tmp_path, served, *, installed=None, from_catalogue=None):
     keyring, sign = key
-    calls = {"installed": [], "off": []}
+    calls = {"installed": [], "off": [], "restarted": 0, "restart_with": []}
 
-    async def install_archive(archive_bytes, plugin_id):
+    async def install_archive(archive_bytes, plugin_id, restart):
         calls["installed"].append((plugin_id, hashlib.sha256(archive_bytes).hexdigest()))
+        calls["restart_with"].append(restart)
         return {"installed": plugin_id}
 
     async def switch_off(plugin_id, why):
         calls["off"].append((plugin_id, why))
 
+    async def restart_core():
+        calls["restarted"] += 1
+
     svc = pc.Service(release=lambda: "1.9.1", installed=lambda: dict(installed or {}),
                      from_catalogue=lambda: set(from_catalogue or ()), ours={"spotify"},
-                     install_archive=install_archive, switch_off=switch_off,
+                     install_archive=install_archive, switch_off=switch_off, restart_core=restart_core,
                      keyring=keyring, state=tmp_path, url=URL, session=lambda: Session(served))
     return svc, calls
 
@@ -226,6 +230,8 @@ async def test_install_downloads_checks_and_hands_the_archive_on(key, tmp_path):
             break
         await asyncio.sleep(0.01)
     assert job.phase == "installed" and calls["installed"] == [("hello", hashlib.sha256(data).hexdigest())]
+    # One install restarts the core itself (ADR-0106).
+    assert calls["restart_with"] == [True] and calls["restarted"] == 0
 
 
 async def test_an_archive_that_is_not_the_listed_one_fails_and_installs_nothing(key, tmp_path):
@@ -320,14 +326,36 @@ async def test_a_restore_installs_the_version_it_had_while_it_is_offered(key, tm
     served = {URL: cat, URL + ".sig": sign(cat), listed(a)["url"]: a, listed(b, "0.2.0")["url"]: b}
     svc, _ = service(key, tmp_path, served)
     await svc.refresh()
-    assert svc.restore([{"id": "hello", "version": "0.1.0"}]) == "hello"
+    assert await svc.restore([{"id": "hello", "version": "0.1.0"}]) == ["hello"]
     assert svc.jobs["hello"].version == "0.1.0"
     withdrawn = index(entry(listed(a, withdrawn="broken"), listed(b, "0.2.0")), serial=2)
     served.update({URL: withdrawn, URL + ".sig": sign(withdrawn)})
     other, _ = service(key, tmp_path, served)
     await other.refresh()
-    other.restore([{"id": "hello", "version": "0.1.0"}])
+    await other.restore([{"id": "hello", "version": "0.1.0"}])
     assert other.jobs["hello"].version == "0.2.0"
+
+
+async def test_a_restore_installs_them_all_then_restarts_once(key, tmp_path):
+    keyring, sign = key
+    found = {pid: archive(plugin_id=pid) for pid in ("hello", "tone", "gone")}
+    versions = {pid: listed(data, url=f"https://github.com/someone/hello/releases/download/v1/{pid}.tar.gz")
+                for pid, data in found.items()}
+    cat = index(*(entry(v, plugin_id=pid) for pid, v in versions.items()))
+    served = {URL: cat, URL + ".sig": sign(cat), versions["hello"]["url"]: found["hello"],
+              versions["tone"]["url"]: found["tone"]}
+    svc, calls = service(key, tmp_path, served)
+    await svc.refresh()
+    missing = [{"id": pid, "version": "0.1.0"} for pid in ("hello", "gone", "tone")]
+    # "gone" cannot be downloaded: the others are installed all the same.
+    assert await svc.restore(missing) == ["hello", "tone"]
+    assert [pid for pid, _ in calls["installed"]] == ["hello", "tone"]
+    assert calls["restart_with"] == [False, False] and calls["restarted"] == 1
+    assert svc.jobs["gone"].phase == "failed"
+    # Nothing installed, nothing restarted.
+    again, calls = service(key, tmp_path, {URL: cat, URL + ".sig": sign(cat)})
+    await again.refresh()
+    assert await again.restore(missing) == [] and calls["restarted"] == 0
 
 
 # Where it came from

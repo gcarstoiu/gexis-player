@@ -323,14 +323,17 @@ class Service:
     from_catalogue: Callable[[], set[str]]
     #: The player's own plugin ids: never shown, never shadowed.
     ours: set[str]
-    #: Install a checked archive as `id`; restarts the core (ADR-0106).
-    install_archive: Callable[[bytes, str], Awaitable[dict]]
+    #: Install a checked archive as `id`, then restart the core unless told
+    #: not to (ADR-0106): (archive, id, restart).
+    install_archive: Callable[[bytes, str, bool], Awaitable[dict]]
     #: Switch a plugin off because it is blocked: (id, why).
     switch_off: Callable[[str, str], Awaitable[None]]
     keyring: Path = KEYRING
     state: Path = STATE
     url: str = URL
     session: Callable[[], aiohttp.ClientSession] | None = None
+    #: Restart the core once after installs that did not.
+    restart_core: Callable[[], Awaitable[None]] | None = None
     catalogue: Catalogue | None = None
     checked: float | None = None
     error: str | None = None
@@ -410,6 +413,14 @@ class Service:
     def start_install(self, plugin_id: str, version: dict | None = None) -> Job:
         """Begin installing `version`, else the one offered for `plugin_id`,
         or say why not."""
+        job, version, running = self._job(plugin_id, version)
+        if not running:
+            asyncio.ensure_future(self._install(job, version))
+        return job
+
+    def _job(self, plugin_id: str, version: dict | None) -> tuple[Job, dict, bool]:
+        """The job for an install, a new one unless one is under way; or
+        `Unavailable` for why there is none."""
         entry = self.catalogue.entry(plugin_id) if self.catalogue else None
         if entry is None or plugin_id in self.ours:
             raise Unavailable(f"{plugin_id} is not in the catalogue")
@@ -423,34 +434,36 @@ class Service:
             raise Unavailable(f"{plugin_id} {here} is already installed")
         running = self.jobs.get(plugin_id)
         if running and running.phase in ("downloading", "installing"):
-            return running
+            return running, version, True
         job = Job(plugin_id, version["version"], total=version["size"])
         self.jobs[plugin_id] = job
-        asyncio.ensure_future(self._install(job, version))
-        return job
+        return job, version, False
 
-    async def _install(self, job: Job, version: dict) -> None:
+    async def _install(self, job: Job, version: dict, *, restart: bool = True) -> bool:
         def progress(done: int, total: int) -> None:
             job.done, job.total = done, total
         try:
             async with self._session() as session:
                 archive = await fetch_archive(session, version, progress)
             job.phase = "installing"
-            await self.install_archive(archive, job.plugin_id)
+            await self.install_archive(archive, job.plugin_id, restart)
             job.phase = "installed"
+            return True
         except (Unavailable, uploads.Refused) as exc:
             job.phase, job.error = "failed", str(exc)
             logger.warning("catalogue: %s %s not installed: %s", job.plugin_id, job.version, exc)
         except Exception as exc:  # noqa: BLE001 - the row says it failed, whatever the cause
             job.phase, job.error = "failed", "it could not be installed"
             logger.exception("catalogue: %s %s not installed: %s", job.plugin_id, job.version, exc)
+        return False
 
-    def restore(self, missing: list[dict]) -> str | None:
-        """After a restore, a plugin from the catalogue is installed from it
-        again (ADR-0168): the version it had if still offered to this player,
-        else the newest. One a start - each install restarts the core, and
-        the next start goes on with the rest."""
+    async def restore(self, missing: list[dict]) -> list[str]:
+        """After a restore, the plugins from the catalogue are installed from
+        it again (ADR-0168): each the version it had if still offered to this
+        player, else the newest. All in one go (George, 2026-10-29): each
+        downloaded and installed in turn, then the core restarted once."""
         release = self.release()
+        todo = []
         for gone in missing:
             entry = self.catalogue.entry(gone["id"]) if self.catalogue else None
             if entry is None or pulled(entry):
@@ -462,13 +475,20 @@ class Service:
             if version is None:
                 continue
             try:
-                self.start_install(gone["id"], version)
+                job, version, running = self._job(gone["id"], version)
             except Unavailable as exc:
                 logger.warning("catalogue: %s not installed again: %s", gone["id"], exc)
                 continue
-            logger.info("catalogue: %s %s installed again after a restore", gone["id"], version["version"])
-            return gone["id"]
-        return None
+            if not running:
+                todo.append((job, version))
+        done = []
+        for job, version in todo:
+            if await self._install(job, version, restart=False):
+                logger.info("catalogue: %s %s installed again after a restore", job.plugin_id, job.version)
+                done.append(job.plugin_id)
+        if done and self.restart_core:
+            await self.restart_core()
+        return done
 
     async def run(self, *, first_delay: float = 60, restore: list[dict] | None = None) -> None:
         """Read it a minute after the start, then once a day; after a
@@ -476,7 +496,7 @@ class Service:
         await asyncio.sleep(20 if restore else first_delay)
         await self.refresh()
         if restore:
-            self.restore(restore)
+            await self.restore(restore)
         while True:
             await asyncio.sleep(EVERY_S)
             await self.refresh()

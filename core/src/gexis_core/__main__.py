@@ -797,8 +797,9 @@ async def main() -> None:
         installed=uploads.versions,
         from_catalogue=lambda: {k for k, v in uploads.origins().items() if v == uploads.CATALOGUE},
         ours=shipped_ids,
-        install_archive=lambda archive, plugin_id: _install_from_catalogue(archive, plugin_id),
+        install_archive=lambda archive, plugin_id, restart: _install_from_catalogue(archive, plugin_id, restart),
         switch_off=lambda plugin_id, why: _switch_off_blocked(plugin_id, why),
+        restart_core=lambda: _restart_core_soon(),
     )
     installed_plugins = [
         replace(p, pulled=plugin_catalogue.pulled_for(catalogue.catalogue, p.id, p.version)) if p.catalogue else p
@@ -4366,7 +4367,7 @@ async def main() -> None:
         await asyncio.sleep(1.5)
         await asyncio.create_subprocess_exec("systemctl", "restart", "gexis-core")
 
-    async def _upload_plugin(archive: bytes, origin: str | None = None) -> dict:
+    async def _upload_plugin(archive: bytes, origin: str | None = None, restart: bool = True) -> dict:
         checked = await asyncio.to_thread(uploads.install, archive, ours=shipped_ids)
         # ADR-0168: where it came from, for its row and for a restore. An
         # upload of a plugin first installed from the catalogue is an upload.
@@ -4378,7 +4379,8 @@ async def main() -> None:
         # never starts a plugin.
         unit = uploads.unit_for(checked.id, checked.kind)
         await restart_if_enabled(unit)
-        asyncio.ensure_future(_restart_core_soon())
+        if restart:
+            asyncio.ensure_future(_restart_core_soon())
         # What the page tells the user: a first install arrives off; an update
         # keeps the switch as it was (George, 2026-09-30: the page said
         # "switched off" of an update that was running).
@@ -4387,13 +4389,14 @@ async def main() -> None:
                 "enabled": await asyncio.to_thread(_unit_is_enabled, unit),
                 "restarting": True}
 
-    async def _install_from_catalogue(archive: bytes, plugin_id: str) -> dict:
+    async def _install_from_catalogue(archive: bytes, plugin_id: str, restart: bool = True) -> dict:
         """ADR-0168: a listed archive, checked as an upload is and installed
-        the same way; only its record says where it came from."""
+        the same way; only its record says where it came from. A restore
+        installs several, then restarts once."""
         checked = await asyncio.to_thread(uploads.check, archive, ours=shipped_ids, installed=uploads.versions())
         if checked.id != plugin_id:
             raise uploads.Refused(f"the archive is {checked.id}, not {plugin_id}")
-        return await _upload_plugin(archive, origin=uploads.CATALOGUE)
+        return await _upload_plugin(archive, origin=uploads.CATALOGUE, restart=restart)
 
     #: One restart however many plugins a read of the catalogue blocks.
     block_restart = {"scheduled": False}
