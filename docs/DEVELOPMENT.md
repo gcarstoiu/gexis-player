@@ -3506,14 +3506,17 @@ how it is signed; what a plugin needs to be listed, and who checks it; how
 the player lists, installs and updates from it.
 
 **Started 2026-10-29** with its plan,
-[ADR-0168](decisions/0168-a-plugin-catalogue.md), proposed, seven questions
-owed to George. In short: a public repository, `gcarstoiu/gexis-plugins`,
+[ADR-0168](decisions/0168-a-plugin-catalogue.md), **accepted the same day**
+(George: the seven questions as recommended - other authors' plugins listed,
+George merges each listing, every version read, updates by a tap, withdrawn
+and blocked, the notice, everywhere from the existing rows - and no setting).
+In short: a public repository, `gcarstoiu/gexis-plugins`,
 one file per plugin; listed by a pull request, checked (the upload's own
 checks among them) and then read by a person; published as a signed index
 with a key of its own; on the player, *More plugins* in Settings → Plugins
 installs through the upload's checks and sandbox and offers listed updates.
 
-**The plan, in order**, once the ADR is accepted:
+**The plan, in order:**
 
 1. **The catalogue repository**: the entry's schema, the checks on a pull
    request, the guide for authors, `publish.sh` and the catalogue key.

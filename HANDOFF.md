@@ -40,10 +40,11 @@ image build, about 1.7 GB at a build's peak; check `df -h /` before one
 **Now: Phase 24, the plugin catalogue** (`ph-plugin-catalogue`), brought
 forward with themes (25) before room correction (now 26 and 27), which still
 cannot be auditioned (George, 2026-10-29).
-[ADR-0168](docs/decisions/0168-a-plugin-catalogue.md) proposed the same day,
-seven questions for George (to-do `ph24-decisions`); nothing is built before
-it is accepted. The wiki Roadmap in the new order is drafted in
-`~/projects/scratch/gexis-wiki`, not pushed until George has seen it.
+[ADR-0168](docs/decisions/0168-a-plugin-catalogue.md) accepted the same day
+(George's seven answers, each as recommended; no setting). Next: plan step 1,
+the catalogue repository (`docs/DEVELOPMENT.md`, Phase 24). The wiki Roadmap
+in the new order is committed nowhere yet: George agreed, the safety check
+refused Claude's push; it waits in `~/projects/scratch/gexis-wiki`.
 
 **Phase 23, AirPlay 2** (`ph-airplay`), in 1.9.0 and 1.9.1 on Testing,
 marked *Limited testing* (no Apple device yet).
@@ -150,46 +151,8 @@ MPD parked. `docs/DEVELOPMENT.md` holds each phase's acceptance criteria.
 
 The full list, with how each was found, is in the archive (2026-10-12 block).
 
-- **The release tag goes on the release-notes commit, nothing after it**
-  (1.4.0, 2026-10-22): a package's version is the last commit that touched it,
-  and the notes are core's last change - a documents fix committed after them
-  and tagged built core as `1.3.1+git67`. A fix found after the notes goes in
-  *before* them (reorder the unpushed commits), then the tag.
-- **A cancelled run blocks the release PR** (1.5.0, 2026-10-24): pushing
-  `next` again cancels the run on the release commit, and `main`'s ruleset
-  counts a cancelled *Core tests* as failed, though the PR's own run passed.
-  Re-run it (`gh run rerun <id>`), or push `next` once.
-
-**Building**
-- **Clear space with `make prune`, never `make clean`**: `clean` destroys the
-  warm pi-gen stages (~9 GB; a cold build is ~40 min against ~15).
-- **Never `docker start pigen_work`** - it starts a build. Read its volumes
-  with a throwaway `docker run --rm --volumes-from pigen_work ...`.
-- **Do not edit `core/`, `ui/dist`, `skins` or `stage-gexis` while an image
-  builds**: they are bind-mounted live, and the `.info` would name a commit
-  the image does not hold.
-- **If the copy-out dies after a finished build, `make fetch-deploy`**
-  recovers the image; an interrupted copy can truncate an older file in
-  `deploy/` - check sizes.
-- **Deleting a stage does not delete what it installed** until
-  `stage-gexis`'s work directory is cleared (LESSONS 45).
-- **A pinned package can vanish from the archive** (`alsa-lib`, ADR-0021):
-  `make image` then stops at `00-alsa`; read the archive's own `Packages`
-  index before changing anything.
-- **Package versions take 7 hex characters** (`build.sh --abbrev=7`); a
-  history rewrite after previews makes dpkg see a downgrade - put a preview
-  device back with `apt-get install --allow-downgrades`, dry run first.
-
-**Releasing**
-- **Run `verify-image.sh` from the release worktree**: from the main checkout it
-  compares against code the release does not carry (0.11.0: five false fails).
-- **A skin pack whose version did not change ships the published file**
-  (1.4.0): a rebuilt archive with the same files differs in bytes, and the
-  repository refuses one version with two contents. Copy the published debs
-  from the release that built them (for 1.4.0, `out/r1.3.0/repos/skins-*/`)
-  into the release's `packaging/out` before `publish.sh`.
-- **GitHub caches `channels/<name>` for minutes after a publish**: verify the
-  new file with `gh release download channels`, not the public URL.
+- **Building or releasing: read `docs/BUILD-TRAPS.md` first** (moved
+  there from here, 2026-10-29).
 
 **On the players**
 - **DSD silence is the byte `0x69`**, not zero; never play `/dev/urandom` or
