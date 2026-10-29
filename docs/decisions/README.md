@@ -188,6 +188,7 @@ been written properly. **0098 has no record either.**
 | [0165](0165-mute-with-fixed-output.md) | Mute with fixed output | Built 2026-10-27, in 1.7.0 (Phase 21): mute silences an output with a control of its own; none where it has no control; amends 0018 and 0046 |
 | [0166](0166-multiroom-for-every-source.md) | Multiroom for every source | Accepted 2026-10-27 (Phase 22; George's nine answers, Claude's C1-C6 confirmed): one group, Lyrion's sync for Lyrion, Snapcast for the rest; amended 2026-10-28 (Lyrion's syncs are Gexis groups; the design; D1 per Finding 139) |
 | [0167](0167-airplay-2-as-a-plugin.md) | AirPlay 2 as a plugin | Accepted 2026-10-28 (Phase 23; George's eight answers, off for an updating player, released marked *Limited testing* until tried with an Apple device): Shairport Sync 5.6.2 and NQPTP 1.2.9 built by us, an adapter in `gcarstoiu/gexis-airplay`; on in first use; controls once measured |
+| [0168](0168-a-plugin-catalogue.md) | A plugin catalogue | Proposed 2026-10-29 (Phase 24; seven questions owed to George): `gcarstoiu/gexis-plugins`, listed by pull request with the upload's checks, every version pinned by checksum, a signed index with its own key; *More plugins* installs through the upload's sandbox |
 
 ## Cross-cutting rules
 
