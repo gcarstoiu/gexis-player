@@ -31,8 +31,10 @@ image`.
 **Before the next Stable promotion, remind George** (his request,
 2026-10-28; to-do `ph22-eq-check`): a group heard in sync with the
 equaliser on at one player only. 1.8.0 plays such a player about 46 ms late
-(lesson 85); the fix, `c913bdc6`, is in 1.9.0 and 1.9.1 (not yet heard): promote
-1.9.1, not 1.8.0, once it is heard. The four players run it now.
+(lesson 85); the fix, `c913bdc6`, is in 1.9.0 and 1.9.1 (not yet heard).
+**Stable waits for the catalogue's release** (George, 2026-10-29): the
+promotion comes after it, heard then, in one session with the two
+measurements (to-dos `ph22-measure`, `eq-measure`).
 **R2D2's `/` fills up**: Docker's containerd store keeps images on `/`, not
 in `/home/docker`, and pi-gen rebuilds its 1.16 GB build image on every
 image build, about 1.7 GB at a build's peak; check `df -h /` before one
@@ -43,22 +45,37 @@ cannot be auditioned (George, 2026-10-29).
 [ADR-0168](docs/decisions/0168-a-plugin-catalogue.md) accepted the same day
 (George's seven answers, each as recommended; no setting). Plan step 1
 done: `gcarstoiu/gexis-plugins` public, GPL-3.0-or-later (local copy
-`~/projects/gexis-plugins`; ADR-0168, *Built*). **The catalogue key waits
-for George** (not yet, 2026-10-29); nothing is published before it. Steps
-2 and 3, the core and the screens, built on `ph-plugin-catalogue` (worktree
+`~/projects/gexis-plugins`; ADR-0168, *Built*); its main has a ruleset
+(pull requests, the listing check required; the admin merges a tools change
+past it). Steps 2 and 3, the core and the screens, built on
+`ph-plugin-catalogue` (worktree
 `~/projects/gexis-player-ph-plugin-catalogue`), checked from mocked data
 (`~/projects/scratch/ph24`: `run.sh` with `catalogue_layout.py` and
-`shots.py`), not yet on a player. Step 3's choices wait for George
-(ADR-0168, *Built: the screens*). Step 4, the first listing, under way:
+`shots.py`), not yet on a player. George confirmed or changed their choices
+the same evening (ADR-0168, *Confirmed and changed*): the notice before a
+first install only, and a restore all in one go - both built. **The
+catalogue key exists** (ADR-0168, *The catalogue key*): R2D2 keeps the
+subkey in `~/projects/gexis-catalogue-key`; the master and revocation
+certificate wait in `~/projects/gexis-catalogue-key-for-george` until
+George has them, then that folder is deleted. Step 4, the first listing:
 `gcarstoiu/gexis-sample-plugins` public (local copy
-`~/projects/gexis-sample-plugins`), listed by `gexis-plugins` #1 and #2,
-checked and with a review note each; **George merges them**. Publishing and
-the test on a player wait for the key. The wiki
+`~/projects/gexis-sample-plugins`), listed by `gexis-plugins` #1 and #2
+(merged), **serial 1 published** with Hello and Tone (`tools/publish.sh`,
+`GEXIS_CATALOGUE_GNUPGHOME=~/projects/gexis-catalogue-key`). Next in step
+4: a preview of the phase on a test player, then install, update (a 0.2.0),
+withdraw, block and restore there; afterwards the samples are withdrawn
+(George). The samples left `tools/` for that repository. The wiki
 Roadmap shows the new order (pushed 2026-10-29 with George's OK).
 **Found in step 3, fixed apart**: on a phone the confirm, its progress card
 and the update dialog sat half off the screen (since 1.7.0); branch
 `fix-remote-dialogs` (worktree `~/projects/gexis-player-fix-remote-dialogs`),
-merged into the phase branch, into `next` after George's test.
+merged into the phase branch, into `next` after George's test: **on sofapi
+as a preview** (`1.9.1+git17.9141a7e`, gexis-ui and gexis-player; files in
+`~/gexis-pd`, removed after the test), for George to try from a phone.
+**`fix-vite`** (worktree `~/projects/gexis-player-fix-vite`): Vite 8.3.3
+for three Dependabot alerts on its development server (George); the built
+UI compared with 8.3.0's, the same mocked screens pixel for pixel; into
+`next` with the next release.
 
 **Phase 23, AirPlay 2** (`ph-airplay`), in 1.9.0 and 1.9.1 on Testing,
 marked *Limited testing* (no Apple device yet).
@@ -84,12 +101,12 @@ the build's story are in the archive (2026-10-28).
 `GEXIS_RELEASE_GNUPGHOME=~/projects/gexis-release-key`; the scripts default
 to `~/.gnupg-gexis-release`, which no longer exists.
 
-**The players** (2026-10-29): all four on the preview `1.9.0+git9.484bd6d`,
-the code 1.9.1 released; sofapi and the bar grouped; AirPlay on at sofapi and
-guestpi. Each has its own Lyrion server. Bring them to 1.9.1 through the
-updater (Testing). Left by the 2026-10-29 clean-up, as they were playing:
-sofapi's and the bar's preview folders, by name `~/gexis-1`, `gexis-lead`,
-`gexis-p6` to `gexis-p13`, `gexis-p23-1` to `-4`, `gexis-pj`.
+**The players** (2026-10-29): all four on 1.9.1 through their updaters, on
+Testing (sofapi moved from Stable to Testing for it, George), dpkg clean;
+sofapi then the dialog fix's preview (above). sofapi and the bar grouped;
+AirPlay on at sofapi and guestpi. Each has its own Lyrion server. The old
+preview folders are gone (of those named, only `gexis-lead` and `gexis-pj`
+were still there, on sofapi and the bar).
 
 **The test venv imports the core from `~/projects/gexis-player-next`** (an
 editable install): in another worktree run the suite with `PYTHONPATH=src`
@@ -116,7 +133,6 @@ against a local copy, so losing that folder means re-uploading every OS file.
 - **Glass** (foonerd's Rust PeppyMeter, Finding 133): George, 2026-10-22,
   *"Glass is too young now"* - **remind him at the beginning of 2027** and
   measure it again (to-do `glass-revisit-2027`).
-- George's look at the moon before sunrise.
 
 **The Home Assistant integration** (Phase 19, closed 2026-10-25):
 `gcarstoiu/gexis-player-homeassistant` at 0.5.0 (2026-10-27: the card as the

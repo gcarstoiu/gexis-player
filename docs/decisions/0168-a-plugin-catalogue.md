@@ -163,7 +163,8 @@ Proposals 5-10 as written, with these settled in building:
 - **Blocked during a run**: switched off at once, and the core restarted
   once so the row says why; its switch refuses to turn it on.
 - **After a restore**, one plugin a start is installed again, since each
-  install restarts the core.
+  install restarts the core - *changed by George the same day: all in one
+  go (below)*.
 - **The key**: the core package carries `gexis-catalogue.gpg` only once
   `packaging/keys/gexis-catalogue.asc` exists; without it there is no
   catalogue on the player.
@@ -188,7 +189,8 @@ building, for George to confirm:
   the tile, with Retry; the page says when the catalogue could not be read,
   or read again, and when nothing is listed.
 - **Decision 6's notice before every install and update**; Retry after a
-  failed download goes straight on.
+  failed download goes straight on - *changed by George the same day: before
+  a first install only (below)*.
 - **On the plugin's own row**: *Update to …* (decision 4) and that download;
   a blocked plugin's switch greyed with its reason, refused by the core too
   (the registry's `restrictions`, a 409); *Remove* also on the panel and the
@@ -216,8 +218,53 @@ catalogue's reads it. Shown: the check's first real run passed on both, its
 log read (each archive downloaded and matched, the player's upload check
 passed); each archive rebuilt from a fresh clone of its tag to the listed
 sha256; a copy with one bit changed refused by the same check run here. A
-review note on each; **George merges**. Not yet: publishing (the key), and
-the install, update, withdrawal, block and restore on a test player.
+review note on each; merged the same day (below). Not yet: the install,
+update, withdrawal, block and restore on a test player.
+
+## Confirmed and changed (George, 2026-10-29)
+
+Asked one at a time, the evening steps 2-4 were built:
+- **Confirmed**: *More plugins* first, above *Upload a plugin*; *Remove* of
+  a catalogue plugin on the panel and the bars too; on wide screens the
+  tile's button at the right; a plugin uploaded under a listed id stays an
+  upload, never replaced or updated from the catalogue; a plugin blocked
+  during a run switched off at once and the core restarted once.
+- **Changed: the notice before a first install only.** An update and a
+  Retry start at once. Built the same day.
+- **Changed: after a restore, all in one go.** Every catalogue plugin the
+  restore needs is downloaded and installed in turn, each without its own
+  restart, then the core restarts once; one that cannot be downloaded does
+  not stop the others. Built the same day (a test seen to fail with a
+  restart per plugin).
+- **The samples are withdrawn after the test**, so a release with the
+  catalogue offers users none of them; authors find them on GitHub.
+- **The samples live only in `gcarstoiu/gexis-sample-plugins`**: the
+  copies in `tools/` removed, and the plugin manual and
+  `tools/handover-check.py` point there.
+- **`gexis-plugins`' main has a ruleset**: changes only by pull request,
+  the listing check required; the repository's admin may merge past it, as
+  for a change to the tools, which that check refuses.
+- **Claude merged the first two listings** at George's word (decision 2
+  otherwise stands: George merges).
+
+## The catalogue key (2026-10-29)
+
+Made at George's word as the release key was (ADR-0105): *Gexis Player
+plugin catalogue*, master `6847 9EEB 5C99 88C2 B1AB  C07F 461D 30A8 4D8F
+5C5E` (Ed25519, certify only), signing subkey `7CD9 86A7 C6ED 8793 6DD2
+D9F4 DF79 672A BDE8 906F`; no passphrase, no expiry. R2D2's keyring
+(`~/projects/gexis-catalogue-key`) holds only the subkey (`sec#`). The
+master, its revocation certificate and a note went to George, to keep off
+R2D2. Shown: a signature from R2D2's keyring good against the public key, a
+changed file refused; the backup restored into an empty keyring with both
+secret keys, and signing. The public half is `packaging/keys/` on
+`ph-plugin-catalogue` (the core package carries it from there) and `keys/`
+in `gexis-plugins`.
+
+**The first catalogue, serial 1** (Hello and Tone), published the same day
+(George's OK): a dry run first, read by the player's own `accept` (offered
+on 1.9.1; a changed copy refused); then published, read back through `gh`
+and from the address players read, with a good signature.
 
 ## Settings (ADR-0022)
 

@@ -3520,8 +3520,9 @@ installs through the upload's checks and sandbox and offers listed updates.
 
 1. **The catalogue repository**: the entry's schema, the checks on a pull
    request, the guide for authors, `publish.sh` and the catalogue key.
-   **Done 2026-10-29** except the key, which waits for George:
-   `gcarstoiu/gexis-plugins`, public, GPL-3.0-or-later (ADR-0168, *Built*).
+   **Done 2026-10-29**: `gcarstoiu/gexis-plugins`, public, GPL-3.0-or-later
+   (ADR-0168, *Built*); the key the same evening (ADR-0168, *The catalogue
+   key*).
 2. **The core**: read and verify the index; install, update, withdraw and
    restore through `uploads`. **Built 2026-10-29** on `ph-plugin-catalogue`,
    not yet run on a player (ADR-0168, *Built: the player's side*).
@@ -3531,9 +3532,10 @@ installs through the upload's checks and sandbox and offers listed updates.
    three, not yet on a player (ADR-0168, *Built: the screens*).
 4. **The first listing**: the sample plugins from a repository of their own,
    end to end. **Under way 2026-10-29**: `gcarstoiu/gexis-sample-plugins`
-   public, listed by two pull requests that pass the check, for George to
-   merge; publishing and the test on a player wait for the catalogue key
-   (ADR-0168, *Built: the first listing*).
+   public, listed by two pull requests (checked, merged), the first
+   catalogue published; the test on a player is next (ADR-0168, *Built: the
+   first listing*). Steps 2 and 3's choices confirmed or changed by George
+   the same evening (ADR-0168, *Confirmed and changed*).
 5. **The public documents**: the manual, the FAQ, the technical guide, the
    plugin manual (how to get listed), the README.
 6. **A preview** on the test players, George's tests, then a release.
