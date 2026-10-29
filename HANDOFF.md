@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-10-28, late (on R2D2).
+Last updated: 2026-10-29 (on R2D2).
 
 ## Start here
 
@@ -20,48 +20,44 @@ and the ideas as Must / Should / Could. It follows `docs/DEVELOPMENT.md`'s
 phases; change it when a phase opens, closes or moves, and show George first. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 1.9.0 on Testing, 1.7.0 on Stable** (2026-10-28:
-Testing serial 59 read back with a good signature; Stable serial 11). 1.9.0
-carries Phase 23 (AirPlay 2, marked *Limited testing*) and the group-latency
-fix; PR #88 merged into `main` (2026-10-28). Release worktree
-`~/projects/gexis-player-r190`; image
-`image/deploy/2026-10-28-gexis-player-v1.9.0.img` (149 checks passed); build
-output `~/projects/gexis-release-out/r1.9.0`. 1.8.0's story is in the
-archive (2026-10-28). A release worktree needs its pi-gen submodule
+**Current release: 1.9.1 on Testing, 1.7.0 on Stable** (2026-10-29:
+Testing serial 60 read back with a good signature; Stable serial 11). 1.9.1
+carries the two multiroom changes previewed on 2026-10-28: another group
+shown and joined whole, and a source leads once it plays. **PR #89
+(`release-1.9.1` into `main`) open, for George to merge** - do not push
+`next` while its checks run. Release worktree `~/projects/gexis-player-r191`;
+image `image/deploy/2026-10-29-gexis-player-v1.9.1.img` (149 checks passed);
+build output `~/projects/gexis-release-out/r1.9.1`. 1.9.0's block is in the
+archive (2026-10-29). A release worktree needs its pi-gen submodule
 initialised before `make image`.
 **Before the next Stable promotion, remind George** (his request,
 2026-10-28; to-do `ph22-eq-check`): a group heard in sync with the
 equaliser on at one player only. 1.8.0 plays such a player about 46 ms late
-(lesson 85); the fix, `c913bdc6`, is in 1.9.0 (not yet heard): promote 1.9.0,
-not 1.8.0, once it is heard. The four players run it now (the preview
-below).
+(lesson 85); the fix, `c913bdc6`, is in 1.9.0 and 1.9.1 (not yet heard): promote
+1.9.1, not 1.8.0, once it is heard. The four players run it now.
 **R2D2's `/` fills up**: Docker's containerd store keeps images on `/`, not
 in `/home/docker`, and pi-gen rebuilds its 1.16 GB build image on every
-image build; check `df -h /` before one (1.9 GB free after 1.8.0's, 213 MB at its lowest while pi-gen rebuilt).
-**Now: Phase 23, AirPlay 2** (`ph-airplay`, closed as a branch) - in 1.9.0
-on Testing, marked *Limited testing*: released before it is tried, no Apple
-device yet (George, 2026-10-28). [ADR-0167](docs/decisions/0167-airplay-2-as-a-plugin.md)
-accepted. Shairport Sync 5.6.2 and NQPTP 1.2.9 are built by us
-(`packaging/shairport-sync`, `packaging/nqptp`); the adapter is
-`gcarstoiu/gexis-airplay` (local copy `~/projects/gexis-airplay`). **Open:**
-the test with an Apple device (to-do `ph23-test`), then T1-T9 to George and
-the tag removed. The build's story is in the archive (2026-10-28, evening).
+image build; check `df -h /` before one (1.9 GB free after 1.8.0's, 213 MB at its lowest while pi-gen rebuilt; 852 MB before 1.9.1's, 4.1 GB once George agreed to remove an unused Home Assistant image, 3.1 GB after).
+**Now: Phase 24, the plugin catalogue** (`ph-plugin-catalogue`), brought
+forward with themes (25) before room correction (now 26 and 27), which still
+cannot be auditioned (George, 2026-10-29).
+[ADR-0168](docs/decisions/0168-a-plugin-catalogue.md) proposed the same day,
+seven questions for George (to-do `ph24-decisions`); nothing is built before
+it is accepted. The wiki Roadmap in the new order is drafted in
+`~/projects/scratch/gexis-wiki`, not pushed until George has seen it.
 
-**Preview on all four players, for George's tests** (2026-10-28, late):
-`1.9.0+git9.484bd6d`, core and player from `group-join-whole` (worktree
-`~/projects/gexis-player-join`), into which `fix-lead-on-restart` is merged.
-`group-join-whole`: another group is shown as a group and joined whole
-(ADR-0166 decision 11, George's option A). `fix-lead-on-restart`: a source
-takes the lead only once it plays (ADR-0166 amended; lesson 86) - before,
-a member's core restart moved the lead with nothing playing. Seen after the
-install: sofapi's restart left the lead with the bar. The lead is on the bar
-since the earlier restart; music played on sofapi takes it back. Once
-George's tests pass, both branches into `next`, then a release.
+**Phase 23, AirPlay 2** (`ph-airplay`), in 1.9.0 and 1.9.1 on Testing,
+marked *Limited testing* (no Apple device yet).
+[ADR-0167](docs/decisions/0167-airplay-2-as-a-plugin.md) accepted; the
+adapter is `gcarstoiu/gexis-airplay` (local copy `~/projects/gexis-airplay`).
+**Open:** the test with an Apple device (to-do `ph23-test`), then T1-T9 to
+George and the tag removed.
 
-**Phase 22, multiroom for every source**, in 1.8.0 and 1.9.0 on Testing;
+**Phase 22, multiroom for every source**, in 1.8.0 to 1.9.1 on Testing;
 [ADR-0166](docs/decisions/0166-multiroom-for-every-source.md) all confirmed
 by George (D7 amended 2026-10-28: a player with the equaliser on plays
-earlier by CamillaDSP's hold, fixed in 1.9.0, not yet heard). **Open:** the
+earlier by CamillaDSP's hold, fixed in 1.9.0, not yet heard; decision 11 and
+the lead taken only on play, in 1.9.1). **Open:** the
 check by ear before the next Stable promotion (above); the measurement
 session (at 192 kHz the bar lost sync over Wi-Fi; a card's own delay, USB or
 optical, is measured there too); the Home Assistant integration's join and
@@ -74,11 +70,10 @@ the build's story are in the archive (2026-10-28).
 `GEXIS_RELEASE_GNUPGHOME=~/projects/gexis-release-key`; the scripts default
 to `~/.gnupg-gexis-release`, which no longer exists.
 
-**The players** (2026-10-28, late): all four on the preview above
-(`1.9.0+git9.484bd6d`, 1.9.0's content and the two multiroom branches);
-sofapi and the bar grouped, the bar leading; AirPlay on at sofapi and
-guestpi. Each has its own Lyrion server. Back to a release through the
-updater once the branches are released.
+**The players** (2026-10-29): all four on the preview `1.9.0+git9.484bd6d`,
+the code 1.9.1 released; sofapi and the bar grouped, the bar leading; AirPlay
+on at sofapi and guestpi. Each has its own Lyrion server. Bring them to
+1.9.1 through the updater (Testing).
 
 **The test venv imports the core from `~/projects/gexis-player-next`** (an
 editable install): in another worktree run the suite with `PYTHONPATH=src`
