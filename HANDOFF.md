@@ -43,8 +43,7 @@ cannot be auditioned (George, 2026-10-29).
 [ADR-0168](docs/decisions/0168-a-plugin-catalogue.md) accepted the same day
 (George's seven answers, each as recommended; no setting). Next: plan step 1,
 the catalogue repository (`docs/DEVELOPMENT.md`, Phase 24). The wiki Roadmap
-in the new order is committed nowhere yet: George agreed, the safety check
-refused Claude's push; it waits in `~/projects/scratch/gexis-wiki`.
+shows the new order (pushed 2026-10-29 with George's OK).
 
 **Phase 23, AirPlay 2** (`ph-airplay`), in 1.9.0 and 1.9.1 on Testing,
 marked *Limited testing* (no Apple device yet).
