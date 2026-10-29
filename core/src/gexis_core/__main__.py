@@ -94,6 +94,7 @@ from gexis_core.settings_registry import InvalidValue, Settings, UnknownSetting,
 from gexis_core.splash import Splash
 from gexis_core.state import StateStore
 from gexis_core import announce, backups, bluealsa_volume, components, outputs, plugin_env, plugins, uploads
+from gexis_core import plugin_catalogue
 from gexis_core import eq_control
 from gexis_core import group as group_module
 from gexis_core import multiroom as multiroom_module
@@ -787,6 +788,22 @@ async def main() -> None:
     restored_missing = [m for m in uploads.missing() if m["id"] not in shipped_ids]
     if restored_missing:
         logger.info("uploads: restored without a package: %s", ", ".join(m["id"] for m in restored_missing))
+    # **ADR-0168: the plugin catalogue** - other authors' plugins, installed
+    # through the upload's path. Its last good read marks what it withdrew
+    # or blocked before the rows are built; a plugin blocked now is
+    # switched off before uploaded plugins are started.
+    catalogue = plugin_catalogue.Service(
+        release=updates.installed_release,
+        installed=uploads.versions,
+        from_catalogue=lambda: {k for k, v in uploads.origins().items() if v == uploads.CATALOGUE},
+        ours=shipped_ids,
+        install_archive=lambda archive, plugin_id: _install_from_catalogue(archive, plugin_id),
+        switch_off=lambda plugin_id, why: _switch_off_blocked(plugin_id, why),
+    )
+    installed_plugins = [
+        replace(p, pulled=plugin_catalogue.pulled_for(catalogue.catalogue, p.id, p.version)) if p.catalogue else p
+        for p in installed_plugins]
+    blocked_at_start = catalogue.blocked()
     if installed_plugins:
         logger.info(
             "plugins: %s", ", ".join(f"{p.id} ({p.kind})" for p in installed_plugins)
@@ -2204,6 +2221,10 @@ async def main() -> None:
         async with lock:
             if plugin.enabled_row is None:
                 on = settings.value(f"{plugin.id}.enabled") is not False
+            if on and plugin.id in catalogue.blocked():
+                # ADR-0168 decision 5: blocked stays off.
+                logger.warning("catalogue: %s is blocked; not switched on", plugin.id)
+                on = False
             await _apply_plugin_unit_now(plugin, on)
 
     async def _apply_plugin_unit_now(plugin, on: bool) -> None:
@@ -2979,6 +3000,10 @@ async def main() -> None:
     # is refused, ends cleanly, and systemd has no failure to restart; the
     # core restarts next and knows it, but nothing started it again. So
     # whatever is switched on and not running is started here.
+    for plugin in installed_plugins:
+        if plugin.id in blocked_at_start:
+            settings_store.set(f"{plugin.id}.enabled", False)
+            await set_unit_enabled(plugin.unit, False)
     asyncio.ensure_future(asyncio.to_thread(_start_uploaded, installed_plugins))
 
     # The fourth corpus word was `Random` until 2026-09-22 and is `All`
@@ -4197,6 +4222,10 @@ async def main() -> None:
         await _restart_visualiser()
 
     asyncio.ensure_future(_visualiser_running())
+    # ADR-0168: the catalogue read a minute after the start and daily; what a
+    # restore brought back from it without its package is installed again.
+    asyncio.ensure_future(catalogue.run(
+        restore=[m for m in restored_missing if m.get("origin") == uploads.CATALOGUE]))
 
     # **ADR-0109 decision 5: Keep this screen?** A screen chosen before this
     # start waits for a touch on the panel. The countdown starts at the
@@ -4331,8 +4360,11 @@ async def main() -> None:
         await asyncio.sleep(1.5)
         await asyncio.create_subprocess_exec("systemctl", "restart", "gexis-core")
 
-    async def _upload_plugin(archive: bytes) -> dict:
+    async def _upload_plugin(archive: bytes, origin: str | None = None) -> dict:
         checked = await asyncio.to_thread(uploads.install, archive, ours=shipped_ids)
+        # ADR-0168: where it came from, for its row and for a restore. An
+        # upload of a plugin first installed from the catalogue is an upload.
+        await asyncio.to_thread(uploads.set_origin, checked.id, origin)
         # **A new version replaces the running one** (found 2026-09-30: the
         # renderer under test had its test3 installed and test2 went on
         # running - the unit had been started from the old folder, and
@@ -4349,7 +4381,32 @@ async def main() -> None:
                 "enabled": await asyncio.to_thread(_unit_is_enabled, unit),
                 "restarting": True}
 
+    async def _install_from_catalogue(archive: bytes, plugin_id: str) -> dict:
+        """ADR-0168: a listed archive, checked as an upload is and installed
+        the same way; only its record says where it came from."""
+        checked = await asyncio.to_thread(uploads.check, archive, ours=shipped_ids, installed=uploads.versions())
+        if checked.id != plugin_id:
+            raise uploads.Refused(f"the archive is {checked.id}, not {plugin_id}")
+        return await _upload_plugin(archive, origin=uploads.CATALOGUE)
+
+    #: One restart however many plugins a read of the catalogue blocks.
+    block_restart = {"scheduled": False}
+
+    async def _switch_off_blocked(plugin_id: str, why: str) -> None:
+        """ADR-0168 decision 5: off now, and the core restarted once so the
+        plugin's row says why - unless it was blocked when this core started."""
+        plugin = next((p for p in installed_plugins if p.id == plugin_id), None)
+        if plugin is None or plugin_id in blocked_at_start:
+            return
+        blocked_at_start[plugin_id] = why
+        settings_store.set(f"{plugin_id}.enabled", False)
+        await set_unit_enabled(plugin.unit, False)
+        if not block_restart["scheduled"]:
+            block_restart["scheduled"] = True
+            asyncio.ensure_future(_restart_core_soon())
+
     async def _uninstall_plugin(plugin_id: str) -> bool:
+        catalogue.jobs.pop(plugin_id, None)
         plugin = next((p for p in installed_plugins if p.id == plugin_id and p.uploaded), None)
         if plugin is None and any(m["id"] == plugin_id for m in restored_missing):
             # Restored without its package, and not wanted any more: its data,
@@ -4515,6 +4572,7 @@ async def main() -> None:
         on_painted=None,
         upload_plugin=_upload_plugin,
         uninstall_plugin=_uninstall_plugin,
+        catalogue=catalogue,
         # ADR-0047: the idle screen's two providers.
         weather=forecast,
         wallpapers=wallpapers,

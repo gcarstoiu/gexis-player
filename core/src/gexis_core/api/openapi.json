@@ -6747,6 +6747,131 @@
           }
         ]
       }
+    },
+    "/plugins/catalogue": {
+      "get": {
+        "operationId": "plugin_catalogue",
+        "tags": [
+          "Plugins"
+        ],
+        "summary": "What the plugin catalogue offers this player",
+        "description": "The plugin catalogue's last good read (ADR-0168): other authors' plugins, checked and read before they are listed, each with its state here. A plugin not installed is listed only when a version suits this player (its contract, its release). The catalogue is trusted by its signature (the catalogue key the player carries) and its serial, never lower than one already accepted. `jobs` holds installs under way or just finished.",
+        "parameters": [
+          {
+            "name": "refresh",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1"
+              ]
+            },
+            "description": "`1`: read the catalogue again first, if the last read is older than 15 minutes. A failed read keeps the last good one and says why in `error`."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The catalogue as this player sees it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PluginCatalogue"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The catalogue is not wired up in this core.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-gexis-stability": "stable",
+        "x-gexis-adr": [
+          "ADR-0168"
+        ]
+      }
+    },
+    "/plugins/catalogue/install": {
+      "post": {
+        "operationId": "plugin_catalogue_install",
+        "tags": [
+          "Plugins"
+        ],
+        "summary": "Install, or update to, the version the catalogue offers",
+        "description": "Starts downloading the version the catalogue offers this player and answers at once (ADR-0168). The archive must be the listed one (its size and SHA-256), and is then installed exactly as an upload is: the same checks, folder and sandbox. Progress is in `GET /plugins/catalogue`'s `jobs`. A finished install restarts the core about 1.5 s later, as an upload does; a first install arrives switched off.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "id"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "The plugin's id."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Started.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PluginCatalogueStarted"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "No `id` given.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "It cannot be installed (`Not installed: <reason>.`): not in the catalogue, no version for this player, already installed, or uploaded here.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The catalogue is not wired up in this core.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-gexis-stability": "stable",
+        "x-gexis-adr": [
+          "ADR-0168"
+        ]
+      }
     }
   },
   "components": {
@@ -13115,6 +13240,208 @@
         "properties": {
           "percent": {
             "type": "number"
+          }
+        }
+      },
+      "PluginCatalogueJob": {
+        "type": "object",
+        "required": [
+          "version",
+          "phase",
+          "done",
+          "total"
+        ],
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "phase": {
+            "type": "string",
+            "enum": [
+              "downloading",
+              "installing",
+              "installed",
+              "failed"
+            ]
+          },
+          "done": {
+            "type": "integer",
+            "description": "Bytes downloaded."
+          },
+          "total": {
+            "type": "integer",
+            "description": "The listed archive's size in bytes."
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why it failed."
+          }
+        }
+      },
+      "PluginCatalogueStarted": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PluginCatalogueJob"
+          },
+          {
+            "type": "object",
+            "required": [
+              "started"
+            ],
+            "properties": {
+              "started": {
+                "type": "string",
+                "description": "The plugin's id."
+              }
+            }
+          }
+        ]
+      },
+      "PluginCatalogueRow": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "state"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "summary": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "renderer",
+              "service"
+            ]
+          },
+          "author": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Its author's GitHub name."
+          },
+          "source": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Its public source repository."
+          },
+          "licence": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "An SPDX expression."
+          },
+          "version": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The version offered to this player, if any."
+          },
+          "size": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "That version's archive, in bytes."
+          },
+          "installed": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The version installed here, if any."
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "available",
+              "installed",
+              "update",
+              "withdrawn",
+              "blocked",
+              "uploaded"
+            ],
+            "description": "`update`: a newer version is offered. `withdrawn`: no longer offered; it keeps running here. `blocked`: switched off here, and stays off. `uploaded`: a plugin of that id was uploaded here, not installed from the catalogue."
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why it was withdrawn or blocked."
+          }
+        }
+      },
+      "PluginCatalogue": {
+        "type": "object",
+        "required": [
+          "available",
+          "plugins",
+          "jobs"
+        ],
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "description": "Whether this player has a catalogue it has verified."
+          },
+          "serial": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "When it was published."
+          },
+          "checked": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "When it was last read, in seconds since the epoch."
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why the last read failed."
+          },
+          "plugins": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PluginCatalogueRow"
+            }
+          },
+          "jobs": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/PluginCatalogueJob"
+            },
+            "description": "Installs under way or just finished, by plugin id."
           }
         }
       }

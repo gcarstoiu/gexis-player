@@ -201,7 +201,7 @@ something the panel is not showing).
 | Enrichment | `GET /enrichment` | Panel, phone |
 | Equaliser | `GET`/`PUT /equaliser`, `POST /equaliser/settings`, `PUT`/`DELETE /equaliser/settings/{key}` - for the output in use; `equaliser` on `/state` (ADR-0162; `eq_control.py`, `eq_engine.py`) | Both |
 | Settings | `GET /settings`; `PUT /settings/{key}` (write a value); `POST /settings/{key}` (run an action); `GET`/`POST /settings/{key}/items` (list rows: Wi-Fi, trusted devices, backups, `lyrion-server.shares`, `lyrion-server.usb_folders`, `lms_server`); `GET /network/wifi` (the connected network's signal, speed, band, channel and address, no rescan - ADR-0123); `GET /notices/{name}` (Legal, Credits) | Both (ADR-0035) |
-| Skins and plugins | `GET /skins`, `/skins/{name}/preview`, `/plugins/{id}/mark`, `/plugins/{id}/artwork/{key}`; `POST /plugins/upload`, `/plugins/{id}/uninstall` | Settings (ADR-0050, ADR-0106) |
+| Skins and plugins | `GET /skins`, `/skins/{name}/preview`, `/plugins/{id}/mark`, `/plugins/{id}/artwork/{key}`, `/plugins/catalogue`; `POST /plugins/upload`, `/plugins/{id}/uninstall`, `/plugins/catalogue/install` | Settings (ADR-0050, ADR-0106, ADR-0168) |
 | Bluetooth | `POST /bluetooth/pairing/{answer}` | Panel (ADR-0045) |
 | Hardware report | `GET /hardware-report` (the board by EEPROM, driver, overlays, controls, formats and rates; the screen's EDID and touch controller - no serials), `POST /hardware-report/tones` (a 1 kHz tone at -20 dBFS at 44.1, 96 and 192 kHz through `output`, and the rate and format the card ran at; `409` while any card plays), `GET /hardware-report/prompt` and `POST /hardware-report/prompt/dismiss` (the System page's one line, a week after a board or screen that is not Tested was first seen, per piece of hardware; kept in the internal `_hardware_prompt` key; a prepared report dismisses it too), `POST /hardware-report/screen` (`{"show"}`: the test pattern on the panel, through `screen_check` in `/state`; taken down after 120 s) and `POST /hardware-report/screen/result` (the panel's four corner taps in screen pixels, measured against 6 % of the diagonal), `POST /hardware-report/issue` (`{"answers", "notes", "tones"}` -> the pre-filled GitHub *Hardware feedback* form's address; its answers are text fields, which GitHub fills from a link and dropdowns are not; the result is kept in `_hardware_feedback` with the sound card and screen it was made on), `GET /hardware-report/kept` (that one, or `null` - dropped once the board or screen in use is another) and `POST /hardware-report/kept/clear` (*Start over*), `GET /hardware-report/file` (that feedback as a text file, for e-mail - ADR-0138) - `hardware_report.py`; the *Reported* state from `hardware_reports.json` (`hardware_reports.py`), which only `tools/hardware-reports.py` writes, from the issues labelled `accepted`, along with HARDWARE.md's table | Settings on a phone or computer (ADR-0126) |
 | Network | `GET`/`POST /network/cable` and `/network/wifi/address` (an address, Automatic or Manual), `POST /network/keep` (ADR-0123); `GET /network/wifi` (the connected network's details) | Phone, computer, panel |
@@ -533,6 +533,20 @@ pieces in code:
   installed under `/var/lib/gexis/plugins/<id>/<version>/` and run by the
   sandboxed template units `gexis-uploaded-{renderer,service}@<id>.service`.
   An uploaded id may never shadow a shipped one.
+- **The plugin catalogue** (`plugin_catalogue.py`, ADR-0168): other
+  authors' plugins, listed in `gcarstoiu/gexis-plugins`. The core reads
+  `catalogue.json` and its signature from that repository's release `index`
+  a minute after it starts, then daily, and when *More plugins* asks
+  (`?refresh=1`, at most every 15 minutes); verifies it with `gpgv` against
+  `/usr/share/gexis/keys/gexis-catalogue.gpg`, refuses a serial lower than
+  one accepted, and keeps the last good read in `/var/lib/gexis/catalogue/`.
+  Installing downloads the version offered to this player (its contract,
+  its lowest release), refuses an archive that is not the listed one (size,
+  sha256), and installs it as an upload (`uploads.install`), recording
+  `origin: catalogue` in `plugins-known.json` - so a restore installs it
+  from the catalogue again. A *withdrawn* plugin is marked on its row; a
+  *blocked* one is switched off at once (the core restarts once, so its row
+  says why) and its switch refuses to turn it on.
 - **The Lyrion Server's network shares** (`lyrion_shares.py`, the
   `lyrion-server.shares` list row): each SMB or NFS share is mounted
   read-only under `/mnt/gexis-shares/`, with a 30 s limit per mount. One
@@ -634,7 +648,8 @@ plugin may send: `acquire`, `release`, `available`, `metadata`, `queue`,
 | `/var/local/www/currentsong.txt` | moOde-compatible metadata file |
 | `/run/gexis/` | Runtime files: plugin socket, plugin env files, meter FIFOs, visualiser selection |
 | `/usr/share/gexis/plugins/` | Shipped plugin manifests |
-| `/var/lib/gexis/plugins/` | Uploaded plugins |
+| `/var/lib/gexis/plugins/` | Uploaded plugins, those from the catalogue included |
+| `/var/lib/gexis/catalogue/` | The plugin catalogue's last good read, its signature and serial |
 
 ## Display standby (ADR-0135)
 

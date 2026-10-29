@@ -175,6 +175,7 @@ class StateServer:
         settling_hide=None,
         on_painted=None,
         upload_plugin=None,
+        catalogue=None,
         uninstall_plugin=None,
         weather=None,
         wallpapers=None,
@@ -304,6 +305,8 @@ class StateServer:
         self._on_painted = on_painted
         #: ADR-0106: a package from a phone or computer, and taking one away.
         self._upload_plugin = upload_plugin
+        #: ADR-0168: `plugin_catalogue.Service`.
+        self._catalogue = catalogue
         self._uninstall_plugin = uninstall_plugin
         self._weather = weather
         self._wallpapers = wallpapers
@@ -2431,6 +2434,38 @@ class StateServer:
         except uploads.Refused as exc:
             return web.json_response({"error": f"Not installed: {exc}."}, status=400)
 
+    async def _handle_catalogue(self, request: web.Request) -> web.Response:
+        """ADR-0168: what *More plugins* shows. `?refresh=1` reads the
+        catalogue again first, if the last read is older than a quarter of
+        an hour - the screen asks so when it opens."""
+        if self._catalogue is None:
+            return web.json_response({"error": "the catalogue is not wired up"}, status=503)
+        if request.query.get("refresh") == "1":
+            from gexis_core import plugin_catalogue
+            await self._catalogue.refresh(older_than=plugin_catalogue.FRESH_S)
+        return web.json_response(self._catalogue.view())
+
+    async def _handle_catalogue_install(self, request: web.Request) -> web.Response:
+        """ADR-0168: install, or update to, the version the catalogue offers
+        this player. Answers at once; the download's progress is in
+        `GET /plugins/catalogue`'s `jobs`. A finished install restarts the
+        core, as an upload does."""
+        if self._catalogue is None:
+            return web.json_response({"error": "the catalogue is not wired up"}, status=503)
+        from gexis_core import plugin_catalogue
+        try:
+            body = await request.json()
+        except ValueError:
+            body = None
+        plugin_id = body.get("id") if isinstance(body, dict) else None
+        if not isinstance(plugin_id, str) or not plugin_id:
+            return web.json_response({"error": "say which plugin: {\"id\": \"...\"}"}, status=400)
+        try:
+            job = self._catalogue.start_install(plugin_id)
+        except plugin_catalogue.Unavailable as exc:
+            return web.json_response({"error": f"Not installed: {exc}."}, status=409)
+        return web.json_response({"started": plugin_id, **job.to_json()})
+
     async def _handle_plugin_uninstall(self, request: web.Request) -> web.Response:
         if self._uninstall_plugin is None:
             return web.json_response({"error": "uploads are not wired up"}, status=503)
@@ -3366,6 +3401,8 @@ class StateServer:
         app.router.add_get("/setup/status", self._handle_setup_status)
         app.router.add_post("/renderers/park", self._handle_park)
         app.router.add_post("/plugins/upload", self._handle_plugin_upload)
+        app.router.add_get("/plugins/catalogue", self._handle_catalogue)
+        app.router.add_post("/plugins/catalogue/install", self._handle_catalogue_install)
         app.router.add_post("/plugins/{id}/uninstall", self._handle_plugin_uninstall)
         app.router.add_get("/setup/answers", self._handle_setup_answers)
         app.router.add_post("/setup/answers", self._handle_setup_save)

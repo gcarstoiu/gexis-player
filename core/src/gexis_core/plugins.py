@@ -116,6 +116,11 @@ class Plugin:
     #: **ADR-0106: uploaded by the user**, not part of Gexis Player. Run under
     #: the player's own sandboxed unit; the screen tags it so.
     uploaded: bool = False
+    #: **ADR-0168: installed from the plugin catalogue** - uploaded in every
+    #: other way (its folder, its sandbox), and told apart on its row.
+    catalogue: bool = False
+    #: ("withdrawn" or "blocked", why), from the catalogue's last read.
+    pulled: tuple[str, str] | None = None
     #: **What its Plugins row says it is** (George, 2026-10-12: "the plugins
     #: do not have a version number stated in settings"): the manifest's
     #: `version`, else the version of the package that installed the

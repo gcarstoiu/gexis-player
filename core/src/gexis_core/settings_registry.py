@@ -603,6 +603,18 @@ class Settings:
                     switches[-1]["default"] = False
                     switches[-1]["uploaded"] = True
                     switches[-1]["note"] = "Uploaded. Not part of Gexis Player; it runs at your own risk."
+                if getattr(plugin, "catalogue", False):
+                    # ADR-0168: the same, from the catalogue - and why, if
+                    # it was withdrawn or blocked there. Blocked stays off.
+                    switches[-1]["catalogue"] = True
+                    switches[-1]["note"] = ("From the plugin catalogue. Not part of Gexis Player; "
+                                            "it runs at your own risk.")
+                    state = getattr(plugin, "pulled", None)
+                    if state and state[0] == "blocked":
+                        switches[-1]["blocked"] = True
+                        switches[-1]["note"] = f"Blocked in the plugin catalogue, and switched off: {state[1]}"
+                    elif state:
+                        switches[-1]["note"] = f"Withdrawn from the plugin catalogue: {state[1]}"
             # **ADR-0100 as amended: a plugin that downloads its software says
             # so on its own switch** - where it is from, how far along it is,
             # and Retry when it failed, all inside the row (George, 2026-09-27:
@@ -715,11 +727,15 @@ class Settings:
         # package.** Not plugins - nothing runs, nothing is switched - only a
         # row saying what to upload again, under its kind.
         for gone in missing:
+            from_catalogue = gone.get("origin") == "catalogue"
             by_area.setdefault(area_of(gone.get("kind"), gone.get("area")), []).append({
                 "key": f"{gone['id']}.missing", "type": "readonly", "label": gone.get("name", gone["id"]),
-                "default": "Upload again", "uploaded": True,
-                "note": f"Restored from a backup. Upload version {gone.get('version', '?')} again "
-                        "to use it; its settings and data are waiting.",
+                "default": "Installing again" if from_catalogue else "Upload again", "uploaded": True,
+                "note": ("Restored from a backup. It is installed again from the plugin catalogue "
+                         "once the player reaches it; its settings and data are waiting.")
+                if from_catalogue else
+                f"Restored from a backup. Upload version {gone.get('version', '?')} again "
+                "to use it; its settings and data are waiting.",
             })
         switch_group = by_id.get("plugins")
         if switch_group is not None:

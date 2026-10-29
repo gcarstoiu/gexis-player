@@ -74,6 +74,12 @@ done
 install -D -m 644 /src/packaging/keys/gexis-release.asc "$STAGE/usr/share/gexis/keys/gexis-release.asc"
 gpg --dearmor < /src/packaging/keys/gexis-release.asc > "$STAGE/usr/share/gexis/keys/gexis-release.gpg"
 chmod 644 "$STAGE/usr/share/gexis/keys/gexis-release.gpg"
+# ADR-0168: the plugin catalogue's key, for gpgv; without it the player shows
+# no catalogue. Until the key is made, a build carries none.
+if [ -s /src/packaging/keys/gexis-catalogue.asc ]; then
+	gpg --dearmor < /src/packaging/keys/gexis-catalogue.asc > "$STAGE/usr/share/gexis/keys/gexis-catalogue.gpg"
+	chmod 644 "$STAGE/usr/share/gexis/keys/gexis-catalogue.gpg"
+fi
 
 # A default, placed once: setup, a restore and first boot all write this file.
 install -D -m 644 "$F/core.toml" "$STAGE/usr/share/gexis/defaults/core.toml"

@@ -195,10 +195,17 @@ def _installed_versions(root: Path) -> list[tuple[plugins.Plugin, str]]:
     return found
 
 
-def installed(root: Path = UPLOADS) -> list[plugins.Plugin]:
+def installed(root: Path = UPLOADS, known: Path | None = None) -> list[plugins.Plugin]:
     """Every uploaded plugin whose current version reads, with the unit the
-    player gives it."""
-    return [replace(p, uploaded=True) for p, _ in _installed_versions(root)]
+    player gives it, and whether it came from the catalogue (ADR-0168)."""
+    mine = origins(known or KNOWN)
+    return [replace(p, uploaded=True, catalogue=mine.get(p.id) == CATALOGUE)
+            for p, _ in _installed_versions(root)]
+
+
+def versions(root: Path = UPLOADS) -> dict[str, str]:
+    """Every uploaded plugin's installed version, by id."""
+    return {p.id: version for p, version in _installed_versions(root)}
 
 
 #: **Which uploaded plugins this device has**, for backups (ADR-0106): a
@@ -224,11 +231,33 @@ def _write_known(path: Path, known: dict) -> None:
 
 def remember(root: Path = UPLOADS, path: Path = KNOWN) -> None:
     """Record every uploaded plugin now on the card, keeping the ones a
-    restore brought back without their package."""
+    restore brought back without their package, and where each came from."""
     known = _read_known(path)
     for plugin, version in _installed_versions(root):
-        known[plugin.id] = {"name": plugin.name, "kind": plugin.kind, "area": plugin.area, "version": version}
+        origin = (known.get(plugin.id) or {}).get("origin")
+        known[plugin.id] = {"name": plugin.name, "kind": plugin.kind, "area": plugin.area, "version": version,
+                            **({"origin": origin} if origin else {})}
     _write_known(path, known)
+
+
+#: **ADR-0168: a plugin installed from the catalogue**, as `origin` in the
+#: record backups keep - so a restore installs it from there again.
+CATALOGUE = "catalogue"
+
+
+def set_origin(plugin_id: str, origin: str | None, path: Path = KNOWN) -> None:
+    known = _read_known(path)
+    entry = known.setdefault(plugin_id, {})
+    if origin:
+        entry["origin"] = origin
+    else:
+        entry.pop("origin", None)
+    _write_known(path, known)
+
+
+def origins(path: Path = KNOWN) -> dict[str, str]:
+    return {pid: info["origin"] for pid, info in _read_known(path).items()
+            if isinstance(info, dict) and isinstance(info.get("origin"), str)}
 
 
 def forget(plugin_id: str, path: Path = KNOWN) -> None:
