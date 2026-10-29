@@ -21,6 +21,8 @@ async function post(path, body) {
 }
 
 export const joinPlayer = (id) => post('/group/join', { player: id });
+//: ADR-0166 decision 11: this player, in no group, joins another one whole.
+export const enterGroup = (leader) => post('/group/enter', { leader });
 export const removePlayer = (id) => post('/group/remove', { player: id });
 export const leaveGroup = () => post('/group/leave');
 export const undoGroup = () => post('/group/undo');
@@ -143,8 +145,47 @@ export function otherStatus(p) {
   return p?.multiroom ? status : `${status} · Update to join`;
 }
 
-/** Whether another player can be joined from here. */
-export const joinable = (p) => !!(p?.multiroom && p?.id);
+/** Whether another player can be joined from here: one in no group of its
+ *  own (ADR-0166 decision 11 - another group is joined whole, not raided). */
+export const joinable = (p) => !!(p?.multiroom && p?.id) && !(p?.group?.members?.length > 1);
+
+/** **The other players, another group's together** (ADR-0166 decision 11,
+ *  George 2026-10-28: a group seen from outside it is a group, not loose
+ *  players). `{loose, groups}`: a group is `{id, leader, title, status,
+ *  members, canEnter}`, its leader first; a member the list has not found
+ *  (switched off) is `listed: false`. `mine`: this player's own group's ids,
+ *  left out. */
+export function othersByGroup(others, mine = new Set()) {
+  const loose = [];
+  const found = new Map();
+  for (const p of others ?? []) {
+    if (mine.has(p.id)) continue;
+    const gid = p?.group?.id;
+    if (!gid || !(p.group.members?.length > 1)) {
+      loose.push(p);
+      continue;
+    }
+    if (!found.has(gid)) found.set(gid, { summary: p.group, listed: new Map() });
+    found.get(gid).listed.set(p.id, p);
+  }
+  const groups = [...found.entries()].map(([id, { summary, listed }]) => {
+    const leader = summary.leader;
+    const lead = listed.get(leader);
+    const members = (summary.members ?? [])
+      .map((m) => ({ id: m.id, name: m.name, leads: m.id === leader, listed: listed.has(m.id),
+                     url: listed.get(m.id)?.url ?? null }))
+      .sort((a, b) => Number(b.leads) - Number(a.leads));
+    const any = lead ?? [...listed.values()][0];
+    return {
+      id, leader, members,
+      title: joinNames(members.map((m) => m.name)),
+      status: lead ? plays(lead.transport, lead.renderer) : 'Its leader is off',
+      // Joined through its leader, which has to be there and new enough.
+      canEnter: !!(lead?.multiroom && any),
+    };
+  });
+  return { loose, groups };
+}
 
 /** The group head: *Grouped · 3 players*, or *Grouped · silent*. */
 export function groupHead(g) {

@@ -753,9 +753,12 @@ phone only.
   own server until nothing holds the device (*the music stays on the
   leader*): going alone rewrites the chain and would restart whoever holds
   it - a paused source, or one taking over meanwhile.
-- **A source started on a member leads** (D4): the supervisor's
-  `on_active_change` reaches `Multiroom.on_local_active`, which claims the
-  lead; a member's own source still active after another leads is stopped
+- **A source playing on a member leads** (D4, amended 2026-10-28): the
+  supervisor's `on_active_change` reaches `Multiroom.on_local_active`, which
+  notes the source; `_lead_if_playing`, run on every state change, claims
+  the lead once that source's transport is *playing* (a source that only
+  came up active, as Lyrion does at a core's start, never leads). A
+  member's own source still active after another leads is stopped
   (`_settle`), unless it is Lyrion playing in the group's own sync.
 - **The members' states, live** (`group.Peers`): one WebSocket to each other
   member's `/state`. From them: each member's level, mute and Fixed for the

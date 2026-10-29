@@ -883,6 +883,13 @@ is silent or production differs, confirmed by George (2026-10-28):
   one is grouped); the drawing always shows them.
 - **[S]** A player older than multiroom has no Join and says why: its state,
   then *Update to join*.
+- **[U]** Another group is drawn as a group (ADR-0166 decision 11, George,
+  2026-10-28): on the phone a block in the group block's shape, neutral
+  rather than this group's teal, its players named and its leader tagged,
+  with *Join this group* from a player in no group; on the panel's *Add
+  players* and the bar's band one row or card (*Office and Garage - Led by
+  Office - Playing - Plexamp*, the bar's button *Join*). The drawing listed
+  each of its players with a Join of their own.
 - **[S]** The leader gone: *Start music on Kitchen or Study and it leads* -
   *or*, where the drawing joins the names with *and*.
 - **[S]** Join says *Joining · catching up* on the row at once, until the

@@ -11,6 +11,7 @@ from gexis_core import multiroom as mr
 from gexis_core import outputs
 from gexis_core.adapters.base import Capabilities, VolumeMechanism
 from gexis_core.group import Member
+from gexis_core.model import TrackMetadata
 from gexis_core.state import StateStore
 
 CAPS = Capabilities(audio_connection="output", acquisition_events=frozenset(), supports_artwork=True,
@@ -105,6 +106,9 @@ class Player:
                 if player_id in net_.off:
                     return False
                 net_.posts.append((self.member.id, player_id, path, body))
+                if path == "/group/join":
+                    # Decision 11: asked to add a player, the leader really does.
+                    await net_.players[player_id].room.join(body["player"])
                 return True
 
         async def stop_source():
@@ -143,9 +147,23 @@ class Player:
                 **self.room.status()}
 
     def play(self, renderer):
+        # A source that starts plays: its track is playing.
         self.active = renderer
         self.store.set_active(renderer)
+        self.store.set_metadata(renderer, TrackMetadata(transport="playing", source_type=renderer))
         self.room.on_local_active(renderer)
+
+    def come_up(self, renderer):
+        """A source that becomes active and plays nothing - Lyrion at a core's
+        start (the bar, 2026-10-28)."""
+        self.active = renderer
+        self.store.set_active(renderer)
+        self.store.set_metadata(renderer, TrackMetadata(transport="stopped", source_type=renderer))
+        self.room.on_local_active(renderer)
+
+    def starts_playing(self, renderer):
+        self.store.set_metadata(renderer, TrackMetadata(transport="playing", source_type=renderer))
+        self.room._lead_if_playing()
 
 
 class Net:
@@ -209,6 +227,38 @@ async def test_a_player_with_the_equaliser_on_plays_earlier_by_what_it_holds(tmp
     assert asked, "the leader's own client asked too"
 
 
+async def test_a_player_alone_joins_another_group_as_a_whole(tmp_path):
+    """ADR-0166 decision 11 (George, 2026-10-28): from a player in no group,
+    another group is joined whole - its leader adds this player, and the
+    group stays as it was with one player more."""
+    net = Net(tmp_path)
+    office, garage, study = net.add("office", "Office"), net.add("garage", "Garage"), net.add("study", "Study")
+    office.play("spotify")
+    await net.settle()
+    await office.room.join("garage")
+    await net.settle()
+    study.play("lms")
+    await study.room.enter("office")
+    await net.settle()
+    for p in (office, garage, study):
+        assert p.room.record is not None and p.room.record.leader == "office"
+        assert {m.id for m in p.room.record.members} == {"office", "garage", "study"}
+    assert study.stopped == ["lms"], "C1: the joining player's own music stops"
+    assert ("study", "office", "/group/join", {"player": "study"}) in net.posts
+
+
+async def test_joining_another_group_is_refused_when_grouped_or_not_a_leader(tmp_path):
+    net = Net(tmp_path)
+    office, garage, study = net.add("office", "Office"), net.add("garage", "Garage"), net.add("study", "Study")
+    await net.settle()
+    await office.room.join("garage")
+    await net.settle()
+    with pytest.raises(mr.GroupError, match="does not lead"):
+        await study.room.enter("garage")
+    with pytest.raises(mr.GroupError, match="leave it first"):
+        await garage.room.enter("office")
+
+
 async def test_a_source_started_on_a_member_makes_it_the_leader_and_stops_the_old_ones(tmp_path):
     net = Net(tmp_path)
     living, kitchen = net.add("living", "Living Room"), net.add("kitchen", "Kitchen")
@@ -221,6 +271,25 @@ async def test_a_source_started_on_a_member_makes_it_the_leader_and_stops_the_ol
     assert living.room.record.leader == kitchen.room.record.leader == "kitchen"
     assert living.stopped == ["spotify"], "C1: only the leader's source plays"
     assert kitchen.snap.host == "127.0.0.1" and living.snap.host == "kitchen.local"
+
+
+async def test_a_source_that_only_comes_up_on_a_member_does_not_take_the_lead(tmp_path):
+    """The bar, 2026-10-28: three seconds after its core restarted, Lyrion came
+    up as its active source and it took the group from sofapi, though nothing
+    played. George: only music that plays here leads."""
+    net = Net(tmp_path)
+    living, kitchen = net.add("living", "Living Room"), net.add("kitchen", "Kitchen")
+    living.play("spotify")
+    await net.settle()
+    await living.room.join("kitchen")
+    await net.settle()
+    kitchen.come_up("lms")
+    await net.settle()
+    assert kitchen.room.record.leader == "living" and living.room.record.leader == "living"
+    # Then it really plays: now it leads, as decision 4 has it.
+    kitchen.starts_playing("lms")
+    await net.settle()
+    assert kitchen.room.record.leader == "kitchen" and living.room.record.leader == "kitchen"
 
 
 async def test_undo_keeps_the_music_on_the_leader_until_nothing_holds_the_device(tmp_path):

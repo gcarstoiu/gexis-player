@@ -842,6 +842,13 @@ it plays - title, artist, album, cover and progress - and its volume.
 **Does AirPlay play in high resolution?**
 No. AirPlay sends 44.1 or 48 kHz, and the player plays it as it arrives.
 
+**Another group already plays. How do I join it?**
+From a player in no group, open *Gexis players* (or *Add players* on the
+panel, the tray's *Group* on a bar): another group shows as one, with *Join
+this group*. That group's leader adds this player, which stops its own music
+and catches up in a moment. A player in a group of its own leaves it, or
+undoes it, first.
+
 **How do I play AirPlay in several rooms?**
 Either group the players here (*Several rooms*) and choose one of them in the
 AirPlay list - the whole group plays - or, for players not grouped, choose
