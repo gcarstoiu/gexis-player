@@ -44,8 +44,10 @@ cannot be auditioned (George, 2026-10-29).
 (George's seven answers, each as recommended; no setting). Plan step 1
 done: `gcarstoiu/gexis-plugins` public, GPL-3.0-or-later (local copy
 `~/projects/gexis-plugins`; ADR-0168, *Built*). **The catalogue key waits
-for George** (not yet, 2026-10-29); nothing is published before it. Next:
-step 2, the core. The wiki Roadmap
+for George** (not yet, 2026-10-29); nothing is published before it. Step
+2, the core, built on `ph-plugin-catalogue` (worktree
+`~/projects/gexis-player-ph-plugin-catalogue`), not yet on a player. Next:
+step 3, the screens. The wiki Roadmap
 shows the new order (pushed 2026-10-29 with George's OK).
 
 **Phase 23, AirPlay 2** (`ph-airplay`), in 1.9.0 and 1.9.1 on Testing,
