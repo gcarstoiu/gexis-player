@@ -134,6 +134,22 @@ Asked one at a time; each answered as Claude recommended.
    rows** (a row per plugin, the download row, the switch), without a design
    round.
 
+## Built: the repository (plan step 1, 2026-10-29)
+
+`gcarstoiu/gexis-plugins` is public (George, the same day), under
+GPL-3.0-or-later as the player (George). It holds `tools/catalogue.py` (an
+entry's form, the index), `tools/check.py` (the pull request's check: each
+new version downloaded, its size and sha256 compared, the player's own
+`uploads.check` run on it from the commit in `tools/player-ref`),
+`tools/publish.sh` (signed, read back; `--dry-run` signs into `out/` only)
+and the authors' guide as its README. The check runs on
+`pull_request_target`, so the tools are main's and the pull request's files
+are read as data only. Shown: the tools' 19 tests against the player's
+upload check, on R2D2 and on GitHub; a dry run signed and verified with a
+throwaway key, and a changed file failed its signature. **The catalogue key
+waits for George** (asked the same day: not yet); until it exists nothing
+is published. Not yet run: the check on a real pull request (plan step 4).
+
 ## Settings (ADR-0022)
 
 None. A switch to hide *More plugins* was offered and declined (George,

@@ -41,8 +41,11 @@ image build, about 1.7 GB at a build's peak; check `df -h /` before one
 forward with themes (25) before room correction (now 26 and 27), which still
 cannot be auditioned (George, 2026-10-29).
 [ADR-0168](docs/decisions/0168-a-plugin-catalogue.md) accepted the same day
-(George's seven answers, each as recommended; no setting). Next: plan step 1,
-the catalogue repository (`docs/DEVELOPMENT.md`, Phase 24). The wiki Roadmap
+(George's seven answers, each as recommended; no setting). Plan step 1
+done: `gcarstoiu/gexis-plugins` public, GPL-3.0-or-later (local copy
+`~/projects/gexis-plugins`; ADR-0168, *Built*). **The catalogue key waits
+for George** (not yet, 2026-10-29); nothing is published before it. Next:
+step 2, the core. The wiki Roadmap
 shows the new order (pushed 2026-10-29 with George's OK).
 
 **Phase 23, AirPlay 2** (`ph-airplay`), in 1.9.0 and 1.9.1 on Testing,

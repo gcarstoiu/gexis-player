@@ -3520,6 +3520,8 @@ installs through the upload's checks and sandbox and offers listed updates.
 
 1. **The catalogue repository**: the entry's schema, the checks on a pull
    request, the guide for authors, `publish.sh` and the catalogue key.
+   **Done 2026-10-29** except the key, which waits for George:
+   `gcarstoiu/gexis-plugins`, public, GPL-3.0-or-later (ADR-0168, *Built*).
 2. **The core**: read and verify the index; install, update, withdraw and
    restore through `uploads`.
 3. **The screens**: *More plugins* on the phone, the panel and the bars; the
