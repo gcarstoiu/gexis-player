@@ -98,7 +98,9 @@ flowchart LR
   install has ended once the core answers without the job and with the
   version installed. Its page is a `.picker` over Settings, a tile per
   listed plugin; the download is in the tile, and in the plugin's own row
-  on the Plugins page for an update or a restore's install.
+  on the Plugins page for an update or a restore's install. The notice
+  (ADR-0168 decision 6) comes before a first install only; an update and
+  a Retry start at once.
 - **Settings' requests end** (George, 2026-10-12). One the player took but
   never answered used to leave a sheet spinning; Settings' requests now go
   through `ask()` in `lib/settings.js`, which aborts one

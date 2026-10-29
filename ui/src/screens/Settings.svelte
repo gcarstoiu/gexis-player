@@ -831,14 +831,10 @@
       catalogueStarted[p.id] = { version: got.body.version, previous: p.installed, since: Date.now() };
       catalogue = { ...catalogue, jobs: { ...(catalogue?.jobs ?? {}), [p.id]: got.body } };
     };
-    // Retry is the same version, already agreed to.
-    if (asked) return go();
-    ask = {
-      title: p.installed ? `Update ${p.name} to ${p.version}?` : `Install ${p.name}?`,
-      text: CATALOGUE_NOTICE,
-      confirm: p.installed ? 'Update' : 'Install',
-      run: go,
-    };
+    // The notice comes once, before the first install (George, 2026-10-29);
+    // an update and a Retry go straight on.
+    if (asked || p.installed) return go();
+    ask = { title: `Install ${p.name}?`, text: CATALOGUE_NOTICE, confirm: 'Install', run: go };
   }
   //: The line under a listed plugin, or on its own row in Plugins: its
   //: download while one runs, else where it stands on this player.
