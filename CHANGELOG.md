@@ -6,6 +6,16 @@
 Every release of Gexis Player and its notes, newest first. The player
 shows the last 10 under Settings → System → Change logs.
 
+## 1.9.1 — 29 October 2026
+
+### New
+
+- From a player in no group, other groups show as groups, with the player that leads each; Join this group adds the player to the whole group.
+
+### Fixed
+
+- A player in a group, restarted, no longer takes the lead from the player that leads; a player leads once music plays on it.
+
 ## 1.9.0 — 28 October 2026
 
 ### New
