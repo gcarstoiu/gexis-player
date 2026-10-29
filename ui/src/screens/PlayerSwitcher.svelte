@@ -12,16 +12,14 @@
 -->
 <script>
   import { onMount } from 'svelte';
+  //: ADR-0166 decision 11: a player in a group says so here as in the
+  //: remote's menu (*In a group with Garage · Plexamp*).
+  import { otherStatus } from '../lib/group.svelte.js';
 
   let me = $state(null);
   let others = $state([]);
   let open = $state(false);
 
-  function said(p) {
-    if (p.transport === 'playing') return p.renderer ? `Playing · ${p.renderer}` : 'Playing';
-    if (p.transport === 'paused') return p.renderer ? `Paused · ${p.renderer}` : 'Paused';
-    return p.renderer ? `Stopped · ${p.renderer}` : 'Idle';
-  }
 
   //: **The last list, remembered on this phone** (George, 2026-10-11: the
   //: switch "takes some time to show up"), so the button is there at once
@@ -85,7 +83,7 @@
         <div class="player is-current">
           <span class="player__text">
             <span class="player__name">{me.name}</span>
-            <span class="player__status">{said(me)}</span>
+            <span class="player__status">{otherStatus(me)}</span>
           </span>
           <span class="player__here">This player</span>
         </div>
@@ -94,7 +92,7 @@
         <a class="player" href={p.url}>
           <span class="player__text">
             <span class="player__name">{p.name}</span>
-            <span class="player__status">{said(p)}</span>
+            <span class="player__status">{otherStatus(p)}</span>
           </span>
           <span class="chev" aria-hidden="true"></span>
         </a>

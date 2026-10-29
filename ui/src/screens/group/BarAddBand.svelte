@@ -3,11 +3,14 @@
   The bar tray's *Add players* band (ADR-0166; design/source/22, 2a, bar,
   `add-band`): the title and what joining does, the other players as cards
   with Join - a member of this group with its status and no button, one out
-  of reach faded - and Done.
+  of reach faded - and Done. Another group is one card (ADR-0166 decision
+  11): its players named, led by whom, what it plays, and - from a player in
+  no group - *Join this group*.
 -->
 <script>
   import mark from '../../assets/gexis-mark.svg';
-  import { joinable, joinPlayer, memberStatus, otherStatus } from '../../lib/group.svelte.js';
+  import GroupGlyph from '../../lib/GroupGlyph.svelte';
+  import { enterGroup, joinable, joinPlayer, memberStatus, othersByGroup, otherStatus } from '../../lib/group.svelte.js';
 
   //: `players`: `/players`' others; `here`: this player's own status.
   let { g, players = [], here = null, ondone, onerror = () => {} } = $props();
@@ -22,10 +25,23 @@
     if ([...asked].some((id) => members.has(id))) asked = new Set([...asked].filter((id) => !members.has(id)));
   });
 
+  //: Another group asked to take this player, until this player is grouped.
+  let entering = $state(null);
+  $effect(() => {
+    if (g && entering) entering = null;
+  });
   const rows = $derived.by(() => {
     const members = new Map((g?.members ?? []).map((m) => [m.id, m]));
+    const split = othersByGroup(players, new Set(members.keys()));
     const out = [];
+    for (const og of split.groups) {
+      out.push({ id: `group:${og.id}`, name: og.title, group: og, joining: entering === og.id, off: false, join: false,
+                 status: entering === og.id ? 'Joining · catching up' : `Led by ${og.members[0]?.name} · ${og.status}`,
+                 enter: !g && og.canEnter && entering !== og.id });
+    }
+    const inOther = new Set(split.groups.flatMap((og) => og.members.map((m) => m.id)));
     for (const p of players) {
+      if (inOther.has(p.id)) continue;
       const m = members.get(p.id);
       if (m?.me) continue;
       out.push(m
@@ -40,6 +56,16 @@
     }
     return out;
   });
+
+  async function enter(og) {
+    entering = og.id;
+    try {
+      await enterGroup(og.leader);
+    } catch (error) {
+      entering = null;
+      onerror(error.message);
+    }
+  }
 
   async function join(id) {
     asked = new Set([...asked, id]);
@@ -60,13 +86,19 @@
   <div class="cards" data-pan-x>
     {#each rows as r (r.id)}
       <div class="card" class:is-off={r.off}>
-        <img class="logo" src={mark} alt="" />
+        {#if r.group}
+          <span class="logo logo--group"><GroupGlyph size={26} ink="var(--ink-quiet)" /></span>
+        {:else}
+          <img class="logo" src={mark} alt="" />
+        {/if}
         <div class="text">
           <span class="name">{r.name}</span>
           <span class="status" class:is-joining={r.joining} class:is-off={r.off}>{r.status}</span>
         </div>
         {#if r.join}
           <button class="join" type="button" aria-label={`Join ${r.name}`} onclick={() => join(r.id)}>Join</button>
+        {:else if r.enter}
+          <button class="join" type="button" aria-label={`Join the group of ${r.name}`} onclick={() => enter(r.group)}>Join</button>
         {/if}
       </div>
     {/each}
@@ -126,6 +158,7 @@
   }
   .card.is-off { opacity: var(--group-off-opacity); }
   .logo { width: 34px; height: 34px; display: block; flex-shrink: 0; }
+  .logo--group { display: grid; place-items: center; }
   .text {
     flex: 1;
     min-width: 0;

@@ -4,11 +4,15 @@
   drawer's card turned to the other players on the network, each with Join.
   The group's own members are listed with what they do and no button; a
   player that is joining says it is catching up. Over the drawer's own
-  scrim, which closes both.
+  scrim, which closes both. Another group is one row (ADR-0166 decision
+  11): its players named, its leader first, what it plays, and - from a
+  player in no group - *Join this group*; its players are not joined one by
+  one.
 -->
 <script>
   import mark from '../../assets/gexis-mark.svg';
-  import { joinable, joinPlayer, memberStatus, otherStatus } from '../../lib/group.svelte.js';
+  import GroupGlyph from '../../lib/GroupGlyph.svelte';
+  import { enterGroup, joinable, joinPlayer, memberStatus, othersByGroup, otherStatus } from '../../lib/group.svelte.js';
 
   //: `others`: /players' others; `leader`: whose music they will play.
   let { open, g = null, others = [], leader = '', onback, onflash, onjoined } = $props();
@@ -17,17 +21,38 @@
   let asked = $state({});
 
   const inGroup = $derived(new Set((g?.members ?? []).map((m) => m.id)));
+  const split = $derived(othersByGroup(others, inGroup));
+  //: Another group asked to take this player, until this player is grouped.
+  let entering = $state(null);
+  $effect(() => {
+    if (g && entering) entering = null;
+  });
   const rows = $derived([
     ...(g?.members ?? []).filter((m) => !m.me).map((m) => ({
       id: m.id, name: m.name, leads: m.leads && m.reachable, status: memberStatus(g, m),
       joining: m.joining, off: !m.reachable, button: false,
     })),
-    ...others.filter((p) => !inGroup.has(p.id)).map((p) => ({
+    ...split.groups.map((og) => ({
+      id: `group:${og.id}`, name: og.title, leads: false, group: og,
+      status: entering === og.id ? 'Joining · catching up' : `Led by ${og.members[0]?.name} · ${og.status}`,
+      joining: entering === og.id, off: false, button: false, enter: !g && og.canEnter && entering !== og.id,
+    })),
+    ...split.loose.map((p) => ({
       id: p.id ?? p.url, name: p.name, leads: false,
       status: asked[p.id] ? 'Joining · catching up' : otherStatus(p),
       joining: !!asked[p.id], off: false, button: joinable(p) && !asked[p.id], player: p,
     })),
   ]);
+
+  async function enter(row) {
+    entering = row.group.id;
+    try {
+      await enterGroup(row.group.leader);
+    } catch (error) {
+      entering = null;
+      onflash?.(`Not joined: ${error.message}`);
+    }
+  }
 
   $effect(() => {
     // A join the group has taken is no longer the panel's to show.
@@ -65,13 +90,19 @@
     {#each rows as row (row.id)}
       <div class="row-wrap">
         <div class="row">
-          <img src={mark} alt="" class="mark" class:is-off={row.off} />
+          {#if row.group}
+            <span class="mark mark--group"><GroupGlyph size={30} ink="var(--ink-quiet)" /></span>
+          {:else}
+            <img src={mark} alt="" class="mark" class:is-off={row.off} />
+          {/if}
           <div class="text" class:is-off={row.off}>
             <span class="name">{row.name}{#if row.leads}<span class="leads">Leads</span>{/if}</span>
             <span class="status" class:is-joining={row.joining} class:is-quiet={row.off}>{row.status}</span>
           </div>
           {#if row.button}
             <button class="join" type="button" onclick={() => join(row)}>Join</button>
+          {:else if row.enter}
+            <button class="join" type="button" onclick={() => enter(row)}>Join this group</button>
           {/if}
         </div>
       </div>
@@ -166,6 +197,7 @@
     padding: 0 14px 0 18px;
   }
   .mark { width: 34px; height: 34px; display: block; flex-shrink: 0; }
+  .mark--group { display: grid; place-items: center; }
   .mark.is-off, .text.is-off { opacity: var(--group-off-opacity); }
   .text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
   .name {

@@ -1,6 +1,10 @@
 {
  "_about": "Every release's notes, newest first, exactly as published and signed (ADR-0116). publish.sh reads a release's notes from here; Settings -> Change logs shows the last 10.",
  "releases": {
+  "1.9.1": {
+   "date": "2026-10-29",
+   "notes": "New\n• From a player in no group, other groups show as groups, with the player that leads each; Join this group adds the player to the whole group.\n\nFixed\n• A player in a group, restarted, no longer takes the lead from the player that leads; a player leads once music plays on it."
+  },
   "1.9.0": {
    "date": "2026-10-28",
    "notes": "New\n• AirPlay 2: an iPhone, iPad or Mac plays to the player, listed under its own name. Marked Limited testing until it has been tried with an Apple device.\n• Make it yours offers AirPlay, on in every preset.\n\nFixed\n• A grouped player with the equaliser on plays in time with the rest of its group.\n• The Credits page names OpenCV, NumPy and the two picture models the player uses.\n\nGood to know\n• On a player updated from an earlier release, AirPlay is off until switched on in Settings → Plugins.\n• While AirPlay plays, play, pause and skip are on the Apple device; AirPlay sends 44.1 or 48 kHz."

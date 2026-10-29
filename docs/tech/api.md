@@ -96,7 +96,9 @@ ADR-0166, *stable*. `GET /group` is this player's record and the view
 {player}` joins a player, by its lasting `id` from `/players`, to this
 player's group (a new one, led by this player, if it is in none); `POST
 /group/remove {player}` takes a member out (never the leader); `POST
-/group/leave`; `POST /group/undo`. `POST /group/volume {percent, from}` is
+/group/leave`; `POST /group/undo`. `POST /group/enter {leader}` joins this
+player, in no group, to another group whole: its leader is asked to add it
+(decision 11). `POST /group/volume {percent, from}` is
 the *All* slider (`from`, optional: the members' levels when the drag
 began); `POST /group/mute {muted}`; `POST /group/members/{id}/volume` and
 `/mute` set one member's own. A refusal is a 409 with the sentence to show.

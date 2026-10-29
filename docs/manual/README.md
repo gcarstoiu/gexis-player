@@ -300,6 +300,13 @@ panel, open the volume drawer: under the volume, *Other players* and
 **Add players**. On a bar, the tray's **Group** button. A group lasts until
 it is undone, a restart included.
 
+**Another group** shows as a group: its players together, the one that
+leads tagged *Leads*, and what it plays. From a player in no group, **Join
+this group** (on a bar, **Join**) joins it whole: that group's leader adds
+this player, and it plays along. Its players are not joined one by one from
+outside the group; a player already in a group has no Join on another one -
+leave or undo yours first.
+
 ![The group on the phone](images/phone-group.webp)
 
 **What a group plays.** Music started on any player of the group plays on

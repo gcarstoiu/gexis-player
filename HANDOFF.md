@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-10-28 (on R2D2).
+Last updated: 2026-10-28, late (on R2D2).
 
 ## Start here
 
@@ -20,71 +20,65 @@ and the ideas as Must / Should / Could. It follows `docs/DEVELOPMENT.md`'s
 phases; change it when a phase opens, closes or moves, and show George first. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 1.8.0 on Testing, 1.7.0 on Stable** (2026-10-28:
-Testing serial 58 read back with a good signature; Stable serial 11). 1.8.0
-carries Phase 22 (multiroom) and the sideways scroll on sliders; PR #87
-merged by George the same day, `main` merged into `docs` and `next`,
-`release-1.8.0`, `ph-multiroom` and `ph-phone-controls` and their worktrees
-gone. Image `image/deploy/2026-10-28-gexis-player-v1.8.0.img`; build output
-`~/projects/gexis-release-out/r1.8.0`. The detail of both releases is in the
-archive (2026-10-27, 1.7.0; 2026-10-28, 1.8.0). A release worktree needs
-its pi-gen submodule initialised before `make image`.
+**Current release: 1.9.0 on Testing, 1.7.0 on Stable** (2026-10-28:
+Testing serial 59 read back with a good signature; Stable serial 11). 1.9.0
+carries Phase 23 (AirPlay 2, marked *Limited testing*) and the group-latency
+fix; PR #88 merged into `main` (2026-10-28). Release worktree
+`~/projects/gexis-player-r190`; image
+`image/deploy/2026-10-28-gexis-player-v1.9.0.img` (149 checks passed); build
+output `~/projects/gexis-release-out/r1.9.0`. 1.8.0's story is in the
+archive (2026-10-28). A release worktree needs its pi-gen submodule
+initialised before `make image`.
 **Before the next Stable promotion, remind George** (his request,
 2026-10-28; to-do `ph22-eq-check`): a group heard in sync with the
 equaliser on at one player only. 1.8.0 plays such a player about 46 ms late
-(lesson 85); the fix, `c913bdc6`, is on `next` (merged at George's word,
-not yet heard), not in 1.8.0 - promoting 1.8.0 as it is ships the offset.
-On sofapi it is installed (core `1.8.0+git18.66947eb`, the AirPlay preview
-with it) and not yet running: restart `gexis-core` there before the check,
-once nobody is playing.
+(lesson 85); the fix, `c913bdc6`, is in 1.9.0 (not yet heard): promote 1.9.0,
+not 1.8.0, once it is heard. The four players run it now (the preview
+below).
 **R2D2's `/` fills up**: Docker's containerd store keeps images on `/`, not
 in `/home/docker`, and pi-gen rebuilds its 1.16 GB build image on every
 image build; check `df -h /` before one (1.9 GB free after 1.8.0's, 213 MB at its lowest while pi-gen rebuilt).
-**Now: Phase 23, AirPlay 2** (`ph-airplay`, started 2026-10-28; George:
-a plugin, offered in first use).
-[ADR-0167](docs/decisions/0167-airplay-2-as-a-plugin.md) proposed: George's
-decisions 1-8 (his acceptance of Claude's recommendations); open: on or off
-for a player that updates, the Apple device for the tests. Debian trixie
-has no AirPlay 2 receiver (`shairport-sync` 4.3.7 is classic only, no
-`nqptp`), so Shairport Sync 5.6.2 and NQPTP 1.2.9 are built by us
-(`packaging/shairport-sync`, `packaging/nqptp`; their build libraries are
-installed by the build itself, not in the builder image, for want of space
-on `/`). Built on `ph-airplay` (worktree `~/projects/gexis-player-ph-airplay`,
-pushed): the `gexis-airplay` package, the contract's `artwork` event (T9),
-AirPlay in *Make it yours*, the documents and Legal and credits (OpenCV,
-NumPy and the two models added: the notices check now reads `packaging/`).
-**The adapter** is in `~/projects/gexis-airplay`, committed locally only:
-its 0.1.0 tarball sits in the build cache under its checksum, and goes to
-GitHub as the release asset (repository and release approved by George)
-once the preview passes. **Preview 1** (2026-10-28) on sofapi (Fixed) and
-guestpi (variable): installed, AirPlay switched on through the API (an
-updated player has it off), receiver, NQPTP and plugin up, announced under
-the device name; not yet played to - waiting for George's Apple device.
-Owed by George: the device, ADR-0022's AirPlay row, the Legal wording, Open
-1. Upstream's source, read for the ADR, is in
-`~/projects/scratch/ph23/upstream`.
-**Phase 22, multiroom for every source**, in 1.8.0 on Testing.
-[ADR-0166](docs/decisions/0166-multiroom-for-every-source.md): George's
-decisions 1-10, C1-C6, the design `design/source/22/`, Claude's build
-decisions B1-B13, B2 and B3 amended - all confirmed by George. His tests
-passed: joining and undoing from the phone, the panel and the bars; every
-source in a group; Fixed, the equaliser and four players in one group; the
-leader rebooted; Lyrion's half (after the sync fix of preview 13).
-**Open:** the measurement session (ADR-0166 *Measured before it is called
-done*; at 192 kHz the bar lost sync over Wi-Fi - whether to cap a group's
-rate is decided with the figures); the Home Assistant integration's join and
+**Now: Phase 23, AirPlay 2** (`ph-airplay`, closed as a branch) - in 1.9.0
+on Testing, marked *Limited testing*: released before it is tried, no Apple
+device yet (George, 2026-10-28). [ADR-0167](docs/decisions/0167-airplay-2-as-a-plugin.md)
+accepted. Shairport Sync 5.6.2 and NQPTP 1.2.9 are built by us
+(`packaging/shairport-sync`, `packaging/nqptp`); the adapter is
+`gcarstoiu/gexis-airplay` (local copy `~/projects/gexis-airplay`). **Open:**
+the test with an Apple device (to-do `ph23-test`), then T1-T9 to George and
+the tag removed. The build's story is in the archive (2026-10-28, evening).
+
+**Preview on all four players, for George's tests** (2026-10-28, late):
+`1.9.0+git9.484bd6d`, core and player from `group-join-whole` (worktree
+`~/projects/gexis-player-join`), into which `fix-lead-on-restart` is merged.
+`group-join-whole`: another group is shown as a group and joined whole
+(ADR-0166 decision 11, George's option A). `fix-lead-on-restart`: a source
+takes the lead only once it plays (ADR-0166 amended; lesson 86) - before,
+a member's core restart moved the lead with nothing playing. Seen after the
+install: sofapi's restart left the lead with the bar. The lead is on the bar
+since the earlier restart; music played on sofapi takes it back. Once
+George's tests pass, both branches into `next`, then a release.
+
+**Phase 22, multiroom for every source**, in 1.8.0 and 1.9.0 on Testing;
+[ADR-0166](docs/decisions/0166-multiroom-for-every-source.md) all confirmed
+by George (D7 amended 2026-10-28: a player with the equaliser on plays
+earlier by CamillaDSP's hold, fixed in 1.9.0, not yet heard). **Open:** the
+check by ear before the next Stable promotion (above); the measurement
+session (at 192 kHz the bar lost sync over Wi-Fi; a card's own delay, USB or
+optical, is measured there too); the Home Assistant integration's join and
 unjoin (its `multiroom` branch, `9744bb3`), released after the player's;
-back and forth between Lyrion-app grouping and the player's. The story of
-the build and the previews is in the archive (2026-10-28).
+back and forth between Lyrion-app grouping and the player's. The tests and
+the build's story are in the archive (2026-10-28).
 
 **The release key** moved to `~/projects/gexis-release-key` (George,
 2026-10-24): every release command sets
 `GEXIS_RELEASE_GNUPGHOME=~/projects/gexis-release-key`; the scripts default
 to `~/.gnupg-gexis-release`, which no longer exists.
 
-**The players**: sofapi, the bar (ShelvesPi), guestpi and bedroompi on
-Phase 22's preview 13 (2026-10-28): 1.8.0's packages but its core, which
-differs only by the notes. Each has its own Lyrion server again.
+**The players** (2026-10-28, late): all four on the preview above
+(`1.9.0+git9.484bd6d`, 1.9.0's content and the two multiroom branches);
+sofapi and the bar grouped, the bar leading; AirPlay on at sofapi and
+guestpi. Each has its own Lyrion server. Back to a release through the
+updater once the branches are released.
 
 **The test venv imports the core from `~/projects/gexis-player-next`** (an
 editable install): in another worktree run the suite with `PYTHONPATH=src`
@@ -136,14 +130,14 @@ in Claude's memory, not here) holds the open items with their detail.
 
 **Routine clean-up** (`docs/ROUTINE-CLEANUP.md`, George 2026-10-12): after
 every merged release PR, otherwise weekly on Sunday evening. **Last run:
-2026-10-28, after 1.8.0** (/home 214 -> 226 GB free, / 826 MB -> 1.9 GB).
+2026-10-28, after 1.9.0** (/home 220 -> 234 GB free, / 826 MB -> 1.9 GB).
 
 ## Phases
 
 Closed: 0-21 (13 with letters a-f). Phases are numbered consecutively
 without letters, each with a stable ID (George, 2026-10-13); 20 (the
 equaliser) and 21 (the phone remote) closed 2026-10-27 with 1.7.0; 22
-(multiroom) on Testing, 23 (AirPlay 2) in progress, 24-30 to come, MPD parked. `docs/DEVELOPMENT.md` holds each phase's acceptance criteria.
+(multiroom) and 23 (AirPlay 2, limited testing) on Testing, 24-30 to come, MPD parked. `docs/DEVELOPMENT.md` holds each phase's acceptance criteria.
 
 ## Machines
 
@@ -205,11 +199,6 @@ The full list, with how each was found, is in the archive (2026-10-12 block).
 - **Uploaded plugins run as systemd dynamic users, which the system bus
   refuses** on our image: what a plugin needs from the system goes through
   the core (`announce`, ADR-0142).
-- **Dry-run every install** (`apt-get -s`) and read the removals: a lone UI
-  package removes `gexis-player`; build the player meta-package with the rest.
-- **Restarting `gexis-core` does not reload the panel**: restart
-  `gexis-kiosk`, and confirm the new bundle by hash in the core's log
-  (LESSONS 10, 38, 66).
 - **A flash wipes what the device learned: back up from Settings first** and
   keep the archive outside the repository (`core.toml` can carry a
   per-display `idle_url`).
@@ -220,8 +209,6 @@ The full list, with how each was found, is in the archive (2026-10-12 block).
   `output` chain.
 - **Only Squeezelite may use `output_wait`** (ADR-0095): two waiters
   deadlocked the core.
-- **`systemctl is-active` does not mean working**: check the symptom (audio,
-  `fuser` on the PCM node).
 - **Plexamp restores its queue on every start** - anything that starts it
   outside `plexamp.service` bypasses `plexamp-start-idle`.
 - **BlueZ's `discoverable on` lapses after 180 s** unless the timeout is set;
