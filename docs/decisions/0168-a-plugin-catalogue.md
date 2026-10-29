@@ -205,6 +205,20 @@ restart and the row's *Installed just now* - which needs a player.
 update dialog sat half off the screen inside the remote, since 1.7.0 -
 fixed apart, on `fix-remote-dialogs`, and merged in here.
 
+## Built: the first listing, under way (plan step 4, 2026-10-29)
+
+`gcarstoiu/gexis-sample-plugins` is public (George, the same day): the two
+samples as in `tools/`, `package.sh` building the same bytes from the same
+tag, a release per version (`hello-0.1.0`, `tone-0.1.0`). Listed by
+`gexis-plugins` pull requests #1 and #2 (George's OK), one plugin each, with
+`player` 1.0.0: both ran as uploads before 1.0, and no release older than the
+catalogue's reads it. Shown: the check's first real run passed on both, its
+log read (each archive downloaded and matched, the player's upload check
+passed); each archive rebuilt from a fresh clone of its tag to the listed
+sha256; a copy with one bit changed refused by the same check run here. A
+review note on each; **George merges**. Not yet: publishing (the key), and
+the install, update, withdrawal, block and restore on a test player.
+
 ## Settings (ADR-0022)
 
 None. A switch to hide *More plugins* was offered and declined (George,

@@ -49,7 +49,11 @@ for George** (not yet, 2026-10-29); nothing is published before it. Steps
 `~/projects/gexis-player-ph-plugin-catalogue`), checked from mocked data
 (`~/projects/scratch/ph24`: `run.sh` with `catalogue_layout.py` and
 `shots.py`), not yet on a player. Step 3's choices wait for George
-(ADR-0168, *Built: the screens*). Next: step 4, the first listing. The wiki
+(ADR-0168, *Built: the screens*). Step 4, the first listing, under way:
+`gcarstoiu/gexis-sample-plugins` public (local copy
+`~/projects/gexis-sample-plugins`), listed by `gexis-plugins` #1 and #2,
+checked and with a review note each; **George merges them**. Publishing and
+the test on a player wait for the key. The wiki
 Roadmap shows the new order (pushed 2026-10-29 with George's OK).
 **Found in step 3, fixed apart**: on a phone the confirm, its progress card
 and the update dialog sat half off the screen (since 1.7.0); branch
