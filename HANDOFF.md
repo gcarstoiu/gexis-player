@@ -23,13 +23,11 @@ phases; change it when a phase opens, closes or moves, and show George first. Hi
 **Current release: 1.9.1 on Testing, 1.7.0 on Stable** (2026-10-29:
 Testing serial 60 read back with a good signature; Stable serial 11). 1.9.1
 carries the two multiroom changes previewed on 2026-10-28: another group
-shown and joined whole, and a source leads once it plays. **PR #89
-(`release-1.9.1` into `main`) open, for George to merge** - do not push
-`next` while its checks run. Release worktree `~/projects/gexis-player-r191`;
-image `image/deploy/2026-10-29-gexis-player-v1.9.1.img` (149 checks passed);
-build output `~/projects/gexis-release-out/r1.9.1`. 1.9.0's block is in the
-archive (2026-10-29). A release worktree needs its pi-gen submodule
-initialised before `make image`.
+shown and joined whole, and a source leads once it plays. PR #89 merged by
+George (2026-10-29). Image `image/deploy/2026-10-29-gexis-player-v1.9.1.img`
+(149 checks passed); build output `~/projects/gexis-release-out/r1.9.1`. A
+release worktree needs its pi-gen submodule initialised before `make
+image`.
 **Before the next Stable promotion, remind George** (his request,
 2026-10-28; to-do `ph22-eq-check`): a group heard in sync with the
 equaliser on at one player only. 1.8.0 plays such a player about 46 ms late
@@ -37,7 +35,8 @@ equaliser on at one player only. 1.8.0 plays such a player about 46 ms late
 1.9.1, not 1.8.0, once it is heard. The four players run it now.
 **R2D2's `/` fills up**: Docker's containerd store keeps images on `/`, not
 in `/home/docker`, and pi-gen rebuilds its 1.16 GB build image on every
-image build; check `df -h /` before one (1.9 GB free after 1.8.0's, 213 MB at its lowest while pi-gen rebuilt; 852 MB before 1.9.1's, 4.1 GB once George agreed to remove an unused Home Assistant image, 3.1 GB after).
+image build, about 1.7 GB at a build's peak; check `df -h /` before one
+(4.1 GB free on 2026-10-29, after the clean-up).
 **Now: Phase 24, the plugin catalogue** (`ph-plugin-catalogue`), brought
 forward with themes (25) before room correction (now 26 and 27), which still
 cannot be auditioned (George, 2026-10-29).
@@ -71,9 +70,11 @@ the build's story are in the archive (2026-10-28).
 to `~/.gnupg-gexis-release`, which no longer exists.
 
 **The players** (2026-10-29): all four on the preview `1.9.0+git9.484bd6d`,
-the code 1.9.1 released; sofapi and the bar grouped, the bar leading; AirPlay
-on at sofapi and guestpi. Each has its own Lyrion server. Bring them to
-1.9.1 through the updater (Testing).
+the code 1.9.1 released; sofapi and the bar grouped; AirPlay on at sofapi and
+guestpi. Each has its own Lyrion server. Bring them to 1.9.1 through the
+updater (Testing). Left by the 2026-10-29 clean-up, as they were playing:
+sofapi's and the bar's preview folders, by name `~/gexis-1`, `gexis-lead`,
+`gexis-p6` to `gexis-p13`, `gexis-p23-1` to `-4`, `gexis-pj`.
 
 **The test venv imports the core from `~/projects/gexis-player-next`** (an
 editable install): in another worktree run the suite with `PYTHONPATH=src`
@@ -116,7 +117,7 @@ them for a review (their template).
 from Phase 20: the measurement through a card (to-do `eq-measure`, at a time
 George picks).
 
-Then 23-30 in order, each ADR first (`docs/DEVELOPMENT.md`, the IDs
+Then 25-30 in order, each ADR first (`docs/DEVELOPMENT.md`, the IDs
 there); MPD parked (ADR-0151). **Raspberry Pi Imager** (ADR-0159, a task):
 Imager's own list stays open as it is (George, 2026-10-24).
 
@@ -125,14 +126,16 @@ in Claude's memory, not here) holds the open items with their detail.
 
 **Routine clean-up** (`docs/ROUTINE-CLEANUP.md`, George 2026-10-12): after
 every merged release PR, otherwise weekly on Sunday evening. **Last run:
-2026-10-28, after 1.9.0** (/home 220 -> 234 GB free, / 826 MB -> 1.9 GB).
+2026-10-29, after 1.9.1** (/home 220 -> 234 GB free, / 3.0 -> 4.1 GB).
 
 ## Phases
 
 Closed: 0-21 (13 with letters a-f). Phases are numbered consecutively
 without letters, each with a stable ID (George, 2026-10-13); 20 (the
 equaliser) and 21 (the phone remote) closed 2026-10-27 with 1.7.0; 22
-(multiroom) and 23 (AirPlay 2, limited testing) on Testing, 24-30 to come, MPD parked. `docs/DEVELOPMENT.md` holds each phase's acceptance criteria.
+(multiroom) and 23 (AirPlay 2, limited testing) on Testing; 24 (the plugin
+catalogue) being planned, then 25 (themes), 26-27 (room correction), 28-30;
+MPD parked. `docs/DEVELOPMENT.md` holds each phase's acceptance criteria.
 
 ## Machines
 
