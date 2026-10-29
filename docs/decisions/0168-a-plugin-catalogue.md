@@ -173,6 +173,38 @@ removed; the suite, 2,837 passed. **Not yet run on a player**, nor the
 start-up wiring in `__main__.py` (the blocked switch-off before uploaded
 plugins start, the refused switch), which no unit test reaches.
 
+## Built: the screens (plan step 3, 2026-10-29)
+
+On `ph-plugin-catalogue`, in `Settings.svelte` (the phone, the panel and the
+bars alike), from the Plugins page's own parts (decision 7). Settled in
+building, for George to confirm:
+- **More plugins is the Plugins page's first row**, above *Upload a
+  plugin*, on every screen, with the number of updates waiting; only on a
+  release that carries the catalogue key (the core says `keyed`).
+- **Its page: a tile per listed plugin** - name, summary, kind, author,
+  licence, source (a link on a phone, its address on the panel), where it
+  stands on this player, and *Install* or *Update to …*; on the panel and
+  the bars the button at the right, as a row's switch is. Its download is in
+  the tile, with Retry; the page says when the catalogue could not be read,
+  or read again, and when nothing is listed.
+- **Decision 6's notice before every install and update**; Retry after a
+  failed download goes straight on.
+- **On the plugin's own row**: *Update to …* (decision 4) and that download;
+  a blocked plugin's switch greyed with its reason, refused by the core too
+  (the registry's `restrictions`, a 409); *Remove* also on the panel and the
+  bars, since it can be installed again there (an upload's stays on a phone
+  or computer), and not while a download for it runs.
+Shown, from mocked data only (a stand-in core with made-up plugins): phone
+at 360 and 412 px, the remote on a 1280 px laptop, the panel at 1280×720,
+the bar at 1850×400; every state of a tile, a download and a failed one, an
+update from the plugin's row, the blocked switch left off when tapped; two
+core tests more (a release without the key reads nothing; the blocked
+switch refuses on). **Not yet seen**: the end of an install - the core's
+restart and the row's *Installed just now* - which needs a player.
+**Found on the way**: on a phone the confirm, its progress card and the
+update dialog sat half off the screen inside the remote, since 1.7.0 -
+fixed apart, on `fix-remote-dialogs`, and merged in here.
+
 ## Settings (ADR-0022)
 
 None. A switch to hide *More plugins* was offered and declined (George,
