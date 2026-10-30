@@ -110,7 +110,9 @@ flowchart LR
 
 The same `index.html` is served to everyone. On mount, `App.svelte` asks
 `GET /surface`. The core answers `panel` when the request comes from loopback
-(the kiosk loads `http://127.0.0.1:8090/`) and `remote` for anything else.
+with this boot's token (the kiosk loads `http://127.0.0.1:8090/#panel=…`, and
+`lib/panel-token.js`, loaded first, adds it to every request as
+`X-Gexis-Panel`; ADR-0170) and `remote` for anything else.
 If the request fails it is asked again, backing off to every 5 s, and nothing
 is drawn meanwhile: a phone taken for a panel would draw at panel size and
 report its taps as the panel's (code review, 2026-10-12). **The panel then
@@ -558,7 +560,8 @@ Remote page scrolls.
 One WebSocket, `/touchpad`, between the phones and the panel (ADR-0121). The
 core relays messages and never interprets them:
 
-- It tells the two ends apart by loopback (the panel) or LAN (a phone).
+- It tells the two ends apart by loopback with the panel's token (`?panel=`,
+  ADR-0170) or anything else (a phone).
 - It accepts only `move`, `tap`, `text`, `key`, `scroll`, `zoom` from phones
   and `over`, `focus`, `ring`, `untyped` from the panel.
 - It drops messages over 2 KB, and drops everything while the

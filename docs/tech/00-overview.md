@@ -123,9 +123,9 @@ Notes on the diagram:
   built Svelte bundle from `/opt/gexis-ui`, the `/state` WebSocket and the
   REST command routes, all on port 8090 (`core/src/gexis_core/config.py`).
 - **Panel and phone load the same page.** The core tells them apart by where
-  the request comes from: loopback is the panel, anything else is a remote
-  surface (`/surface` in `core/src/gexis_core/wsserver.py`; ADR-0032,
-  ADR-0101).
+  the request comes from: loopback with this boot's token is the panel,
+  anything else is a remote surface (`/surface` in
+  `core/src/gexis_core/wsserver.py`; ADR-0032, ADR-0101, ADR-0170).
 - **The Peppy screen is not in the browser.** It is a native PeppyMeter
   window that labwc keeps behind Chromium; the core raises and hides it
   with `wlrctl` (`core/src/gexis_core/peppy.py`, ADR-0026).
