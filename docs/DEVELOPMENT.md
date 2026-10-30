@@ -3539,7 +3539,11 @@ installs through the upload's checks and sandbox and offers listed updates.
    *The first listing on a test player*). Steps 2 and 3's choices confirmed
    or changed by George on 2026-10-29 (ADR-0168, *Confirmed and changed*).
 5. **The public documents**: the manual, the FAQ, the technical guide, the
-   plugin manual (how to get listed), the README.
+   plugin manual (how to get listed), the README. **Done 2026-10-30** on
+   `ph-plugin-catalogue`: the manual's Plugins section, a Plugins section in
+   the FAQ, section 8 of *Writing a plugin*, the README's plugins, features
+   and roadmap, and the technical guide; no screenshot changed (the
+   Settings ones show other groups).
 6. **A preview** on the test players, George's tests, then a release.
 
 **Acceptance (draft, with the ADR)**

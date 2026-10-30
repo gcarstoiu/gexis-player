@@ -66,8 +66,10 @@ and blocked on sofapi; `gexis-plugins` #1-#9 merged; **serial 4 published**
 `GEXIS_CATALOGUE_GNUPGHOME=~/projects/gexis-catalogue-key`). The signature
 is now `catalogue-<serial>.json.sig` (George, after GitHub's cache paired a
 catalogue with the previous signature). The ADR's three measurements done.
-Next: step 5, the public documents (manual, FAQ, README); then step 6,
-George's tests on a preview and release 1.10.0. The samples left `tools/`
+Step 5 done the same day (the manual, the FAQ, *Writing a plugin*, the
+README, the technical guide, on the phase branch). Next: step 6, George's
+tests on a preview and release 1.10.0; with both samples withdrawn the
+catalogue lists nothing, which his tests will need a way around. The samples left `tools/`
 for that repository. The wiki Roadmap shows the new order (pushed
 2026-10-29 with George's OK).
 **Found in step 3, fixed apart**: on a phone the confirm, its progress card
