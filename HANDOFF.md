@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-10-29 (on R2D2).
+Last updated: 2026-10-30 (on R2D2).
 
 ## Start here
 
@@ -57,21 +57,26 @@ first install only, and a restore all in one go - both built. **The
 catalogue key exists** (ADR-0168, *The catalogue key*): R2D2 keeps the
 subkey in `~/projects/gexis-catalogue-key`; the master and revocation
 certificate wait in `~/projects/gexis-catalogue-key-for-george` until
-George has them, then that folder is deleted. Step 4, the first listing:
-`gcarstoiu/gexis-sample-plugins` public (local copy
-`~/projects/gexis-sample-plugins`), listed by `gexis-plugins` #1 and #2
-(merged), **serial 1 published** with Hello and Tone (`tools/publish.sh`,
-`GEXIS_CATALOGUE_GNUPGHOME=~/projects/gexis-catalogue-key`). Next in step
-4: a preview of the phase on a test player, then install, update (a 0.2.0),
-withdraw, block and restore there; afterwards the samples are withdrawn
-(George). The samples left `tools/` for that repository. The wiki
-Roadmap shows the new order (pushed 2026-10-29 with George's OK).
+George has them, then that folder is deleted. **Step 4 done** (2026-10-30;
+ADR-0168, *The first listing on a test player*): the samples
+(`gcarstoiu/gexis-sample-plugins`, local copy
+`~/projects/gexis-sample-plugins`) installed, updated, restored, withdrawn
+and blocked on sofapi; `gexis-plugins` #1-#9 merged; **serial 4 published**
+(both samples withdrawn; `tools/publish.sh`,
+`GEXIS_CATALOGUE_GNUPGHOME=~/projects/gexis-catalogue-key`). The signature
+is now `catalogue-<serial>.json.sig` (George, after GitHub's cache paired a
+catalogue with the previous signature). The ADR's three measurements done.
+Next: step 5, the public documents (manual, FAQ, README); then step 6,
+George's tests on a preview and release 1.10.0. The samples left `tools/`
+for that repository. The wiki Roadmap shows the new order (pushed
+2026-10-29 with George's OK).
 **Found in step 3, fixed apart**: on a phone the confirm, its progress card
 and the update dialog sat half off the screen (since 1.7.0); branch
 `fix-remote-dialogs` (worktree `~/projects/gexis-player-fix-remote-dialogs`),
-merged into the phase branch, into `next` after George's test: **on sofapi
-as a preview** (`1.9.1+git17.9141a7e`, gexis-ui and gexis-player; files in
-`~/gexis-pd`, removed after the test), for George to try from a phone.
+merged into the phase branch, into `next` after George's test. **sofapi
+runs the phase's preview** (`1.9.1+git26.81918c4` core and player,
+`1.9.1+git25.1b14a2e` UI; files in `~/gexis-pc`), which carries the fix:
+George's phone test of the dialogs can be done there.
 **`fix-vite`** (worktree `~/projects/gexis-player-fix-vite`): Vite 8.3.3
 for three Dependabot alerts on its development server (George); the built
 UI compared with 8.3.0's, the same mocked screens pixel for pixel; into
@@ -103,7 +108,8 @@ to `~/.gnupg-gexis-release`, which no longer exists.
 
 **The players** (2026-10-29): all four on 1.9.1 through their updaters, on
 Testing (sofapi moved from Stable to Testing for it, George), dpkg clean;
-sofapi then the dialog fix's preview (above). sofapi and the bar grouped;
+sofapi since 2026-10-30 on the phase's preview (above), no catalogue
+plugins installed, DevTools off; `~/gexis-pd` removed. sofapi and the bar grouped;
 AirPlay on at sofapi and guestpi. Each has its own Lyrion server. The old
 preview folders are gone (of those named, only `gexis-lead` and `gexis-pj`
 were still there, on sofapi and the bar).
