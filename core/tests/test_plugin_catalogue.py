@@ -358,6 +358,26 @@ async def test_a_restore_installs_them_all_then_restarts_once(key, tmp_path):
     assert await again.restore(missing) == [] and calls["restarted"] == 0
 
 
+async def test_a_withdrawal_read_during_a_run_reaches_the_row(key, tmp_path):
+    """Found on sofapi, 2026-10-30: the row's mark was fixed at the start."""
+    keyring, sign = key
+    a = archive()
+    cat = index(entry(listed(a)))
+    served = {URL: cat, URL + ".sig": sign(cat)}
+    svc, _ = service(key, tmp_path, served, installed={"hello": "0.1.0"}, from_catalogue={"hello"})
+    told = []
+    svc.on_change = lambda: told.append(svc.catalogue.serial)
+    await svc.refresh()
+    await svc.refresh()
+    assert told == [1] and svc.pulled("hello") is None
+    withdrawn = index(entry(listed(a), withdrawn="no longer kept up"), serial=2)
+    served.update({URL: withdrawn, URL + ".sig": sign(withdrawn)})
+    await svc.refresh()
+    assert told == [1, 2]
+    assert settings_registry.catalogue_note(svc.pulled("hello")) == \
+        "Withdrawn from the plugin catalogue: no longer kept up"
+
+
 # Where it came from
 
 def test_an_uploads_origin_survives_the_record_and_goes_with_remove(tmp_path):

@@ -90,7 +90,7 @@ from gexis_core.softvol_boot import (
     FIXED, HARDWARE, SOFTWARE, SOFTWARE_LEVEL_FIRST_DB, SOFTWARE_LEVEL_KEY, VOLUME_KEY,
     start_level, volume_mode,
 )
-from gexis_core.settings_registry import InvalidValue, Settings, UnknownSetting, load_registry
+from gexis_core.settings_registry import InvalidValue, Settings, UnknownSetting, catalogue_note, load_registry
 from gexis_core.splash import Splash
 from gexis_core.state import StateStore
 from gexis_core import announce, backups, bluealsa_volume, components, outputs, plugin_env, plugins, uploads
@@ -800,6 +800,7 @@ async def main() -> None:
         install_archive=lambda archive, plugin_id, restart: _install_from_catalogue(archive, plugin_id, restart),
         switch_off=lambda plugin_id, why: _switch_off_blocked(plugin_id, why),
         restart_core=lambda: _restart_core_soon(),
+        on_change=lambda: state_store.bump_settings_revision(),
     )
     installed_plugins = [
         replace(p, pulled=plugin_catalogue.pulled_for(catalogue.catalogue, p.id, p.version)) if p.catalogue else p
@@ -2775,7 +2776,13 @@ async def main() -> None:
                "screen": lambda: _reports_note("screen", hardware_report.screen_reports(settings_store.get("screen"))),
                # The Lyrion server's first start says what it is doing.
                **({"lyrion-server.enabled": lambda: _lyrion_note(settings.value("lyrion-server.enabled") is True)}
-                  if any(p.id == "lyrion-server" for p in installed_plugins) else {})},
+                  if any(p.id == "lyrion-server" for p in installed_plugins) else {}),
+               # ADR-0168: withdrawn or blocked by a read during the run, said
+               # without waiting for a restart.
+               **{f"{plugin.id}.enabled":
+                  (lambda plugin_id=plugin.id: catalogue_note(catalogue.pulled(plugin_id)))
+                  for plugin in installed_plugins
+                  if plugin.catalogue and plugin.enabled_row is None}},
         # Wired = something reads it (ADR-0035). The token is read on every
         # Popular lookup, so it takes effect as soon as it is typed.
         # Wired = something reads it, or something happens. `lms_server` is

@@ -809,6 +809,20 @@
     const timer = setInterval(() => readCatalogue(), 1000);
     return () => clearInterval(timer);
   });
+  // What an install ended with belongs to the visit that saw it: another
+  // group opened, and it goes (found on sofapi, 2026-10-30: a panel left on
+  // Plugins still said "just now" hours later).
+  $effect(() => {
+    cat;
+    drilled;
+    untrack(() => (catalogueSaid = {}));
+  });
+  //: The line on a plugin's own row: a first install's "switched off" no
+  //: longer holds once its switch is on.
+  function saidOnRow(r, id) {
+    const said = catalogueSaid[id];
+    return said && !(said.done && !said.previous && toggleOn(r)) ? said : null;
+  }
   async function openCatalogue() {
     catalogueOpen = true;
     catalogueSaid = {};
@@ -2354,9 +2368,10 @@
                         {@const id = pluginIdOf(r)}
                         {@const job = jobOf(id)}
                         {@const listed = r.catalogue ? listedOf(id) : null}
-                        {#if job || catalogueSaid[id]}
-                          <span class="row__note dl__line" class:dl--failed={listedFailed(null, job, catalogueSaid[id])}>
-                            {listedLine(null, job, catalogueSaid[id])}{#if listedDetail(job)}<span class="dl__sub"> · {listedDetail(job)}</span>{/if}
+                        {@const said = saidOnRow(r, id)}
+                        {#if job || said}
+                          <span class="row__note dl__line" class:dl--failed={listedFailed(null, job, said)}>
+                            {listedLine(null, job, said)}{#if listedDetail(job)}<span class="dl__sub"> · {listedDetail(job)}</span>{/if}
                           </span>
                         {/if}
                         {#if listed?.state === 'update' && (!job || job.phase === 'failed')}

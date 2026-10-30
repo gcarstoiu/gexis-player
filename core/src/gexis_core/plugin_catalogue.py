@@ -334,6 +334,9 @@ class Service:
     session: Callable[[], aiohttp.ClientSession] | None = None
     #: Restart the core once after installs that did not.
     restart_core: Callable[[], Awaitable[None]] | None = None
+    #: A read brought a different catalogue: the screens read the settings
+    #: again, for a row's withdrawn mark and an update offered.
+    on_change: Callable[[], None] | None = None
     catalogue: Catalogue | None = None
     checked: float | None = None
     error: str | None = None
@@ -360,6 +363,7 @@ class Service:
                 # A release built without the key has no catalogue to trust.
                 self.error = "this player has no catalogue key"
                 return
+            before = self.catalogue.serial if self.catalogue else None
             try:
                 async with self._session() as session:
                     data, signature = await download(session, self.url)
@@ -371,6 +375,8 @@ class Service:
                 self.error = str(exc)
                 logger.warning("catalogue: not read: %s", exc)
                 return
+        if self.on_change and self.catalogue.serial != before:
+            self.on_change()
         await self.enforce()
 
     @property
@@ -380,6 +386,11 @@ class Service:
     def blocked(self) -> dict[str, str]:
         mine = {k: v for k, v in self.installed().items() if k in self.from_catalogue()}
         return blocked(self.catalogue, mine)
+
+    def pulled(self, plugin_id: str) -> tuple[str, str] | None:
+        """Whether the catalogue read last withdrew or blocked this plugin,
+        or the version installed here - for its row, read with the settings."""
+        return pulled_for(self.catalogue, plugin_id, self.installed().get(plugin_id))
 
     def switch_unavailable(self, plugin_id: str) -> dict:
         """What the plugin's switch cannot be set to (the registry's
