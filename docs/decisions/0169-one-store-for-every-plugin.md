@@ -78,6 +78,22 @@ none (ADR-0168, *Changed*).
     Bluetooth) stay switches on the Sources page.
 12. **An update starts from what is in use**, as (10) proposes.
 
+## Built (2026-10-30)
+
+On `ph-plugin-catalogue`: `plugin_store.py` and the core's wiring (the
+record, the hidden switch rows, `GET /plugins/store`, `POST
+/plugins/{id}/add` and `/remove` with `keep`), setup recording what it chose,
+every plugin row saying what it does; the screens (*Add plugins* with chips,
+two columns on the panel and three on a bar, the upload at its end; tags;
+one Remove with the keep switch). Shown from mocked data on a phone at 360
+and 412 px, the panel at 1280×800 and a bar at 1850×400, no overflow. On
+sofapi (preview `1.9.1+git46.d41c73e`): the update from the earlier preview
+marked added what was in use (AirPlay, Beszel, the Lyrion Server, its
+software downloaded, Plexamp, the skins) and put the Beszel hub in *Add
+plugins*; the hub added (row shown and on, its service running) and removed
+again (row hidden, service stopped, tile back). Not yet seen: a new
+player's setup writing the record; Remove with *Keep* off for one of ours.
+
 ## Settings (ADR-0022)
 
 None new for the user: *Keep its settings and sign-in* is a choice in the

@@ -87,6 +87,24 @@ too. True of every uploaded plugin since ADR-0106. A fix of its own, before
 1.10.0 (George): the panel proves itself with a token only the kiosk can
 read.
 
+## Built (2026-10-30)
+
+On `ph-plugin-catalogue`: `plugin_permissions.py` (`cec`, `gpio`, `usb`, the
+drop-in, written at every core start, a unit whose grant changed restarted),
+the manifest's `permissions`, consent kept as `granted` in the plugin's
+record, the `409` round for an upload and a catalogue install, an update
+asking again for what is new, a restore granting nothing new, the udev rule
+for USB and HID; `gexis-plugins`, locally: a version's `permissions` and an
+entry's `area`, each compared with the manifest. The loopback fix on
+`fix-panel-loopback`, merged into the phase branch. Shown on sofapi with a
+test plugin uploaded from a phone-sized remote: without the permission it
+could open no device; its next version asking for `cec` was asked about
+first, then opened `/dev/cec0` and `/dev/cec1` and was refused the GPU and
+the GPIO chip; started without its grant, as at boot, it was restarted with
+it four seconds after the core; removed, nothing of it was left. The kiosk
+proves itself (its panel requests all answered), and a call on loopback
+without the token is refused. Not yet: CEC with a TV; the plugin.
+
 ## Settings (ADR-0022)
 
 None: a permission is granted by adding the plugin, and taken back by
