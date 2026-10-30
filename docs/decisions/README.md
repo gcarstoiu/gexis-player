@@ -189,6 +189,8 @@ been written properly. **0098 has no record either.**
 | [0166](0166-multiroom-for-every-source.md) | Multiroom for every source | Accepted 2026-10-27 (Phase 22; George's nine answers, Claude's C1-C6 confirmed): one group, Lyrion's sync for Lyrion, Snapcast for the rest; amended 2026-10-28 (Lyrion's syncs are Gexis groups; the design; D1 per Finding 139) |
 | [0167](0167-airplay-2-as-a-plugin.md) | AirPlay 2 as a plugin | Accepted 2026-10-28 (Phase 23; George's eight answers, off for an updating player, released marked *Limited testing* until tried with an Apple device): Shairport Sync 5.6.2 and NQPTP 1.2.9 built by us, an adapter in `gcarstoiu/gexis-airplay`; on in first use; controls once measured |
 | [0168](0168-a-plugin-catalogue.md) | A plugin catalogue | Accepted 2026-10-29 (Phase 24; George's seven answers, no setting): `gcarstoiu/gexis-plugins`, others' plugins listed by pull request, every version read and pinned, George merges; *More plugins* everywhere, through the upload's sandbox |
+| [0169](0169-one-store-for-every-plugin.md) | One store for every plugin | Accepted 2026-10-30 (Phase 24, George): *Add plugins* holds ours and the catalogue's alike; the Plugins page what is added; one Remove |
+| [0170](0170-plugins-that-ask-for-more.md) | Plugins that ask for more | Accepted 2026-10-30 (Phase 24, George): declared permissions `cec`, `gpio`, `usb`, granted as declared and asked for; a CEC plugin first |
 
 ## Cross-cutting rules
 

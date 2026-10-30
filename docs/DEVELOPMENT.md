@@ -3544,13 +3544,19 @@ installs through the upload's checks and sandbox and offers listed updates.
    the FAQ, section 8 of *Writing a plugin*, the README's plugins, features
    and roadmap, and the technical guide; no screenshot changed (the
    Settings ones show other groups).
-6. **One store for every plugin** (George, 2026-10-30; ADR-0168, *Changed*):
-   *Add plugins* lists ours and the catalogue's alike; the Plugins page what
-   is installed. Mock-ups first, for George's OK; then its decision record
-   and the build, with the documents.
-7. **Plugins that ask for more** (George, 2026-10-30): declared permissions
-   and a stricter first check, its decision record first; **the CEC plugin**
-   as the first to use them, tried first on a test player with a TV.
+6. **One store for every plugin** (George, 2026-10-30): *Add plugins* lists
+   ours and the catalogue's alike; the Plugins page what is added. Mock-ups
+   approved and [ADR-0169](decisions/0169-one-store-for-every-plugin.md)
+   accepted the same day; **built** the same day and tried on sofapi, the
+   documents with it (ADR-0169, *Built*).
+7. **Plugins that ask for more** (George, 2026-10-30):
+   [ADR-0170](decisions/0170-plugins-that-ask-for-more.md) accepted the same
+   day - `cec`, `gpio` and `usb`, granted as declared and asked for; **the
+   CEC plugin** as the first, tried by hand once George has a test player on
+   a TV. With it, apart: a plugin on `127.0.0.1` no longer passes for the
+   panel (a fix branch, before 1.10.0). Permissions and the fix **built** the
+   same day and tried on sofapi (ADR-0170, *Built*); the CEC plugin waits for
+   the TV.
 8. **A preview** on the test players, George's tests, then a release.
 
 **Acceptance (draft, with the ADR)**
