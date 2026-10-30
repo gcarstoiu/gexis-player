@@ -3544,7 +3544,14 @@ installs through the upload's checks and sandbox and offers listed updates.
    the FAQ, section 8 of *Writing a plugin*, the README's plugins, features
    and roadmap, and the technical guide; no screenshot changed (the
    Settings ones show other groups).
-6. **A preview** on the test players, George's tests, then a release.
+6. **One store for every plugin** (George, 2026-10-30; ADR-0168, *Changed*):
+   *Add plugins* lists ours and the catalogue's alike; the Plugins page what
+   is installed. Mock-ups first, for George's OK; then its decision record
+   and the build, with the documents.
+7. **Plugins that ask for more** (George, 2026-10-30): declared permissions
+   and a stricter first check, its decision record first; **the CEC plugin**
+   as the first to use them, tried first on a test player with a TV.
+8. **A preview** on the test players, George's tests, then a release.
 
 **Acceptance (draft, with the ADR)**
 

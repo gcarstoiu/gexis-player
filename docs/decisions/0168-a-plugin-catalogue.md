@@ -312,6 +312,27 @@ Found and fixed:
   signature moved to the new name, the old file deleted). A test reproduces
   the cached pair; sofapi reads serial 4 so.
 
+## Changed: one store, and plugins that ask for more (George, 2026-10-30)
+
+George found several tiers of plugin confusing (ours that download their
+software, ours with a page of their own, uploaded, from the catalogue) and
+asked that a plugin be a plugin. Shown Volumio's way (everything a plugin,
+one store, community code with the same rights as Volumio's own), moOde's
+(no plugins) and Lyrion's (one list, third-party code with full rights), and
+two mock-ups, he chose:
+- **One store** (option B): the Plugins page lists what is installed, every
+  plugin in the same row with a tag for where it came from; one *Add
+  plugins* page lists everything available, ours beside the catalogue's.
+  Its own decision record before it is built; the mock-ups finished first
+  (the bar, Remove), for George's OK.
+- **Plugins may ask for more**: rather than a sandbox that stops a whole
+  kind of plugin (a TV remote over HDMI-CEC, GPIO controls), a stricter
+  first check and declared permissions, each granted only as declared,
+  listed in the notice, and asked again when a version wants more. Its own
+  decision record; **a CEC plugin is the first** to use it.
+- **Both in this phase**, before 1.10.0 (George, the same day).
+Ours keep coming with the release, signed with the release key (ADR-0106).
+
 ## Settings (ADR-0022)
 
 None. A switch to hide *More plugins* was offered and declined (George,
