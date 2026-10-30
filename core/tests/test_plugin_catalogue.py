@@ -201,13 +201,14 @@ async def test_only_the_listed_archive_is_taken():
             await pc.fetch_archive(Session({v["url"]: served}), {**v, "size": max(len(served), v["size"])})
 
 
-def service(key, tmp_path, served, *, installed=None, from_catalogue=None):
+def service(key, tmp_path, served, *, installed=None, from_catalogue=None, granted=None):
     keyring, sign = key
-    calls = {"installed": [], "off": [], "restarted": 0, "restart_with": []}
+    calls = {"installed": [], "off": [], "restarted": 0, "restart_with": [], "permissions": []}
 
-    async def install_archive(archive_bytes, plugin_id, restart):
+    async def install_archive(archive_bytes, plugin_id, restart, permissions):
         calls["installed"].append((plugin_id, hashlib.sha256(archive_bytes).hexdigest()))
         calls["restart_with"].append(restart)
+        calls["permissions"].append(permissions)
         return {"installed": plugin_id}
 
     async def switch_off(plugin_id, why):
@@ -219,6 +220,7 @@ def service(key, tmp_path, served, *, installed=None, from_catalogue=None):
     svc = pc.Service(release=lambda: "1.9.1", installed=lambda: dict(installed or {}),
                      from_catalogue=lambda: set(from_catalogue or ()), ours={"spotify"},
                      install_archive=install_archive, switch_off=switch_off, restart_core=restart_core,
+                     granted=lambda: dict(granted or {}),
                      keyring=keyring, state=tmp_path, url=URL, session=lambda: Session(served))
     return svc, calls
 
@@ -466,3 +468,63 @@ def test_a_plugin_restored_from_the_catalogue_says_it_is_installed_again():
     row = _rows(missing=[{"id": "hello", "name": "Hello", "kind": "service", "version": "0.1.0"}])["hello.missing"]
     assert row["default"] == "Upload again"
 
+
+
+# Plugins that ask for more (ADR-0170)
+
+async def test_a_version_that_asks_for_more_waits_for_its_person(key, tmp_path):
+    keyring, sign = key
+    data = archive(plugin_id="tv")
+    v = listed(data, permissions=["cec"])
+    cat = index(entry(v, plugin_id="tv"))
+    svc, calls = service(key, tmp_path, {**published(cat, sign), v["url"]: data})
+    await svc.refresh()
+    row = svc.view()["plugins"][0]
+    assert row["permissions"][0]["name"] == "cec" and row["asks"] == ["cec"]
+    with pytest.raises(pc.NeedsConsent) as asked:
+        svc.start_install("tv")
+    assert asked.value.missing == ("cec",) and "tv" not in svc.jobs
+    job = svc.start_install("tv", grant=("cec",))
+    for _ in range(50):
+        if job.phase in ("installed", "failed"):
+            break
+        await asyncio.sleep(0.01)
+    assert job.phase == "installed" and calls["permissions"] == [("cec",)]
+
+
+async def test_an_update_asks_again_only_for_what_is_new(key, tmp_path):
+    keyring, sign = key
+    a, b = archive(plugin_id="tv"), archive(plugin_id="tv", version="0.2.0")
+    cat = index(entry(listed(a, permissions=["cec"]), listed(b, "0.2.0", permissions=["cec", "usb"]), plugin_id="tv"))
+    svc, _ = service(key, tmp_path, published(cat, sign), installed={"tv": "0.1.0"},
+                     from_catalogue={"tv"}, granted={"tv": ("cec",)})
+    await svc.refresh()
+    row = svc.view()["plugins"][0]
+    assert row["state"] == "update" and row["asks"] == ["usb"]
+    with pytest.raises(pc.NeedsConsent) as asked:
+        svc.start_install("tv")
+    assert asked.value.missing == ("usb",)
+
+
+async def test_a_version_asking_for_what_this_player_does_not_grant_is_not_offered(key, tmp_path):
+    keyring, sign = key
+    a, b = archive(), archive(version="0.2.0")
+    cat = index(entry(listed(a), listed(b, "0.2.0", permissions=["root"])))
+    svc, _ = service(key, tmp_path, published(cat, sign))
+    await svc.refresh()
+    assert svc.view()["plugins"][0]["version"] == "0.1.0"
+
+
+async def test_a_restore_grants_nothing_new(key, tmp_path):
+    keyring, sign = key
+    data = archive(plugin_id="tv")
+    v = listed(data, permissions=["cec"])
+    cat = index(entry(v, plugin_id="tv"))
+    served = {**published(cat, sign), v["url"]: data}
+    svc, calls = service(key, tmp_path, served)
+    await svc.refresh()
+    assert await svc.restore([{"id": "tv", "version": "0.1.0"}]) == []
+    agreed, calls = service(key, tmp_path, served, granted={"tv": ("cec",)})
+    await agreed.refresh()
+    assert await agreed.restore([{"id": "tv", "version": "0.1.0"}]) == ["tv"]
+    assert calls["permissions"] == [("cec",)]

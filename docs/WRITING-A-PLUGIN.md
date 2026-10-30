@@ -66,6 +66,7 @@ brings one is refused.
 | `tag` | no | A few words beside its name on its switch in Settings, 24 characters at most - the player's AirPlay says *Limited testing* |
 | `connection` | no | Honoured only on the player's own `service` plugins, not on an uploaded one: the heading above its rows then says *Connected*, *Connecting* or *Not connected*. An uploaded plugin runs as a user made for each run, so there is no fixed user to read connections from |
 | `settings` | no | Rows for **Settings**, below |
+| `permissions` | no | What it needs beyond the sandbox (section 3): a list of `cec`, `gpio`, `usb`. The person adding it is told, and the player grants exactly those. Absent: none |
 
 **Not allowed:** `unit` (the player writes it), paths that point outside the
 package (`..`, absolute paths, links out), devices or pipes in the archive.
@@ -79,7 +80,7 @@ Every uploaded plugin runs under `gexis-uploaded-<kind>@<id>.service`:
 | **User** | A temporary user made for each run - never root, never `pi` |
 | **Can write** | Only its own data folder, `$STATE_DIRECTORY` (also `$GEXIS_PLUGIN_DATA`), kept across restarts and versions and deleted with the plugin. Plus its own `/tmp` |
 | **Can read** | The system, read-only. **Not** `/home` |
-| **Devices** | A **renderer** gets the sound cards (and the basics every program has, like `/dev/null`); a **service** gets no devices beyond those basics |
+| **Devices** | A **renderer** gets the sound cards (and the basics every program has, like `/dev/null`); a **service** gets no devices beyond those basics. More only as its `permissions` ask, below |
 | **Network** | Open |
 | **Processes** | Its own only: other users' processes are out of sight (`ProtectProc=invisible`) |
 | **The player** | The plugin socket, `$GEXIS_PLUGIN_SOCKET` (`/run/gexis/plugins.sock`) |
@@ -89,6 +90,21 @@ Every uploaded plugin runs under `gexis-uploaded-<kind>@<id>.service`:
 
 Your process starts **in its package folder** (`current/`), so relative paths
 to your own files work.
+
+**Asking for more** (ADR-0170). A plugin that needs a device names it in its
+manifest's `permissions`; the notice before it is added lists each, and the
+player grants exactly those with a drop-in for its unit, written at every
+start of the player (an update that asks for more asks again):
+
+| Permission | What it opens | Groups it joins |
+|---|---|---|
+| `cec` | The TV's HDMI-CEC connection, `/dev/cec*` | `video` |
+| `gpio` | `/dev/gpiochip*`, `/dev/gpiomem`; I²C, SPI and IR receivers (`/dev/i2c-*`, `/dev/spidev*`, `/dev/lirc*`) once their buses are on, which the player does not do | `gpio`, `i2c`, `spi`, `video` |
+| `usb` | USB devices (`/dev/bus/usb`, for libusb), HID (`/dev/hidraw*`), USB serial ports | `plugdev`, `dialout` |
+
+Nothing else of the sandbox changes. Driving the player itself needs no
+permission: its HTTP API (D-pad keys, transport, volume) is open to anything
+on the network, a plugin included.
 
 Things that follow from this:
 
@@ -346,8 +362,9 @@ README is the full guide. In short:
   against the tag.
 - **Open a pull request** on the catalogue adding `plugins/<id>.json`: what
   the plugin is, and per version its URL, SHA-256, size, the contract it
-  speaks and the lowest player release it needs. One plugin per pull
-  request.
+  speaks, the lowest player release it needs and the `permissions` its
+  manifest asks for. One plugin per pull request; say what each permission
+  is used for.
 - **Its check** downloads the archive, compares its size and SHA-256, and
   runs the player's own upload check on it (section 7). **A person then
   reads** the source at that tag before it is merged and published.

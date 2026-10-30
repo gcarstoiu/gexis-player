@@ -2441,8 +2441,16 @@ class StateServer:
             if size > uploads.MAX_BYTES:
                 return web.json_response({"error": "It is larger than 200 MB."}, status=413)
             chunks.append(chunk)
+        # ADR-0170: what the person agreed to, after the screen listed it.
+        grant = tuple(n for n in request.query.get("grant", "").split(",") if n)
         try:
-            return web.json_response(await self._upload_plugin(b"".join(chunks)))
+            return web.json_response(await self._upload_plugin(b"".join(chunks), grant=grant))
+        except uploads.NeedsConsent as exc:
+            from gexis_core import plugin_permissions
+            return web.json_response({"error": "It asks for more than the sandbox gives.",
+                                      "id": exc.checked.id, "name": exc.checked.manifest.get("name"),
+                                      "asks": plugin_permissions.words(exc.checked.permissions),
+                                      "new": list(exc.missing)}, status=409)
         except uploads.Refused as exc:
             return web.json_response({"error": f"Not installed: {exc}."}, status=400)
 
@@ -2472,8 +2480,15 @@ class StateServer:
         plugin_id = body.get("id") if isinstance(body, dict) else None
         if not isinstance(plugin_id, str) or not plugin_id:
             return web.json_response({"error": "say which plugin: {\"id\": \"...\"}"}, status=400)
+        # ADR-0170: what the person agreed to, after the page listed it.
+        grant = body.get("grant") if isinstance(body.get("grant"), list) else []
         try:
-            job = self._catalogue.start_install(plugin_id)
+            job = self._catalogue.start_install(plugin_id, grant=tuple(n for n in grant if isinstance(n, str)))
+        except plugin_catalogue.NeedsConsent as exc:
+            from gexis_core import plugin_permissions
+            return web.json_response({"error": "It asks for more than the sandbox gives.", "id": plugin_id,
+                                      "asks": plugin_permissions.words(exc.permissions),
+                                      "new": list(exc.missing)}, status=409)
         except plugin_catalogue.Unavailable as exc:
             return web.json_response({"error": f"Not installed: {exc}."}, status=409)
         return web.json_response({"started": plugin_id, **job.to_json()})

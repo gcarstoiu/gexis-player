@@ -30,7 +30,7 @@ from typing import Awaitable, Callable
 
 import aiohttp
 
-from gexis_core import plugins, uploads
+from gexis_core import plugin_permissions, plugins, uploads
 
 logger = logging.getLogger("gexis_core.plugin_catalogue")
 
@@ -52,6 +52,15 @@ HEADERS = {"User-Agent": "gexis-player"}
 
 class Unavailable(Exception):
     """Why something from the catalogue cannot be had, in words for the page."""
+
+
+class NeedsConsent(Exception):
+    """ADR-0170: the version asks for permissions its person has not agreed
+    to; nothing is downloaded until the page has listed them."""
+
+    def __init__(self, plugin_id: str, permissions: tuple[str, ...], missing: tuple[str, ...]):
+        super().__init__(f"{plugin_id} asks for {', '.join(missing)}")
+        self.plugin_id, self.permissions, self.missing = plugin_id, permissions, missing
 
 
 @dataclass(frozen=True)
@@ -97,7 +106,19 @@ def _usable(entry: object) -> bool:
             return False
         if not isinstance(v.get("size"), int) or not 0 < v["size"] <= uploads.MAX_BYTES:
             return False
+        perms = v.get("permissions", [])
+        if not isinstance(perms, list) or not all(isinstance(n, str) for n in perms):
+            return False
     return True
+
+
+def version_permissions(v: dict) -> tuple[str, ...] | None:
+    """What a version asks for beyond the sandbox (ADR-0170); None when it
+    names one this player does not grant - not a version for this player."""
+    try:
+        return plugin_permissions.parse(v.get("permissions"))
+    except plugin_permissions.Unknown:
+        return None
 
 
 def parse(data: bytes) -> Catalogue:
@@ -209,7 +230,7 @@ def offer(entry: dict, release: str | None) -> dict | None:
     if pulled(entry):
         return None
     for v in reversed(entry["versions"]):
-        if pulled(v) or v.get("contract") not in CONTRACTS:
+        if pulled(v) or v.get("contract") not in CONTRACTS or version_permissions(v) is None:
             continue
         if release_tuple(str(v.get("player", ""))) > release_tuple(release):
             continue
@@ -242,7 +263,7 @@ def blocked(catalogue: Catalogue | None, installed: dict[str, str]) -> dict[str,
 
 
 def rows(catalogue: Catalogue | None, *, release: str | None, installed: dict[str, str],
-         from_catalogue: set[str], ours: set[str]) -> list[dict]:
+         from_catalogue: set[str], ours: set[str], granted: dict[str, tuple[str, ...]] | None = None) -> list[dict]:
     """What *More plugins* shows, by name. A plugin not installed shows only
     when there is a version this player may install."""
     out = []
@@ -271,6 +292,10 @@ def rows(catalogue: Catalogue | None, *, release: str | None, installed: dict[st
                 state = "installed"
         elif offered is None:
             continue
+        # ADR-0170: what the version on offer asks for, and of that what its
+        # person has not agreed to yet - all of it before a first install.
+        asked = version_permissions(offered) if offered else ()
+        agreed = set((granted or {}).get(plugin_id, ())) if here is not None else set()
         out.append({
             "id": plugin_id, "name": entry["name"], "summary": entry.get("summary"),
             "kind": entry["kind"], "author": entry.get("author"), "source": entry.get("source"),
@@ -278,6 +303,8 @@ def rows(catalogue: Catalogue | None, *, release: str | None, installed: dict[st
             "version": offered["version"] if offered else None,
             "size": offered["size"] if offered else None,
             "installed": here, "state": state, "reason": reason,
+            "permissions": plugin_permissions.words(asked or ()),
+            "asks": [n for n in (asked or ()) if n not in agreed],
         })
     return out
 
@@ -334,8 +361,9 @@ class Service:
     #: The player's own plugin ids: never shown, never shadowed.
     ours: set[str]
     #: Install a checked archive as `id`, then restart the core unless told
-    #: not to (ADR-0106): (archive, id, restart).
-    install_archive: Callable[[bytes, str, bool], Awaitable[dict]]
+    #: not to (ADR-0106): (archive, id, restart, the permissions its listing
+    #: says it asks for, ADR-0170).
+    install_archive: Callable[[bytes, str, bool, tuple[str, ...]], Awaitable[dict]]
     #: Switch a plugin off because it is blocked: (id, why).
     switch_off: Callable[[str, str], Awaitable[None]]
     keyring: Path = KEYRING
@@ -344,6 +372,8 @@ class Service:
     session: Callable[[], aiohttp.ClientSession] | None = None
     #: Restart the core once after installs that did not.
     restart_core: Callable[[], Awaitable[None]] | None = None
+    #: ADR-0170: what each plugin's person agreed to (`uploads.granted`).
+    granted: Callable[[], dict[str, tuple[str, ...]]] | None = None
     #: A read brought a different catalogue: the screens read the settings
     #: again, for a row's withdrawn mark and an update offered.
     on_change: Callable[[], None] | None = None
@@ -427,15 +457,25 @@ class Service:
             "checked": self.checked,
             "error": self.error,
             "plugins": rows(self.catalogue, release=self.release(), installed=self.installed(),
-                            from_catalogue=self.from_catalogue(), ours=self.ours),
+                            from_catalogue=self.from_catalogue(), ours=self.ours, granted=self._granted()),
             "jobs": {k: j.to_json() for k, j in self.jobs.items()},
         }
 
-    def start_install(self, plugin_id: str, version: dict | None = None) -> Job:
+    def _granted(self) -> dict[str, tuple[str, ...]]:
+        return self.granted() if self.granted else {}
+
+    def start_install(self, plugin_id: str, version: dict | None = None, grant=()) -> Job:
         """Begin installing `version`, else the one offered for `plugin_id`,
-        or say why not."""
+        or say why not. ADR-0170: what it asks for must be agreed to now
+        (`grant`) or for the version before; else `NeedsConsent`."""
         job, version, running = self._job(plugin_id, version)
         if not running:
+            asked = version_permissions(version) or ()
+            agreed = set(grant) | set(self._granted().get(plugin_id, ()))
+            missing = tuple(n for n in asked if n not in agreed)
+            if missing:
+                self.jobs.pop(plugin_id, None)
+                raise NeedsConsent(plugin_id, asked, missing)
             asyncio.ensure_future(self._install(job, version))
         return job
 
@@ -467,7 +507,7 @@ class Service:
             async with self._session() as session:
                 archive = await fetch_archive(session, version, progress)
             job.phase = "installing"
-            await self.install_archive(archive, job.plugin_id, restart)
+            await self.install_archive(archive, job.plugin_id, restart, version_permissions(version) or ())
             job.phase = "installed"
             return True
         except (Unavailable, uploads.Refused) as exc:
@@ -494,6 +534,12 @@ class Service:
                 release_tuple(str(had.get("player", ""))) <= release_tuple(release))
             version = had if suits else offer(entry, release)
             if version is None:
+                continue
+            # ADR-0170: nothing granted that was not agreed to before.
+            asked = version_permissions(version) or ()
+            agreed = self._granted().get(gone["id"], ())
+            if any(n not in agreed for n in asked):
+                logger.warning("catalogue: %s not installed again: it asks for more than was agreed", gone["id"])
                 continue
             try:
                 job, version, running = self._job(gone["id"], version)

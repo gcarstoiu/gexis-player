@@ -45,6 +45,15 @@ class Refused(ValueError):
     """Why a package was not installed, in words a person can act on."""
 
 
+class NeedsConsent(Exception):
+    """ADR-0170: the package asks for permissions its person has not agreed
+    to yet; nothing was installed. The screen lists them and sends it again."""
+
+    def __init__(self, checked: "Checked", missing: tuple[str, ...]):
+        super().__init__(f"{checked.id} asks for {', '.join(missing)}")
+        self.checked, self.missing = checked, missing
+
+
 @dataclass(frozen=True)
 class Checked:
     manifest: dict
@@ -54,6 +63,8 @@ class Checked:
     run: str
     #: The version it replaced, or None for a first install.
     previous: str | None = None
+    #: ADR-0170: what it asks for beyond the sandbox.
+    permissions: tuple[str, ...] = ()
 
 
 def unit_for(plugin_id: str, kind: str) -> str:
@@ -135,7 +146,8 @@ def check(archive: bytes, *, ours: set[str], installed: dict[str, str]) -> Check
         head = tar.extractfile(member).read(64)
         if not _executable_for_this_machine(head):
             raise Refused(f"{raw['run']!r} is not built for this player (aarch64) or a script")
-    return Checked(manifest=raw, id=parsed.id, version=raw["version"], kind=parsed.kind, run=run.as_posix())
+    return Checked(manifest=raw, id=parsed.id, version=raw["version"], kind=parsed.kind, run=run.as_posix(),
+                   permissions=parsed.permissions)
 
 
 def install(archive: bytes, *, ours: set[str], root: Path = UPLOADS) -> Checked:
@@ -234,9 +246,9 @@ def remember(root: Path = UPLOADS, path: Path = KNOWN) -> None:
     restore brought back without their package, and where each came from."""
     known = _read_known(path)
     for plugin, version in _installed_versions(root):
-        origin = (known.get(plugin.id) or {}).get("origin")
+        kept = {k: v for k, v in (known.get(plugin.id) or {}).items() if k in ("origin", "granted")}
         known[plugin.id] = {"name": plugin.name, "kind": plugin.kind, "area": plugin.area, "version": version,
-                            **({"origin": origin} if origin else {})}
+                            **kept}
     _write_known(path, known)
 
 
@@ -258,6 +270,31 @@ def set_origin(plugin_id: str, origin: str | None, path: Path = KNOWN) -> None:
 def origins(path: Path = KNOWN) -> dict[str, str]:
     return {pid: info["origin"] for pid, info in _read_known(path).items()
             if isinstance(info, dict) and isinstance(info.get("origin"), str)}
+
+
+def grant(plugin_id: str, names, path: Path = KNOWN) -> None:
+    """ADR-0170: what the person adding it agreed to, kept with its record
+    (and so in a backup); granted at the next start."""
+    known = _read_known(path)
+    entry = known.setdefault(plugin_id, {})
+    if names:
+        entry["granted"] = sorted(set(names))
+    else:
+        entry.pop("granted", None)
+    _write_known(path, known)
+
+
+def granted(path: Path = KNOWN) -> dict[str, tuple[str, ...]]:
+    return {pid: tuple(info["granted"]) for pid, info in _read_known(path).items()
+            if isinstance(info, dict) and isinstance(info.get("granted"), list)}
+
+
+def grants(root: Path = UPLOADS, path: Path = KNOWN) -> dict[str, tuple[str, ...]]:
+    """Each installed plugin's unit -> what it asks for and was agreed to:
+    both, never one alone."""
+    agreed = granted(path)
+    return {unit_for(plugin.id, plugin.kind): tuple(n for n in plugin.permissions if n in agreed.get(plugin.id, ()))
+            for plugin, _ in _installed_versions(root)}
 
 
 def forget(plugin_id: str, path: Path = KNOWN) -> None:

@@ -58,6 +58,7 @@ for unit in gexis-core.service gexis-meter.service gexis-park.service gexis-scre
 	install -D -m 644 "$F/$unit" "$U/$unit"
 done
 install -D -m 755 "$F/gexis-run-uploaded" "$STAGE/usr/lib/gexis/gexis-run-uploaded"
+install -D -m 644 "$F/60-gexis-plugins.rules" "$STAGE/usr/lib/udev/rules.d/60-gexis-plugins.rules"
 install -D -m 755 "$F/gexis-fetch-component" "$STAGE/usr/lib/gexis/gexis-fetch-component"
 for plugin in "$F"/plugins/*/; do
 	id=$(basename "$plugin")
@@ -102,6 +103,14 @@ if getent passwd pi >/dev/null; then adduser pi gexis-plugins >/dev/null; fi
 
 # The pictures and backups shares (ADR-0049, ADR-0083), the stock user's.
 install -d -o 1000 -g 1000 -m 2775 /var/lib/gexis-core/pictures /var/lib/gexis-core/backups
+
+# ADR-0170: the USB and HID devices already plugged in, owned as our rule
+# says (a plugin granted `usb` reaches them through plugdev).
+if command -v udevadm >/dev/null; then
+	udevadm control --reload-rules 2>/dev/null || true
+	udevadm trigger --action=change --subsystem-match=usb --property-match=DEVTYPE=usb_device 2>/dev/null || true
+	udevadm trigger --action=change --subsystem-match=hidraw 2>/dev/null || true
+fi
 
 if [ -z "$2" ]; then
 	# First install: on at boot, as the image has always had them. An update

@@ -563,6 +563,19 @@ pieces in code:
   `restrictions`, so the row says why and a write of on is a 409). A
   release built without the key reads nothing and says `keyed: false`;
   *More plugins* is not offered there.
+- **What a plugin asks for** (`plugin_permissions.py`, ADR-0170): a
+  manifest's `permissions` (`cec`, `gpio`, `usb`; any other name refuses the
+  package) are granted only with its person's consent, kept as `granted` in
+  `plugins-known.json`: an upload that asks for something not yet agreed is
+  answered `409` with the list and sent again with `?grant=`; a catalogue
+  install takes `grant` in its body, and the archive must ask for exactly
+  what its listing says; a restore grants nothing new. At every start, before
+  it starts any plugin, the core writes a drop-in per plugin under
+  `/run/systemd/system/<unit>.d/gexis-permissions.conf` (`PrivateDevices=no`,
+  `DevicePolicy=closed`, `DeviceAllow=` the devices' groups, the devices'
+  `SupplementaryGroups`), removes the rest, reloads systemd and restarts a
+  unit whose grant changed (systemd started it at boot without one). Our udev
+  rule `60-gexis-plugins.rules` gives raw USB and HID to `plugdev`.
 - **The Lyrion Server's network shares** (`lyrion_shares.py`, the
   `lyrion-server.shares` list row): each SMB or NFS share is mounted
   read-only under `/mnt/gexis-shares/`, with a 30 s limit per mount. One

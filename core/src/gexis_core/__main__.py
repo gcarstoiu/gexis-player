@@ -19,7 +19,7 @@ from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
 from gexis_core import alsa, bluetooth_adapter_state, bluetooth_agent, device_name, journal, meters, screen_detect, skins, wifi
-from gexis_core import board_apply, panel_token, placement, screen_apply, screen_watch, screens, skin_packs, skin_previews
+from gexis_core import board_apply, panel_token, placement, plugin_permissions, screen_apply, screen_watch, screens, skin_packs, skin_previews
 from gexis_core.adapters.base import VolumeMechanism
 from gexis_core.adapters.bluetooth import BluetoothAdapter
 from gexis_core.adapters.lms import LmsAdapter
@@ -779,6 +779,17 @@ async def main() -> None:
         uploads.remember()
     except OSError as exc:
         logger.warning("uploads: cannot record the uploaded plugins: %s", exc)
+    # ADR-0170: what each plugin asked for and its person agreed to, granted
+    # before this core starts any; one systemd started at boot, before these
+    # were written, is restarted with them.
+    try:
+        regranted = plugin_permissions.apply(uploads.grants())
+    except OSError as exc:
+        regranted = []
+        logger.warning("permissions: not written: %s", exc)
+    if regranted:
+        subprocess.run(["systemctl", "daemon-reload"], check=False, capture_output=True)
+        subprocess.run(["systemctl", "try-restart", *regranted], check=False, capture_output=True)
     # ADR-0142: what was announced for plugins goes with the core that wrote
     # it; each plugin asks again when it connects.
     try:
@@ -797,7 +808,9 @@ async def main() -> None:
         installed=uploads.versions,
         from_catalogue=lambda: {k for k, v in uploads.origins().items() if v == uploads.CATALOGUE},
         ours=shipped_ids,
-        install_archive=lambda archive, plugin_id, restart: _install_from_catalogue(archive, plugin_id, restart),
+        install_archive=lambda archive, plugin_id, restart, permissions: _install_from_catalogue(
+            archive, plugin_id, restart, permissions),
+        granted=uploads.granted,
         switch_off=lambda plugin_id, why: _switch_off_blocked(plugin_id, why),
         restart_core=lambda: _restart_core_soon(),
         on_change=lambda: state_store.bump_settings_revision(),
@@ -4374,8 +4387,18 @@ async def main() -> None:
         await asyncio.sleep(1.5)
         await asyncio.create_subprocess_exec("systemctl", "restart", "gexis-core")
 
-    async def _upload_plugin(archive: bytes, origin: str | None = None, restart: bool = True) -> dict:
+    async def _upload_plugin(archive: bytes, origin: str | None = None, restart: bool = True,
+                             grant: tuple[str, ...] = ()) -> dict:
+        # ADR-0170: what it asks for beyond the sandbox, agreed to now
+        # (`grant`) or for an earlier version; else nothing is installed and
+        # the screen asks. An update that asks for no more goes straight on.
+        checked = await asyncio.to_thread(uploads.check, archive, ours=shipped_ids, installed=uploads.versions())
+        agreed = set(grant) | set(uploads.granted().get(checked.id, ()))
+        missing = tuple(n for n in checked.permissions if n not in agreed)
+        if missing:
+            raise uploads.NeedsConsent(checked, missing)
         checked = await asyncio.to_thread(uploads.install, archive, ours=shipped_ids)
+        await asyncio.to_thread(uploads.grant, checked.id, checked.permissions)
         # ADR-0168: where it came from, for its row and for a restore. An
         # upload of a plugin first installed from the catalogue is an upload.
         await asyncio.to_thread(uploads.set_origin, checked.id, origin)
@@ -4396,14 +4419,19 @@ async def main() -> None:
                 "enabled": await asyncio.to_thread(_unit_is_enabled, unit),
                 "restarting": True}
 
-    async def _install_from_catalogue(archive: bytes, plugin_id: str, restart: bool = True) -> dict:
+    async def _install_from_catalogue(archive: bytes, plugin_id: str, restart: bool = True,
+                                      permissions: tuple[str, ...] = ()) -> dict:
         """ADR-0168: a listed archive, checked as an upload is and installed
         the same way; only its record says where it came from. A restore
-        installs several, then restarts once."""
+        installs several, then restarts once. ADR-0170: it asks for exactly
+        what its listing said, which its person agreed to before the
+        download began."""
         checked = await asyncio.to_thread(uploads.check, archive, ours=shipped_ids, installed=uploads.versions())
         if checked.id != plugin_id:
             raise uploads.Refused(f"the archive is {checked.id}, not {plugin_id}")
-        return await _upload_plugin(archive, origin=uploads.CATALOGUE, restart=restart)
+        if tuple(sorted(checked.permissions)) != tuple(sorted(permissions)):
+            raise uploads.Refused("it asks for other permissions than its listing says")
+        return await _upload_plugin(archive, origin=uploads.CATALOGUE, restart=restart, grant=tuple(permissions))
 
     #: One restart however many plugins a read of the catalogue blocks.
     block_restart = {"scheduled": False}

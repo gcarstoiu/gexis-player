@@ -518,6 +518,8 @@ for u in gexis-uploaded-renderer@.service gexis-uploaded-service@.service; do
 	rm -f "$OUT/one"
 done
 dfs "stat /usr/lib/gexis/gexis-run-uploaded" | grep -q 'Mode:  0755' && ok "gexis-run-uploaded executable" || bad "gexis-run-uploaded missing or not executable"
+# ADR-0170: a plugin granted `usb` reaches USB and HID through plugdev.
+dfs "stat /usr/lib/udev/rules.d/60-gexis-plugins.rules" | grep -q 'Inode:' && ok "60-gexis-plugins.rules installed" || bad "60-gexis-plugins.rules missing"
 
 echo "== ADR-0085: the ALSA default is our output"
 dfs "dump /etc/alsa/conf.d/zz-gexis-default.conf $OUT/one" >/dev/null
