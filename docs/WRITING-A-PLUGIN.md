@@ -3,7 +3,8 @@
 A plugin adds something to the player that the player does not ship: a
 **renderer** (a source of music, like a streaming receiver) or a **service**
 (anything else that runs on the device, like a monitoring agent). This guide
-takes you from an empty folder to a plugin installed from a phone.
+takes you from an empty folder to a plugin installed from a phone, and to
+listing it in the plugin catalogue.
 
 - **The protocol** a plugin speaks is [PLUGIN-CONTRACT.md](PLUGIN-CONTRACT.md).
   This guide shows how to use it; the contract is the reference.
@@ -16,7 +17,8 @@ takes you from an empty folder to a plugin installed from a phone.
   `hello/` (a service) and `tone/` (a renderer that plays a tone), each
   published as the plugin catalogue lists a plugin.
 
-**A plugin you upload is not part of Gexis Player.** The person who installs it
+**A plugin you upload, or install from the plugin catalogue, is not part of
+Gexis Player.** The person who installs it
 is told so, and that it runs at their own risk and responsibility. What the
 player guarantees is the sandbox it runs in, described below.
 
@@ -325,10 +327,40 @@ again at start if the plugin needs it. A restore refuses the whole backup
 if a link in the data folder lies on the path of anything it would write.
 Your plugin is stopped while a restore puts its data back, so its own
 SQLite or other open files cannot write over what was restored; the
-restart after the restore starts it again. After a restore, the plugin is
-listed as needing to be uploaded again.
+restart after the restore starts it again. After a restore, an uploaded
+plugin is listed as needing to be uploaded again; one from the catalogue is
+installed from it again (section 8).
 
-## 8. When something does not work
+## 8. Listing it in the plugin catalogue
+
+Listed, a plugin can be installed from **Settings → Plugins → More plugins**
+on every player it suits, on the screen as well as a phone, with no file to
+hand around. The catalogue is
+[gcarstoiu/gexis-plugins](https://github.com/gcarstoiu/gexis-plugins); its
+README is the full guide. In short:
+
+- **Publish** the plugin's source in a public GitHub repository, and each
+  version's `.tar.gz` on a release of it. Build the archive the same way
+  every time (the samples' `package.sh` does), so its SHA-256 can be checked
+  against the tag.
+- **Open a pull request** on the catalogue adding `plugins/<id>.json`: what
+  the plugin is, and per version its URL, SHA-256, size, the contract it
+  speaks and the lowest player release it needs. One plugin per pull
+  request.
+- **Its check** downloads the archive, compares its size and SHA-256, and
+  runs the player's own upload check on it (section 7). **A person then
+  reads** the source at that tag before it is merged and published.
+- **A new version** is a new pull request, added after the listed ones;
+  a listed version never changes. Players offer it as *Update to …* on the
+  plugin's row; nothing updates by itself.
+
+A player installs a listed plugin as an upload: the same checks, the same
+folder and sandbox, and it arrives switched off; its row says *From the
+plugin catalogue*. A plugin can be **withdrawn** (no longer offered; players
+that have it keep it) or, if it is found to do harm, **blocked** (switched
+off on every player that has it). Either way the reason is shown.
+
+## 9. When something does not work
 
 On the device (`ssh pi@<name>.local`):
 

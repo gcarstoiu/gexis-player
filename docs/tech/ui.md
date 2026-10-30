@@ -110,7 +110,8 @@ flowchart LR
   (20 s); `LONG_REQUEST_TIMEOUT_MS` (120 s) for what is slow on purpose - a
   Wi-Fi join, anything on the network shares (search, browse, add, forget),
   a Wi-Fi scan, making a backup, an address change (`CableSheet.svelte`), a
-  plugin's removal, a problem report's start, and a plugin upload (an
+  plugin's removal, *More plugins*' read of the catalogue (`?refresh=1`), a
+  problem report's start, and a plugin upload (an
   `XMLHttpRequest`, for its progress), where the limit counts silence (no bytes going out, or no answer once all are sent) rather
   than the whole request; `RESTORE_TIMEOUT_MS` (15 min) for a restore, which
   answers only once every file is back. A timeout ends as the failure its

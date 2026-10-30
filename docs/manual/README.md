@@ -796,7 +796,8 @@ on for a new player, off on one updated from an earlier release; marked
 **Plexamp**, the **Lyrion Server** and the **Beszel** monitoring agent, among
 others. A plugin that needs software from its maker
 downloads it when switched on. Setup offers the same plugins, and the first
-start shows each download arriving. A plugin file can also be uploaded here.
+start shows each download arriving. On a phone or computer, *Upload a
+plugin* installs one from a file.
 Each plugin's switch says its version (for example *Version 0.4.7*); the
 software it downloads is named, with its own version, on the line below once
 it is installed.
@@ -804,6 +805,23 @@ While Beszel is on, its heading in **System**, above the hub address, token
 and key, says whether the agent has reached its hub: **Connected** in green,
 **Connecting** in orange for its first minute, **Not connected** in red after
 that. A Hub public key that is not one is refused when it is saved.
+
+**More plugins**, the page's first row, lists plugins by other authors from
+the Gexis Player plugin catalogue, with what each does, who wrote it, its
+licence and its source, and the number of updates waiting. Each version was
+checked and read before it was listed, but none is part of Gexis Player:
+*Install* first says so, and that it runs at your own risk and
+responsibility. The plugin downloads in its tile, the player restarts once
+to finish, and the plugin arrives switched off; its row then says *From the
+plugin catalogue*. A newer version shows *Update to …* on its row and in
+*More plugins*; nothing updates by itself. If the catalogue withdraws a
+plugin, its row says why and it keeps running; if it blocks one, found to do
+harm, the plugin is switched off at once and its switch stays off. *Remove*,
+on the row of a plugin that is switched off, deletes it with its data and
+settings. After a restore, plugins from the catalogue are installed from it
+again, unless it has withdrawn them since; an uploaded one needs uploading
+again. The player reads the catalogue
+from GitHub once a day and when *More plugins* opens.
 
 ### System — *The player, its network, updates and maintenance*
 

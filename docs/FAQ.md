@@ -907,6 +907,53 @@ ListenBrainz token*.
 
 ---
 
+## Plugins
+
+**What is *More plugins*?**
+The first row of *Settings → Plugins*: plugins by other authors, from the
+Gexis Player plugin catalogue, a list kept on GitHub. Before a version is
+listed, its download is checked against what was read, the player's own
+checks accept it, and a person reads its source. Listed means checked, not
+made or vouched for: a plugin from there is not part of Gexis Player, and
+installing one first says that it runs at your own risk and responsibility.
+It runs in the same sandbox as any plugin the player did not ship.
+
+**How do I install or update a plugin from the catalogue?**
+*Install* in its tile, on the screen or a phone. It downloads there, the
+player restarts once to finish, and the plugin arrives switched off: switch
+it on in *Settings → Plugins*. A newer version shows *Update to …* on the
+plugin's row and in *More plugins*. Plugins never update by themselves.
+
+**More plugins says nothing is listed.**
+Only plugins that suit this player's release are shown, and the catalogue
+lists them as their authors send them in. When the catalogue cannot be read
+(no internet), the page says so and shows the last list it read.
+
+**What do *Withdrawn* and *Blocked* mean?**
+The catalogue can take a plugin back. *Withdrawn*: it is no longer offered;
+where it is installed it keeps running, and its row says why. *Blocked*, for
+a plugin found to do harm: it is also switched off at once on every player
+that has it, and its switch stays off. Either way, *Remove* on its row
+deletes it.
+
+**What does the catalogue learn about the player?**
+Nothing but the request: the player reads the list from GitHub once a day
+and when *More plugins* opens, so GitHub sees its address, as it does for
+the update check. A plugin downloads from its author's release on GitHub.
+
+**Are plugins from the catalogue in a backup?**
+Their settings and data are. After a restore they are installed from the
+catalogue again - the version they had if it is still offered, else the
+newest - unless the catalogue has withdrawn them since. A plugin uploaded
+from a file needs uploading again.
+
+**How do I get my own plugin listed?**
+*Writing a plugin* ([WRITING-A-PLUGIN.md](WRITING-A-PLUGIN.md)), section 8:
+a pull request on the catalogue's repository, where each version is checked
+and read before it is listed.
+
+---
+
 ## Updates and maintenance
 
 **How are updates installed?**

@@ -137,7 +137,8 @@ Notes on the diagram:
   address; it comes from setup or Settings, and with none, LMS is off
   (`config.py`). The on-device server is an optional plugin, off by default
   (ADR-0115).
-- **Uploaded plugins** run under sandboxed template units,
+- **Uploaded plugins**, and those installed from the plugin catalogue
+  (ADR-0168), run under sandboxed template units,
   `gexis-uploaded-renderer@` and `gexis-uploaded-service@` (ADR-0106).
   They may not bind port 5353; a plugin that wants to be found sends
   `announce`, and the core writes `/etc/avahi/services/gexis-plugin-<id>.service`

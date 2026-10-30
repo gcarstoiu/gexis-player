@@ -180,11 +180,18 @@ or removed from Settings, with its progress shown in the switch itself.
 
 - **Ready today:** Plexamp, the Lyrion Server, the visualiser skin packs, and
   Beszel monitoring with its connection shown in Settings.
+- **From other authors:** *More plugins* in Settings lists the
+  [plugin catalogue](https://github.com/gcarstoiu/gexis-plugins), where every
+  version is checked and read before it is listed. A plugin installs with a
+  tap on the screen or the phone; a new version is offered, never installed
+  by itself; and one found to do harm is switched off on every player that
+  has it.
 - **Your own:** upload a plugin from Settings on your phone. It speaks a small
   JSON protocol over a local socket, so it can be written in any language, and
   runs in a sandbox the player sets up for it. The
   [plugin guide](docs/WRITING-A-PLUGIN.md) takes you from an empty folder to a
-  plugin installed from your phone, with two working examples.
+  plugin installed from your phone, with two working examples, and on to the
+  catalogue.
 - **Clean to remove:** Remove deletes what a plugin downloaded, and a plugin
   that fails says why on its own row.
 
@@ -192,7 +199,7 @@ or removed from Settings, with its progress shown in the switch itself.
 
 | | |
 |---|---|
-| 🔊 **Sources** | Spotify Connect · AirPlay 2 (Shairport Sync) · Lyrion (squeezelite) · Bluetooth (A2DP) · Plexamp · your own plugins |
+| 🔊 **Sources** | Spotify Connect · AirPlay 2 (Shairport Sync) · Lyrion (squeezelite) · Bluetooth (A2DP) · Plexamp · plugins, your own or from the catalogue |
 | 🎚️ **Sound** | Bit-perfect, tested up to 24/192 on DAC boards and to 768 kHz on a USB DAC · native DSD on a DAC that takes it · hardware, software or fixed volume · a maximum level for every source · a starting volume Spotify never exceeds · a ten-band equaliser with presets and your own settings, for each output, off (and bit-perfect) until you switch it on |
 | 🔀 **Handover** | One source at a time, never mixed · takeover in any direction · the previous source released before the next one plays |
 | 📡 **Multiroom** | Players joined into a group play the same music in sync, for every source · music started on any of them plays on all · each keeps its own level and equaliser, and an *All* slider moves them together · Lyrion's own sync for Lyrion, and Lyrion's synced players grouped too · groups last until undone, restarts included |
@@ -265,8 +272,9 @@ Rough, and subject to change:
   Assistant as a media player, with a D-pad for its screen and a dashboard
   card. A ten-band equaliser with presets and your own settings. The phone as
   a remote, with a touchpad or a D-pad for the screen. Multiroom for every
-  source. AirPlay 2 from an iPhone, iPad or Mac.
-- 🔜 **Next:** a plugin catalogue, then themes.
+  source. AirPlay 2 from an iPhone, iPad or Mac. A plugin catalogue: other
+  authors' plugins installed from Settings.
+- 🔜 **Next:** themes.
 - 🎨 **Later:** room correction with a USB microphone, for the bass and then the full range; internet radio without a Lyrion server. With Plex switched on, your own Plex server fills in
   the artist and album information other sources leave out.
 - 💭 **Maybe:** the DAC's own filter and polarity options.
