@@ -528,3 +528,10 @@ async def test_a_restore_grants_nothing_new(key, tmp_path):
     await agreed.refresh()
     assert await agreed.restore([{"id": "tv", "version": "0.1.0"}]) == ["tv"]
     assert calls["permissions"] == [("cec",)]
+
+
+def test_a_row_s_group_is_its_area_else_its_kind_s():
+    e = entry(listed(archive()))
+    rows = pc.rows(pc.Catalogue(serial=1, date="", plugins=(e, {**e, "id": "lib", "area": "library"})),
+                   release="1.10.0", installed={}, from_catalogue=set(), ours=set())
+    assert {r["id"]: r["area"] for r in rows} == {"hello": "system", "lib": "library"}

@@ -300,6 +300,8 @@ def rows(catalogue: Catalogue | None, *, release: str | None, installed: dict[st
             "id": plugin_id, "name": entry["name"], "summary": entry.get("summary"),
             "kind": entry["kind"], "author": entry.get("author"), "source": entry.get("source"),
             "licence": entry.get("licence"),
+            # ADR-0169: its group under *Add plugins*, as its manifest's area.
+            "area": entry["area"] if entry.get("area") in plugins.AREAS else plugins.default_area(entry["kind"]),
             "version": offered["version"] if offered else None,
             "size": offered["size"] if offered else None,
             "installed": here, "state": state, "reason": reason,
