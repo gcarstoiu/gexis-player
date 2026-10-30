@@ -207,7 +207,7 @@ restart and the row's *Installed just now* - which needs a player.
 update dialog sat half off the screen inside the remote, since 1.7.0 -
 fixed apart, on `fix-remote-dialogs`, and merged in here.
 
-## Built: the first listing, under way (plan step 4, 2026-10-29)
+## Built: the first listing (plan step 4, 2026-10-29)
 
 `gcarstoiu/gexis-sample-plugins` is public (George, the same day): the two
 samples as in `tools/`, `package.sh` building the same bytes from the same
@@ -266,6 +266,52 @@ in `gexis-plugins`.
 on 1.9.1; a changed copy refused); then published, read back through `gh`
 and from the address players read, with a good signature.
 
+## The first listing on a test player (plan step 4, 2026-10-30)
+
+On sofapi, a preview of `ph-plugin-catalogue` (core, UI, player; the dialog
+fix with it) reading the published catalogue; each outward step asked first
+(George). Shown:
+- **Installed**: Tone from the panel, Hello from a phone-sized remote, each
+  after the notice; *Installed just now*, one core restart, both arrived off
+  and ran once switched on.
+- **Updated**: Tone 0.2.0 (the same tone; its tag and release, `gexis-plugins`
+  #4, serial 2) from its row, without the notice; 0.1.0 kept for one step
+  back, its switch kept on, one core restart.
+- **Restored**: a backup made, both removed from the panel, the backup
+  restored; after the reboot both installed again at the versions they had
+  (Hello 0.1.0, Tone 0.2.0), then one restart, both on as before.
+- **Withdrawn and blocked** (#5, #6, serial 3): Hello marked on its row and
+  kept running; Tone switched off at once, one core restart, its row saying
+  why, its switch refusing (a tap does nothing, a write of on is a 409).
+  Neither offered on *More plugins*.
+- **The end state** (#8, serial 4): Tone withdrawn instead of blocked, as
+  Hello: no player is offered either (George, 2026-10-29). Read with the
+  Plugins page open on the panel: its row changed with no restart and its
+  switch was free again. Both removed from sofapi afterwards (George).
+- **Measured on the Pi 4**: twenty synthetic entries (24 KB, a throwaway
+  key) verified, parsed and listed in about 12 ms, about 56 kB more memory;
+  a lower serial, a changed byte, and an archive against a changed sha256
+  each refused, nothing installed.
+
+Found and fixed:
+- A withdrawal read during a run reached the plugin's row only at the core's
+  next start, and an open page was not told of a new catalogue: the row's
+  note is now worked out with every settings read, and a different serial
+  moves the settings revision (a test seen to fail without it).
+- On a panel left on Plugins, an install's line said *just now* and
+  *switched off* hours later, with the plugin on: it now goes when another
+  group opens, and *switched off* once the switch is on.
+- `publish.sh --dry-run` always signed serial 1: it reads the published
+  serial now (`gexis-plugins` #7).
+- **Decided (George, 2026-10-30): the signature is named by the serial.**
+  About 15 minutes after serial 3 was published, GitHub served sofapi the
+  new `catalogue.json` with the previous signature; the read was refused and
+  serial 2 kept, as designed. The signature is now
+  `catalogue-<serial>.json.sig`, kept on the release, and a player fetches
+  the one its catalogue's serial names (`gexis-plugins` #9; serial 4's
+  signature moved to the new name, the old file deleted). A test reproduces
+  the cached pair; sofapi reads serial 4 so.
+
 ## Settings (ADR-0022)
 
 None. A switch to hide *More plugins* was offered and declined (George,
@@ -274,16 +320,17 @@ None. A switch to hide *More plugins* was offered and declined (George,
 ## Measured before it is called done
 
 - Reading and verifying the catalogue on a Pi 4 - time and memory - with
-  twenty synthetic entries.
-- The sample listed end to end, as in 12, on a test player.
+  twenty synthetic entries. *Done 2026-10-30 (above).*
+- The sample listed end to end, as in 12, on a test player. *Done
+  2026-10-30 (above).*
 - An archive that differs from its sha256, a catalogue with a lower serial,
-  one with a bad signature: each refused, nothing installed.
+  one with a bad signature: each refused, nothing installed. *Done
+  2026-10-30 (above).*
 
 ## Unverified
 
-- That `uploads.check` runs in GitHub Actions from the player's code alone:
-  it imports `gexis_core.plugins` and the standard library (read from the
-  source, not tried).
+- Nothing from building. `uploads.check` runs in GitHub Actions from the
+  player's code alone: seen on every listing's check (#1, #2, #4).
 
 ## Not decided here
 
