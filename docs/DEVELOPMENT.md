@@ -3520,18 +3520,38 @@ installs through the upload's checks and sandbox and offers listed updates.
 
 1. **The catalogue repository**: the entry's schema, the checks on a pull
    request, the guide for authors, `publish.sh` and the catalogue key.
-   **Done 2026-10-29** except the key, which waits for George:
-   `gcarstoiu/gexis-plugins`, public, GPL-3.0-or-later (ADR-0168, *Built*).
+   **Done 2026-10-29**: `gcarstoiu/gexis-plugins`, public, GPL-3.0-or-later
+   (ADR-0168, *Built*); the key the same evening (ADR-0168, *The catalogue
+   key*).
 2. **The core**: read and verify the index; install, update, withdraw and
-   restore through `uploads`. **Built 2026-10-29** on `ph-plugin-catalogue`,
-   not yet run on a player (ADR-0168, *Built: the player's side*).
+   restore through `uploads`. **Built 2026-10-29** on `ph-plugin-catalogue`
+   (ADR-0168, *Built: the player's side*); run on sofapi in step 4.
 3. **The screens**: *More plugins* on the phone, the panel and the bars; the
-   plugin's row (from the catalogue, an update, withdrawn).
+   plugin's row (from the catalogue, an update, withdrawn). **Built
+   2026-10-29** on `ph-plugin-catalogue`, checked from mocked data on all
+   three (ADR-0168, *Built: the screens*); on sofapi's panel and a
+   phone-sized remote in step 4.
 4. **The first listing**: the sample plugins from a repository of their own,
-   end to end.
+   end to end. **Done 2026-10-30**: `gcarstoiu/gexis-sample-plugins`
+   public; installed, updated, restored, withdrawn and blocked on sofapi,
+   then both withdrawn (serial 4); the ADR's measurements done; three things
+   found and fixed, and the signature named by the serial (George) (ADR-0168,
+   *The first listing on a test player*). Steps 2 and 3's choices confirmed
+   or changed by George on 2026-10-29 (ADR-0168, *Confirmed and changed*).
 5. **The public documents**: the manual, the FAQ, the technical guide, the
-   plugin manual (how to get listed), the README.
-6. **A preview** on the test players, George's tests, then a release.
+   plugin manual (how to get listed), the README. **Done 2026-10-30** on
+   `ph-plugin-catalogue`: the manual's Plugins section, a Plugins section in
+   the FAQ, section 8 of *Writing a plugin*, the README's plugins, features
+   and roadmap, and the technical guide; no screenshot changed (the
+   Settings ones show other groups).
+6. **One store for every plugin** (George, 2026-10-30; ADR-0168, *Changed*):
+   *Add plugins* lists ours and the catalogue's alike; the Plugins page what
+   is installed. Mock-ups first, for George's OK; then its decision record
+   and the build, with the documents.
+7. **Plugins that ask for more** (George, 2026-10-30): declared permissions
+   and a stricter first check, its decision record first; **the CEC plugin**
+   as the first to use them, tried first on a test player with a TV.
+8. **A preview** on the test players, George's tests, then a release.
 
 **Acceptance (draft, with the ADR)**
 

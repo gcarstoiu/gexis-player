@@ -19,7 +19,7 @@ from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
 from gexis_core import alsa, bluetooth_adapter_state, bluetooth_agent, device_name, journal, meters, screen_detect, skins, wifi
-from gexis_core import board_apply, placement, screen_apply, screen_watch, screens, skin_packs, skin_previews
+from gexis_core import board_apply, panel_token, placement, screen_apply, screen_watch, screens, skin_packs, skin_previews
 from gexis_core.adapters.base import VolumeMechanism
 from gexis_core.adapters.bluetooth import BluetoothAdapter
 from gexis_core.adapters.lms import LmsAdapter
@@ -4522,6 +4522,8 @@ async def main() -> None:
     plugin_art = PluginArtwork()
     state_server = StateServer(
         state_store,
+        # ADR-0170: the panel proves itself; a plugin on loopback does not.
+        panel_token=panel_token.ensure(),
         plugin_artwork=plugin_art,
         lyrion_known=lyrion_known,
         cable=cable,

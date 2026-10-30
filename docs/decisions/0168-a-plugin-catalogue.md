@@ -163,7 +163,8 @@ Proposals 5-10 as written, with these settled in building:
 - **Blocked during a run**: switched off at once, and the core restarted
   once so the row says why; its switch refuses to turn it on.
 - **After a restore**, one plugin a start is installed again, since each
-  install restarts the core.
+  install restarts the core - *changed by George the same day: all in one
+  go (below)*.
 - **The key**: the core package carries `gexis-catalogue.gpg` only once
   `packaging/keys/gexis-catalogue.asc` exists; without it there is no
   catalogue on the player.
@@ -173,6 +174,165 @@ removed; the suite, 2,837 passed. **Not yet run on a player**, nor the
 start-up wiring in `__main__.py` (the blocked switch-off before uploaded
 plugins start, the refused switch), which no unit test reaches.
 
+## Built: the screens (plan step 3, 2026-10-29)
+
+On `ph-plugin-catalogue`, in `Settings.svelte` (the phone, the panel and the
+bars alike), from the Plugins page's own parts (decision 7). Settled in
+building, for George to confirm:
+- **More plugins is the Plugins page's first row**, above *Upload a
+  plugin*, on every screen, with the number of updates waiting; only on a
+  release that carries the catalogue key (the core says `keyed`).
+- **Its page: a tile per listed plugin** - name, summary, kind, author,
+  licence, source (a link on a phone, its address on the panel), where it
+  stands on this player, and *Install* or *Update to …*; on the panel and
+  the bars the button at the right, as a row's switch is. Its download is in
+  the tile, with Retry; the page says when the catalogue could not be read,
+  or read again, and when nothing is listed.
+- **Decision 6's notice before every install and update**; Retry after a
+  failed download goes straight on - *changed by George the same day: before
+  a first install only (below)*.
+- **On the plugin's own row**: *Update to …* (decision 4) and that download;
+  a blocked plugin's switch greyed with its reason, refused by the core too
+  (the registry's `restrictions`, a 409); *Remove* also on the panel and the
+  bars, since it can be installed again there (an upload's stays on a phone
+  or computer), and not while a download for it runs.
+Shown, from mocked data only (a stand-in core with made-up plugins): phone
+at 360 and 412 px, the remote on a 1280 px laptop, the panel at 1280×720,
+the bar at 1850×400; every state of a tile, a download and a failed one, an
+update from the plugin's row, the blocked switch left off when tapped; two
+core tests more (a release without the key reads nothing; the blocked
+switch refuses on). **Not yet seen**: the end of an install - the core's
+restart and the row's *Installed just now* - which needs a player.
+**Found on the way**: on a phone the confirm, its progress card and the
+update dialog sat half off the screen inside the remote, since 1.7.0 -
+fixed apart, on `fix-remote-dialogs`, and merged in here.
+
+## Built: the first listing (plan step 4, 2026-10-29)
+
+`gcarstoiu/gexis-sample-plugins` is public (George, the same day): the two
+samples as in `tools/`, `package.sh` building the same bytes from the same
+tag, a release per version (`hello-0.1.0`, `tone-0.1.0`). Listed by
+`gexis-plugins` pull requests #1 and #2 (George's OK), one plugin each, with
+`player` 1.0.0: both ran as uploads before 1.0, and no release older than the
+catalogue's reads it. Shown: the check's first real run passed on both, its
+log read (each archive downloaded and matched, the player's upload check
+passed); each archive rebuilt from a fresh clone of its tag to the listed
+sha256; a copy with one bit changed refused by the same check run here. A
+review note on each; merged the same day (below). Not yet: the install,
+update, withdrawal, block and restore on a test player.
+
+## Confirmed and changed (George, 2026-10-29)
+
+Asked one at a time, the evening steps 2-4 were built:
+- **Confirmed**: *More plugins* first, above *Upload a plugin*; *Remove* of
+  a catalogue plugin on the panel and the bars too; on wide screens the
+  tile's button at the right; a plugin uploaded under a listed id stays an
+  upload, never replaced or updated from the catalogue; a plugin blocked
+  during a run switched off at once and the core restarted once.
+- **Changed: the notice before a first install only.** An update and a
+  Retry start at once. Built the same day.
+- **Changed: after a restore, all in one go.** Every catalogue plugin the
+  restore needs is downloaded and installed in turn, each without its own
+  restart, then the core restarts once; one that cannot be downloaded does
+  not stop the others. Built the same day (a test seen to fail with a
+  restart per plugin).
+- **The samples are withdrawn after the test**, so a release with the
+  catalogue offers users none of them; authors find them on GitHub.
+- **The samples live only in `gcarstoiu/gexis-sample-plugins`**: the
+  copies in `tools/` removed, and the plugin manual and
+  `tools/handover-check.py` point there.
+- **`gexis-plugins`' main has a ruleset**: changes only by pull request,
+  the listing check required; the repository's admin may merge past it, as
+  for a change to the tools, which that check refuses.
+- **Claude merged the first two listings** at George's word (decision 2
+  otherwise stands: George merges).
+
+## The catalogue key (2026-10-29)
+
+Made at George's word as the release key was (ADR-0105): *Gexis Player
+plugin catalogue*, master `6847 9EEB 5C99 88C2 B1AB  C07F 461D 30A8 4D8F
+5C5E` (Ed25519, certify only), signing subkey `7CD9 86A7 C6ED 8793 6DD2
+D9F4 DF79 672A BDE8 906F`; no passphrase, no expiry. R2D2's keyring
+(`~/projects/gexis-catalogue-key`) holds only the subkey (`sec#`). The
+master, its revocation certificate and a note went to George, to keep off
+R2D2. Shown: a signature from R2D2's keyring good against the public key, a
+changed file refused; the backup restored into an empty keyring with both
+secret keys, and signing. The public half is `packaging/keys/` on
+`ph-plugin-catalogue` (the core package carries it from there) and `keys/`
+in `gexis-plugins`.
+
+**The first catalogue, serial 1** (Hello and Tone), published the same day
+(George's OK): a dry run first, read by the player's own `accept` (offered
+on 1.9.1; a changed copy refused); then published, read back through `gh`
+and from the address players read, with a good signature.
+
+## The first listing on a test player (plan step 4, 2026-10-30)
+
+On sofapi, a preview of `ph-plugin-catalogue` (core, UI, player; the dialog
+fix with it) reading the published catalogue; each outward step asked first
+(George). Shown:
+- **Installed**: Tone from the panel, Hello from a phone-sized remote, each
+  after the notice; *Installed just now*, one core restart, both arrived off
+  and ran once switched on.
+- **Updated**: Tone 0.2.0 (the same tone; its tag and release, `gexis-plugins`
+  #4, serial 2) from its row, without the notice; 0.1.0 kept for one step
+  back, its switch kept on, one core restart.
+- **Restored**: a backup made, both removed from the panel, the backup
+  restored; after the reboot both installed again at the versions they had
+  (Hello 0.1.0, Tone 0.2.0), then one restart, both on as before.
+- **Withdrawn and blocked** (#5, #6, serial 3): Hello marked on its row and
+  kept running; Tone switched off at once, one core restart, its row saying
+  why, its switch refusing (a tap does nothing, a write of on is a 409).
+  Neither offered on *More plugins*.
+- **The end state** (#8, serial 4): Tone withdrawn instead of blocked, as
+  Hello: no player is offered either (George, 2026-10-29). Read with the
+  Plugins page open on the panel: its row changed with no restart and its
+  switch was free again. Both removed from sofapi afterwards (George).
+- **Measured on the Pi 4**: twenty synthetic entries (24 KB, a throwaway
+  key) verified, parsed and listed in about 12 ms, about 56 kB more memory;
+  a lower serial, a changed byte, and an archive against a changed sha256
+  each refused, nothing installed.
+
+Found and fixed:
+- A withdrawal read during a run reached the plugin's row only at the core's
+  next start, and an open page was not told of a new catalogue: the row's
+  note is now worked out with every settings read, and a different serial
+  moves the settings revision (a test seen to fail without it).
+- On a panel left on Plugins, an install's line said *just now* and
+  *switched off* hours later, with the plugin on: it now goes when another
+  group opens, and *switched off* once the switch is on.
+- `publish.sh --dry-run` always signed serial 1: it reads the published
+  serial now (`gexis-plugins` #7).
+- **Decided (George, 2026-10-30): the signature is named by the serial.**
+  About 15 minutes after serial 3 was published, GitHub served sofapi the
+  new `catalogue.json` with the previous signature; the read was refused and
+  serial 2 kept, as designed. The signature is now
+  `catalogue-<serial>.json.sig`, kept on the release, and a player fetches
+  the one its catalogue's serial names (`gexis-plugins` #9; serial 4's
+  signature moved to the new name, the old file deleted). A test reproduces
+  the cached pair; sofapi reads serial 4 so.
+
+## Changed: one store, and plugins that ask for more (George, 2026-10-30)
+
+George found several tiers of plugin confusing (ours that download their
+software, ours with a page of their own, uploaded, from the catalogue) and
+asked that a plugin be a plugin. Shown Volumio's way (everything a plugin,
+one store, community code with the same rights as Volumio's own), moOde's
+(no plugins) and Lyrion's (one list, third-party code with full rights), and
+two mock-ups, he chose:
+- **One store** (option B): the Plugins page lists what is installed, every
+  plugin in the same row with a tag for where it came from; one *Add
+  plugins* page lists everything available, ours beside the catalogue's.
+  Its own decision record before it is built; the mock-ups finished first
+  (the bar, Remove), for George's OK.
+- **Plugins may ask for more**: rather than a sandbox that stops a whole
+  kind of plugin (a TV remote over HDMI-CEC, GPIO controls), a stricter
+  first check and declared permissions, each granted only as declared,
+  listed in the notice, and asked again when a version wants more. Its own
+  decision record; **a CEC plugin is the first** to use it.
+- **Both in this phase**, before 1.10.0 (George, the same day).
+Ours keep coming with the release, signed with the release key (ADR-0106).
+
 ## Settings (ADR-0022)
 
 None. A switch to hide *More plugins* was offered and declined (George,
@@ -181,16 +341,17 @@ None. A switch to hide *More plugins* was offered and declined (George,
 ## Measured before it is called done
 
 - Reading and verifying the catalogue on a Pi 4 - time and memory - with
-  twenty synthetic entries.
-- The sample listed end to end, as in 12, on a test player.
+  twenty synthetic entries. *Done 2026-10-30 (above).*
+- The sample listed end to end, as in 12, on a test player. *Done
+  2026-10-30 (above).*
 - An archive that differs from its sha256, a catalogue with a lower serial,
-  one with a bad signature: each refused, nothing installed.
+  one with a bad signature: each refused, nothing installed. *Done
+  2026-10-30 (above).*
 
 ## Unverified
 
-- That `uploads.check` runs in GitHub Actions from the player's code alone:
-  it imports `gexis_core.plugins` and the standard library (read from the
-  source, not tried).
+- Nothing from building. `uploads.check` runs in GitHub Actions from the
+  player's code alone: seen on every listing's check (#1, #2, #4).
 
 ## Not decided here
 

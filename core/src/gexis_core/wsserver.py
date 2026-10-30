@@ -25,6 +25,7 @@ from __future__ import annotations
 import asyncio
 import concurrent.futures
 import datetime
+import hmac
 import json
 import logging
 import os
@@ -44,7 +45,7 @@ from aiohttp import web
 from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
-from gexis_core import memo, own_wallpapers, screen_apply, settling, updates
+from gexis_core import memo, own_wallpapers, panel_token, screen_apply, settling, updates
 from gexis_core.players import Players, own_id, status_line
 from gexis_core.group import GroupError
 from gexis_core.wallpapers import SEARCH as PIXABAY_SEARCH
@@ -185,6 +186,7 @@ class StateServer:
         lyrion_known: "discovery.Known | None" = None,
         multiroom=None,
         plugin_artwork=None,
+        panel_token: str | None = None,
     ) -> None:
         """`activate(renderer_id) -> bool` and `set_volume(percent) -> bool`
         are injected by `__main__.py` (ADR-0028's command surface). Both are
@@ -202,6 +204,8 @@ class StateServer:
         #: each ask searches.
         self._lyrion_found = lyrion_known.current if lyrion_known is not None else (lambda: discovery.find_servers())
         self._store = store
+        #: ADR-0170: this boot's token the panel's page sends (`panel_token`).
+        self._panel_token = panel_token
         #: ADR-0059's sweep leaves fanart URLs here. Not `_store`,
         #: which is the *state* store - two different things that
         #: would otherwise share a name in this file.
@@ -436,10 +440,18 @@ class StateServer:
                     asyncio.create_task(self._send(other, left))
         return ws
 
-    @staticmethod
-    def _from_panel(request: web.Request) -> bool:
-        """The panel arrives on loopback, a phone from the LAN (ADR-0035 §6)."""
-        return request.remote in ("127.0.0.1", "::1")
+    def _from_panel(self, request: web.Request) -> bool:
+        """The panel arrives on loopback, a phone from the LAN (ADR-0035 §6) -
+        and, since a plugin calls from loopback too, with this boot's token
+        (ADR-0170): a header, or `?panel=` on a socket, which sends none. A
+        server built without a token (the tests, a development run) goes by
+        loopback alone, as before."""
+        if request.remote not in ("127.0.0.1", "::1"):
+            return False
+        if self._panel_token is None:
+            return True
+        sent = request.headers.get(panel_token.HEADER) or request.query.get(panel_token.QUERY) or ""
+        return hmac.compare_digest(sent.encode(), self._panel_token.encode())
 
     def _touchpad_on(self) -> bool:
         try:
@@ -1412,7 +1424,7 @@ class StateServer:
 
     async def _handle_surface(self, request: web.Request) -> web.Response:
         """ADR-0035 §6: the panel always arrives on loopback, a phone from the LAN."""
-        panel = request.remote in ("127.0.0.1", "::1")
+        panel = self._from_panel(request)
         return web.json_response({"surface": "panel" if panel else "remote"})
 
     async def _handle_touch(self, request: web.Request) -> web.Response:
@@ -1420,7 +1432,7 @@ class StateServer:
         see touches itself: they land in whichever window has the screen.
         **The panel only** (review, 2026-10-12): a phone's request would wake a
         screen in standby and count as attention it never paid."""
-        if request.remote not in ("127.0.0.1", "::1"):
+        if not self._from_panel(request):
             return web.json_response({"error": "only the panel reports touches"}, status=403)
         if self._peppy is not None:
             self._peppy.on_touch()
@@ -1871,7 +1883,7 @@ class StateServer:
             return web.json_response({"error": "not wired up"}, status=503)
         sockname = request.transport.get_extra_info("sockname") if request.transport else None
         arrived_at = sockname[0] if sockname else None
-        loopback = request.remote in ("127.0.0.1", "::1")
+        loopback = self._from_panel(request)
         waiting = [p for p in ports if p.pending is not None]
         if not waiting:
             return web.json_response({"error": "Nothing is waiting to be kept."}, status=409)
@@ -2363,7 +2375,7 @@ class StateServer:
         as amended, whether its lyrics are - so the phone's toggles say what
         the panel shows, whatever changed it. **The panel only** (review,
         2026-10-12): a phone saying so would set the toggles to a lie."""
-        if request.remote not in ("127.0.0.1", "::1"):
+        if not self._from_panel(request):
             return web.json_response({"error": "only the panel reports what it shows"}, status=403)
         try:
             body = await request.json()
@@ -2382,7 +2394,7 @@ class StateServer:
         nowhere else."""
         if self._setup is None:
             return web.json_response({"needed": False, "network": "unmanaged"})
-        panel = request.remote in ("127.0.0.1", "::1")
+        panel = self._from_panel(request)
         return web.json_response(self._setup.status() if panel else self._setup.public_status())
 
     @staticmethod
@@ -2477,7 +2489,7 @@ class StateServer:
     async def _handle_park(self, request: web.Request) -> web.Response:
         """**The device is going down: leave nothing to resume.** Loopback
         only - it is the shutdown's, not a phone's."""
-        if request.remote not in ("127.0.0.1", "::1"):
+        if not self._from_panel(request):
             return web.json_response({"error": "loopback only"}, status=403)
         if self._park is None:
             return web.json_response({"parked": False})
@@ -2705,7 +2717,7 @@ class StateServer:
         reloads reports a first frame again, and a development machine has
         no plymouth at all. Neither is the panel's problem."""
         dropped = self._splash.drop() if self._splash is not None else False
-        if self._on_painted is not None and request.remote in ("127.0.0.1", "::1"):
+        if self._on_painted is not None and self._from_panel(request):
             self._on_painted()
         return web.json_response({"painted": True, "splash_dropped": dropped})
 
@@ -2729,7 +2741,7 @@ class StateServer:
         may need a driver it never installs (Finding 125, 2026-10-14)."""
         confirm = self._store.state.screen_confirm or {}
         action = request.match_info["action"]
-        local = request.remote in ("127.0.0.1", "::1")
+        local = self._from_panel(request)
         # **`shown`: the panel has drawn the question** (George, 2026-10-14:
         # "The countdown should start with the keep screen displayed") - its
         # countdown starts then. Only the panel says what is on its glass.

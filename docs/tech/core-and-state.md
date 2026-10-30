@@ -179,8 +179,15 @@ fails when it and the registered routes differ. The table below is the map;
 [api.md](api.md) is the overview for integrators.
 
 **Panel or phone?** The panel's kiosk always connects over loopback and a phone
-from the LAN, so `request.remote` is the discriminator (ADR-0035 §6). A few
-routes are loopback-only or behave differently by origin: `/surface`,
+from the LAN (ADR-0035 §6). A plugin calls from loopback too, so the panel
+also proves itself (ADR-0170): the core makes a token per boot in
+`/run/gexis/panel-token` (`panel_token.py`; `root:pi`, 0640, kept across core
+restarts), the kiosk opens its page with it (`#panel=…`), and the page sends it
+as `X-Gexis-Panel` with every request and as `?panel=` on `/touchpad`;
+`gexis-park.service` sends it too. Plugins' units have `ProtectProc=invisible`,
+so the kiosk's command line is out of their sight. `_from_panel` checks both;
+a server built without a token (the tests) goes by loopback alone. A few
+routes are the panel's only or behave differently by origin: `/surface`,
 `/touchpad`, `/setup/status` (the setup password goes to the panel only),
 `/panel/painted`, `/screen/{action}` and `/renderers/park`. `POST /touch` and
 `POST /panel/shown` are the panel's only: a phone gets `403` (a phone's touch
