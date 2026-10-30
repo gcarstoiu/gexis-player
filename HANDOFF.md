@@ -76,10 +76,10 @@ them, both before 1.10.0. Mock-ups approved; ADR-0169 (the store) and ADR-0170
 day. The loopback fix (`fix-panel-loopback`, merged into the
 phase branch), the permissions and the store were built the same evening
 and tried on sofapi, which runs that preview (`1.9.1+git46.d41c73e`; core,
-UI, system, player). Next: the CEC plugin, once George has a test player on
-a TV with CEC; the pushes (the phase branch, `gexis-plugins`' local branch
-`permissions-and-area`, then its `tools/player-ref` moved to the phase's
-commit) asked first. The samples left `tools/`
+UI, system, player). Pushed (George): both branches; `gexis-plugins` #10
+(a version's permissions, an entry's area) and #11 (`tools/player-ref` at
+the phase's `1e26c75e`, whose upload check knows permissions). Next: the CEC
+plugin, once George has a test player on a TV with CEC. The samples left `tools/`
 for that repository. The wiki Roadmap shows the new order (pushed
 2026-10-29 with George's OK).
 **Found in step 3, fixed apart**: on a phone the confirm, its progress card
