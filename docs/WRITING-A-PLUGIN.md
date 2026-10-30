@@ -350,7 +350,7 @@ installed from it again (section 8).
 
 ## 8. Listing it in the plugin catalogue
 
-Listed, a plugin can be installed from **Settings → Plugins → More plugins**
+Listed, a plugin can be added from **Settings → Plugins → Add plugins**
 on every player it suits, on the screen as well as a phone, with no file to
 hand around. The catalogue is
 [gcarstoiu/gexis-plugins](https://github.com/gcarstoiu/gexis-plugins); its

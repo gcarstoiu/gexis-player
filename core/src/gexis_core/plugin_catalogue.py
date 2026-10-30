@@ -41,7 +41,7 @@ STATE = Path("/var/lib/gexis/catalogue")
 MAX_INDEX = 2 * 1024 * 1024
 FORMAT = 1
 CONTRACTS = (1,)
-#: Read by itself once a day, and when *More plugins* opens if older than this.
+#: Read by itself once a day, and when *Add plugins* opens if older than this.
 EVERY_S = 24 * 3600
 FRESH_S = 15 * 60
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
@@ -264,7 +264,7 @@ def blocked(catalogue: Catalogue | None, installed: dict[str, str]) -> dict[str,
 
 def rows(catalogue: Catalogue | None, *, release: str | None, installed: dict[str, str],
          from_catalogue: set[str], ours: set[str], granted: dict[str, tuple[str, ...]] | None = None) -> list[dict]:
-    """What *More plugins* shows, by name. A plugin not installed shows only
+    """What *Add plugins* shows of the catalogue, by name. A plugin not installed shows only
     when there is a version this player may install."""
     out = []
     for entry in sorted(catalogue.plugins if catalogue else (), key=lambda e: e["name"].lower()):
@@ -455,7 +455,7 @@ class Service:
 
     def view(self) -> dict:
         return {
-            #: False on a release built without the key: *More plugins* is
+            #: False on a release built without the key: the catalogue's tiles are
             #: not offered there.
             "keyed": self.keyed,
             "available": self.catalogue is not None,

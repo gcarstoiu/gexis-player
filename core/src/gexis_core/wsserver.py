@@ -2491,7 +2491,7 @@ class StateServer:
         return web.json_response({"removed": plugin_id, "kept": keep})
 
     async def _handle_catalogue(self, request: web.Request) -> web.Response:
-        """ADR-0168: what *More plugins* shows. `?refresh=1` reads the
+        """ADR-0168: what *Add plugins* shows of the catalogue. `?refresh=1` reads the
         catalogue again first, if the last read is older than a quarter of
         an hour - the screen asks so when it opens."""
         if self._catalogue is None:

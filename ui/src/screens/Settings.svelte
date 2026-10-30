@@ -761,7 +761,7 @@
     if (yes && pending) await pending.run();
   }
 
-  //: **ADR-0168: More plugins** - other authors' plugins from the plugin
+  //: **ADR-0168: the catalogue in Add plugins** - other authors' plugins from the plugin
   //: catalogue. On every screen, the panel's and the bars' too: installing
   //: from it needs no file. `catalogue` is what `/plugins/catalogue` last
   //: said; null before it answers and on a core without it.
@@ -5645,7 +5645,7 @@
   .upload__input {
     display: none;
   }
-  /* ADR-0168: More plugins, apart from the groups where Upload a plugin
+  /* ADR-0168: the store's tiles, apart from the groups where Upload a plugin
      does not follow it (the panel, the bars). */
   .row--apart {
     margin-bottom: 18px;

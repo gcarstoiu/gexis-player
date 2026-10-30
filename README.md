@@ -180,12 +180,14 @@ or removed from Settings, with its progress shown in the switch itself.
 
 - **Ready today:** Plexamp, the Lyrion Server, the visualiser skin packs, and
   Beszel monitoring with its connection shown in Settings.
-- **From other authors:** *More plugins* in Settings lists the
+- **One store:** *Add plugins* in Settings lists the player's own optional
+  plugins beside other authors' from the
   [plugin catalogue](https://github.com/gcarstoiu/gexis-plugins), where every
-  version is checked and read before it is listed. A plugin installs with a
+  version is checked and read before it is listed. A plugin is added with a
   tap on the screen or the phone; a new version is offered, never installed
-  by itself; and one found to do harm is switched off on every player that
-  has it.
+  by itself; one found to do harm is switched off on every player that has
+  it. A plugin may ask for more than the sandbox gives - the TV's HDMI-CEC
+  connection, GPIO, USB - and is granted exactly that, once agreed.
 - **Your own:** upload a plugin from Settings on your phone. It speaks a small
   JSON protocol over a local socket, so it can be written in any language, and
   runs in a sandbox the player sets up for it. The

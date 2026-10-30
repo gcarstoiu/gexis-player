@@ -545,7 +545,7 @@ pieces in code:
   `catalogue.json` and the signature of its serial (`catalogue-<serial>.json.sig`,
   so a cached catalogue is never paired with another's) from that
   repository's release `index` a minute after it starts, then daily, and
-  when *More plugins* asks
+  when *Add plugins* asks
   (`?refresh=1`, at most every 15 minutes); verifies it with `gpgv` against
   `/usr/share/gexis/keys/gexis-catalogue.gpg`, refuses a serial lower than
   one accepted, and keeps the last good read in `/var/lib/gexis/catalogue/`.
@@ -562,7 +562,20 @@ pieces in code:
   says why) and its switch refuses to turn it on (the registry's
   `restrictions`, so the row says why and a write of on is a 409). A
   release built without the key reads nothing and says `keyed: false`;
-  *More plugins* is not offered there.
+  *Add plugins* offers only ours there.
+- **One store for every plugin** (`plugin_store.py`, ADR-0169): ours that may
+  be added (not the Lyrion client, Spotify, Bluetooth), the visualiser skins
+  among them as `visualiser-skins`, are added or not, recorded in the
+  settings store as `_plugins_added`: setup writes what it chose; the first
+  start without one (an update) writes what is in use (on, or its software
+  downloaded). A switch row of ours not added is hidden (`shown`), and its own
+  rows hide with it as they do when it is off. `GET /plugins/store` lists ours
+  with `added`; `POST /plugins/{id}/add` adds one and switches it on;
+  `POST /plugins/{id}/remove` takes any plugin off the player (ours: off, its
+  download removed, not added; an upload or catalogue plugin: as Remove did),
+  keeping its settings - and an upload's data - unless `{"keep": false}`.
+  Every plugin's row says what it does (`plugin_line`): its summary, else its
+  kind and where it came from.
 - **What a plugin asks for** (`plugin_permissions.py`, ADR-0170): a
   manifest's `permissions` (`cec`, `gpio`, `usb`; any other name refuses the
   package) are granted only with its person's consent, kept as `granted` in

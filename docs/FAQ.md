@@ -909,25 +909,34 @@ ListenBrainz token*.
 
 ## Plugins
 
-**What is *More plugins*?**
-The first row of *Settings → Plugins*: plugins by other authors, from the
-Gexis Player plugin catalogue, a list kept on GitHub. Before a version is
+**What is *Add plugins*?**
+The first row of *Settings → Plugins*: every plugin that can be added - the
+player's own optional ones not added yet, and plugins by other authors from
+the Gexis Player plugin catalogue, a list kept on GitHub. Before a version is
 listed, its download is checked against what was read, the player's own
 checks accept it, and a person reads its source. Listed means checked, not
 made or vouched for: a plugin from there is not part of Gexis Player, and
-installing one first says that it runs at your own risk and responsibility.
-It runs in the same sandbox as any plugin the player did not ship.
+adding one first says that it runs at your own risk and responsibility. It
+runs in the same sandbox as any plugin the player did not ship. On the
+Plugins page, each plugin's tag says where it came from.
 
-**How do I install or update a plugin from the catalogue?**
-*Install* in its tile, on the screen or a phone. It downloads there, the
-player restarts once to finish, and the plugin arrives switched off: switch
-it on in *Settings → Plugins*. A newer version shows *Update to …* on the
-plugin's row and in *More plugins*. Plugins never update by themselves.
+**How do I add or update a plugin?**
+*Add* in its tile, on the screen or a phone. One of the player's own is
+switched on, and downloads its software if it has some. One from the
+catalogue downloads there, the player restarts once to finish, and it arrives
+switched off: switch it on on the Plugins page. A newer version shows *Update
+to …* on the plugin's row. Plugins never update by themselves.
 
-**More plugins says nothing is listed.**
+**Add plugins shows nothing from other authors.**
 Only plugins that suit this player's release are shown, and the catalogue
 lists them as their authors send them in. When the catalogue cannot be read
 (no internet), the page says so and shows the last list it read.
+
+**What does *Asks to* mean on a plugin?**
+A plugin runs in a sandbox: no devices beyond what it needs to play. One that
+needs more says so - the TV's HDMI-CEC connection, the GPIO pins, USB devices
+- and the player grants exactly that once you agree, when it is added. A
+later version that asks for more asks again.
 
 **What do *Withdrawn* and *Blocked* mean?**
 The catalogue can take a plugin back. *Withdrawn*: it is no longer offered;
@@ -936,9 +945,15 @@ a plugin found to do harm: it is also switched off at once on every player
 that has it, and its switch stays off. Either way, *Remove* on its row
 deletes it.
 
+**What does *Remove* keep?**
+*Remove*, on a switched-off plugin's row, takes it off the player and back to
+*Add plugins*: what it downloaded, or its package, is deleted. Its settings
+and sign-in stay, so that adding it again starts where it left off, unless
+*Keep its settings and sign-in* is turned off in the dialog.
+
 **What does the catalogue learn about the player?**
 Nothing but the request: the player reads the list from GitHub once a day
-and when *More plugins* opens, so GitHub sees its address, as it does for
+and when *Add plugins* opens, so GitHub sees its address, as it does for
 the update check. A plugin downloads from its author's release on GitHub.
 
 **Are plugins from the catalogue in a backup?**

@@ -89,20 +89,29 @@ flowchart LR
   opens or Settings is left; a set the core refuses puts the copy back
   (2026-10-16, as the standby times do). Each tap used to wait for its
   write and a full reload, 0.4-0.65 s on sofapi.
-- **More plugins** (ADR-0168): Settings reads `GET /plugins/catalogue`
-  with every settings read - for the row on the Plugins page, shown only
-  while the core says `keyed`, and each plugin's *Update to …* - with
-  `?refresh=1` when the page opens, and every second while one of its
-  `jobs` runs or an install started here has not ended. That covers the
-  restart an install makes: the reads fail until the core is back, and the
-  install has ended once the core answers without the job and with the
-  version installed. Its page is a `.picker` over Settings, a tile per
-  listed plugin; the download is in the tile, and in the plugin's own row
-  on the Plugins page for an update or a restore's install. The notice
-  (ADR-0168 decision 6) comes before a first install only; an update and
-  a Retry start at once. What an install ended with stays on the plugin's
-  row until another group is opened, and a first install's "switched off"
-  goes once its switch is on.
+- **Add plugins** (ADR-0168, ADR-0169, ADR-0170): Settings reads
+  `GET /plugins/store` (ours, each `added` or not) and `GET /plugins/catalogue`
+  with every settings read - for the row on the Plugins page and its count of
+  updates, and each plugin's *Update to …* - with `?refresh=1` when the page
+  opens, and every second while one of its `jobs` runs or an install started
+  here has not ended. That covers the restart an install makes: the reads
+  fail until the core is back, and the install has ended once the core
+  answers without the job and with the version installed. Its page is a
+  `.picker` over Settings: chips by `area`, a tile per plugin that can be
+  added - ours not added (`POST /plugins/{id}/add`, after its `notice` if it
+  has one) and the catalogue's not installed (`POST /plugins/catalogue/install`
+  with `grant`) - in two columns on the panel and three on a bar, and on a
+  phone or computer *Upload a plugin* at its end. The notice (ADR-0168
+  decision 6, with what the plugin `permissions` asks for listed) comes
+  before a first install; an update and a Retry start at once, unless the
+  version asks for more than was agreed (`asks`). An upload answered `409`
+  lists what it asks for and is sent again with `?grant=`. On the Plugins
+  page every plugin row carries its tag (`sourceOf`: ours, catalogue,
+  uploaded) and, switched off, one *Remove* (`POST /plugins/{id}/remove`
+  with `keep`, the dialog's *Keep its settings and sign-in*); an upload's
+  only on a phone or computer. What an install ended with stays on the
+  plugin's row until another group is opened, and a first install's
+  "switched off" goes once its switch is on.
 - **Settings' requests end** (George, 2026-10-12). One the player took but
   never answered used to leave a sheet spinning; Settings' requests now go
   through `ask()` in `lib/settings.js`, which aborts one
@@ -110,7 +119,7 @@ flowchart LR
   (20 s); `LONG_REQUEST_TIMEOUT_MS` (120 s) for what is slow on purpose - a
   Wi-Fi join, anything on the network shares (search, browse, add, forget),
   a Wi-Fi scan, making a backup, an address change (`CableSheet.svelte`), a
-  plugin's removal, *More plugins*' read of the catalogue (`?refresh=1`), a
+  plugin's removal, *Add plugins*' read of the catalogue (`?refresh=1`), a
   problem report's start, and a plugin upload (an
   `XMLHttpRequest`, for its progress), where the limit counts silence (no bytes going out, or no answer once all are sent) rather
   than the whole request; `RESTORE_TIMEOUT_MS` (15 min) for a restore, which

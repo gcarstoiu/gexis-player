@@ -796,8 +796,7 @@ on for a new player, off on one updated from an earlier release; marked
 **Plexamp**, the **Lyrion Server** and the **Beszel** monitoring agent, among
 others. A plugin that needs software from its maker
 downloads it when switched on. Setup offers the same plugins, and the first
-start shows each download arriving. On a phone or computer, *Upload a
-plugin* installs one from a file.
+start shows each download arriving.
 Each plugin's switch says its version (for example *Version 0.4.7*); the
 software it downloads is named, with its own version, on the line below once
 it is installed.
@@ -806,22 +805,29 @@ and key, says whether the agent has reached its hub: **Connected** in green,
 **Connecting** in orange for its first minute, **Not connected** in red after
 that. A Hub public key that is not one is refused when it is saved.
 
-**More plugins**, the page's first row, lists plugins by other authors from
-the Gexis Player plugin catalogue, with what each does, who wrote it, its
-licence and its source, and the number of updates waiting. Each version was
-checked and read before it was listed, but none is part of Gexis Player:
-*Install* first says so, and that it runs at your own risk and
-responsibility. The plugin downloads in its tile, the player restarts once
-to finish, and the plugin arrives switched off; its row then says *From the
-plugin catalogue*. A newer version shows *Update to …* on its row and in
-*More plugins*; nothing updates by itself. If the catalogue withdraws a
+**Add plugins**, the page's first row, lists every plugin that can be added:
+the player's own optional ones not added yet, and plugins by other authors
+from the Gexis Player plugin catalogue, grouped as their settings are, with
+the number of updates waiting. The page itself lists what is added to this
+player, each plugin tagged with where it came from: *Gexis Player*,
+*Catalogue* or *Uploaded*. One of the player's own is added with *Add* (and
+its software downloads, if it has some). One by another author shows what it
+does, who wrote it, its licence and its source; each version was checked and
+read before it was listed, but none is part of Gexis Player: *Add* first says
+so, and lists anything it asks for beyond what every plugin may do (the TV's
+HDMI-CEC connection, the GPIO pins, USB devices). It downloads in its tile,
+the player restarts once to finish, and it arrives switched off. A newer
+version shows *Update to …* on its row; nothing updates by itself, and a
+version that asks for more asks first. On a phone or computer, *Upload a
+plugin*, at the end, installs one from a file. If the catalogue withdraws a
 plugin, its row says why and it keeps running; if it blocks one, found to do
 harm, the plugin is switched off at once and its switch stays off. *Remove*,
-on the row of a plugin that is switched off, deletes it with its data and
-settings. After a restore, plugins from the catalogue are installed from it
-again, unless it has withdrawn them since; an uploaded one needs uploading
-again. The player reads the catalogue
-from GitHub once a day and when *More plugins* opens.
+on the row of a plugin that is switched off, takes it off the player and back
+to *Add plugins*; its settings and sign-in stay, for when it is added again,
+unless *Keep its settings and sign-in* is turned off. After a restore, plugins
+from the catalogue are installed from it again, unless it has withdrawn them
+since; an uploaded one needs uploading again. The player reads the catalogue
+from GitHub once a day and when *Add plugins* opens.
 
 ### System — *The player, its network, updates and maintenance*
 
