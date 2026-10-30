@@ -3447,11 +3447,33 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "ADR-0170: it asks for permissions not agreed to yet; nothing was installed. Send it again with `grant`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PluginAsks"
+                }
+              }
+            }
           }
         },
         "x-gexis-stability": "stable",
         "x-gexis-adr": [
-          "ADR-0106"
+          "ADR-0106",
+          "ADR-0170"
+        ],
+        "parameters": [
+          {
+            "name": "grant",
+            "in": "query",
+            "required": false,
+            "description": "ADR-0170: the permissions the person agreed to, comma-separated, after a `409` listed them.",
+            "schema": {
+              "type": "string"
+            }
+          }
         ]
       }
     },
@@ -6819,6 +6841,13 @@
                   "id": {
                     "type": "string",
                     "description": "The plugin's id."
+                  },
+                  "grant": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "ADR-0170: the permissions the person agreed to after they were listed."
                   }
                 }
               }
@@ -6847,7 +6876,7 @@
             }
           },
           "409": {
-            "description": "It cannot be installed (`Not installed: <reason>.`): not in the catalogue, no version for this player, already installed, or uploaded here.",
+            "description": "It cannot be installed (`Not installed: <reason>.`): not in the catalogue, no version for this player, already installed, or uploaded here. Or (ADR-0170) it asks for permissions not agreed to yet: then the body is a `PluginAsks`, and the request is sent again with `grant`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -6869,7 +6898,231 @@
         },
         "x-gexis-stability": "stable",
         "x-gexis-adr": [
-          "ADR-0168"
+          "ADR-0168",
+          "ADR-0170"
+        ]
+      }
+    },
+    "/plugins/store": {
+      "get": {
+        "operationId": "plugin_store",
+        "tags": [
+          "Plugins"
+        ],
+        "summary": "The player's own plugins for Add plugins",
+        "description": "ADR-0169: every optional plugin of the player's own (not the Lyrion client, Spotify or Bluetooth), the visualiser skins included, each with whether it is added to this player. *Add plugins* shows those not added beside the catalogue's (`GET /plugins/catalogue`).",
+        "responses": {
+          "200": {
+            "description": "The list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ours": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string"
+                          },
+                          "area": {
+                            "type": "string"
+                          },
+                          "summary": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "tag": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "notice": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "added": {
+                            "type": "boolean"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The store is not wired up in this core.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-gexis-stability": "stable",
+        "x-gexis-adr": [
+          "ADR-0169"
+        ]
+      }
+    },
+    "/plugins/{id}/add": {
+      "post": {
+        "operationId": "plugin_add",
+        "tags": [
+          "Plugins"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The plugin's id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Add one of the player's own plugins",
+        "description": "ADR-0169: marks it added and switches it on; one that downloads its software starts the download, as its switch does. Show its `notice` first. A plugin from the catalogue is added with `POST /plugins/catalogue/install`, one from a file with `POST /plugins/upload`. Takes no body.",
+        "responses": {
+          "200": {
+            "description": "Added.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "added": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not one of the player's own optional plugins.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The store is not wired up in this core.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-gexis-stability": "stable",
+        "x-gexis-adr": [
+          "ADR-0169"
+        ]
+      }
+    },
+    "/plugins/{id}/remove": {
+      "post": {
+        "operationId": "plugin_remove",
+        "tags": [
+          "Plugins"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The plugin's id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Take a plugin off the player, back to Add plugins",
+        "description": "ADR-0169: any plugin. Switched off; what it downloaded, or its package, deleted; back to *Add plugins*. Its settings and sign-in stay unless `keep` is false, which deletes them (and an uploaded or catalogue plugin's data) too. Removing an uploaded or catalogue plugin restarts the core shortly after answering.",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "keep": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Keep its settings and sign-in (and data)."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Removed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "removed": {
+                      "type": "string"
+                    },
+                    "kept": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not a plugin that can be removed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The store is not wired up in this core.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-gexis-stability": "stable",
+        "x-gexis-adr": [
+          "ADR-0169"
         ]
       }
     }
@@ -13447,6 +13700,40 @@
               "$ref": "#/components/schemas/PluginCatalogueJob"
             },
             "description": "Installs under way or just finished, by plugin id."
+          }
+        }
+      },
+      "PluginAsks": {
+        "description": "ADR-0170: the plugin asks for permissions its person has not agreed to; nothing was installed.",
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "asks": {
+            "type": "array",
+            "description": "Every permission it asks for, with the words the notice shows.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "words": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "new": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Those not yet agreed to."
           }
         }
       }

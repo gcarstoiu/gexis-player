@@ -187,6 +187,9 @@ class StateServer:
         multiroom=None,
         plugin_artwork=None,
         panel_token: str | None = None,
+        store_view=None,
+        store_add=None,
+        store_remove=None,
     ) -> None:
         """`activate(renderer_id) -> bool` and `set_volume(percent) -> bool`
         are injected by `__main__.py` (ADR-0028's command surface). Both are
@@ -206,6 +209,8 @@ class StateServer:
         self._store = store
         #: ADR-0170: this boot's token the panel's page sends (`panel_token`).
         self._panel_token = panel_token
+        #: ADR-0169: one store for every plugin.
+        self._store_view, self._store_add, self._store_remove = store_view, store_add, store_remove
         #: ADR-0059's sweep leaves fanart URLs here. Not `_store`,
         #: which is the *state* store - two different things that
         #: would otherwise share a name in this file.
@@ -2454,6 +2459,37 @@ class StateServer:
         except uploads.Refused as exc:
             return web.json_response({"error": f"Not installed: {exc}."}, status=400)
 
+    async def _handle_store(self, request: web.Request) -> web.Response:
+        """ADR-0169: ours for *Add plugins*, each with whether it is added; the
+        catalogue's come from `/plugins/catalogue`."""
+        if self._store_view is None:
+            return web.json_response({"error": "the store is not wired up"}, status=503)
+        return web.json_response(self._store_view())
+
+    async def _handle_store_add(self, request: web.Request) -> web.Response:
+        """ADR-0169: one of ours added and switched on."""
+        if self._store_add is None:
+            return web.json_response({"error": "the store is not wired up"}, status=503)
+        plugin_id = request.match_info["id"]
+        if not await self._store_add(plugin_id):
+            return web.json_response({"error": f"{plugin_id} is not one to add"}, status=404)
+        return web.json_response({"added": plugin_id})
+
+    async def _handle_store_remove(self, request: web.Request) -> web.Response:
+        """ADR-0169: any plugin taken off the player and back to *Add
+        plugins*; `{"keep": false}` deletes its settings and data too."""
+        if self._store_remove is None:
+            return web.json_response({"error": "the store is not wired up"}, status=503)
+        try:
+            body = await request.json()
+        except ValueError:
+            body = {}
+        keep = not (isinstance(body, dict) and body.get("keep") is False)
+        plugin_id = request.match_info["id"]
+        if not await self._store_remove(plugin_id, keep):
+            return web.json_response({"error": f"{plugin_id} is not one to remove"}, status=404)
+        return web.json_response({"removed": plugin_id, "kept": keep})
+
     async def _handle_catalogue(self, request: web.Request) -> web.Response:
         """ADR-0168: what *More plugins* shows. `?refresh=1` reads the
         catalogue again first, if the last read is older than a quarter of
@@ -3431,6 +3467,9 @@ class StateServer:
         app.router.add_get("/plugins/catalogue", self._handle_catalogue)
         app.router.add_post("/plugins/catalogue/install", self._handle_catalogue_install)
         app.router.add_post("/plugins/{id}/uninstall", self._handle_plugin_uninstall)
+        app.router.add_get("/plugins/store", self._handle_store)
+        app.router.add_post("/plugins/{id}/add", self._handle_store_add)
+        app.router.add_post("/plugins/{id}/remove", self._handle_store_remove)
         app.router.add_get("/setup/answers", self._handle_setup_answers)
         app.router.add_post("/setup/answers", self._handle_setup_save)
         app.router.add_get("/setup/networks", self._handle_setup_networks)

@@ -19,7 +19,7 @@ from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
 from gexis_core import alsa, bluetooth_adapter_state, bluetooth_agent, device_name, journal, meters, screen_detect, skins, wifi
-from gexis_core import board_apply, panel_token, placement, plugin_permissions, screen_apply, screen_watch, screens, skin_packs, skin_previews
+from gexis_core import board_apply, panel_token, placement, plugin_permissions, plugin_store, screen_apply, screen_watch, screens, skin_packs, skin_previews
 from gexis_core.adapters.base import VolumeMechanism
 from gexis_core.adapters.bluetooth import BluetoothAdapter
 from gexis_core.adapters.lms import LmsAdapter
@@ -2656,9 +2656,32 @@ async def main() -> None:
                 personalise.put_off(settings, personalise.first())
         asyncio.ensure_future(_put_off_at_start())
 
+    # ADR-0169: one store for every plugin. Ours are added or not, a record
+    # of its own; what is not added waits in *Add plugins*.
+    optional_plugins = plugin_store.optional(installed_plugins)
+
+    def _enabled_row(plugin) -> str:
+        return plugin.enabled_row or f"{plugin.id}.enabled"
+
+    def _first_added() -> list[str]:
+        status = components.all_status()
+        return plugin_store.first(
+            [p.id for p in optional_plugins],
+            on=lambda pid: settings.value(_enabled_row(next(p for p in optional_plugins if p.id == pid))) is True,
+            downloaded=lambda pid: pid in downloads and (status.get(downloads[pid]) or {}).get("state") == "installed",
+            skins=settings.value("visualiser_skins") is True)
+
+    def _added() -> set[str]:
+        stored = plugin_store.read(settings_store.get(plugin_store.ADDED))
+        return stored if stored is not None else set(_first_added())
+
     settings = Settings(
         settings_store,
         shown={"cable": cable.shown,
+               # ADR-0169: a plugin of ours not added shows in *Add plugins*,
+               # not on the Plugins page.
+               **{_enabled_row(p): (lambda pid=p.id: pid in _added()) for p in optional_plugins},
+               "visualiser_skins": lambda: plugin_store.SKINS in _added(),
                # ADR-0141 D2: a choice only while both ports have something on them.
                "screen_port": lambda: not settings_store.get("headless")
                and len(screen_detect.ports()) >= 2,
@@ -4449,7 +4472,9 @@ async def main() -> None:
             block_restart["scheduled"] = True
             asyncio.ensure_future(_restart_core_soon())
 
-    async def _uninstall_plugin(plugin_id: str) -> bool:
+    async def _uninstall_plugin(plugin_id: str, keep: bool = False) -> bool:
+        """Remove an uploaded or catalogue plugin. ADR-0169: with `keep`, its
+        settings and data stay for when it is added again."""
         catalogue.jobs.pop(plugin_id, None)
         plugin = next((p for p in installed_plugins if p.id == plugin_id and p.uploaded), None)
         if plugin is None and any(m["id"] == plugin_id for m in restored_missing):
@@ -4464,13 +4489,60 @@ async def main() -> None:
             return False
         await asyncio.to_thread(_set_unit_enabled, plugin.unit, False)
         await asyncio.to_thread(uploads.remove, plugin_id)
-        await asyncio.to_thread(uploads.remove_data, plugin_id)
         await asyncio.to_thread(uploads.forget, plugin_id)
-        for row in plugin.settings:
-            if row.get("key"):
-                settings_store.delete(f"{plugin_id}.{row['key']}")
+        if not keep:
+            await asyncio.to_thread(uploads.remove_data, plugin_id)
+            for row in plugin.settings:
+                if row.get("key"):
+                    settings_store.delete(f"{plugin_id}.{row['key']}")
         settings_store.delete(plugin.enabled_row or f"{plugin_id}.enabled")
         asyncio.ensure_future(_restart_core_soon())
+        return True
+
+    def _store_view() -> dict:
+        """ADR-0169: ours for *Add plugins*, each with whether it is added."""
+        return {"ours": plugin_store.tiles(optional_plugins, _added())}
+
+    def _set_added(plugin_id: str, on: bool) -> None:
+        added = _added()
+        (added.add if on else added.discard)(plugin_id)
+        settings_store.set(plugin_store.ADDED, sorted(added))
+        state_store.bump_settings_revision()
+
+    async def _store_add(plugin_id: str) -> bool:
+        """ADR-0169: one of ours added and switched on - its download as a
+        switch-on starts it. The page has shown its notice first."""
+        if plugin_id == plugin_store.SKINS:
+            _set_added(plugin_id, True)
+            settings.set("visualiser_skins", True)
+            return True
+        plugin = next((p for p in optional_plugins if p.id == plugin_id), None)
+        if plugin is None:
+            return False
+        _set_added(plugin_id, True)
+        settings.set(_enabled_row(plugin), True)
+        return True
+
+    async def _store_remove(plugin_id: str, keep: bool) -> bool:
+        """ADR-0169: off, what it downloaded deleted, back to *Add plugins*.
+        Without `keep`, its settings go too (George: kept unless the switch
+        in the dialog is turned off)."""
+        if plugin_id == plugin_store.SKINS:
+            settings.set("visualiser_skins", False)
+            _set_added(plugin_id, False)
+            return True
+        plugin = next((p for p in optional_plugins if p.id == plugin_id), None)
+        if plugin is None:
+            return await _uninstall_plugin(plugin_id, keep=keep)
+        if settings.value(_enabled_row(plugin)) is not False:
+            settings.set(_enabled_row(plugin), False)
+        if plugin_id in downloads:
+            await _remove_download(plugin)
+        if not keep:
+            for row in plugin.settings:
+                if row.get("key"):
+                    settings_store.delete(f"{plugin_id}.{row['key']}")
+        _set_added(plugin_id, False)
         return True
 
     async def _park_renderers(stop_all: bool = False) -> bool:
@@ -4509,6 +4581,11 @@ async def main() -> None:
 
     setup_network = SetupNetwork(on_change=_setup_changed)
     setup_ref["net"] = setup_network
+    # ADR-0169 (George, 2026-10-30): an updated player starts from what is in
+    # use. A new one leaves it to setup, which records what it chose.
+    if plugin_store.read(settings_store.get(plugin_store.ADDED)) is None and not setup_network.needed:
+        settings_store.set(plugin_store.ADDED, _first_added())
+        logger.info("plugins: added from what is in use: %s", ", ".join(settings_store.get(plugin_store.ADDED)) or "none")
     setup_flow = SetupFlow(setup_network, settings, reboot=_reboot, plugins=_offered_plugins,
                            owed=_personalise_owed)
     asyncio.ensure_future(cable.follow())
@@ -4618,6 +4695,10 @@ async def main() -> None:
         on_painted=None,
         upload_plugin=_upload_plugin,
         uninstall_plugin=_uninstall_plugin,
+        # ADR-0169: one store for every plugin.
+        store_view=_store_view,
+        store_add=_store_add,
+        store_remove=_store_remove,
         catalogue=catalogue,
         # ADR-0047: the idle screen's two providers.
         weather=forecast,
