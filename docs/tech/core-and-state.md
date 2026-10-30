@@ -535,8 +535,10 @@ pieces in code:
   An uploaded id may never shadow a shipped one.
 - **The plugin catalogue** (`plugin_catalogue.py`, ADR-0168): other
   authors' plugins, listed in `gcarstoiu/gexis-plugins`. The core reads
-  `catalogue.json` and its signature from that repository's release `index`
-  a minute after it starts, then daily, and when *More plugins* asks
+  `catalogue.json` and the signature of its serial (`catalogue-<serial>.json.sig`,
+  so a cached catalogue is never paired with another's) from that
+  repository's release `index` a minute after it starts, then daily, and
+  when *More plugins* asks
   (`?refresh=1`, at most every 15 minutes); verifies it with `gpgv` against
   `/usr/share/gexis/keys/gexis-catalogue.gpg`, refuses a serial lower than
   one accepted, and keeps the last good read in `/var/lib/gexis/catalogue/`.

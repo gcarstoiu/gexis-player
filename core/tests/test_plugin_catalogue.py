@@ -68,6 +68,11 @@ def index(*entries, serial=1) -> bytes:
                        "plugins": list(entries)}).encode()
 
 
+def published(cat: bytes, sign) -> dict[str, bytes]:
+    """As the release serves it: the catalogue, and its signature named by its serial."""
+    return {URL: cat, pc.signature_url(URL, json.loads(cat)["serial"]): sign(cat)}
+
+
 class Response:
     def __init__(self, status: int, body: bytes):
         self.status, self._body, self.content = status, body, self
@@ -222,7 +227,7 @@ async def test_install_downloads_checks_and_hands_the_archive_on(key, tmp_path):
     keyring, sign = key
     data = archive()
     cat = index(entry(listed(data)))
-    svc, calls = service(key, tmp_path, {URL: cat, URL + ".sig": sign(cat), listed(data)["url"]: data})
+    svc, calls = service(key, tmp_path, {**published(cat, sign), listed(data)["url"]: data})
     await svc.refresh()
     job = svc.start_install("hello")
     for _ in range(50):
@@ -238,7 +243,7 @@ async def test_an_archive_that_is_not_the_listed_one_fails_and_installs_nothing(
     keyring, sign = key
     data = archive()
     cat = index(entry(listed(data)))
-    svc, calls = service(key, tmp_path, {URL: cat, URL + ".sig": sign(cat), listed(data)["url"]: data[:-3] + b"abc"})
+    svc, calls = service(key, tmp_path, {**published(cat, sign), listed(data)["url"]: data[:-3] + b"abc"})
     await svc.refresh()
     job = svc.start_install("hello")
     for _ in range(50):
@@ -252,7 +257,7 @@ async def test_what_cannot_be_installed_says_why(key, tmp_path):
     keyring, sign = key
     data = archive()
     cat = index(entry(listed(data)), entry(listed(data), plugin_id="spotify"))
-    served = {URL: cat, URL + ".sig": sign(cat)}
+    served = published(cat, sign)
     svc, _ = service(key, tmp_path, served, installed={"hello": "0.1.0"}, from_catalogue={"hello"})
     await svc.refresh()
     for plugin_id, why in (("hello", "already installed"), ("spotify", "not in the catalogue"),
@@ -268,7 +273,7 @@ async def test_what_cannot_be_installed_says_why(key, tmp_path):
 async def test_a_read_that_blocks_a_plugin_switches_it_off(key, tmp_path):
     keyring, sign = key
     cat = index(entry(listed(archive(), blocked="it sends what it hears")))
-    svc, calls = service(key, tmp_path, {URL: cat, URL + ".sig": sign(cat)},
+    svc, calls = service(key, tmp_path, published(cat, sign),
                          installed={"hello": "0.1.0"}, from_catalogue={"hello"})
     await svc.refresh()
     assert calls["off"] == [("hello", "it sends what it hears")]
@@ -287,7 +292,7 @@ async def test_a_failed_read_keeps_the_last_good_catalogue(key, tmp_path):
 async def test_a_release_without_the_key_reads_nothing_and_says_so(key, tmp_path):
     keyring, sign = key
     cat = index(entry(listed(archive())))
-    served = {URL: cat, URL + ".sig": sign(cat)}
+    served = published(cat, sign)
     svc, _ = service(key, tmp_path, served)
     svc.keyring = tmp_path / "none.gpg"
     asked = []
@@ -300,7 +305,7 @@ async def test_a_release_without_the_key_reads_nothing_and_says_so(key, tmp_path
 async def test_a_blocked_plugins_switch_refuses_on_with_the_reason(key, tmp_path):
     keyring, sign = key
     cat = index(entry(listed(archive(), blocked="It sends what it hears.")))
-    svc, _ = service(key, tmp_path, {URL: cat, URL + ".sig": sign(cat)},
+    svc, _ = service(key, tmp_path, published(cat, sign),
                      installed={"hello": "0.1.0"}, from_catalogue={"hello"})
     assert svc.switch_unavailable("hello") == {}
     await svc.refresh()
@@ -323,13 +328,13 @@ async def test_a_restore_installs_the_version_it_had_while_it_is_offered(key, tm
     keyring, sign = key
     a, b = archive(), archive(version="0.2.0")
     cat = index(entry(listed(a), listed(b, "0.2.0")))
-    served = {URL: cat, URL + ".sig": sign(cat), listed(a)["url"]: a, listed(b, "0.2.0")["url"]: b}
+    served = {**published(cat, sign), listed(a)["url"]: a, listed(b, "0.2.0")["url"]: b}
     svc, _ = service(key, tmp_path, served)
     await svc.refresh()
     assert await svc.restore([{"id": "hello", "version": "0.1.0"}]) == ["hello"]
     assert svc.jobs["hello"].version == "0.1.0"
     withdrawn = index(entry(listed(a, withdrawn="broken"), listed(b, "0.2.0")), serial=2)
-    served.update({URL: withdrawn, URL + ".sig": sign(withdrawn)})
+    served.update(published(withdrawn, sign))
     other, _ = service(key, tmp_path, served)
     await other.refresh()
     await other.restore([{"id": "hello", "version": "0.1.0"}])
@@ -342,7 +347,7 @@ async def test_a_restore_installs_them_all_then_restarts_once(key, tmp_path):
     versions = {pid: listed(data, url=f"https://github.com/someone/hello/releases/download/v1/{pid}.tar.gz")
                 for pid, data in found.items()}
     cat = index(*(entry(v, plugin_id=pid) for pid, v in versions.items()))
-    served = {URL: cat, URL + ".sig": sign(cat), versions["hello"]["url"]: found["hello"],
+    served = {**published(cat, sign), versions["hello"]["url"]: found["hello"],
               versions["tone"]["url"]: found["tone"]}
     svc, calls = service(key, tmp_path, served)
     await svc.refresh()
@@ -353,7 +358,7 @@ async def test_a_restore_installs_them_all_then_restarts_once(key, tmp_path):
     assert calls["restart_with"] == [False, False] and calls["restarted"] == 1
     assert svc.jobs["gone"].phase == "failed"
     # Nothing installed, nothing restarted.
-    again, calls = service(key, tmp_path, {URL: cat, URL + ".sig": sign(cat)})
+    again, calls = service(key, tmp_path, published(cat, sign))
     await again.refresh()
     assert await again.restore(missing) == [] and calls["restarted"] == 0
 
@@ -363,7 +368,7 @@ async def test_a_withdrawal_read_during_a_run_reaches_the_row(key, tmp_path):
     keyring, sign = key
     a = archive()
     cat = index(entry(listed(a)))
-    served = {URL: cat, URL + ".sig": sign(cat)}
+    served = published(cat, sign)
     svc, _ = service(key, tmp_path, served, installed={"hello": "0.1.0"}, from_catalogue={"hello"})
     told = []
     svc.on_change = lambda: told.append(svc.catalogue.serial)
@@ -371,11 +376,30 @@ async def test_a_withdrawal_read_during_a_run_reaches_the_row(key, tmp_path):
     await svc.refresh()
     assert told == [1] and svc.pulled("hello") is None
     withdrawn = index(entry(listed(a), withdrawn="no longer kept up"), serial=2)
-    served.update({URL: withdrawn, URL + ".sig": sign(withdrawn)})
+    served.update(published(withdrawn, sign))
     await svc.refresh()
     assert told == [1, 2]
     assert settings_registry.catalogue_note(svc.pulled("hello")) == \
         "Withdrawn from the plugin catalogue: no longer kept up"
+
+
+async def test_a_cached_catalogue_reads_its_own_signature(key, tmp_path):
+    """Found on sofapi, 2026-10-30: GitHub's cache paired serial 3 with serial
+    2's signature, and the read was refused. Each serial's has its own name."""
+    keyring, sign = key
+    old, new = index(entry(listed(archive())), serial=2), index(serial=3)
+    # Both signatures on the release; the cache still serves the old catalogue.
+    served = {**published(new, sign), **published(old, sign)}
+    svc, _ = service(key, tmp_path, served)
+    await svc.refresh()
+    assert svc.error is None and svc.catalogue.serial == 2
+    served[URL] = new
+    await svc.refresh()
+    assert svc.error is None and svc.catalogue.serial == 3
+    # A catalogue whose own signature is not there: refused, the last good kept.
+    served[URL] = index(serial=4)
+    await svc.refresh()
+    assert svc.catalogue.serial == 3 and svc.error == "GitHub answered 404"
 
 
 # Where it came from
@@ -423,7 +447,7 @@ async def test_the_routes_show_the_catalogue_and_start_an_install(key, tmp_path)
     keyring, sign = key
     data = archive()
     cat = index(entry(listed(data)))
-    svc, _ = service(key, tmp_path, {URL: cat, URL + ".sig": sign(cat), listed(data)["url"]: data})
+    svc, _ = service(key, tmp_path, {**published(cat, sign), listed(data)["url"]: data})
     server = StateServer(StateStore({}), catalogue=svc)
     async with TestClient(TestServer(server.make_app())) as client:
         view = await (await client.get("/plugins/catalogue?refresh=1")).json()

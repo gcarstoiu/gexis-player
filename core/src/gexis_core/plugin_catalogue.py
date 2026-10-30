@@ -168,9 +168,19 @@ async def _get(session: aiohttp.ClientSession, url: str, limit: int) -> bytes:
     return data
 
 
+def signature_url(url: str, serial: int) -> str:
+    """A catalogue's signature, named by its serial: GitHub's cache once gave
+    a new catalogue.json with the previous signature, which a name per
+    serial cannot pair (George, 2026-10-30)."""
+    return f"{url.rsplit('/', 1)[0]}/catalogue-{serial}.json.sig"
+
+
 async def download(session: aiohttp.ClientSession, url: str = URL) -> tuple[bytes, bytes]:
+    """The catalogue and the signature of the serial it says it is - read
+    from it before it is verified, and verified with that signature."""
     try:
-        return await _get(session, url, MAX_INDEX), await _get(session, url + ".sig", 64 * 1024)
+        data = await _get(session, url, MAX_INDEX)
+        return data, await _get(session, signature_url(url, parse(data).serial), 64 * 1024)
     except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
         raise Unavailable(f"it could not be reached ({exc.__class__.__name__})") from None
 
