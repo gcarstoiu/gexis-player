@@ -105,6 +105,25 @@ it four seconds after the core; removed, nothing of it was left. The kiosk
 proves itself (its panel requests all answered), and a call on loopback
 without the token is refused. Not yet: CEC with a TV; the plugin.
 
+## CEC on a test player (2026-10-30)
+
+George connected sofapi's second HDMI port to a receiver (input 6) that
+feeds a TV. Tried by hand with `cec-ctl` and `cec-follower`:
+- **The bus works through the chain.** The port reads physical address
+  `2.6.0.0`; claimed as a playback device it got logical address 8 (another
+  player on the bus had 4) and saw the TV (0), the receiver (3, 5) and that
+  player, with their vendors and power states.
+- **The player can wake the TV and take the input.** *Image View On* woke
+  the TV, which then asked for the player's vendor, power status and name;
+  waking it reset HDMI, so the player was unregistered for a moment and an
+  *Active Source* sent then was lost. Sent again once registered, the
+  receiver switched to it (*Routing Change* to `2.6.0.0`).
+- **The kernel answers some messages itself** (physical address, vendor,
+  name) but not *Give Device Power Status*: with no follower it is refused,
+  so the plugin must answer the bus as a device does.
+- **Not yet seen: the remote's keys** (George was called away); asked again
+  when he is back.
+
 ## Settings (ADR-0022)
 
 None: a permission is granted by adding the plugin, and taken back by
