@@ -78,8 +78,12 @@ phase branch), the permissions and the store were built the same evening
 and tried on sofapi, which runs that preview (`1.9.1+git46.d41c73e`; core,
 UI, system, player). Pushed (George): both branches; `gexis-plugins` #10
 (a version's permissions, an entry's area) and #11 (`tools/player-ref` at
-the phase's `1e26c75e`, whose upload check knows permissions). Next: the CEC
-plugin, once George has a test player on a TV with CEC. The samples left `tools/`
+the phase's `1e26c75e`, whose upload check knows permissions). CEC (ADR-0170, *CEC on a test player*):
+sofapi's second HDMI port goes to a receiver feeding a TV; the bus, waking the
+TV and taking the input shown; the plugin `tv-remote` 0.1.0 written
+(`~/projects/gexis-tv-remote`, local) and running on sofapi. Next: George's
+key test (the TV's remote, the receiver on sofapi's input 6), then the
+plugin's public repository and listing (asked first). The samples left `tools/`
 for that repository. The wiki Roadmap shows the new order (pushed
 2026-10-29 with George's OK).
 **Found in step 3, fixed apart**: on a phone the confirm, its progress card

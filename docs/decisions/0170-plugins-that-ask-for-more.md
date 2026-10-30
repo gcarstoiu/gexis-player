@@ -124,6 +124,19 @@ feeds a TV. Tried by hand with `cec-ctl` and `cec-follower`:
 - **Not yet seen: the remote's keys** (George was called away); asked again
   when he is back.
 
+**The plugin, 0.1.0** (local, `~/projects/gexis-tv-remote`, not yet
+published): standard-library Python on the kernel's CEC device; a playback
+device that answers power, menu and deck status and the active source, and
+sends the remote's keys to `/panel/key`, `/panel/go/home` and the transport
+routes; nothing switched on or taken by itself; the kernel's own key
+passthrough off, so a key reaches the player once. 9 tests without a TV.
+Installed on sofapi from a phone-sized remote (asked about `cec` first): its
+first run joined the wrong port - sofapi's panel reports an HDMI address too -
+so it now joins each port with an address and keeps the one where a TV or a
+receiver answers a poll; it gives a vendor ID (the HDMI placeholder, as
+`cec-ctl` does), since the TV kept asking. Seen on the bus: it joined as
+playback device 8 on the TV's port and answered the TV's questions.
+
 ## Settings (ADR-0022)
 
 None: a permission is granted by adding the plugin, and taken back by
