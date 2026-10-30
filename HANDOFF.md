@@ -67,9 +67,12 @@ and blocked on sofapi; `gexis-plugins` #1-#9 merged; **serial 4 published**
 is now `catalogue-<serial>.json.sig` (George, after GitHub's cache paired a
 catalogue with the previous signature). The ADR's three measurements done.
 Step 5 done the same day (the manual, the FAQ, *Writing a plugin*, the
-README, the technical guide, on the phase branch). Next: step 6, George's
-tests on a preview and release 1.10.0; with both samples withdrawn the
-catalogue lists nothing, which his tests will need a way around. The samples left `tools/`
+README, the technical guide, on the phase branch). **The phase grew the
+same evening** (George; ADR-0168, *Changed*): one store for every plugin
+(option B of the mock-ups, a Claude Design canvas *Plugins: one look or one
+store*), and declared permissions with a CEC plugin as the first to use
+them, both before 1.10.0. Next: George's OK of the finished mock-ups, then
+the two decision records. The samples left `tools/`
 for that repository. The wiki Roadmap shows the new order (pushed
 2026-10-29 with George's OK).
 **Found in step 3, fixed apart**: on a phone the confirm, its progress card
