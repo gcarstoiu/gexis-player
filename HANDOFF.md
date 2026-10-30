@@ -71,8 +71,11 @@ README, the technical guide, on the phase branch). **The phase grew the
 same evening** (George; ADR-0168, *Changed*): one store for every plugin
 (option B of the mock-ups, a Claude Design canvas *Plugins: one look or one
 store*), and declared permissions with a CEC plugin as the first to use
-them, both before 1.10.0. Next: George's OK of the finished mock-ups, then
-the two decision records. The samples left `tools/`
+them, both before 1.10.0. Mock-ups approved; ADR-0169 (the store) and ADR-0170
+(permissions `cec`, `gpio`, `usb`; a CEC plugin first) accepted the same
+day. Next: the loopback fix (a plugin on `127.0.0.1` passes for the panel),
+the permissions, the store, the CEC plugin (George connects a test player
+to a TV with CEC and says which). The samples left `tools/`
 for that repository. The wiki Roadmap shows the new order (pushed
 2026-10-29 with George's OK).
 **Found in step 3, fixed apart**: on a phone the confirm, its progress card
