@@ -97,7 +97,7 @@ def apply(grants: dict[str, tuple[str, ...]], root: Path = DROPINS) -> list[str]
             logger.info("permissions: %s granted %s", unit, ", ".join(names))
             changed.append(unit)
         elif path.exists():
-            path.unlink()
+            _drop(path)
             logger.info("permissions: %s granted nothing", unit)
             changed.append(unit)
     if root.is_dir():
@@ -105,6 +105,15 @@ def apply(grants: dict[str, tuple[str, ...]], root: Path = DROPINS) -> list[str]
         for stale in root.glob(f"gexis-uploaded-*.d/{DROPIN}"):
             unit = stale.parent.name[:-2]
             if unit not in grants:
-                stale.unlink()
+                _drop(stale)
                 changed.append(unit)
     return changed
+
+
+def _drop(path: Path) -> None:
+    """The drop-in, and its folder once nothing else is in it."""
+    path.unlink()
+    try:
+        path.parent.rmdir()
+    except OSError:
+        pass

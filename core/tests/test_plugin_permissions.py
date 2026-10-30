@@ -43,7 +43,7 @@ def test_apply_writes_what_is_granted_and_removes_the_rest(tmp_path):
     assert pp.apply({unit: ()}, root=tmp_path) == [unit] and not path.exists()
     # A plugin removed since: its drop-in goes at the next start.
     pp.apply({unit: ("cec",)}, root=tmp_path)
-    assert pp.apply({}, root=tmp_path) == [unit] and not path.exists()
+    assert pp.apply({}, root=tmp_path) == [unit] and not path.exists() and not path.parent.exists()
 
 
 def _archive(**manifest) -> bytes:
