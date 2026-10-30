@@ -91,6 +91,7 @@ from gexis_core.softvol_boot import (
     start_level, volume_mode,
 )
 from gexis_core.settings_registry import InvalidValue, Settings, UnknownSetting, catalogue_note, load_registry
+from gexis_core.settings_registry import plugin_line as settings_registry_line
 from gexis_core.splash import Splash
 from gexis_core.state import StateStore
 from gexis_core import announce, backups, bluealsa_volume, components, outputs, plugin_env, plugins, uploads
@@ -2816,7 +2817,9 @@ async def main() -> None:
                # ADR-0168: withdrawn or blocked by a read during the run, said
                # without waiting for a restart.
                **{f"{plugin.id}.enabled":
-                  (lambda plugin_id=plugin.id: catalogue_note(catalogue.pulled(plugin_id)))
+                  (lambda plugin_id=plugin.id, p=plugin: catalogue_note(
+                      catalogue.pulled(plugin_id),
+                      catalogue.summary(plugin_id) or settings_registry_line(p, "catalogue")))
                   for plugin in installed_plugins
                   if plugin.catalogue and plugin.enabled_row is None}},
         # Wired = something reads it (ADR-0035). The token is read on every

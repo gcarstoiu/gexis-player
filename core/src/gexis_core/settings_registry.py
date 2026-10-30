@@ -508,14 +508,25 @@ class Locked(Exception):
     pass
 
 
-def catalogue_note(pulled: tuple[str, str] | None) -> str:
-    """A plugin from the catalogue says so on its row - and why, if the
-    catalogue withdrew or blocked it (ADR-0168)."""
+def catalogue_note(pulled: tuple[str, str] | None, line: str | None = None) -> str:
+    """A plugin from the catalogue says what it does on its row (its tag says
+    where it came from, ADR-0169) - and why, if the catalogue withdrew or
+    blocked it (ADR-0168)."""
     if pulled and pulled[0] == "blocked":
         return f"Blocked in the plugin catalogue, and switched off: {pulled[1]}"
     if pulled:
         return f"Withdrawn from the plugin catalogue: {pulled[1]}"
-    return "From the plugin catalogue. Not part of Gexis Player; it runs at your own risk."
+    return line or "From the plugin catalogue."
+
+
+def plugin_line(plugin, origin: str | None = None) -> str | None:
+    """**One line on what it does** (ADR-0169): its summary; else, for one
+    not ours, what kind it is and where it came from."""
+    summary = getattr(plugin, "summary", None)
+    if summary:
+        return summary
+    kind = "A source" if getattr(plugin, "kind", "") == "renderer" else "A service"
+    return {"file": f"{kind}, installed from a file.", "catalogue": f"{kind} from the plugin catalogue."}.get(origin)
 
 
 class Settings:
@@ -608,17 +619,21 @@ class Settings:
                     # restart, ADR-0048) rebuilds.
                     from gexis_core import device_name as _name
                     switches[-1]["note"] = f"Open http://{_name.hostname() or 'gexis'}.local:{plugin.port}"
+                elif plugin_line(plugin):
+                    # ADR-0169: every plugin's row says what it does.
+                    switches[-1]["note"] = plugin_line(plugin)
                 if getattr(plugin, "uploaded", False):
-                    # ADR-0106: an upload arrives off, and says what it is.
+                    # ADR-0106: an upload arrives off. ADR-0169: its tag says
+                    # it was uploaded; its note what it does.
                     switches[-1]["default"] = False
                     switches[-1]["uploaded"] = True
-                    switches[-1]["note"] = "Uploaded. Not part of Gexis Player; it runs at your own risk."
+                    switches[-1]["note"] = plugin_line(plugin, "file")
                 if getattr(plugin, "catalogue", False):
-                    # ADR-0168: the same, from the catalogue - and why, if
-                    # it was withdrawn or blocked there. Blocked stays off.
+                    # ADR-0168: from the catalogue - and why, if it was
+                    # withdrawn or blocked there. Blocked stays off.
                     switches[-1]["catalogue"] = True
                     state = getattr(plugin, "pulled", None)
-                    switches[-1]["note"] = catalogue_note(state)
+                    switches[-1]["note"] = catalogue_note(state, plugin_line(plugin, "catalogue"))
                     if state and state[0] == "blocked":
                         switches[-1]["blocked"] = True
             # **ADR-0100 as amended: a plugin that downloads its software says

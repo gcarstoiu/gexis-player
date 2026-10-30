@@ -436,7 +436,11 @@ def test_a_catalogue_plugins_row_says_where_it_came_from_and_why_it_is_off():
                           "unit": "gexis-uploaded-service@hello.service"})
     from dataclasses import replace
     row = _switch(replace(base, uploaded=True, catalogue=True))
-    assert row["catalogue"] and "From the plugin catalogue" in row["note"]
+    assert row["catalogue"] and row["note"] == "A service from the plugin catalogue."
+    row = _switch(replace(base, uploaded=True, catalogue=True, summary="Says hello."))
+    assert row["note"] == "Says hello."
+    row = _switch(replace(base, uploaded=True))
+    assert row["note"] == "A service, installed from a file."
     row = _switch(replace(base, uploaded=True, catalogue=True, pulled=("blocked", "it sends what it hears")))
     assert row["blocked"] and "it sends what it hears" in row["note"]
     row = _switch(replace(base, uploaded=True, catalogue=True, pulled=("withdrawn", "no longer kept up")))

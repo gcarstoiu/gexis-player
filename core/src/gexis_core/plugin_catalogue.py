@@ -429,6 +429,11 @@ class Service:
         mine = {k: v for k, v in self.installed().items() if k in self.from_catalogue()}
         return blocked(self.catalogue, mine)
 
+    def summary(self, plugin_id: str) -> str | None:
+        """Its entry's one line on what it does, for its row (ADR-0169)."""
+        entry = self.catalogue.entry(plugin_id) if self.catalogue else None
+        return entry.get("summary") if entry else None
+
     def pulled(self, plugin_id: str) -> tuple[str, str] | None:
         """Whether the catalogue read last withdrew or blocked this plugin,
         or the version installed here - for its row, read with the settings."""
