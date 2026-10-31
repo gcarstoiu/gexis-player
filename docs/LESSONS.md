@@ -453,6 +453,23 @@ the lead on the same edge; after a member's core restarted, Lyrion came up
 active with nothing playing and took the group from its leader. Let a fake's
 states be as many as the real one's: active is not playing.
 
+**87. Players that were never started** (2026-10-31, Phase 22). Case 86's
+fix was tested on players the tests built but never started, and starting is
+what ties each change of state to the look that stops a member's own
+source. On every real player that look stopped a new source before it could
+play, so no member led again after 1.9.1; George found it as music that would
+not play in a group. Build what a test drives the way the program starts it,
+and see the test fail without the fix.
+
+**88. A screen measured at its pixels** (2026-10-31, Phase 24). Asking
+George how the album page should take a long title, I said *Add to queue* went
+under the mini player on the 7" panel even with one line, and on the 10" from
+about two. The 7" had been laid out at 1024 x 600 CSS pixels; the kiosk
+scales its page by 0.8 to 1280 x 750, where it takes three lines, and the
+10" four. He chose on those numbers and was asked again. A layout is
+measured at the page the kiosk gives the screen - its size divided by
+`GEXIS_SCREEN_SCALE` - and no number goes into a question before it is.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target, the check quietly

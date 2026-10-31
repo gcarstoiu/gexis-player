@@ -105,6 +105,50 @@ it four seconds after the core; removed, nothing of it was left. The kiosk
 proves itself (its panel requests all answered), and a call on loopback
 without the token is refused. Not yet: CEC with a TV; the plugin.
 
+## CEC on a test player (2026-10-30)
+
+George connected sofapi's second HDMI port to a receiver (input 6) that
+feeds a TV. Tried by hand with `cec-ctl` and `cec-follower`:
+- **The bus works through the chain.** The port reads physical address
+  `2.6.0.0`; claimed as a playback device it got logical address 8 (another
+  player on the bus had 4) and saw the TV (0), the receiver (3, 5) and that
+  player, with their vendors and power states.
+- **The player can wake the TV and take the input.** *Image View On* woke
+  the TV, which then asked for the player's vendor, power status and name;
+  waking it reset HDMI, so the player was unregistered for a moment and an
+  *Active Source* sent then was lost. Sent again once registered, the
+  receiver switched to it (*Routing Change* to `2.6.0.0`).
+- **The kernel answers some messages itself** (physical address, vendor,
+  name) but not *Give Device Power Status*: with no follower it is refused,
+  so the plugin must answer the bus as a device does.
+- **Not yet seen: the remote's keys** (George was called away); asked again
+  when he is back.
+
+**The plugin, 0.1.0** (local, `~/projects/gexis-tv-remote`, not yet
+published): standard-library Python on the kernel's CEC device; a playback
+device that answers power, menu and deck status and the active source, and
+sends the remote's keys to `/panel/key`, `/panel/go/home` and the transport
+routes; nothing switched on or taken by itself; the kernel's own key
+passthrough off, so a key reaches the player once. 9 tests without a TV.
+Installed on sofapi from a phone-sized remote (asked about `cec` first): its
+first run joined the wrong port - sofapi's panel reports an HDMI address too -
+so it now joins each port with an address and keeps the one where a TV or a
+receiver answers a poll; it gives a vendor ID (the HDMI placeholder, as
+`cec-ctl` does), since the TV kept asking. Seen on the bus: it joined as
+playback device 8 on the TV's port and answered the TV's questions.
+
+**George's key test** (2026-10-31, the TV's remote through a Harmony): Back
+did nothing and Exit worked as Back; he raised nothing else about the keys.
+The plugin then said nothing of a key it does not use, so what Back sent is
+not known. Its log showed something else: at boot it started before the
+player's plugin socket was there, and its hello thread ended. **0.1.1**
+(local): the hello is tried again until the socket is there, and again after
+the core restarts; a key the plugin does not use is written to its log once.
+Installed on sofapi the same morning as an update from a phone-sized remote:
+not asked about `cec` again, and connected to the player at once.
+Open: Back, pressed again with 0.1.1, and whether the receiver passes its own
+remote's keys on over the bus (the plugin takes keys from any device on it).
+
 ## Settings (ADR-0022)
 
 None: a permission is granted by adding the plugin, and taken back by

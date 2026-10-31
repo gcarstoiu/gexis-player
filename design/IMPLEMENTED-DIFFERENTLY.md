@@ -539,6 +539,11 @@ line is left out (2026-10-04).
 **[S] Not built:** on an app's album page the artist is plain coral text, not
 the link 13f draws.
 
+**[U] The album page's title stops at three lines, and the cover gives way**
+as far as the title and both buttons need (George, 2026-10-31): the design
+lets the title wrap, and on the TV a second line put *Add to queue* under the
+mini player (on the 7" a third, on the 10" a fourth).
+
 ### The waiting screen, backgrounds, the idle screen
 
 **[U] The waiting screen** (ADR-0133): its own wallpaper under a veil; the
@@ -766,6 +771,18 @@ pictures (ADR-0161, ADR-0163).
 - **[S]** Lyrion's own menu tiles (`F02`) were not seen with data: the
   check had no Lyrion server. They are buttons like Home's, so the same
   rules hold.
+- **[U]** A slider's ring takes in its knob's whole travel and has **no
+  arrows** (George, 2026-10-31, after a TV remote: the knob ran through the
+  ring into the arrow, and a wider ring put the arrows on the mute icon);
+  `F13` and `Focus Ring.dc.html`'s `slider` states draw them.
+- **[U]** On the A-Z rail the letter itself lights up, teal and larger, with
+  no ring: the ring hid a letter 19 px tall (George, 2026-10-31).
+- **[U]** The band is 3 px where the design's is 6 (George, 2026-10-31: too
+  thick), and a row whose text reaches its edges (the Popular rows) is ringed
+  outside, not inside as `F07`'s rows are.
+- **[U]** A queue row's Remove is reached with Right and shows as a swipe
+  uncovers it (George, 2026-10-31); no design draws the queue with the
+  D-pad.
 
 *The card*
 - **[S]** The album line has no year: Home Assistant carries none.

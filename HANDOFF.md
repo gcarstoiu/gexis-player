@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-10-30 (on R2D2).
+Last updated: 2026-10-31 (on R2D2).
 
 ## Start here
 
@@ -75,11 +75,55 @@ them, both before 1.10.0. Mock-ups approved; ADR-0169 (the store) and ADR-0170
 (permissions `cec`, `gpio`, `usb`; a CEC plugin first) accepted the same
 day. The loopback fix (`fix-panel-loopback`, merged into the
 phase branch), the permissions and the store were built the same evening
-and tried on sofapi, which runs that preview (`1.9.1+git46.d41c73e`; core,
-UI, system, player). Pushed (George): both branches; `gexis-plugins` #10
+and tried on sofapi, in that evening's preview (`1.9.1+git46.d41c73e`;
+core, UI, system, player; replaced 2026-10-31, below). Pushed (George): both branches; `gexis-plugins` #10
 (a version's permissions, an entry's area) and #11 (`tools/player-ref` at
-the phase's `1e26c75e`, whose upload check knows permissions). Next: the CEC
-plugin, once George has a test player on a TV with CEC. The samples left `tools/`
+the phase's `1e26c75e`, whose upload check knows permissions). CEC (ADR-0170, *CEC on a test player*):
+sofapi's second HDMI port goes to a receiver feeding a TV; the bus, waking the
+TV and taking the input shown; the plugin `tv-remote` 0.1.0 written
+(`~/projects/gexis-tv-remote`, local) and running on sofapi. George's key
+test (2026-10-31, ADR-0170): Back did nothing, Exit worked as Back; 0.1.1
+(local, committed, not pushed; on sofapi since 10:38) tries its hello again
+and logs a key it does not use. Next: Back again with 0.1.1, and the receiver's own remote, then the
+plugin's public repository and listing (asked first).
+**Found in George's test, 2026-10-31, fixed apart** (branches from `next`,
+worktrees `~/projects/gexis-player-<branch>`, committed, not pushed; merged
+into the phase branch locally, so they ship with 1.10.0 - George, the same
+day; sofapi runs that preview, core `1.9.1+git54.c9e52ad`, UI and player
+`1.9.1+git58.b2aa8e1`): `fix-group-lead` - a member's new source
+was stopped before it played, so no member led since 1.9.1 (ADR-0166, *Fixed
+2026-10-31*; lesson 87); `fix-group-list` - after *Undo group* the lists
+showed the other player's old group with this player in it, *Not reachable*;
+`fix-lyrics-wrap` - the Track tab's three lyric lines wrote over each other
+when the current one wrapped (the manual's sentence changed with it).
+**Found in George's TV-remote test the same afternoon, fixed apart** (the
+same way: from `next`, committed, not pushed, merged into the phase branch
+locally for 1.10.0; George's four decisions in ADR-0161, *Changed after
+George's test with a TV remote*): `fix-dpad-reach` - the equaliser's switch
+reached, a long biography read through, a slider's ring round its knob with
+no arrows, no stop on the queue's hidden Remove, the A-Z letter lit instead
+of the ring, Right on a queue row shows Remove (the manual and the technical
+guide with it); `fix-album-title` - the title stops at three lines and the
+cover gives way, so *Add to queue* stays above the mini player;
+`fix-visualiser-size` - the visualiser's window back at the screen's size on
+each show, after the TV's output came back at 640 x 480 (ADR-0147, *Amended
+2026-10-31*; only a real drop shows it works). Lesson 88. Their preview is
+built (core, system and player `1.9.1+git68.87294a6`, UI `1.9.1+git66.1e0411e`),
+on sofapi since 17:57 (George's OK; dry run clean, core, kiosk and
+visualiser restarted). Seen then: a visualiser stopped while it was still
+starting ignored the stop for 90 s and was killed - the kiosk's restart had
+already restarted it.
+**George's second test the same evening**: CEC works; the ring was too thick
+and lay over the Popular rows' numbers and lengths; the visualiser's first
+press after a drop showed nothing (the core looked for the window as the
+driver resized it, and restarted it). Fixed on the same branches (ADR-0161
+25-26, ADR-0147): a 3 px band, a ring outside a row rather than over its
+text (checked on every mocked screen at four sizes), and a show that asks
+again before restarting. Second preview built (core `1.9.1+git72.04b0e1d`,
+UI `1.9.1+git74.8426a20`, player `1.9.1+git76.fdc800e`), not yet installed.
+Next, as George asked: the release (1.10.0), the plugin's repository and
+listing, Stable.
+The samples left `tools/`
 for that repository. The wiki Roadmap shows the new order (pushed
 2026-10-29 with George's OK).
 **Found in step 3, fixed apart**: on a phone the confirm, its progress card
@@ -90,7 +134,8 @@ runs the phase's preview** (`1.9.1+git26.81918c4` core and player,
 `1.9.1+git25.1b14a2e` UI; files in `~/gexis-pc`), which carries the fix:
 George's phone test of the dialogs can be done there.
 **`fix-vite`** (worktree `~/projects/gexis-player-fix-vite`): Vite 8.3.3
-for three Dependabot alerts on its development server (George); the built
+for the Dependabot alerts on its development server (George; six open on
+2026-10-31, all Vite 8.3.0-8.3.2, all fixed by 8.3.3); the built
 UI compared with 8.3.0's, the same mocked screens pixel for pixel; into
 `next` with the next release.
 

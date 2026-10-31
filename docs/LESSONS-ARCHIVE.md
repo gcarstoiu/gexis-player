@@ -1674,3 +1674,40 @@ state there, and no test could have shown a source that came up silent.
 **Rule:** let a fake's states be as many as the real one's - active is not
 playing, connected is not ready - and test the edge between them.
 
+**87. Players that were never started** (2026-10-31, Phase 22). In a group
+led by the bar, George started Lyrion on sofapi three times and nothing
+played. sofapi's log: Lyrion took the device, and 230-350 ms later "lms
+stopped here - another player leads the group (C1)". Case 86's fix made a
+member's source wait until it plays before it leads, but each change of the
+member's state was looked at 50 ms later, and that look stopped any source
+of its own while another player led - before Lyrion, active as its player
+switches on, had played. With the two players synced in Lyrion, the stop
+paused the sync on both. The logs of both players held no "plays here; this
+player leads the group" since 1.9.1 was installed; AirPlay had been stopped
+the same way the day before. The multiroom tests construct their players and
+never call `start()`, which is where the store's changes are subscribed to,
+so in the tests the look never ran after a source came up: the test written
+for case 86 passed, and with the subscription wired in, it failed as sofapi
+did.
+**Rule:** build what a test drives the way the program starts it - every
+subscription and watcher a start sets up - and see the new test fail without
+the fix before trusting its pass.
+
+**88. A screen measured at its pixels** (2026-10-31, Phase 24). George's
+TV test found *Add to queue* under the mini player on an album with a long
+title. Before asking him how the page should take one, the album page was
+laid out with mocked data at three sizes, the 7" panel among them as a
+1024 x 600 viewport at a device scale of 1 - its pixels. Measured so, even a
+one-line title pushed the button under the strip, and the question said so:
+on the 7" even with one line, on the 10" from about two. He chose to clamp
+the title at two lines on those numbers. Measuring the change afterwards, a
+1024 x 600 page showed the album page 1280 wide - the page is laid out at the
+Standard width, and the kiosk gets there by scaling (`gexis-kiosk-start`,
+`--force-device-scale-factor` from `GEXIS_SCREEN_SCALE`, 0.8 on the 7"), so
+the 7"'s page is 1280 x 750. Measured there, the button went under from three
+lines on the 7" and four on the 10"; only the TV's two lines had been right.
+Two lines would have cut titles that fit on both panels, so the question was
+asked again with these numbers, and George chose three.
+**Rule:** lay a screen out at the page the kiosk gives it - its size divided
+by `GEXIS_SCREEN_SCALE`, at that device scale - and measure before any number
+goes into a question for George.
