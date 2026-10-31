@@ -16,7 +16,8 @@
 //   and so do the phone's touchpad and a screen over everything (the idle
 //   screen).
 // - Its look is the design's (`design/source/19/Focus Ring.dc.html`, George's
-//   teal ring, Jump): one element over the control's box, in no layout.
+//   teal ring, Jump): one element over the control's box, in no layout;
+//   without the arrows beside a slider's (George, 2026-10-31).
 //
 // Components take part through attributes and two events, so a new screen
 // needs nothing here:
@@ -204,16 +205,6 @@ function makeRing() {
   ring.className = 'dpad-ring';
   ring.dataset.focusRing = 'ring';
   ring.hidden = true;
-  const arrow = (side, d) => {
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('viewBox', '0 0 20 28');
-    svg.setAttribute('class', `dpad-ring__arrow dpad-ring__arrow--${side}`);
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', d);
-    svg.append(path);
-    return svg;
-  };
-  ring.append(arrow('left', 'M17 3 L4 14 L17 25 Z'), arrow('right', 'M3 3 L16 14 L3 25 Z'));
   document.body.append(ring);
   return ring;
 }
@@ -238,8 +229,6 @@ export function startDpad({ root, onkey = () => {}, wake = () => false, trayUp =
   // lands again, so it never outlives the drawer's fade.
   let lost = false;
   let follow = 0;
-  let nudge = null;
-  let nudgeTimer;
   let lostTimer;
   // What OK pressed, newest last: Back brings the ring back to the control
   // that opened the screen it leaves, found by its name (screens are drawn
@@ -371,7 +360,7 @@ export function startDpad({ root, onkey = () => {}, wake = () => false, trayUp =
       x = r.left - OUT; y = r.top - OUT; w = r.width + 2 * OUT; h = r.height + 2 * OUT;
       rr = round ? 9999 : rad + OUT;
     }
-    const key = `${x}|${y}|${w}|${h}|${rr}|${slider}|${nudge}`;
+    const key = `${x}|${y}|${w}|${h}|${rr}`;
     if (key === placed) return;
     placed = key;
     ring.hidden = false;
@@ -379,9 +368,6 @@ export function startDpad({ root, onkey = () => {}, wake = () => false, trayUp =
     ring.style.width = `${w}px`;
     ring.style.height = `${h}px`;
     ring.style.borderRadius = `${rr}px`;
-    ring.classList.toggle('dpad-ring--slider', slider);
-    ring.classList.toggle('dpad-ring--left', slider && nudge === -1);
-    ring.classList.toggle('dpad-ring--right', slider && nudge === 1);
   }
 
   // Follows the control for a moment after it moved (a list scrolling, a
@@ -411,9 +397,6 @@ export function startDpad({ root, onkey = () => {}, wake = () => false, trayUp =
 
   function step(el, dir) {
     stepSlider(el, dir);
-    nudge = dir;
-    clearTimeout(nudgeTimer);
-    nudgeTimer = setTimeout(() => { nudge = null; draw(); }, 300);
     draw();
   }
 
@@ -604,7 +587,6 @@ export function startDpad({ root, onkey = () => {}, wake = () => false, trayUp =
     clearInterval(watch);
     observer.disconnect();
     cancelAnimationFrame(checking);
-    clearTimeout(nudgeTimer);
     clearTimeout(lostTimer);
     ring.remove();
   };
