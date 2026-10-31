@@ -10,7 +10,7 @@
 <script>
   import mark from '../../assets/gexis-mark.svg';
   import GroupGlyph from '../../lib/GroupGlyph.svelte';
-  import { enterGroup, joinable, joinPlayer, memberStatus, othersByGroup, otherStatus } from '../../lib/group.svelte.js';
+  import { enterGroup, joinable, joinPlayer, memberStatus, othersByGroup, otherStatus, withoutMe } from '../../lib/group.svelte.js';
 
   //: `players`: `/players`' others; `here`: this player's own status.
   let { g, players = [], here = null, ondone, onerror = () => {} } = $props();
@@ -32,7 +32,8 @@
   });
   const rows = $derived.by(() => {
     const members = new Map((g?.members ?? []).map((m) => [m.id, m]));
-    const split = othersByGroup(players, new Set(members.keys()));
+    const list = withoutMe(players, here?.id, new Set(members.keys()));
+    const split = othersByGroup(list, new Set(members.keys()));
     const out = [];
     for (const og of split.groups) {
       out.push({ id: `group:${og.id}`, name: og.title, group: og, joining: entering === og.id, off: false, join: false,
@@ -40,7 +41,7 @@
                  enter: !g && og.canEnter && entering !== og.id });
     }
     const inOther = new Set(split.groups.flatMap((og) => og.members.map((m) => m.id)));
-    for (const p of players) {
+    for (const p of list) {
       if (inOther.has(p.id)) continue;
       const m = members.get(p.id);
       if (m?.me) continue;
