@@ -1693,3 +1693,21 @@ did.
 subscription and watcher a start sets up - and see the new test fail without
 the fix before trusting its pass.
 
+**88. A screen measured at its pixels** (2026-10-31, Phase 24). George's
+TV test found *Add to queue* under the mini player on an album with a long
+title. Before asking him how the page should take one, the album page was
+laid out with mocked data at three sizes, the 7" panel among them as a
+1024 x 600 viewport at a device scale of 1 - its pixels. Measured so, even a
+one-line title pushed the button under the strip, and the question said so:
+on the 7" even with one line, on the 10" from about two. He chose to clamp
+the title at two lines on those numbers. Measuring the change afterwards, a
+1024 x 600 page showed the album page 1280 wide - the page is laid out at the
+Standard width, and the kiosk gets there by scaling (`gexis-kiosk-start`,
+`--force-device-scale-factor` from `GEXIS_SCREEN_SCALE`, 0.8 on the 7"), so
+the 7"'s page is 1280 x 750. Measured there, the button went under from three
+lines on the 7" and four on the 10"; only the TV's two lines had been right.
+Two lines would have cut titles that fit on both panels, so the question was
+asked again with these numbers, and George chose three.
+**Rule:** lay a screen out at the page the kiosk gives it - its size divided
+by `GEXIS_SCREEN_SCALE`, at that device scale - and measure before any number
+goes into a question for George.

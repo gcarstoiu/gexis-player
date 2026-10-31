@@ -95,7 +95,22 @@ was stopped before it played, so no member led since 1.9.1 (ADR-0166, *Fixed
 2026-10-31*; lesson 87); `fix-group-list` - after *Undo group* the lists
 showed the other player's old group with this player in it, *Not reachable*;
 `fix-lyrics-wrap` - the Track tab's three lyric lines wrote over each other
-when the current one wrapped (the manual's sentence changed with it). The samples left `tools/`
+when the current one wrapped (the manual's sentence changed with it).
+**Found in George's TV-remote test the same afternoon, fixed apart** (the
+same way: from `next`, committed, not pushed, merged into the phase branch
+locally for 1.10.0; George's four decisions in ADR-0161, *Changed after
+George's test with a TV remote*): `fix-dpad-reach` - the equaliser's switch
+reached, a long biography read through, a slider's ring round its knob with
+no arrows, no stop on the queue's hidden Remove, the A-Z letter lit instead
+of the ring, Right on a queue row shows Remove (the manual and the technical
+guide with it); `fix-album-title` - the title stops at three lines and the
+cover gives way, so *Add to queue* stays above the mini player;
+`fix-visualiser-size` - the visualiser's window back at the screen's size on
+each show, after the TV's output came back at 640 x 480 (ADR-0147, *Amended
+2026-10-31*; only a real drop shows it works). Lesson 88. Their preview is
+built (core, system and player `1.9.1+git68.87294a6`, UI `1.9.1+git66.1e0411e`),
+not installed: sofapi is George's to free.
+The samples left `tools/`
 for that repository. The wiki Roadmap shows the new order (pushed
 2026-10-29 with George's OK).
 **Found in step 3, fixed apart**: on a phone the confirm, its progress card
