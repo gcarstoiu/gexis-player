@@ -75,20 +75,22 @@ them, both before 1.10.0. Mock-ups approved; ADR-0169 (the store) and ADR-0170
 (permissions `cec`, `gpio`, `usb`; a CEC plugin first) accepted the same
 day. The loopback fix (`fix-panel-loopback`, merged into the
 phase branch), the permissions and the store were built the same evening
-and tried on sofapi, which runs that preview (`1.9.1+git46.d41c73e`; core,
-UI, system, player). Pushed (George): both branches; `gexis-plugins` #10
+and tried on sofapi, in that evening's preview (`1.9.1+git46.d41c73e`;
+core, UI, system, player; replaced 2026-10-31, below). Pushed (George): both branches; `gexis-plugins` #10
 (a version's permissions, an entry's area) and #11 (`tools/player-ref` at
 the phase's `1e26c75e`, whose upload check knows permissions). CEC (ADR-0170, *CEC on a test player*):
 sofapi's second HDMI port goes to a receiver feeding a TV; the bus, waking the
 TV and taking the input shown; the plugin `tv-remote` 0.1.0 written
 (`~/projects/gexis-tv-remote`, local) and running on sofapi. George's key
 test (2026-10-31, ADR-0170): Back did nothing, Exit worked as Back; 0.1.1
-(local, not yet installed) tries its hello again and logs a key it does not
-use. Next: Back again with 0.1.1, and the receiver's own remote, then the
+(local, committed, not pushed; on sofapi since 10:38) tries its hello again
+and logs a key it does not use. Next: Back again with 0.1.1, and the receiver's own remote, then the
 plugin's public repository and listing (asked first).
 **Found in George's test, 2026-10-31, fixed apart** (branches from `next`,
-worktrees `~/projects/gexis-player-<branch>`, committed, not pushed; for one
-preview on sofapi with the phase): `fix-group-lead` - a member's new source
+worktrees `~/projects/gexis-player-<branch>`, committed, not pushed; merged
+into the phase branch locally, so they ship with 1.10.0 - George, the same
+day; sofapi runs that preview, core `1.9.1+git54.c9e52ad`, UI and player
+`1.9.1+git58.b2aa8e1`): `fix-group-lead` - a member's new source
 was stopped before it played, so no member led since 1.9.1 (ADR-0166, *Fixed
 2026-10-31*; lesson 87); `fix-group-list` - after *Undo group* the lists
 showed the other player's old group with this player in it, *Not reachable*;

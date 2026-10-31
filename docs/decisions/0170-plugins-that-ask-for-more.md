@@ -144,6 +144,8 @@ not known. Its log showed something else: at boot it started before the
 player's plugin socket was there, and its hello thread ended. **0.1.1**
 (local): the hello is tried again until the socket is there, and again after
 the core restarts; a key the plugin does not use is written to its log once.
+Installed on sofapi the same morning as an update from a phone-sized remote:
+not asked about `cec` again, and connected to the player at once.
 Open: Back, pressed again with 0.1.1, and whether the receiver passes its own
 remote's keys on over the bus (the plugin takes keys from any device on it).
 
