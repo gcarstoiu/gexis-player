@@ -124,7 +124,8 @@ runs the phase's preview** (`1.9.1+git26.81918c4` core and player,
 `1.9.1+git25.1b14a2e` UI; files in `~/gexis-pc`), which carries the fix:
 George's phone test of the dialogs can be done there.
 **`fix-vite`** (worktree `~/projects/gexis-player-fix-vite`): Vite 8.3.3
-for three Dependabot alerts on its development server (George); the built
+for the Dependabot alerts on its development server (George; six open on
+2026-10-31, all Vite 8.3.0-8.3.2, all fixed by 8.3.3); the built
 UI compared with 8.3.0's, the same mocked screens pixel for pixel; into
 `next` with the next release.
 
