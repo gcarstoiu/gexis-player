@@ -109,7 +109,10 @@ cover gives way, so *Add to queue* stays above the mini player;
 each show, after the TV's output came back at 640 x 480 (ADR-0147, *Amended
 2026-10-31*; only a real drop shows it works). Lesson 88. Their preview is
 built (core, system and player `1.9.1+git68.87294a6`, UI `1.9.1+git66.1e0411e`),
-not installed: sofapi is George's to free.
+on sofapi since 17:57 (George's OK; dry run clean, core, kiosk and
+visualiser restarted). Seen then: a visualiser stopped while it was still
+starting ignored the stop for 90 s and was killed - the kiosk's restart had
+already restarted it.
 The samples left `tools/`
 for that repository. The wiki Roadmap shows the new order (pushed
 2026-10-29 with George's OK).
