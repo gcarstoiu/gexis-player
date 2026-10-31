@@ -100,7 +100,7 @@
           onpointerdown={down} onpointermove={move} onpointerup={up} onpointercancel={up}>
           <div class="rail" bind:this={rail} data-dpad-box>
             <div class="fill" class:is-muted={muted} style:width={`${level}%`}></div>
-            <div class="knob" style:left={`${level}%`}></div>
+            <div class="knob" style:left={`${level}%`} data-dpad-knob></div>
           </div>
         </div>
         <span class="value">{muted ? 'Off' : level}</span>

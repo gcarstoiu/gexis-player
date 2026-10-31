@@ -577,10 +577,44 @@ async def test_a_show_with_no_window_starts_the_visualiser_again(monkeypatch):
         return Done()
 
     monkeypatch.setattr(asyncio, "create_subprocess_exec", exec_)
+    monkeypatch.setattr(StateServer, "PEPPY_TRY_S", 0)
     async with TestClient(TestServer(server.make_app())) as client:
         assert (await client.post("/peppy/show")).status == 200
     assert started == [("systemctl", "restart", "gexis-peppy.service")]
     assert screen.visible
+
+
+async def test_a_window_back_in_a_moment_is_shown_without_a_restart(monkeypatch):
+    """sofapi, 2026-10-31: the driver was giving its window the screen's
+    size back as the show asked wlrctl, which found none, and the visualiser
+    was started again - the first press showed nothing."""
+    import asyncio
+
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from gexis_core.state import StateStore
+    from gexis_core.wsserver import StateServer
+
+    class BackOnTheSecondAsk(FakeScreen):
+        def show(self):
+            self.calls.append("show")
+            self.visible = self.calls.count("show") > 1
+            return self.visible
+
+    screen = BackOnTheSecondAsk()
+    controller = PeppyController(screen, UnattendedPlayback(300))
+    server = StateServer(StateStore({}), peppy=controller)
+    started = []
+
+    async def exec_(*args, **kw):
+        started.append(args)
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", exec_)
+    monkeypatch.setattr(StateServer, "PEPPY_TRY_S", 0)
+    async with TestClient(TestServer(server.make_app())) as client:
+        assert (await client.post("/peppy/show")).status == 200
+    assert started == []
+    assert screen.calls.count("show") == 2
 
 
 async def test_a_show_refused_for_standby_starts_nothing(monkeypatch):

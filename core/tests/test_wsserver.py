@@ -760,10 +760,14 @@ async def test_a_plugin_upload_reaches_the_installer_and_a_refusal_says_why():
     from gexis_core import uploads
     got = []
 
-    async def upload(data):
+    async def upload(data, grant=()):
         got.append(data)
         if data == b"bad":
             raise uploads.Refused("plugin.json is not at the top of the package")
+        if data == b"asks" and "cec" not in grant:
+            checked = uploads.Checked(manifest={"name": "TV remote"}, id="tv", version="0.1.0",
+                                      kind="service", run="tv.py", permissions=("cec",))
+            raise uploads.NeedsConsent(checked, ("cec",))
         return {"installed": "radiofoo", "version": "1.0.0", "kind": "renderer", "restarting": True}
 
     server = StateServer(StateStore({}), upload_plugin=upload)
@@ -772,8 +776,15 @@ async def test_a_plugin_upload_reaches_the_installer_and_a_refusal_says_why():
         ok_body = await ok.json()
         bad = await client.post("/plugins/upload", data=b"bad")
         bad_body = await bad.json()
+        # ADR-0170: one that asks for more is listed first, then sent again.
+        asks = await client.post("/plugins/upload", data=b"asks")
+        asks_body = await asks.json()
+        agreed = await client.post("/plugins/upload?grant=cec", data=b"asks")
     assert ok.status == 200 and ok_body["installed"] == "radiofoo" and got[0] == b"tarball-bytes"
     assert bad.status == 400 and "plugin.json is not at the top" in bad_body["error"]
+    assert asks.status == 409 and asks_body["new"] == ["cec"] and asks_body["asks"][0]["name"] == "cec"
+    assert "HDMI-CEC" in asks_body["asks"][0]["words"]
+    assert agreed.status == 200
 
 
 @pytest.mark.asyncio

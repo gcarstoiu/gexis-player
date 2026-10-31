@@ -149,6 +149,23 @@ export function otherStatus(p) {
  *  own (ADR-0166 decision 11 - another group is joined whole, not raided). */
 export const joinable = (p) => !!(p?.multiroom && p?.id) && !(p?.group?.members?.length > 1);
 
+/** **The other players as they are now, seen from this one** (`self`, its
+ *  id; `mine`, the ids in its group). `/players` is up to half a minute old:
+ *  a group that names this player, though this player is not in it, was read
+ *  before this player left it (sofapi, 2026-10-31: after *Undo group* the
+ *  phone showed the other player's group still, this player in it *Not
+ *  reachable*). This player is taken out of it; a group of one, or one this
+ *  player led, is no group. */
+export function withoutMe(others, self, mine = new Set()) {
+  if (!self) return others ?? [];
+  return (others ?? []).map((p) => {
+    const members = p?.group?.members;
+    if (mine.has(p?.id) || !members?.some((m) => m.id === self)) return p;
+    const left = members.filter((m) => m.id !== self);
+    return { ...p, group: left.length > 1 && p.group.leader !== self ? { ...p.group, members: left } : null };
+  });
+}
+
 /** **The other players, another group's together** (ADR-0166 decision 11,
  *  George 2026-10-28: a group seen from outside it is a group, not loose
  *  players). `{loose, groups}`: a group is `{id, leader, title, status,

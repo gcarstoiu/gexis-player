@@ -179,8 +179,15 @@ fails when it and the registered routes differ. The table below is the map;
 [api.md](api.md) is the overview for integrators.
 
 **Panel or phone?** The panel's kiosk always connects over loopback and a phone
-from the LAN, so `request.remote` is the discriminator (ADR-0035 §6). A few
-routes are loopback-only or behave differently by origin: `/surface`,
+from the LAN (ADR-0035 §6). A plugin calls from loopback too, so the panel
+also proves itself (ADR-0170): the core makes a token per boot in
+`/run/gexis/panel-token` (`panel_token.py`; `root:pi`, 0640, kept across core
+restarts), the kiosk opens its page with it (`#panel=…`), and the page sends it
+as `X-Gexis-Panel` with every request and as `?panel=` on `/touchpad`;
+`gexis-park.service` sends it too. Plugins' units have `ProtectProc=invisible`,
+so the kiosk's command line is out of their sight. `_from_panel` checks both;
+a server built without a token (the tests) goes by loopback alone. A few
+routes are the panel's only or behave differently by origin: `/surface`,
 `/touchpad`, `/setup/status` (the setup password goes to the panel only),
 `/panel/painted`, `/screen/{action}` and `/renderers/park`. `POST /touch` and
 `POST /panel/shown` are the panel's only: a phone gets `403` (a phone's touch
@@ -201,7 +208,7 @@ something the panel is not showing).
 | Enrichment | `GET /enrichment` | Panel, phone |
 | Equaliser | `GET`/`PUT /equaliser`, `POST /equaliser/settings`, `PUT`/`DELETE /equaliser/settings/{key}` - for the output in use; `equaliser` on `/state` (ADR-0162; `eq_control.py`, `eq_engine.py`) | Both |
 | Settings | `GET /settings`; `PUT /settings/{key}` (write a value); `POST /settings/{key}` (run an action); `GET`/`POST /settings/{key}/items` (list rows: Wi-Fi, trusted devices, backups, `lyrion-server.shares`, `lyrion-server.usb_folders`, `lms_server`); `GET /network/wifi` (the connected network's signal, speed, band, channel and address, no rescan - ADR-0123); `GET /notices/{name}` (Legal, Credits) | Both (ADR-0035) |
-| Skins and plugins | `GET /skins`, `/skins/{name}/preview`, `/plugins/{id}/mark`, `/plugins/{id}/artwork/{key}`; `POST /plugins/upload`, `/plugins/{id}/uninstall` | Settings (ADR-0050, ADR-0106) |
+| Skins and plugins | `GET /skins`, `/skins/{name}/preview`, `/plugins/{id}/mark`, `/plugins/{id}/artwork/{key}`, `/plugins/catalogue`; `POST /plugins/upload`, `/plugins/{id}/uninstall`, `/plugins/catalogue/install` | Settings (ADR-0050, ADR-0106, ADR-0168) |
 | Bluetooth | `POST /bluetooth/pairing/{answer}` | Panel (ADR-0045) |
 | Hardware report | `GET /hardware-report` (the board by EEPROM, driver, overlays, controls, formats and rates; the screen's EDID and touch controller - no serials), `POST /hardware-report/tones` (a 1 kHz tone at -20 dBFS at 44.1, 96 and 192 kHz through `output`, and the rate and format the card ran at; `409` while any card plays), `GET /hardware-report/prompt` and `POST /hardware-report/prompt/dismiss` (the System page's one line, a week after a board or screen that is not Tested was first seen, per piece of hardware; kept in the internal `_hardware_prompt` key; a prepared report dismisses it too), `POST /hardware-report/screen` (`{"show"}`: the test pattern on the panel, through `screen_check` in `/state`; taken down after 120 s) and `POST /hardware-report/screen/result` (the panel's four corner taps in screen pixels, measured against 6 % of the diagonal), `POST /hardware-report/issue` (`{"answers", "notes", "tones"}` -> the pre-filled GitHub *Hardware feedback* form's address; its answers are text fields, which GitHub fills from a link and dropdowns are not; the result is kept in `_hardware_feedback` with the sound card and screen it was made on), `GET /hardware-report/kept` (that one, or `null` - dropped once the board or screen in use is another) and `POST /hardware-report/kept/clear` (*Start over*), `GET /hardware-report/file` (that feedback as a text file, for e-mail - ADR-0138) - `hardware_report.py`; the *Reported* state from `hardware_reports.json` (`hardware_reports.py`), which only `tools/hardware-reports.py` writes, from the issues labelled `accepted`, along with HARDWARE.md's table | Settings on a phone or computer (ADR-0126) |
 | Network | `GET`/`POST /network/cable` and `/network/wifi/address` (an address, Automatic or Manual), `POST /network/keep` (ADR-0123); `GET /network/wifi` (the connected network's details) | Phone, computer, panel |
@@ -533,6 +540,55 @@ pieces in code:
   installed under `/var/lib/gexis/plugins/<id>/<version>/` and run by the
   sandboxed template units `gexis-uploaded-{renderer,service}@<id>.service`.
   An uploaded id may never shadow a shipped one.
+- **The plugin catalogue** (`plugin_catalogue.py`, ADR-0168): other
+  authors' plugins, listed in `gcarstoiu/gexis-plugins`. The core reads
+  `catalogue.json` and the signature of its serial (`catalogue-<serial>.json.sig`,
+  so a cached catalogue is never paired with another's) from that
+  repository's release `index` a minute after it starts, then daily, and
+  when *Add plugins* asks
+  (`?refresh=1`, at most every 15 minutes); verifies it with `gpgv` against
+  `/usr/share/gexis/keys/gexis-catalogue.gpg`, refuses a serial lower than
+  one accepted, and keeps the last good read in `/var/lib/gexis/catalogue/`.
+  Installing downloads the version offered to this player (its contract,
+  its lowest release), refuses an archive that is not the listed one (size,
+  sha256), and installs it as an upload (`uploads.install`), recording
+  `origin: catalogue` in `plugins-known.json` - so a restore installs it
+  from the catalogue again: every such plugin downloaded and installed in
+  turn, then the core restarted once. A read that brings a different
+  serial moves the settings revision, so open screens read again. A
+  *withdrawn* plugin is marked on its row (its note is worked out with every
+  settings read, so a withdrawal read during a run shows at once); a
+  *blocked* one is switched off at once (the core restarts once, so its row
+  says why) and its switch refuses to turn it on (the registry's
+  `restrictions`, so the row says why and a write of on is a 409). A
+  release built without the key reads nothing and says `keyed: false`;
+  *Add plugins* offers only ours there.
+- **One store for every plugin** (`plugin_store.py`, ADR-0169): ours that may
+  be added (not the Lyrion client, Spotify, Bluetooth), the visualiser skins
+  among them as `visualiser-skins`, are added or not, recorded in the
+  settings store as `_plugins_added`: setup writes what it chose; the first
+  start without one (an update) writes what is in use (on, or its software
+  downloaded). A switch row of ours not added is hidden (`shown`), and its own
+  rows hide with it as they do when it is off. `GET /plugins/store` lists ours
+  with `added`; `POST /plugins/{id}/add` adds one and switches it on;
+  `POST /plugins/{id}/remove` takes any plugin off the player (ours: off, its
+  download removed, not added; an upload or catalogue plugin: as Remove did),
+  keeping its settings - and an upload's data - unless `{"keep": false}`.
+  Every plugin's row says what it does (`plugin_line`): its summary, else its
+  kind and where it came from.
+- **What a plugin asks for** (`plugin_permissions.py`, ADR-0170): a
+  manifest's `permissions` (`cec`, `gpio`, `usb`; any other name refuses the
+  package) are granted only with its person's consent, kept as `granted` in
+  `plugins-known.json`: an upload that asks for something not yet agreed is
+  answered `409` with the list and sent again with `?grant=`; a catalogue
+  install takes `grant` in its body, and the archive must ask for exactly
+  what its listing says; a restore grants nothing new. At every start, before
+  it starts any plugin, the core writes a drop-in per plugin under
+  `/run/systemd/system/<unit>.d/gexis-permissions.conf` (`PrivateDevices=no`,
+  `DevicePolicy=closed`, `DeviceAllow=` the devices' groups, the devices'
+  `SupplementaryGroups`), removes the rest, reloads systemd and restarts a
+  unit whose grant changed (systemd started it at boot without one). Our udev
+  rule `60-gexis-plugins.rules` gives raw USB and HID to `plugdev`.
 - **The Lyrion Server's network shares** (`lyrion_shares.py`, the
   `lyrion-server.shares` list row): each SMB or NFS share is mounted
   read-only under `/mnt/gexis-shares/`, with a 30 s limit per mount. One
@@ -634,7 +690,8 @@ plugin may send: `acquire`, `release`, `available`, `metadata`, `queue`,
 | `/var/local/www/currentsong.txt` | moOde-compatible metadata file |
 | `/run/gexis/` | Runtime files: plugin socket, plugin env files, meter FIFOs, visualiser selection |
 | `/usr/share/gexis/plugins/` | Shipped plugin manifests |
-| `/var/lib/gexis/plugins/` | Uploaded plugins |
+| `/var/lib/gexis/plugins/` | Uploaded plugins, those from the catalogue included |
+| `/var/lib/gexis/catalogue/` | The plugin catalogue's last good read, its signature and serial |
 
 ## Display standby (ADR-0135)
 

@@ -449,7 +449,7 @@ class Component extends DCLogic {
         const g = live.stage(live.component('plexamp.enabled', 'plexamp')), inst = g.done;
         const dl = prog(inst ? 'Plexamp is installed' : g.label, g.pct, g.meta, inst ? '' : g.line);
         if (s.plexClaimed) return { title: 'Plexamp', sub, blocks: [dl, status('ok', nm + ' is on your Plex account', 'Signed in to Plex'), P('Open Plexamp on your phone and pick ' + nm + ' as the player.')] };
-        if (!s.plexOn && !inst) return { title: 'Plexamp', sub, blocks: [list([{ k: 'plain', label: 'Plexamp', note: 'From Plex', icon: 'plex' }]), num([['Download Plexamp', 'next'], ['Sign in to Plex with a claim code', 'next']]), P('Skip, and add Plexamp later from Settings → Plugins.')],
+        if (!s.plexOn && !inst) return { title: 'Plexamp', sub, blocks: [list([{ k: 'plain', label: 'Plexamp', note: 'From Plex', icon: 'plex' }]), num([['Download Plexamp', 'next'], ['Sign in to Plex with a claim code', 'next']]), P('Skip, and add Plexamp later from Settings → Plugins → Add plugins.')],
           foot: { alt: 'Skip', altFn: () => this.setState({ plexSkipped: true, plexState: 'later' }, () => this.skip()), next: 'Download', nextFn: () => this.setState({ plexOn: true, plexSkipped: false }, () => live.downloadPlex()), keep: true } };
         const later = () => this.setState({ plexState: 'later' }, () => this.skip());
         const skipP = P('Or skip, and sign in later from Settings → Plugins → Plexamp.' + (inst ? '' : ' The download carries on.'));
@@ -464,7 +464,7 @@ class Component extends DCLogic {
       case 'browse': return { title: 'Browse on the screen', sub: 'A Lyrion app on your phone works with any of these.', pv: pv({ kind: KNAV[s.browse] }), blocks: [list(NAV.map(n => R(n[1], n[2], s.browse === n[0], () => set({ browse: n[0] }))))], foot: SK };
       case 'spotify': return { title: 'Spotify', sub: 'Built in. ' + nm + ' appears in the Spotify app on your phone.', blocks: [list([T('Spotify Connect', '', s.spotify, flip('spotify'), { icon: 'spo' })]), ...(s.spotify ? [{ t: 'Cast', device: nm, text: 'Tap the devices icon, then ' + nm + '.' }] : [])], foot: SK };
       case 'airplay': return { title: 'AirPlay', sub: 'Built in. ' + nm + ' appears in the AirPlay list on an iPhone, iPad or Mac.', blocks: [list([T('AirPlay', '', s.airplay, flip('airplay'), { icon: 'air', tag: LIMITED })]),
-        ...(s.airplay ? [note('info', 'On an iPhone or iPad', 'Where the music plays, tap the AirPlay button, then ' + nm + '. On a Mac, choose ' + nm + ' as the sound output.')] : [note('info', '', 'Apple devices can’t find ' + nm + '. Turn it on any time in Settings → Plugins.')])], foot: SK };
+        ...(s.airplay ? [note('info', 'On an iPhone or iPad', 'Where the music plays, tap the AirPlay button, then ' + nm + '. On a Mac, choose ' + nm + ' as the sound output.')] : [note('info', '', 'Apple devices can’t find ' + nm + '. Add it any time from Settings → Plugins → Add plugins.')])], foot: SK };
       case 'bluetooth': {
         const ph = s.pairDevice || 'A phone', sub = 'Any phone can play to ' + nm + ' over Bluetooth. Pair one now, or later from Settings.';
         const en = list([T('Enabled', '', s.bt, () => this.setState(st => ({ bt: !st.bt, btPhase: !st.bt ? 'disc' : st.btPhase, btLeft: !st.bt ? 180 : st.btLeft })), { icon: 'bt' })]);

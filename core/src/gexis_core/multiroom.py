@@ -49,6 +49,11 @@ logger = logging.getLogger("gexis_core.multiroom")
 CHAIN_PATH = Path("/var/lib/gexis/group-chain.json")
 #: A sync seen in Lyrion this soon after one of ours is ours.
 OWN_SYNC_S = 6.0
+#: **How long a source started on a member has to play** before it counts
+#: as one that only came up, and C1 stops it (sofapi, 2026-10-31: Lyrion,
+#: active as its player switched on and playing only once the device was
+#: free, was stopped within half a second, every time).
+LEAD_WAIT_S = 10.0
 HTTP_TIMEOUT_S = 3.0
 
 
@@ -152,6 +157,7 @@ class Multiroom:
         #: as its active source and it took the group from sofapi, though
         #: nothing played). It leads once it plays, and not if it goes.
         self._wants_lead: str | None = None
+        self._wants_since = 0.0
         #: The group ended while this player led and played: it plays on
         #: through its own server until the stream ends (*the music stays on
         #: the leader*), then plays alone.
@@ -196,11 +202,16 @@ class Multiroom:
 
     # -- start -----------------------------------------------------------------------
 
+    def watch(self) -> None:
+        """The players' rounds and this player's own state, looked at as they
+        change - the first thing `start` does."""
+        self._players.on_refresh = self._seen
+        self._store.subscribe(lambda _state: (self._lead_if_playing(), self._changed()))
+
     async def start(self) -> None:
         """At the core's start: a group kept from before is put back in force
         (decision 3). The chain was written with it already (`chain`)."""
-        self._players.on_refresh = self._seen
-        self._store.subscribe(lambda _state: (self._lead_if_playing(), self._changed()))
+        self.watch()
         record = self.group.record
         if record is None:
             return
@@ -369,8 +380,11 @@ class Multiroom:
                 asyncio.ensure_future(self._listen())
             return
         # **Only music that plays here leads** (George, 2026-10-28): a source
-        # that only came up - Lyrion at a core's start - waits for it.
-        self._wants_lead = renderer_id
+        # that only came up - Lyrion at a core's start - waits for it, and is
+        # stopped if it has not played by `LEAD_WAIT_S` (`_settle`).
+        if self._wants_lead != renderer_id:
+            self._wants_lead, self._wants_since = renderer_id, time.monotonic()
+            asyncio.get_running_loop().call_later(LEAD_WAIT_S, self._changed)
         self._lead_if_playing()
 
     def _lead_if_playing(self) -> None:
@@ -712,10 +726,17 @@ class Multiroom:
     async def _settle(self, record: Record) -> None:
         """**Only the leader's source plays** (C1, D4): a member's own source
         still active after another took the lead is stopped - unless it is
-        Lyrion playing in the group's own sync."""
+        Lyrion playing in the group's own sync, or a source started here that
+        has `LEAD_WAIT_S` to play and lead (decision 4 as amended)."""
         me = self.group.me
         active = self._local_active()
         if record.leader == me or active is None:
+            return
+        if active == self._wants_lead and time.monotonic() - self._wants_since < LEAD_WAIT_S:
+            return
+        if self._in_lyrions_sync(record):
+            # Lyrion plays the leader's player too, whose state may not say so
+            # yet: stopping it here would pause the sync everywhere.
             return
         if active == "lms" and self.chain == outputs.BUT_LYRION:
             leader_state = self.peers.states.get(record.leader) or {}

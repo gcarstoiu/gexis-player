@@ -23,6 +23,8 @@ import re
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
+from gexis_core import plugin_permissions
+
 logger = logging.getLogger("gexis_core.plugins")
 
 #: Installed by a package, not edited by hand - so `/usr/share`, not `/etc`
@@ -116,6 +118,11 @@ class Plugin:
     #: **ADR-0106: uploaded by the user**, not part of Gexis Player. Run under
     #: the player's own sandboxed unit; the screen tags it so.
     uploaded: bool = False
+    #: **ADR-0168: installed from the plugin catalogue** - uploaded in every
+    #: other way (its folder, its sandbox), and told apart on its row.
+    catalogue: bool = False
+    #: ("withdrawn" or "blocked", why), from the catalogue's last read.
+    pulled: tuple[str, str] | None = None
     #: **What its Plugins row says it is** (George, 2026-10-12: "the plugins
     #: do not have a version number stated in settings"): the manifest's
     #: `version`, else the version of the package that installed the
@@ -124,6 +131,10 @@ class Plugin:
     #: The program it downloads and runs, as its pin names it - "Plexamp
     #: 4.13.2" - when that is not the plugin itself (`with_software`).
     software: str | None = None
+    #: **ADR-0170: what it asks for beyond the sandbox** - names from
+    #: `plugin_permissions.KNOWN`, granted only once the person adding it
+    #: agreed.
+    permissions: tuple[str, ...] = ()
 
     def version_line(self) -> str | None:
         """"Version 0.4.7" - the plugin's own only. The program it downloads
@@ -191,6 +202,10 @@ def parse(raw: dict, *, directory: Path | None = None, built_in: bool = False) -
         name = row.get("env")
         if name is not None and (not isinstance(name, str) or not ENV_NAME.match(name)):
             raise BadManifest(f"{name!r} is not a usable environment variable name")
+    try:
+        permissions = plugin_permissions.parse(raw.get("permissions"))
+    except plugin_permissions.Unknown as exc:
+        raise BadManifest(str(exc)) from None
     mark = None
     if directory is not None:
         candidate = directory / "mark.png"
@@ -216,6 +231,7 @@ def parse(raw: dict, *, directory: Path | None = None, built_in: bool = False) -
         settings=tuple(settings),
         built_in=built_in,
         version=raw["version"] if isinstance(raw.get("version"), str) and raw["version"].strip() else None,
+        permissions=permissions,
     )
 
 

@@ -25,6 +25,7 @@ from __future__ import annotations
 import asyncio
 import concurrent.futures
 import datetime
+import hmac
 import json
 import logging
 import os
@@ -44,7 +45,7 @@ from aiohttp import web
 from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
-from gexis_core import memo, own_wallpapers, screen_apply, settling, updates
+from gexis_core import memo, own_wallpapers, panel_token, screen_apply, settling, updates
 from gexis_core.players import Players, own_id, status_line
 from gexis_core.group import GroupError
 from gexis_core.wallpapers import SEARCH as PIXABAY_SEARCH
@@ -175,6 +176,7 @@ class StateServer:
         settling_hide=None,
         on_painted=None,
         upload_plugin=None,
+        catalogue=None,
         uninstall_plugin=None,
         weather=None,
         wallpapers=None,
@@ -184,6 +186,10 @@ class StateServer:
         lyrion_known: "discovery.Known | None" = None,
         multiroom=None,
         plugin_artwork=None,
+        panel_token: str | None = None,
+        store_view=None,
+        store_add=None,
+        store_remove=None,
     ) -> None:
         """`activate(renderer_id) -> bool` and `set_volume(percent) -> bool`
         are injected by `__main__.py` (ADR-0028's command surface). Both are
@@ -201,6 +207,10 @@ class StateServer:
         #: each ask searches.
         self._lyrion_found = lyrion_known.current if lyrion_known is not None else (lambda: discovery.find_servers())
         self._store = store
+        #: ADR-0170: this boot's token the panel's page sends (`panel_token`).
+        self._panel_token = panel_token
+        #: ADR-0169: one store for every plugin.
+        self._store_view, self._store_add, self._store_remove = store_view, store_add, store_remove
         #: ADR-0059's sweep leaves fanart URLs here. Not `_store`,
         #: which is the *state* store - two different things that
         #: would otherwise share a name in this file.
@@ -304,6 +314,8 @@ class StateServer:
         self._on_painted = on_painted
         #: ADR-0106: a package from a phone or computer, and taking one away.
         self._upload_plugin = upload_plugin
+        #: ADR-0168: `plugin_catalogue.Service`.
+        self._catalogue = catalogue
         self._uninstall_plugin = uninstall_plugin
         self._weather = weather
         self._wallpapers = wallpapers
@@ -433,10 +445,18 @@ class StateServer:
                     asyncio.create_task(self._send(other, left))
         return ws
 
-    @staticmethod
-    def _from_panel(request: web.Request) -> bool:
-        """The panel arrives on loopback, a phone from the LAN (ADR-0035 §6)."""
-        return request.remote in ("127.0.0.1", "::1")
+    def _from_panel(self, request: web.Request) -> bool:
+        """The panel arrives on loopback, a phone from the LAN (ADR-0035 §6) -
+        and, since a plugin calls from loopback too, with this boot's token
+        (ADR-0170): a header, or `?panel=` on a socket, which sends none. A
+        server built without a token (the tests, a development run) goes by
+        loopback alone, as before."""
+        if request.remote not in ("127.0.0.1", "::1"):
+            return False
+        if self._panel_token is None:
+            return True
+        sent = request.headers.get(panel_token.HEADER) or request.query.get(panel_token.QUERY) or ""
+        return hmac.compare_digest(sent.encode(), self._panel_token.encode())
 
     def _touchpad_on(self) -> bool:
         try:
@@ -1409,7 +1429,7 @@ class StateServer:
 
     async def _handle_surface(self, request: web.Request) -> web.Response:
         """ADR-0035 §6: the panel always arrives on loopback, a phone from the LAN."""
-        panel = request.remote in ("127.0.0.1", "::1")
+        panel = self._from_panel(request)
         return web.json_response({"surface": "panel" if panel else "remote"})
 
     async def _handle_touch(self, request: web.Request) -> web.Response:
@@ -1417,7 +1437,7 @@ class StateServer:
         see touches itself: they land in whichever window has the screen.
         **The panel only** (review, 2026-10-12): a phone's request would wake a
         screen in standby and count as attention it never paid."""
-        if request.remote not in ("127.0.0.1", "::1"):
+        if not self._from_panel(request):
             return web.json_response({"error": "only the panel reports touches"}, status=403)
         if self._peppy is not None:
             self._peppy.on_touch()
@@ -1868,7 +1888,7 @@ class StateServer:
             return web.json_response({"error": "not wired up"}, status=503)
         sockname = request.transport.get_extra_info("sockname") if request.transport else None
         arrived_at = sockname[0] if sockname else None
-        loopback = request.remote in ("127.0.0.1", "::1")
+        loopback = self._from_panel(request)
         waiting = [p for p in ports if p.pending is not None]
         if not waiting:
             return web.json_response({"error": "Nothing is waiting to be kept."}, status=409)
@@ -2360,7 +2380,7 @@ class StateServer:
         as amended, whether its lyrics are - so the phone's toggles say what
         the panel shows, whatever changed it. **The panel only** (review,
         2026-10-12): a phone saying so would set the toggles to a lie."""
-        if request.remote not in ("127.0.0.1", "::1"):
+        if not self._from_panel(request):
             return web.json_response({"error": "only the panel reports what it shows"}, status=403)
         try:
             body = await request.json()
@@ -2379,7 +2399,7 @@ class StateServer:
         nowhere else."""
         if self._setup is None:
             return web.json_response({"needed": False, "network": "unmanaged"})
-        panel = request.remote in ("127.0.0.1", "::1")
+        panel = self._from_panel(request)
         return web.json_response(self._setup.status() if panel else self._setup.public_status())
 
     @staticmethod
@@ -2426,10 +2446,88 @@ class StateServer:
             if size > uploads.MAX_BYTES:
                 return web.json_response({"error": "It is larger than 200 MB."}, status=413)
             chunks.append(chunk)
+        # ADR-0170: what the person agreed to, after the screen listed it.
+        grant = tuple(n for n in request.query.get("grant", "").split(",") if n)
         try:
-            return web.json_response(await self._upload_plugin(b"".join(chunks)))
+            return web.json_response(await self._upload_plugin(b"".join(chunks), grant=grant))
+        except uploads.NeedsConsent as exc:
+            from gexis_core import plugin_permissions
+            return web.json_response({"error": "It asks for more than the sandbox gives.",
+                                      "id": exc.checked.id, "name": exc.checked.manifest.get("name"),
+                                      "asks": plugin_permissions.words(exc.checked.permissions),
+                                      "new": list(exc.missing)}, status=409)
         except uploads.Refused as exc:
             return web.json_response({"error": f"Not installed: {exc}."}, status=400)
+
+    async def _handle_store(self, request: web.Request) -> web.Response:
+        """ADR-0169: ours for *Add plugins*, each with whether it is added; the
+        catalogue's come from `/plugins/catalogue`."""
+        if self._store_view is None:
+            return web.json_response({"error": "the store is not wired up"}, status=503)
+        return web.json_response(self._store_view())
+
+    async def _handle_store_add(self, request: web.Request) -> web.Response:
+        """ADR-0169: one of ours added and switched on."""
+        if self._store_add is None:
+            return web.json_response({"error": "the store is not wired up"}, status=503)
+        plugin_id = request.match_info["id"]
+        if not await self._store_add(plugin_id):
+            return web.json_response({"error": f"{plugin_id} is not one to add"}, status=404)
+        return web.json_response({"added": plugin_id})
+
+    async def _handle_store_remove(self, request: web.Request) -> web.Response:
+        """ADR-0169: any plugin taken off the player and back to *Add
+        plugins*; `{"keep": false}` deletes its settings and data too."""
+        if self._store_remove is None:
+            return web.json_response({"error": "the store is not wired up"}, status=503)
+        try:
+            body = await request.json()
+        except ValueError:
+            body = {}
+        keep = not (isinstance(body, dict) and body.get("keep") is False)
+        plugin_id = request.match_info["id"]
+        if not await self._store_remove(plugin_id, keep):
+            return web.json_response({"error": f"{plugin_id} is not one to remove"}, status=404)
+        return web.json_response({"removed": plugin_id, "kept": keep})
+
+    async def _handle_catalogue(self, request: web.Request) -> web.Response:
+        """ADR-0168: what *Add plugins* shows of the catalogue. `?refresh=1` reads the
+        catalogue again first, if the last read is older than a quarter of
+        an hour - the screen asks so when it opens."""
+        if self._catalogue is None:
+            return web.json_response({"error": "the catalogue is not wired up"}, status=503)
+        if request.query.get("refresh") == "1":
+            from gexis_core import plugin_catalogue
+            await self._catalogue.refresh(older_than=plugin_catalogue.FRESH_S)
+        return web.json_response(self._catalogue.view())
+
+    async def _handle_catalogue_install(self, request: web.Request) -> web.Response:
+        """ADR-0168: install, or update to, the version the catalogue offers
+        this player. Answers at once; the download's progress is in
+        `GET /plugins/catalogue`'s `jobs`. A finished install restarts the
+        core, as an upload does."""
+        if self._catalogue is None:
+            return web.json_response({"error": "the catalogue is not wired up"}, status=503)
+        from gexis_core import plugin_catalogue
+        try:
+            body = await request.json()
+        except ValueError:
+            body = None
+        plugin_id = body.get("id") if isinstance(body, dict) else None
+        if not isinstance(plugin_id, str) or not plugin_id:
+            return web.json_response({"error": "say which plugin: {\"id\": \"...\"}"}, status=400)
+        # ADR-0170: what the person agreed to, after the page listed it.
+        grant = body.get("grant") if isinstance(body.get("grant"), list) else []
+        try:
+            job = self._catalogue.start_install(plugin_id, grant=tuple(n for n in grant if isinstance(n, str)))
+        except plugin_catalogue.NeedsConsent as exc:
+            from gexis_core import plugin_permissions
+            return web.json_response({"error": "It asks for more than the sandbox gives.", "id": plugin_id,
+                                      "asks": plugin_permissions.words(exc.permissions),
+                                      "new": list(exc.missing)}, status=409)
+        except plugin_catalogue.Unavailable as exc:
+            return web.json_response({"error": f"Not installed: {exc}."}, status=409)
+        return web.json_response({"started": plugin_id, **job.to_json()})
 
     async def _handle_plugin_uninstall(self, request: web.Request) -> web.Response:
         if self._uninstall_plugin is None:
@@ -2442,7 +2540,7 @@ class StateServer:
     async def _handle_park(self, request: web.Request) -> web.Response:
         """**The device is going down: leave nothing to resume.** Loopback
         only - it is the shutdown's, not a phone's."""
-        if request.remote not in ("127.0.0.1", "::1"):
+        if not self._from_panel(request):
             return web.json_response({"error": "loopback only"}, status=403)
         if self._park is None:
             return web.json_response({"parked": False})
@@ -2670,7 +2768,7 @@ class StateServer:
         reloads reports a first frame again, and a development machine has
         no plymouth at all. Neither is the panel's problem."""
         dropped = self._splash.drop() if self._splash is not None else False
-        if self._on_painted is not None and request.remote in ("127.0.0.1", "::1"):
+        if self._on_painted is not None and self._from_panel(request):
             self._on_painted()
         return web.json_response({"painted": True, "splash_dropped": dropped})
 
@@ -2694,7 +2792,7 @@ class StateServer:
         may need a driver it never installs (Finding 125, 2026-10-14)."""
         confirm = self._store.state.screen_confirm or {}
         action = request.match_info["action"]
-        local = request.remote in ("127.0.0.1", "::1")
+        local = self._from_panel(request)
         # **`shown`: the panel has drawn the question** (George, 2026-10-14:
         # "The countdown should start with the keep screen displayed") - its
         # countdown starts then. Only the panel says what is on its glass.
@@ -2718,8 +2816,20 @@ class StateServer:
         # 2026-10-21): a show refused for standby started the driver again
         # with the only output off, and it could not start - *the video
         # driver did not add any displays* - so the visualiser stayed gone.
-        if (not shown and action == "show" and self._peppy._has_levels()
-                and not getattr(self._peppy, "refused", False)):
+        def no_window() -> bool:
+            return (not shown and action == "show" and self._peppy._has_levels()
+                    and not getattr(self._peppy, "refused", False))
+        # **A window made again is not a window gone** (sofapi, 2026-10-31):
+        # the driver gives a shrunk window the screen's size back as it is
+        # shown, wlrctl asked in that moment found none, and the visualiser
+        # was started again - George's first press showed nothing. Asked
+        # again for a moment first.
+        for _ in range(self.PEPPY_TRIES if no_window() else 0):
+            await asyncio.sleep(self.PEPPY_TRY_S)
+            shown = await self._peppy.request_async(action)
+            if shown:
+                break
+        if no_window():
             # **One restart at a time** (review, 2026-10-12): a second tap
             # while the skins load (~9 s) restarted the unit again and killed
             # the half-loaded one. A later ask waits for the restart under way;
@@ -2730,6 +2840,11 @@ class StateServer:
         if not shown:
             return web.json_response({"error": "no Peppy screen window to act on"}, status=409)
         return web.json_response({"peppy": action})
+
+    #: How often, and how far apart, a show that found no window is asked
+    #: again before the visualiser is started again.
+    PEPPY_TRIES = 3
+    PEPPY_TRY_S = 0.5
 
     #: How long a restarted visualiser has to put its window up (its skins
     #: load in about 9 s on a Pi 4 with the 1920x1080 packs, guestpi).
@@ -3366,7 +3481,12 @@ class StateServer:
         app.router.add_get("/setup/status", self._handle_setup_status)
         app.router.add_post("/renderers/park", self._handle_park)
         app.router.add_post("/plugins/upload", self._handle_plugin_upload)
+        app.router.add_get("/plugins/catalogue", self._handle_catalogue)
+        app.router.add_post("/plugins/catalogue/install", self._handle_catalogue_install)
         app.router.add_post("/plugins/{id}/uninstall", self._handle_plugin_uninstall)
+        app.router.add_get("/plugins/store", self._handle_store)
+        app.router.add_post("/plugins/{id}/add", self._handle_store_add)
+        app.router.add_post("/plugins/{id}/remove", self._handle_store_remove)
         app.router.add_get("/setup/answers", self._handle_setup_answers)
         app.router.add_post("/setup/answers", self._handle_setup_save)
         app.router.add_get("/setup/networks", self._handle_setup_networks)

@@ -9,6 +9,8 @@
 // the phone's remote while it shows a player with a screen), and reopened
 // with a backoff, as the `/state` socket is.
 
+import { panelToken } from './panel-token.js';
+
 const RECONNECT_MIN_MS = 500;
 const RECONNECT_MAX_MS = 5000;
 //: **Asked whether the socket still answers** (George, 2026-10-14: the
@@ -35,7 +37,9 @@ export function openTouchpad(onMessage) {
 
   function url() {
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    return `${protocol}//${location.host}/touchpad`;
+    // ADR-0170: the panel's side proves itself; a socket sends no headers.
+    const proof = panelToken ? `?panel=${encodeURIComponent(panelToken)}` : '';
+    return `${protocol}//${location.host}/touchpad${proof}`;
   }
 
   function connect() {

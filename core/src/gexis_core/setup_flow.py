@@ -24,6 +24,7 @@ from pathlib import Path
 
 from gexis_core import backups, device_name, discovery, hardware_reports, screen_apply, screen_detect, screens, settling, \
     settings_migrations, setup_network, skin_packs
+from gexis_core import plugin_store
 
 logger = logging.getLogger(__name__)
 
@@ -555,11 +556,21 @@ class SetupFlow:
         wait = []
         if data.get("visualiser") and not data.get("headless"):
             wait.append({"id": "skins", "name": "The visualiser's skins"})
+        added = []
         for plugin in self.offered():
             on = plugin["id"] in chosen
             self._set_quietly(plugin["row"], on)
+            if on:
+                added.append(plugin["id"])
             if on and plugin.get("component"):
                 wait.append({"id": plugin["component"], "name": plugin["name"]})
+        # ADR-0169: what setup chose is added; the rest waits in Add plugins.
+        if data.get("visualiser") and not data.get("headless"):
+            added.append(plugin_store.SKINS)
+        try:
+            self._settings.keep(plugin_store.ADDED, sorted(added))
+        except Exception as exc:  # noqa: BLE001 - setup goes on; the next start works it out
+            logger.warning("setup: what was added not recorded: %s", exc)
         try:
             settling.begin(wait, self._settling_path)
         except OSError as exc:

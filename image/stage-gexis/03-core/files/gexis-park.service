@@ -9,7 +9,9 @@ Wants=network-online.target
 Type=oneshot
 RemainAfterExit=yes
 ExecStart=/bin/true
-ExecStop=/usr/bin/curl -s -m 5 -X POST http://127.0.0.1:8090/renderers/park
+# ADR-0170: the route takes the panel's token, so that a plugin cannot park
+# the renderers; root reads it as the kiosk does.
+ExecStop=/bin/sh -c 'exec /usr/bin/curl -s -m 5 -X POST -H "X-Gexis-Panel: $(cat /run/gexis/panel-token 2>/dev/null)" http://127.0.0.1:8090/renderers/park'
 TimeoutStopSec=8
 
 [Install]
