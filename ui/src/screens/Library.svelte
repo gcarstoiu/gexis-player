@@ -3792,16 +3792,24 @@
     display: flex;
     flex-direction: column;
     gap: 18px;
+    min-height: 0;
+    /* Into the page's bottom padding, as the buttons always reached: the
+       cover gives way only where they would meet the mini player. */
+    margin-bottom: -18px;
   }
+  /* **The cover gives way** to a long title, as far as the title and both
+     buttons need and no further (George, 2026-10-31: on the TV a second
+     line put Add to queue under the mini player). */
   .albumpage__art {
-    width: calc(var(--panel-h) * 264 / 800);
     height: calc(var(--panel-h) * 264 / 800);
+    aspect-ratio: 1;
+    align-self: flex-start;
+    min-height: 0;
     border-radius: var(--r-lg);
     overflow: hidden;
     position: relative;
     background: var(--bg-well);
     border: 1px solid var(--ink-line);
-    flex-shrink: 0;
   }
   .albumpage__art img {
     position: absolute;
@@ -3810,12 +3818,18 @@
     height: 100%;
     object-fit: cover;
   }
+  /* Three lines at most (George, 2026-10-31). */
   .albumpage__title {
     font-size: 24px;
     font-weight: 700;
     color: var(--ink);
     line-height: 1.2;
     text-wrap: pretty;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    overflow: hidden;
   }
   .albumpage__meta {
     font-family: var(--font-mono);
