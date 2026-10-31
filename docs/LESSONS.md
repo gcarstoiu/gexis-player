@@ -453,6 +453,14 @@ the lead on the same edge; after a member's core restarted, Lyrion came up
 active with nothing playing and took the group from its leader. Let a fake's
 states be as many as the real one's: active is not playing.
 
+**87. Players that were never started** (2026-10-31, Phase 22). Case 86's
+fix was tested on players the tests built but never started, and starting is
+what ties each change of state to the look that stops a member's own
+source. On every real player that look stopped a new source before it could
+play, so no member led again after 1.9.1; George found it as music that would
+not play in a group. Build what a test drives the way the program starts it,
+and see the test fail without the fix.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target, the check quietly

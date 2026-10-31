@@ -1674,3 +1674,22 @@ state there, and no test could have shown a source that came up silent.
 **Rule:** let a fake's states be as many as the real one's - active is not
 playing, connected is not ready - and test the edge between them.
 
+**87. Players that were never started** (2026-10-31, Phase 22). In a group
+led by the bar, George started Lyrion on sofapi three times and nothing
+played. sofapi's log: Lyrion took the device, and 230-350 ms later "lms
+stopped here - another player leads the group (C1)". Case 86's fix made a
+member's source wait until it plays before it leads, but each change of the
+member's state was looked at 50 ms later, and that look stopped any source
+of its own while another player led - before Lyrion, active as its player
+switches on, had played. With the two players synced in Lyrion, the stop
+paused the sync on both. The logs of both players held no "plays here; this
+player leads the group" since 1.9.1 was installed; AirPlay had been stopped
+the same way the day before. The multiroom tests construct their players and
+never call `start()`, which is where the store's changes are subscribed to,
+so in the tests the look never ran after a source came up: the test written
+for case 86 passed, and with the subscription wired in, it failed as sofapi
+did.
+**Rule:** build what a test drives the way the program starts it - every
+subscription and watcher a start sets up - and see the new test fail without
+the fix before trusting its pass.
+

@@ -137,6 +137,16 @@ receiver answers a poll; it gives a vendor ID (the HDMI placeholder, as
 `cec-ctl` does), since the TV kept asking. Seen on the bus: it joined as
 playback device 8 on the TV's port and answered the TV's questions.
 
+**George's key test** (2026-10-31, the TV's remote through a Harmony): Back
+did nothing and Exit worked as Back; he raised nothing else about the keys.
+The plugin then said nothing of a key it does not use, so what Back sent is
+not known. Its log showed something else: at boot it started before the
+player's plugin socket was there, and its hello thread ended. **0.1.1**
+(local): the hello is tried again until the socket is there, and again after
+the core restarts; a key the plugin does not use is written to its log once.
+Open: Back, pressed again with 0.1.1, and whether the receiver passes its own
+remote's keys on over the bus (the plugin takes keys from any device on it).
+
 ## Settings (ADR-0022)
 
 None: a permission is granted by adding the plugin, and taken back by

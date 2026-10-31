@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-10-30 (on R2D2).
+Last updated: 2026-10-31 (on R2D2).
 
 ## Start here
 
@@ -81,9 +81,19 @@ UI, system, player). Pushed (George): both branches; `gexis-plugins` #10
 the phase's `1e26c75e`, whose upload check knows permissions). CEC (ADR-0170, *CEC on a test player*):
 sofapi's second HDMI port goes to a receiver feeding a TV; the bus, waking the
 TV and taking the input shown; the plugin `tv-remote` 0.1.0 written
-(`~/projects/gexis-tv-remote`, local) and running on sofapi. Next: George's
-key test (the TV's remote, the receiver on sofapi's input 6), then the
-plugin's public repository and listing (asked first). The samples left `tools/`
+(`~/projects/gexis-tv-remote`, local) and running on sofapi. George's key
+test (2026-10-31, ADR-0170): Back did nothing, Exit worked as Back; 0.1.1
+(local, not yet installed) tries its hello again and logs a key it does not
+use. Next: Back again with 0.1.1, and the receiver's own remote, then the
+plugin's public repository and listing (asked first).
+**Found in George's test, 2026-10-31, fixed apart** (branches from `next`,
+worktrees `~/projects/gexis-player-<branch>`, committed, not pushed; for one
+preview on sofapi with the phase): `fix-group-lead` - a member's new source
+was stopped before it played, so no member led since 1.9.1 (ADR-0166, *Fixed
+2026-10-31*; lesson 87); `fix-group-list` - after *Undo group* the lists
+showed the other player's old group with this player in it, *Not reachable*;
+`fix-lyrics-wrap` - the Track tab's three lyric lines wrote over each other
+when the current one wrapped (the manual's sentence changed with it). The samples left `tools/`
 for that repository. The wiki Roadmap shows the new order (pushed
 2026-10-29 with George's OK).
 **Found in step 3, fixed apart**: on a phone the confirm, its progress card
