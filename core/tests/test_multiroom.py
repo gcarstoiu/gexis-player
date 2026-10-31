@@ -141,6 +141,9 @@ class Player:
                          after_client=after_client or (lambda rate: 0.0),
                          group_path=tmp_path / f"{member.id}.json",
                          chain_path=tmp_path / f"{member.id}-chain.json", peers=FakePeers())
+        # As at a core's start: every change of this player's state is looked
+        # at (sofapi, 2026-10-31: without it no test saw what that look did).
+        self.room.watch()
 
     def status_for_others(self):
         return {"id": self.member.id, "name": self.member.name, "host": self.member.host,
@@ -290,6 +293,44 @@ async def test_a_source_that_only_comes_up_on_a_member_does_not_take_the_lead(tm
     kitchen.starts_playing("lms")
     await net.settle()
     assert kitchen.room.record.leader == "kitchen" and living.room.record.leader == "kitchen"
+
+
+async def test_a_source_that_never_plays_on_a_member_is_stopped_after_its_wait(tmp_path, monkeypatch):
+    monkeypatch.setattr(mr, "LEAD_WAIT_S", 0.3)
+    net = Net(tmp_path)
+    living, kitchen = net.add("living", "Living Room"), net.add("kitchen", "Kitchen")
+    living.play("spotify")
+    await net.settle()
+    await living.room.join("kitchen")
+    await net.settle()
+    kitchen.come_up("lms")
+    await net.settle()
+    await net.settle()
+    assert kitchen.stopped == ["lms"], "C1, once it has had its time to play"
+    assert kitchen.room.record.leader == "living" and living.stopped == []
+
+
+async def test_lyrion_started_on_a_member_in_the_leaders_sync_plays_on(tmp_path, monkeypatch):
+    """sofapi, 2026-10-31: synced in Lyrion with the group's leader, which
+    played nothing; Lyrion started on sofapi was stopped before the leader's
+    state said Lyrion, and that paused the sync on both."""
+    monkeypatch.setattr(mr, "LEAD_WAIT_S", 0.3)
+    net = Net(tmp_path)
+    living = net.add("living", "Living Room", lyrion=("server-uuid", "player-a"))
+    kitchen = net.add("kitchen", "Kitchen", lyrion=("server-uuid", "player-b"))
+    await net.settle()
+    await living.room.join("kitchen")
+    await net.settle()
+    assert kitchen.room.chain == outputs.BUT_LYRION
+    kitchen.room._lms.sync_group = ("player-a", ("player-b",))
+    kitchen.come_up("lms")
+    await net.settle()
+    await net.settle()
+    assert kitchen.stopped == [], "Lyrion's own sync plays on"
+    kitchen.starts_playing("lms")
+    await net.settle()
+    assert kitchen.room.record.leader == "living", "its leader plays it too: it does not lead"
+    assert kitchen.stopped == [] and living.stopped == []
 
 
 async def test_undo_keeps_the_music_on_the_leader_until_nothing_holds_the_device(tmp_path):
