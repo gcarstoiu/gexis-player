@@ -31,6 +31,9 @@
 //   (Left and Right; Up and Down on one with `aria-orientation="vertical"`;
 //   a scroll along it sends the same, one per `data-step`, scrollSlide.js),
 //   and `data-dpad-box` inside a control on the parts the ring goes round;
+// - `data-dpad-ring="none"` on a control too small for the ring (the A-Z
+//   rail's letters), which draws its own look on `data-dpad-focus` - set on
+//   the control the ring is on, while it shows;
 // - `data-dpad-knob` on a slider's knob that runs past its ends: the ring
 //   takes in the knob's whole travel, the same at every value;
 // - `data-dpad-off` on the screens the D-pad leaves to the phone (D8);
@@ -337,9 +340,21 @@ export function startDpad({ root, onkey = () => {}, wake = () => false, trayUp =
   }
 
   let placed = '';
+  // The control the ring is on carries `data-dpad-focus` while it shows,
+  // for a look of its own (`data-dpad-ring="none"`, the A-Z rail's letter).
+  let marked = null;
+  function mark(el) {
+    if (el === marked) return;
+    marked?.removeAttribute('data-dpad-focus');
+    marked = el;
+    el?.setAttribute('data-dpad-focus', '');
+  }
+
   function draw() {
     tell();
-    if (!shown || lost || !current || !visible(current)) {
+    const on = shown && !lost && !!current && visible(current);
+    mark(on ? current : null);
+    if (!on || current.matches('[data-dpad-ring="none"]')) {
       if (!ring.hidden) ring.hidden = true;
       placed = '';
       return;
@@ -579,6 +594,7 @@ export function startDpad({ root, onkey = () => {}, wake = () => false, trayUp =
   addEventListener('scroll', onScroll, true);
   addEventListener('resize', onScroll);
   return () => {
+    mark(null);
     removeEventListener('keydown', onKey, true);
     removeEventListener('pointerdown', onPointer, true);
     removeEventListener('panelpointer', hide);
