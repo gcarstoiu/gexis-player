@@ -113,6 +113,16 @@ on sofapi since 17:57 (George's OK; dry run clean, core, kiosk and
 visualiser restarted). Seen then: a visualiser stopped while it was still
 starting ignored the stop for 90 s and was killed - the kiosk's restart had
 already restarted it.
+**George's second test the same evening**: CEC works; the ring was too thick
+and lay over the Popular rows' numbers and lengths; the visualiser's first
+press after a drop showed nothing (the core looked for the window as the
+driver resized it, and restarted it). Fixed on the same branches (ADR-0161
+25-26, ADR-0147): a 3 px band, a ring outside a row rather than over its
+text (checked on every mocked screen at four sizes), and a show that asks
+again before restarting. Second preview built (core `1.9.1+git72.04b0e1d`,
+UI `1.9.1+git74.8426a20`, player `1.9.1+git76.fdc800e`), not yet installed.
+Next, as George asked: the release (1.10.0), the plugin's repository and
+listing, Stable.
 The samples left `tools/`
 for that repository. The wiki Roadmap shows the new order (pushed
 2026-10-29 with George's OK).

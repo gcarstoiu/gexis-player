@@ -217,4 +217,8 @@ labwc had shrunk the visualiser's window with the output and nothing gave it
 the screen's size back, so the 1280 x 800 skin, centred for 1920 x 1080, was
 cut by a 640 x 480 window. Now the driver asks for the screen's size again
 each time it is shown, when the window has another (`fix-visualiser-size`).
-**Not yet seen:** a real drop with the fix in.
+George's first press after the next drop (18:11) showed nothing: the
+window was being given its size as the core looked for it, wlrctl found none,
+and the core started the visualiser again; the second press worked. A show
+that finds no window now asks again three times, half a second apart, before
+starting it again. **Not yet seen:** a drop and a first press with both in.

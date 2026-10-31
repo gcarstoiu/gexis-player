@@ -210,3 +210,20 @@ before it was changed (branches `fix-dpad-reach`, `fix-album-title`,
     *Add to queue* under the mini player (`design/IMPLEMENTED-DIFFERENTLY.md`),
     and the visualiser kept a window the TV's return at 640 x 480 had
     shrunk ([ADR-0147](0147-a-tv-as-the-screen.md)).
+
+**After George's second test the same evening** (CEC worked; he asked for the
+ring to be checked everywhere it might cover something, and made thinner):
+
+25. **The band is 3 px, not 6** (George: too thick).
+26. **The ring lies over no letters where it can help it**: one the rule puts
+    inside goes outside when inside it would cover the control's own text and
+    outside none, with room on the screen. It lay over the artist page's
+    Popular rows' numbers and lengths, which reach the row's edges, and the
+    two lines of an album row with a guest artist. Text an ellipsis or a
+    clamp has cut off does not count. Checked with mocked data on every
+    screen and sheet reachable without a Lyrion server, at the TV's, the 10"
+    and 7" panels' and a bar's sizes: each control's ring placed as the
+    module places it (the copy checked against the real ring over 1,359 key
+    presses, one differing while a row still scrolled), and the text and
+    small icons under its band listed. Left: none but a queue row's Remove,
+    which the check sees without the row slid aside.

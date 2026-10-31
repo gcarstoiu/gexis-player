@@ -777,6 +777,9 @@ pictures (ADR-0161, ADR-0163).
   `F13` and `Focus Ring.dc.html`'s `slider` states draw them.
 - **[U]** On the A-Z rail the letter itself lights up, teal and larger, with
   no ring: the ring hid a letter 19 px tall (George, 2026-10-31).
+- **[U]** The band is 3 px where the design's is 6 (George, 2026-10-31: too
+  thick), and a row whose text reaches its edges (the Popular rows) is ringed
+  outside, not inside as `F07`'s rows are.
 - **[U]** A queue row's Remove is reached with Right and shows as a swipe
   uncovers it (George, 2026-10-31); no design draws the queue with the
   D-pad.
