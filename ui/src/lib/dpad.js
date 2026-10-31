@@ -31,6 +31,8 @@
 //   (Left and Right; Up and Down on one with `aria-orientation="vertical"`;
 //   a scroll along it sends the same, one per `data-step`, scrollSlide.js),
 //   and `data-dpad-box` inside a control on the parts the ring goes round;
+// - `data-dpad-aside` on a control reached only with Left or Right (the
+//   queue row's Remove, behind the row's end); Up and Down pass it by;
 // - `data-dpad-ring="none"` on a control too small for the ring (the A-Z
 //   rail's letters), which draws its own look on `data-dpad-focus` - set on
 //   the control the ring is on, while it shows;
@@ -496,7 +498,7 @@ export function startDpad({ root, onkey = () => {}, wake = () => false, trayUp =
     let bestScore = Infinity;
     let bestLevel = false;
     for (const el of list) {
-      if (el === current) continue;
+      if (el === current || (!sideways && el.matches('[data-dpad-aside]'))) continue;
       const r = el.getBoundingClientRect();
       const s = score(from, r, key);
       if (s === Infinity) continue;
