@@ -17,7 +17,8 @@
 //   screen).
 // - Its look is the design's (`design/source/19/Focus Ring.dc.html`, George's
 //   teal ring, Jump): one element over the control's box, in no layout;
-//   without the arrows beside a slider's (George, 2026-10-31).
+//   without the arrows beside a slider's, and outside a row rather than
+//   over its text (George, 2026-10-31).
 //
 // Components take part through attributes and two events, so a new screen
 // needs nothing here:
@@ -59,12 +60,18 @@ const LAYERS = '[data-dpad-layer], [role="dialog"], [role="alertdialog"]';
 const COVERS = '[data-dpad-cover]';
 const TEXT = /^(text|search|email|url|tel|password|number)$/;
 
-// The design's ring (design/tokens.css, *Phase 19: the D-pad's focus*).
+// The design's ring (design/tokens.css, *Phase 19: the D-pad's focus*),
+// its band half as wide (George, 2026-10-31: too thick); BAND is
+// `--focus-band` in styles/tokens.css.
 const GAP = 4;
-const BAND = 6;
+const BAND = 3;
 const OUT = GAP + BAND;
 const INSET = 2;
 const NEIGHBOUR = 12;
+// The dark line either side of the band (`.dpad-ring`'s box-shadow).
+const KEYLINE = 2;
+// Less text than this under the band (px²) is a glancing touch, not a cover.
+const COVER_MIN = 4;
 // Kept clear of a scrolled list's edge, so the ring outside it shows.
 const SCROLL_MARGIN = 24;
 
@@ -205,6 +212,34 @@ function ringBox(el, boxes, slider) {
   ]);
 }
 
+const area = (a, b) => Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left))
+  * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+const grown = (r, by) => ({ left: r.left - by, top: r.top - by, right: r.right + by, bottom: r.bottom + by });
+
+// How much text, of `scope`'s that `take` accepts, lies under the band of a
+// ring round `r`, inside or outside it: each line's letters taken as the
+// middle of its line box, about the font's size high.
+function textUnder(r, inside, scope, take) {
+  const outer = inside ? r : grown(r, OUT + KEYLINE);
+  const inner = inside ? grown(r, -(INSET + BAND + KEYLINE)) : grown(r, GAP - KEYLINE);
+  let under = 0;
+  const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const host = node.parentElement;
+    if (!host || !take(host) || !node.textContent.trim() || !area(host.getBoundingClientRect(), outer)) continue;
+    if (!visible(host)) continue;
+    const size = parseFloat(getComputedStyle(host).fontSize) || 16;
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    for (const line of range.getClientRects()) {
+      const middle = (line.top + line.bottom) / 2;
+      const ink = inView(host, { left: line.left, right: line.right, top: middle - 0.36 * size, bottom: middle + 0.36 * size });
+      under += area(ink, outer) - area(ink, inner);
+    }
+  }
+  return under;
+}
+
 function makeRing() {
   const ring = document.createElement('div');
   ring.className = 'dpad-ring';
@@ -332,6 +367,18 @@ export function startDpad({ root, onkey = () => {}, wake = () => false, trayUp =
     return false;
   }
 
+  // **The ring lies over no letters where it can help it** (George,
+  // 2026-10-31: over a Popular row's number and length): inside by the rule
+  // but over the control's own text, it goes outside when there it would
+  // cover none and the screen has room.
+  function form(el, r, list, layer) {
+    const inside = inset(el, r, list);
+    if (!inside || el.matches('[data-dpad-ring]')) return inside;
+    if (r.left - OUT < 0 || r.top - OUT < 0 || r.right + OUT > innerWidth || r.bottom + OUT > innerHeight) return true;
+    if (textUnder(r, true, el, () => true) < COVER_MIN) return true;
+    return textUnder(r, false, layer, (host) => !el.contains(host)) >= COVER_MIN;
+  }
+
   let ringField = false;
   function tell() {
     // A field, or a control that opens one focused (`data-text-entry`).
@@ -406,7 +453,7 @@ export function startDpad({ root, onkey = () => {}, wake = () => false, trayUp =
     if (el) {
       last.set(layer, el);
       reveal(el, layer);
-      insetForm = inset(el, inView(el, el.getBoundingClientRect()), list ?? candidates(layer));
+      insetForm = form(el, inView(el, el.getBoundingClientRect()), list ?? candidates(layer), layer);
     }
     draw();
     track();

@@ -103,10 +103,11 @@
    Jump). lib/dpad.js places it over the focused control's box; it takes no
    part in layout and moves with `transform`, with no transition and no blur.
    Above every sheet and drawer, below the phone's pointer (1000). The
-   design's arrows beside a slider's ring are not drawn (George, 2026-10-31). */
+   design's arrows beside a slider's ring are not drawn, and its band is 3 px,
+   not 6 (George, 2026-10-31). */
 :root {
   --focus-ink:           #7ed6bc;
-  --focus-band:          6px;
+  --focus-band:          3px;
   --focus-keyline-ink:   rgba(8, 12, 16, 0.8);
 }
 .dpad-ring {
