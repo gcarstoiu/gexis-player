@@ -2718,8 +2718,20 @@ class StateServer:
         # 2026-10-21): a show refused for standby started the driver again
         # with the only output off, and it could not start - *the video
         # driver did not add any displays* - so the visualiser stayed gone.
-        if (not shown and action == "show" and self._peppy._has_levels()
-                and not getattr(self._peppy, "refused", False)):
+        def no_window() -> bool:
+            return (not shown and action == "show" and self._peppy._has_levels()
+                    and not getattr(self._peppy, "refused", False))
+        # **A window made again is not a window gone** (sofapi, 2026-10-31):
+        # the driver gives a shrunk window the screen's size back as it is
+        # shown, wlrctl asked in that moment found none, and the visualiser
+        # was started again - George's first press showed nothing. Asked
+        # again for a moment first.
+        for _ in range(self.PEPPY_TRIES if no_window() else 0):
+            await asyncio.sleep(self.PEPPY_TRY_S)
+            shown = await self._peppy.request_async(action)
+            if shown:
+                break
+        if no_window():
             # **One restart at a time** (review, 2026-10-12): a second tap
             # while the skins load (~9 s) restarted the unit again and killed
             # the half-loaded one. A later ask waits for the restart under way;
@@ -2730,6 +2742,11 @@ class StateServer:
         if not shown:
             return web.json_response({"error": "no Peppy screen window to act on"}, status=409)
         return web.json_response({"peppy": action})
+
+    #: How often, and how far apart, a show that found no window is asked
+    #: again before the visualiser is started again.
+    PEPPY_TRIES = 3
+    PEPPY_TRY_S = 0.5
 
     #: How long a restarted visualiser has to put its window up (its skins
     #: load in about 9 s on a Pi 4 with the 1920x1080 packs, guestpi).
