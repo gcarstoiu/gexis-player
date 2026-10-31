@@ -6,7 +6,11 @@
 //
 // - The focus moves by position (D3): the nearest control in the pressed
 //   direction, measured on the screen, within the topmost layer - a sheet,
-//   drawer, tray or dialog over the screen - scrolled into view.
+//   drawer, tray or dialog over the screen - scrolled into view. Left and
+//   Right go first to a control level with the focused one.
+// - A control taller than the list it scrolls in (an opened biography):
+//   Up and Down scroll through it before they leave it, and the ring goes
+//   round the part in view.
 // - It is hidden until the first press, which only shows it (D4): on the
 //   control focused last in that layer, or on its main one. A touch hides it,
 //   and so do the phone's touchpad and a screen over everything (the idle
@@ -26,6 +30,8 @@
 //   (Left and Right; Up and Down on one with `aria-orientation="vertical"`;
 //   a scroll along it sends the same, one per `data-step`, scrollSlide.js),
 //   and `data-dpad-box` inside a control on the parts the ring goes round;
+// - `data-dpad-knob` on a slider's knob that runs past its ends: the ring
+//   takes in the knob's whole travel, the same at every value;
 // - `data-dpad-off` on the screens the D-pad leaves to the phone (D8);
 // - `data-dpad-cover` on a screen over everything that a press only takes
 //   down (the idle screen, a takeover's).
@@ -60,7 +66,9 @@ function visible(el) {
   if (!el.isConnected || el.closest('[inert], [aria-hidden="true"], .is-kept')) return false;
   if (el.checkVisibility && !el.checkVisibility({ opacityProperty: true, visibilityProperty: true })) return false;
   const r = el.getBoundingClientRect();
-  return r.width > 0 && r.height > 0;
+  // A control kept for a keyboard but drawn as nothing (the queue row's
+  // Remove, 1 x 1) is not one the ring can show.
+  return r.width > 1 && r.height > 1;
 }
 
 function layerShown(el) {
@@ -111,6 +119,46 @@ function union(rects) {
 // The gap between two intervals; 0 when they overlap.
 const gap = (a1, a2, b1, b2) => Math.max(0, Math.max(a1, b1) - Math.min(a2, b2));
 
+// The part of `r` its scroll areas show, along the way each one scrolls.
+function inView(el, r) {
+  let { left, top, right, bottom } = r;
+  for (const { el: box, x, y } of scrollers(el)) {
+    const b = box.getBoundingClientRect();
+    if (y) {
+      top = Math.max(top, b.top);
+      bottom = Math.min(bottom, b.bottom);
+    }
+    if (x) {
+      left = Math.max(left, b.left);
+      right = Math.min(right, b.right);
+    }
+  }
+  return { left, top, right, bottom, width: Math.max(0, right - left), height: Math.max(0, bottom - top) };
+}
+
+// The list a control is taller than, which it cannot be scrolled into
+// whole; null for any other.
+function taller(el) {
+  const s = scrollers(el).find((one) => one.y);
+  if (!s) return null;
+  const b = s.el.getBoundingClientRect();
+  return el.getBoundingClientRect().height > b.height - 2 * SCROLL_MARGIN ? s : null;
+}
+
+// How far Up or Down scrolls such a control's list before the press leaves
+// the control; null when it shows the control's end that way.
+function through(el, dir) {
+  const s = taller(el);
+  if (!s) return null;
+  const r = el.getBoundingClientRect();
+  const b = s.el.getBoundingClientRect();
+  const rest = dir === 'down'
+    ? Math.min(r.bottom - (b.bottom - SCROLL_MARGIN), s.el.scrollHeight - s.el.clientHeight - s.el.scrollTop)
+    : Math.min(b.top + SCROLL_MARGIN - r.top, s.el.scrollTop);
+  if (rest <= 1) return null;
+  return { box: s.el, by: Math.min(rest, b.height * 0.75) * (dir === 'down' ? 1 : -1) };
+}
+
 function score(c, r, dir) {
   const cx = c.left + c.width / 2, cy = c.top + c.height / 2;
   const rx = r.left + r.width / 2, ry = r.top + r.height / 2;
@@ -134,6 +182,21 @@ function score(c, r, dir) {
 function readingOrder(a, b) {
   const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
   return Math.abs(ra.top - rb.top) > 8 ? ra.top - rb.top : ra.left - rb.left;
+}
+
+// What the ring goes round: the control, or its `data-dpad-box` parts; a
+// slider's widened by half its knob each way, so the knob stays inside at
+// either end.
+function ringBox(el, boxes, slider) {
+  const r = boxes.length > 1 ? union(boxes.map((b) => b.getBoundingClientRect()))
+    : (boxes[0] ?? el).getBoundingClientRect();
+  const knob = slider ? el.querySelector('[data-dpad-knob]') : null;
+  if (!knob) return r;
+  const k = knob.getBoundingClientRect();
+  return union([
+    { left: r.left - k.width / 2, top: r.top, right: r.right + k.width / 2, bottom: r.bottom },
+    { left: r.left, top: k.top, right: r.right, bottom: k.bottom },
+  ]);
 }
 
 function makeRing() {
@@ -296,12 +359,12 @@ export function startDpad({ root, onkey = () => {}, wake = () => false, trayUp =
     // tray's slider) names the part the ring goes round: `data-dpad-box`.
     const boxes = [...current.querySelectorAll('[data-dpad-box]')];
     const box = boxes[0] ?? current;
-    const r = boxes.length > 1 ? union(boxes.map((b) => b.getBoundingClientRect())) : box.getBoundingClientRect();
-    const rad = radius(box, r);
     const slider = isSlider(current) && !isVertical(current);
+    const r = inView(current, ringBox(current, boxes, slider));
+    const rad = radius(box, r);
     let x, y, w, h, rr;
     if (!slider && insetForm) {
-      x = r.left + INSET; y = r.top + INSET; w = r.width - 2 * INSET; h = r.height - 2 * INSET;
+      x = r.left + INSET; y = r.top + INSET; w = Math.max(0, r.width - 2 * INSET); h = Math.max(0, r.height - 2 * INSET);
       rr = Math.max(4, rad - INSET);
     } else {
       const round = rad >= Math.min(r.width, r.height) / 2 - 0.5;
@@ -340,7 +403,7 @@ export function startDpad({ root, onkey = () => {}, wake = () => false, trayUp =
     if (el) {
       last.set(layer, el);
       reveal(el, layer);
-      insetForm = inset(el, el.getBoundingClientRect(), list ?? candidates(layer));
+      insetForm = inset(el, inView(el, el.getBoundingClientRect()), list ?? candidates(layer));
     }
     draw();
     track();
@@ -423,14 +486,31 @@ export function startDpad({ root, onkey = () => {}, wake = () => false, trayUp =
       step(current, key === 'up' ? 1 : -1);
       return;
     }
-    const from = current.getBoundingClientRect();
+    const scroll = (key === 'up' || key === 'down') && through(current, key);
+    if (scroll) {
+      scroll.box.scrollTop += scroll.by;
+      track();
+      return;
+    }
+    const from = taller(current) ? inView(current, current.getBoundingClientRect()) : current.getBoundingClientRect();
+    const sideways = key === 'left' || key === 'right';
     let best = null;
     let bestScore = Infinity;
+    let bestLevel = false;
     for (const el of list) {
       if (el === current) continue;
-      const s = score(from, el.getBoundingClientRect(), key);
-      if (s < bestScore) {
+      const r = el.getBoundingClientRect();
+      const s = score(from, r, key);
+      if (s === Infinity) continue;
+      // Level with the focused control: across it by half the smaller of
+      // the two, and no more than three times its height (the equaliser's
+      // switch beside Back, over the bands below; not the bar's rail, which
+      // is level with everything).
+      const across = Math.min(from.bottom, r.bottom) - Math.max(from.top, r.top);
+      const level = sideways && across >= Math.min(r.height, from.height) / 2 && r.height <= 3 * from.height;
+      if (level > bestLevel || (level === bestLevel && s < bestScore)) {
         bestScore = s;
+        bestLevel = level;
         best = el;
       }
     }

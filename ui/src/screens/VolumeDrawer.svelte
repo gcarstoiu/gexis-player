@@ -125,7 +125,7 @@
     >
       <div class="rail">
         <div class="fill" class:is-muted={muted} style:width={`${pct}%`}></div>
-        <div class="knob" class:is-muted={muted} style:left={`${pct}%`}></div>
+        <div class="knob" class:is-muted={muted} style:left={`${pct}%`} data-dpad-knob></div>
       </div>
     </div>
 
