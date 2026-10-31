@@ -291,7 +291,10 @@ ignored. It moves a ring (`.dpad-ring`, styled in `styles/tokens.css` from
 the design's tokens) to the nearest control in the pressed direction within
 the topmost layer, scrolling lists to keep it in view; Left and Right go
 first to a control level with the focused one. A control 1 px or less across
-is never a stop. A control taller than the list it scrolls in (an opened
+is never a stop. The ring goes inside a control on rows and wherever a
+neighbour is under 12 px or the ring would leave the screen, outside
+otherwise - and outside after all when inside it would lie over the control's
+own text and outside over none. A control taller than the list it scrolls in (an opened
 biography): Up and Down scroll through it before they leave it, and the ring
 goes round the part in view. Screens take part by attributes and two events,
 so a new screen needs nothing in the module:
