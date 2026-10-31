@@ -85,8 +85,9 @@ letter to jump there.
 | Queue (bottom right) | Lyrion's queue, with the number of tracks still to come. |
 
 **Track** shows the title, artist, album and year, and, when the song has
-synchronised lyrics, the current line and the next one. Tap the artist's
-name to open their page in the library.
+synchronised lyrics, the current line with the one before and the one after.
+When a long line leaves no room, the line before gives way first, then the
+one after. Tap the artist's name to open their page in the library.
 
 ![Lyrics](images/panel-nowplaying-lyrics.webp)
 
