@@ -48,7 +48,7 @@
          onpointerdown={drag.down} onpointermove={drag.move} onpointerup={drag.up} onpointercancel={drag.up}>
       <div class="rail">
         <div class="fill" class:is-muted={m.muted} style:width={`${level ?? 0}%`}></div>
-        <div class="knob" style:left={`${level ?? 0}%`}></div>
+        <div class="knob" style:left={`${level ?? 0}%`} data-dpad-knob></div>
       </div>
     </div>
     <span class="value">{m.muted ? 'Off' : (level ?? '—')}</span>
