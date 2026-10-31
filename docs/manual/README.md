@@ -491,6 +491,12 @@ The screen can be used without touching it: with Home Assistant's *D-pad*
   the screen's main control (Play/Pause on Now Playing). A touch and the
   idle screen hide it. The phone's remote moves it too (section 8).
 - On a slider, Left and Right change the value; Up and Down leave it.
+- A long text, such as an artist's biography opened with OK, scrolls with Up
+  and Down before the ring moves on.
+- In the queue, Right on a track shows **Remove**; OK removes the track and
+  Left goes back to it.
+- On the A-Z letters beside the artists, the letter itself lights up instead
+  of the ring.
 - On a bar, Up from the top row brings the tray down.
 - While the screen is dark, or the visualiser or the idle screen is up, the
   first press from Home Assistant only wakes the screen.

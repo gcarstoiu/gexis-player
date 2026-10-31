@@ -263,8 +263,12 @@ keyboard's arrows, Enter and Escape - from the core's virtual keyboard (Home
 Assistant's remote, `POST /panel/key`) or a USB keyboard; made-up events are
 ignored. It moves a ring (`.dpad-ring`, styled in `styles/tokens.css` from
 the design's tokens) to the nearest control in the pressed direction within
-the topmost layer, scrolling lists to keep it in view. Screens take part by
-attributes and two events, so a new screen needs nothing in the module:
+the topmost layer, scrolling lists to keep it in view; Left and Right go
+first to a control level with the focused one. A control 1 px or less across
+is never a stop. A control taller than the list it scrolls in (an opened
+biography): Up and Down scroll through it before they leave it, and the ring
+goes round the part in view. Screens take part by attributes and two events,
+so a new screen needs nothing in the module:
 
 | | |
 |---|---|
@@ -276,7 +280,10 @@ attributes and two events, so a new screen needs nothing in the module:
 | `dpadstep` event | Left or Right on a custom slider (`detail.step`: +1 or -1); Up or Down on one with `aria-orientation="vertical"` (the equaliser's bands), whose Left and Right go to its neighbours |
 | `data-step` | a custom slider's step in its own units (`aria-valuemin` to `aria-valuemax`): a scroll along it sends one `dpadstep` per step's length (`lib/scrollSlide.js`) |
 | `data-dpad-box` | inside a control: the parts the ring goes round |
+| `data-dpad-knob` | a horizontal slider's knob: the ring takes in its whole travel, the same width at every value |
 | `data-dpad-ring="inset"` / `"outside"` | the ring's form, where the rule would choose the other |
+| `data-dpad-ring="none"`, `data-dpad-focus` | no ring on this control (the A-Z rail's letters); the control the ring is on carries `data-dpad-focus` while it shows, for a look of its own |
+| `data-dpad-aside` | reached only with Left or Right; Up and Down pass it by (the queue row's Remove, behind the row's end) |
 | `data-dpad-skip`, `data-dpad-off` | not a stop; a screen the D-pad leaves alone (setup, updates) |
 | `data-dpad-cover` | a screen over everything (the idle screen, a takeover's): no ring while it is up, and a press only takes it down |
 
