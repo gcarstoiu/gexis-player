@@ -1078,6 +1078,8 @@ def draw_on_a_canvas(util, screen: tuple[int, int] | None) -> tuple[int, int]:
     window shows the same frame either way."""
     pack = util.PYGAME_SCREEN.get_size()
     offset = centring(pack, screen)
+    # The size each show gives the window back (`give_the_window_the_screen_again`).
+    screen_window[0] = tuple(screen) if offset is not None or screen == pack else None
     if offset is not None:
         window = pygame.display.set_mode(screen, pygame.NOFRAME)
         print(f"peppy: {pack[0]}x{pack[1]} centred on a {screen[0]}x{screen[1]} screen")
@@ -1173,6 +1175,30 @@ def take_the_window_as_it_is() -> None:
     if size[0] > 0 and size[1] > 0:
         pygame.display.set_mode(size, pygame.NOFRAME)
         pygame.display.get_surface().fill((0, 0, 0))
+
+
+#: The screen's size when the window was given it at the start - a pack
+#: centred on it or filling it; None for one larger than the screen, or no
+#: screen known.
+screen_window: list[tuple[int, int] | None] = [None]
+
+
+def give_the_window_the_screen_again() -> bool:
+    """**The window back at the screen's size, each time it is shown**
+    (sofapi, 2026-10-31): the TV's output went and came back at 640 x 480,
+    labwc shrank the window with it, and the kiosk's mode back at 1920 x 1080
+    two seconds later gave it nothing - the skin stayed off centre, cut by
+    the small window. Asked before the raise, and never at the size the
+    window already has (`take_the_window_as_it_is`). True when it was
+    asked."""
+    want = screen_window[0]
+    if want is None or pygame.display.get_surface() is None:
+        return False
+    if tuple(pygame.display.get_window_size()) == want:
+        return False
+    pygame.display.set_mode(want, pygame.NOFRAME)
+    pygame.display.get_surface().fill((0, 0, 0))
+    return True
 
 
 def hold_the_last_frame(data_source) -> None:
@@ -1455,6 +1481,9 @@ def main() -> int:
         hidden = not shown.check()
         if was_hidden[0] and not hidden:
             repaints.shown()
+            if give_the_window_the_screen_again():
+                print(f"peppy: window back at the screen's {screen_window[0][0]}x{screen_window[0][1]}")
+                repaints.event("the screen's size again")
         was_hidden[0] = hidden
         if hidden:
             time.sleep(HIDDEN_FRAME_S)
