@@ -216,6 +216,20 @@ const area = (a, b) => Math.max(0, Math.min(a.right, b.right) - Math.max(a.left,
   * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
 const grown = (r, by) => ({ left: r.left - by, top: r.top - by, right: r.right + by, bottom: r.bottom + by });
 
+// `r` as far as the boxes round `el` that clip it let it show - a line cut
+// off by an ellipsis or a clamp included.
+function clipped(el, r, stop) {
+  let { left, top, right, bottom } = r;
+  for (let p = el.parentElement; p && p !== stop; p = p.parentElement) {
+    const s = getComputedStyle(p);
+    if (s.overflowX === 'visible' && s.overflowY === 'visible') continue;
+    const b = p.getBoundingClientRect();
+    if (s.overflowX !== 'visible') { left = Math.max(left, b.left); right = Math.min(right, b.right); }
+    if (s.overflowY !== 'visible') { top = Math.max(top, b.top); bottom = Math.min(bottom, b.bottom); }
+  }
+  return { left, top, right, bottom };
+}
+
 // How much text, of `scope`'s that `take` accepts, lies under the band of a
 // ring round `r`, inside or outside it: each line's letters taken as the
 // middle of its line box, about the font's size high.
@@ -233,7 +247,7 @@ function textUnder(r, inside, scope, take) {
     range.selectNodeContents(node);
     for (const line of range.getClientRects()) {
       const middle = (line.top + line.bottom) / 2;
-      const ink = inView(host, { left: line.left, right: line.right, top: middle - 0.36 * size, bottom: middle + 0.36 * size });
+      const ink = clipped(node, { left: line.left, right: line.right, top: middle - 0.36 * size, bottom: middle + 0.36 * size }, scope.parentElement);
       under += area(ink, outer) - area(ink, inner);
     }
   }
