@@ -755,6 +755,44 @@ def test_a_size_event_at_the_window_s_own_size_leaves_it_alone(monkeypatch):
     assert modes and modes[-1][0] == (640, 480), "a new size is still taken at once"
 
 
+def test_a_shown_window_gets_the_screen_s_size_back(monkeypatch):
+    """sofapi, 2026-10-31: the TV's output came back at 640 x 480 and the
+    window shrank with it; the mode went back to 1920 x 1080 and the window
+    did not. The next show asks for the screen's size again, and the pack is
+    centred in it as at the start."""
+    monkeypatch.setattr(driver, "screen_window", [None])
+    pg, util = _display(monkeypatch, (1280, 800))
+    assert driver.draw_on_a_canvas(util, (1920, 1080)) == (320, 140)
+    canvas = util.PYGAME_SCREEN
+    pg.display.set_mode((640, 480), pg.NOFRAME)    # what the compositor did
+    driver.take_the_window_as_it_is()
+    assert driver.give_the_window_the_screen_again()
+    assert tuple(pg.display.get_window_size()) == (1920, 1080)
+    canvas.fill((10, 200, 10))
+    pg.display.update()
+    window = pg.display.get_surface()
+    assert window.get_at((325, 145))[:3] == (10, 200, 10) and window.get_at((5, 5))[:3] == (0, 0, 0)
+
+
+def test_a_shown_window_at_the_screen_s_size_is_left_alone(monkeypatch):
+    monkeypatch.setattr(driver, "screen_window", [None])
+    pg, util = _display(monkeypatch, (1280, 800))
+    driver.draw_on_a_canvas(util, (1920, 1080))
+    modes = []
+    monkeypatch.setattr(pg.display, "set_mode", lambda *a, **k: modes.append(a))
+    assert not driver.give_the_window_the_screen_again()
+    assert modes == [], "nothing taken again: no black frame on a show"
+
+
+def test_with_no_screen_known_a_shown_window_is_left_as_it_is(monkeypatch):
+    monkeypatch.setattr(driver, "screen_window", [None])
+    pg, util = _display(monkeypatch, (1280, 800))
+    driver.draw_on_a_canvas(util, None)
+    pg.display.set_mode((640, 480), pg.NOFRAME)
+    assert not driver.give_the_window_the_screen_again()
+    assert tuple(pg.display.get_window_size()) == (640, 480)
+
+
 def test_a_size_event_takes_the_window_as_it_is_before_anything_draws(monkeypatch):
     pg, util = _display(monkeypatch, (1280, 800))
     taken = []
