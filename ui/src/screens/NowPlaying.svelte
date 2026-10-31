@@ -306,6 +306,32 @@
       .filter((n) => n >= 0 && n < sungLines.length)
       .map((n) => ({ ...sungLines[n], n, distance: Math.abs(n - at) }));
   });
+  //: **What of the three fits whole** (sofapi's TV, 2026-10-31: under a
+  //: two-row title, the current line wrapped and the three were squeezed
+  //: into the strip, writing over each other). Each keeps its height; when
+  //: they do not fit, the line before gives way first, then the one after.
+  //: The current line is always shown.
+  let stripBox = $state(null);
+  let stripEls = $state([]);
+  let stripDropped = $state(new Set());
+  $effect(() => {
+    const lines = window3, box = stripBox;
+    if (!box) return;
+    const fit = () => {
+      const now = lines.findIndex((l) => l.distance === 0);
+      const gap = parseFloat(getComputedStyle(box).rowGap) || 0;
+      const need = (keep) => keep.reduce((sum, i) => sum + (stripEls[i]?.offsetHeight ?? 0), 0) + gap * (keep.length - 1);
+      const all = lines.map((_, i) => i);
+      let keep = all;
+      if (need(keep) > box.clientHeight + 0.5) keep = keep.filter((i) => i >= now);
+      if (need(keep) > box.clientHeight + 0.5) keep = [now];
+      stripDropped = new Set(all.filter((i) => !keep.includes(i)));
+    };
+    fit();
+    const watch = new ResizeObserver(fit);
+    watch.observe(box);
+    return () => watch.disconnect();
+  });
   //: The Lyrics tab shows the whole song, not a five-line window, and keeps
   //: the current line in view by translating the list - the design's own
   //: mechanism (`translateY(-(child.offsetTop - lead))`). Measured rather
@@ -448,9 +474,10 @@
                      this box rather than giving it a height of its own. -->
                 <div class="trackblock__body">
                   {#if sungLines.length}
-                    <div class="lyrics lyrics--synced lyrics--fill">
-                      {#each window3 as line (line.n)}
-                        <div class="lyrics__line" class:is-now={line.distance === 0 && singing} data-distance={line.distance}>
+                    <div class="lyrics lyrics--synced lyrics--fill" bind:this={stripBox}>
+                      {#each window3 as line, i (line.n)}
+                        <div class="lyrics__line" class:is-now={line.distance === 0 && singing}
+                             class:is-dropped={stripDropped.has(i)} data-distance={line.distance} bind:this={stripEls[i]}>
                           {line.text}
                         </div>
                       {/each}
@@ -1307,13 +1334,23 @@
      each line is its own height (design, 2026-09-22). */
   .lyrics--fill {
     gap: 16px;
+    overflow: hidden;
   }
   .lyrics--fill .lyrics__line {
     font-size: 32px;
     line-height: 1.3;
     min-height: 0;
+    flex-shrink: 0;
     display: block;
     text-wrap: pretty;
+  }
+  /* Out of the strip, still measured at its width: it comes back as soon as
+     there is room. */
+  .lyrics--fill .lyrics__line.is-dropped {
+    position: absolute;
+    left: 0;
+    right: 0;
+    visibility: hidden;
   }
   .lyrics--synced .lyrics__line[data-distance='1'] { opacity: 0.42; }
   .lyrics__line.is-now {

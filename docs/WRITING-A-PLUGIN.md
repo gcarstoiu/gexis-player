@@ -3,7 +3,8 @@
 A plugin adds something to the player that the player does not ship: a
 **renderer** (a source of music, like a streaming receiver) or a **service**
 (anything else that runs on the device, like a monitoring agent). This guide
-takes you from an empty folder to a plugin installed from a phone.
+takes you from an empty folder to a plugin installed from a phone, and to
+listing it in the plugin catalogue.
 
 - **The protocol** a plugin speaks is [PLUGIN-CONTRACT.md](PLUGIN-CONTRACT.md).
   This guide shows how to use it; the contract is the reference.
@@ -11,10 +12,13 @@ takes you from an empty folder to a plugin installed from a phone.
   (uploads and the sandbox), [ADR-0086](decisions/0086-a-plugin-declares-itself-in-a-manifest.md)
   (the manifest), [ADR-0088](decisions/0088-a-plugins-settings-reach-its-unit-as-environment.md)
   (settings as environment).
-- **Two working examples** are in the repository: `tools/sample-plugin/` (a
-  service) and `tools/sample-renderer/` (a renderer that plays a tone).
+- **Two working examples** are in
+  [gexis-sample-plugins](https://github.com/gcarstoiu/gexis-sample-plugins):
+  `hello/` (a service) and `tone/` (a renderer that plays a tone), each
+  published as the plugin catalogue lists a plugin.
 
-**A plugin you upload is not part of Gexis Player.** The person who installs it
+**A plugin you upload, or install from the plugin catalogue, is not part of
+Gexis Player.** The person who installs it
 is told so, and that it runs at their own risk and responsibility. What the
 player guarantees is the sandbox it runs in, described below.
 
@@ -62,6 +66,7 @@ brings one is refused.
 | `tag` | no | A few words beside its name on its switch in Settings, 24 characters at most - the player's AirPlay says *Limited testing* |
 | `connection` | no | Honoured only on the player's own `service` plugins, not on an uploaded one: the heading above its rows then says *Connected*, *Connecting* or *Not connected*. An uploaded plugin runs as a user made for each run, so there is no fixed user to read connections from |
 | `settings` | no | Rows for **Settings**, below |
+| `permissions` | no | What it needs beyond the sandbox (section 3): a list of `cec`, `gpio`, `usb`. The person adding it is told, and the player grants exactly those. Absent: none |
 
 **Not allowed:** `unit` (the player writes it), paths that point outside the
 package (`..`, absolute paths, links out), devices or pipes in the archive.
@@ -75,8 +80,9 @@ Every uploaded plugin runs under `gexis-uploaded-<kind>@<id>.service`:
 | **User** | A temporary user made for each run - never root, never `pi` |
 | **Can write** | Only its own data folder, `$STATE_DIRECTORY` (also `$GEXIS_PLUGIN_DATA`), kept across restarts and versions and deleted with the plugin. Plus its own `/tmp` |
 | **Can read** | The system, read-only. **Not** `/home` |
-| **Devices** | A **renderer** gets the sound cards (and the basics every program has, like `/dev/null`); a **service** gets no devices beyond those basics |
+| **Devices** | A **renderer** gets the sound cards (and the basics every program has, like `/dev/null`); a **service** gets no devices beyond those basics. More only as its `permissions` ask, below |
 | **Network** | Open |
+| **Processes** | Its own only: other users' processes are out of sight (`ProtectProc=invisible`) |
 | **The player** | The plugin socket, `$GEXIS_PLUGIN_SOCKET` (`/run/gexis/plugins.sock`) |
 | **Limits** | 1 GB of memory (past it, the kernel ends your plugin and it restarts), 1.5 CPU cores, 128 tasks |
 | **Restart** | Restarted 3 s after it exits with an error. A plugin switched on but missing its package (restored from a backup without it) is not retried; it starts when the package is uploaded. When the player starts, any plugin switched on and not running is started |
@@ -85,6 +91,21 @@ Every uploaded plugin runs under `gexis-uploaded-<kind>@<id>.service`:
 Your process starts **in its package folder** (`current/`), so relative paths
 to your own files work.
 
+**Asking for more** (ADR-0170). A plugin that needs a device names it in its
+manifest's `permissions`; the notice before it is added lists each, and the
+player grants exactly those with a drop-in for its unit, written at every
+start of the player (an update that asks for more asks again):
+
+| Permission | What it opens | Groups it joins |
+|---|---|---|
+| `cec` | The TV's HDMI-CEC connection, `/dev/cec*` | `video` |
+| `gpio` | `/dev/gpiochip*`, `/dev/gpiomem`; I²C, SPI and IR receivers (`/dev/i2c-*`, `/dev/spidev*`, `/dev/lirc*`) once their buses are on, which the player does not do | `gpio`, `i2c`, `spi`, `video` |
+| `usb` | USB devices (`/dev/bus/usb`, for libusb), HID (`/dev/hidraw*`), USB serial ports | `plugdev`, `dialout` |
+
+Nothing else of the sandbox changes. Driving the player itself needs no
+permission: its HTTP API (D-pad keys, transport, volume) is open to anything
+on the network, a plugin included.
+
 Things that follow from this:
 
 - **Keep state in `$STATE_DIRECTORY`**, never beside your program: the package
@@ -92,7 +113,9 @@ Things that follow from this:
 - **A program that expects `$HOME`** should be given one there:
   `export HOME=$STATE_DIRECTORY`.
 - **A program that wants a config file** writes it into `$STATE_DIRECTORY`
-  at start. `tools/sample-renderer/tone.py` shows the shape.
+  at start. The sample renderer's
+  [`tone.py`](https://github.com/gcarstoiu/gexis-sample-plugins/blob/main/tone/tone.py)
+  shows the shape.
 
 ## 4. Talking to the player
 
@@ -196,9 +219,11 @@ volume of its own that the core does not manage, hold it at full level while
 `fixed` is true - otherwise its slider would still lower the sound on a
 player whose owner set the level on the amplifier (ADR-0137).
 
-`tools/sample-renderer/` is a complete renderer in about a hundred lines of
-Python: it plays a generated tone through `output` when the panel's button is
-pressed, and stops when another source takes over.
+The sample renderer,
+[`tone/`](https://github.com/gcarstoiu/gexis-sample-plugins/tree/main/tone),
+is a complete renderer in about a hundred lines of Python: it plays a
+generated tone through `output` when the panel's button is pressed, and stops
+when another source takes over.
 
 ### What a real renderer taught us
 
@@ -319,10 +344,41 @@ again at start if the plugin needs it. A restore refuses the whole backup
 if a link in the data folder lies on the path of anything it would write.
 Your plugin is stopped while a restore puts its data back, so its own
 SQLite or other open files cannot write over what was restored; the
-restart after the restore starts it again. After a restore, the plugin is
-listed as needing to be uploaded again.
+restart after the restore starts it again. After a restore, an uploaded
+plugin is listed as needing to be uploaded again; one from the catalogue is
+installed from it again (section 8).
 
-## 8. When something does not work
+## 8. Listing it in the plugin catalogue
+
+Listed, a plugin can be added from **Settings → Plugins → Add plugins**
+on every player it suits, on the screen as well as a phone, with no file to
+hand around. The catalogue is
+[gcarstoiu/gexis-plugins](https://github.com/gcarstoiu/gexis-plugins); its
+README is the full guide. In short:
+
+- **Publish** the plugin's source in a public GitHub repository, and each
+  version's `.tar.gz` on a release of it. Build the archive the same way
+  every time (the samples' `package.sh` does), so its SHA-256 can be checked
+  against the tag.
+- **Open a pull request** on the catalogue adding `plugins/<id>.json`: what
+  the plugin is, and per version its URL, SHA-256, size, the contract it
+  speaks, the lowest player release it needs and the `permissions` its
+  manifest asks for. One plugin per pull request; say what each permission
+  is used for.
+- **Its check** downloads the archive, compares its size and SHA-256, and
+  runs the player's own upload check on it (section 7). **A person then
+  reads** the source at that tag before it is merged and published.
+- **A new version** is a new pull request, added after the listed ones;
+  a listed version never changes. Players offer it as *Update to …* on the
+  plugin's row; nothing updates by itself.
+
+A player installs a listed plugin as an upload: the same checks, the same
+folder and sandbox, and it arrives switched off; its row says *From the
+plugin catalogue*. A plugin can be **withdrawn** (no longer offered; players
+that have it keep it) or, if it is found to do harm, **blocked** (switched
+off on every player that has it). Either way the reason is shown.
+
+## 9. When something does not work
 
 On the device (`ssh pi@<name>.local`):
 
@@ -341,5 +397,7 @@ sudo ls -la /var/lib/gexis/plugins/hello/         # versions and `current`
 - **No sound from a renderer**: you opened a card by number or `default`
   instead of `output`, or you did not send `acquire` first.
 
-`tools/sample-plugin/hello.py` prints what the sandbox allows and refuses when
-it starts, which is a quick way to see the environment for yourself.
+The sample service,
+[`hello/hello.py`](https://github.com/gcarstoiu/gexis-sample-plugins/blob/main/hello/hello.py),
+prints what the sandbox allows and refuses when it starts, which is a quick
+way to see the environment for yourself.

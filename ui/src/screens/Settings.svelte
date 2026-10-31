@@ -611,11 +611,12 @@
   //: 2026-09-30: "no feedback given on the upload itself"). `sending` has a
   //: share of the bytes; `checking` and `restarting` have none to give.
   let task = $state(null);
-  function send(file) {
+  function send(file, grant = []) {
     // XMLHttpRequest, not fetch: only it reports an upload's progress.
     return new Promise((resolve) => {
       const xhr = new XMLHttpRequest();
-      xhr.open('POST', '/plugins/upload');
+      // ADR-0170: what its person agreed to, once the player listed it.
+      xhr.open('POST', `/plugins/upload${grant.length ? `?grant=${encodeURIComponent(grant.join(','))}` : ''}`);
       xhr.setRequestHeader('Content-Type', 'application/gzip');
       // George, 2026-10-12 (answer 10): an upload that stalls ends. Not a
       // limit on the whole request - a large file over a slow link may take
@@ -674,44 +675,66 @@
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
-    ask = {
-      title: `Install ${file.name}?`,
-      text: UPLOAD_NOTICE,
-      confirm: 'Install',
-      run: async () => {
-        task = { title: file.name, phase: 'sending', share: 0 };
-        const res = await send(file);
-        if (!res.ok) {
-          task = { ...task, phase: 'failed', text: res.body.error ?? `The player answered HTTP ${res.status}.` };
-          return;
-        }
-        task.title = `${res.body.installed} ${res.body.version}`;
-        const b = res.body;
-        await restarted(
-          !b.previous
-            ? 'Installed, and switched off. Its switch is on this page.'
-            : b.enabled
-              ? `Updated from ${b.previous}, and restarted with the new version.`
-              : `Updated from ${b.previous}. It stays switched off.`
-        );
+    const upload = async (grant = []) => {
+      task = { title: file.name, phase: 'sending', share: 0 };
+      const res = await send(file, grant);
+      if (res.status === 409 && res.body.asks) {
+        // ADR-0170: it asks for more than the sandbox gives - listed first,
+        // then sent again with what was agreed.
+        task = null;
+        ask = {
+          title: `${res.body.name ?? file.name} asks for more`,
+          text: 'Beyond what every plugin may do, it asks to:',
+          asks: res.body.asks,
+          confirm: 'Install',
+          run: () => upload(res.body.asks.map((x) => x.name)),
+        };
+        return;
       }
+      if (!res.ok) {
+        task = { ...task, phase: 'failed', text: res.body.error ?? `The player answered HTTP ${res.status}.` };
+        return;
+      }
+      task.title = `${res.body.installed} ${res.body.version}`;
+      const b = res.body;
+      await restarted(
+        !b.previous
+          ? 'Installed, and switched off. Its switch is on the Plugins page.'
+          : b.enabled
+            ? `Updated from ${b.previous}, and restarted with the new version.`
+            : `Updated from ${b.previous}. It stays switched off.`
+      );
     };
+    ask = { title: `Install ${file.name}?`, text: UPLOAD_NOTICE, confirm: 'Install', run: () => upload() };
   }
-  function uninstallPlugin(row) {
-    const id = row.key.replace(/\.(enabled|missing)$/, '');
+  //: **ADR-0169: one Remove for every plugin.** Off, what it downloaded or
+  //: its package deleted, back to Add plugins; its settings and sign-in kept
+  //: unless the dialog's switch is turned off (George, 2026-10-30).
+  let keepData = $state(true);
+  function removePlugin(row) {
+    const id = rowPluginId(row);
+    const source = row.key.endsWith('.missing') ? 'file' : sourceOf(row);
+    keepData = true;
     ask = {
       title: `Remove ${row.label}?`,
-      text: 'Its package, its data and its settings are deleted. Upload it again to reinstall it.',
+      text: source === 'ours'
+        ? (row.component ? 'It goes back to Add plugins, and the software it downloaded is deleted.' : 'It goes back to Add plugins.')
+        : source === 'catalogue'
+          ? 'It goes back to Add plugins, and its package is deleted.'
+          : 'Its package is deleted. Upload it again to have it back.',
+      keep: true,
       confirm: 'Remove',
       danger: true,
       run: async () => {
         task = { title: row.label, phase: 'checking' };
         // A request that never arrives fails the card, as an upload's does:
         // a rejection left it on *Checking* with no OK (code review,
-        // 2026-10-12).
-        // A removal takes the package off, as an upload puts one on: long.
-        const got = await askPlayer(`/plugins/${encodeURIComponent(id)}/uninstall`, { method: 'POST' },
-                              LONG_REQUEST_TIMEOUT_MS).catch(() => null);
+        // 2026-10-12). A removal takes a package off: long.
+        const got = await askPlayer(`/plugins/${encodeURIComponent(id)}/remove`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ keep: keepData }),
+        }, LONG_REQUEST_TIMEOUT_MS).catch(() => null);
         if (!got) {
           task = { ...task, phase: 'failed', text: UNREACHED };
           return;
@@ -721,7 +744,14 @@
           task = { ...task, phase: 'failed', text: body.error ?? `The player answered HTTP ${res.status}.` };
           return;
         }
-        await restarted('Removed.');
+        // Ours goes without a restart; a package taken off restarts the core.
+        if (source === 'ours') {
+          task = { ...task, phase: 'done', text: 'Removed. It is in Add plugins.' };
+          await loadSettings();
+          await readStore();
+        } else {
+          await restarted('Removed.');
+        }
       }
     };
   }
@@ -729,6 +759,216 @@
     const pending = ask;
     ask = null;
     if (yes && pending) await pending.run();
+  }
+
+  //: **ADR-0168: the catalogue in Add plugins** - other authors' plugins from the plugin
+  //: catalogue. On every screen, the panel's and the bars' too: installing
+  //: from it needs no file. `catalogue` is what `/plugins/catalogue` last
+  //: said; null before it answers and on a core without it.
+  const CATALOGUE_NOTICE =
+    'This plugin is not part of Gexis Player. It was checked before it was listed, and is installed and run at your own risk and responsibility.';
+  let catalogue = $state(null);
+  let catalogueOpen = $state(false);
+  let catalogueReading = $state(false);
+  //: Installs started here, by id, until they end: `{ version, previous, since }`.
+  let catalogueStarted = $state({});
+  //: What each ended with, said on its row until the page closes:
+  //: `{ done: true, version, previous }` or `{ error }`.
+  let catalogueSaid = $state({});
+  let catalogueAsking = null;
+  const listedOf = (id) => catalogue?.plugins?.find((p) => p.id === id) ?? null;
+  const jobOf = (id) => catalogue?.jobs?.[id] ?? null;
+  const pluginIdOf = (row) => row.key.replace(/\.(enabled|missing)$/, '');
+
+  //: **ADR-0169: one store for every plugin.** `store` is what
+  //: `/plugins/store` last said: ours, each with whether it is added.
+  let store = $state(null);
+  let storeArea = $state('all');
+  async function readStore() {
+    const got = await askPlayer('/plugins/store', { cache: 'no-store' }).catch(() => null);
+    if (got?.response.ok) store = got.body;
+  }
+  const SKINS_ID = 'visualiser-skins';
+  //: A plugin row's id: its switch's, the skins' own.
+  const rowPluginId = (r) => (r.key === 'visualiser_skins' ? SKINS_ID : pluginIdOf(r));
+  //: Where it came from, said by its tag instead of a note.
+  const sourceOf = (r) => (r.uploaded ? (r.catalogue ? 'catalogue' : 'file') : 'ours');
+  const SOURCE_TAG = { ours: 'Gexis Player', catalogue: 'Catalogue', file: 'Uploaded' };
+  const isPluginRow = (r) => current?.id === 'plugins' && r.type === 'toggle';
+  //: What Add plugins offers: ours not added, and the catalogue's not
+  //: installed - or on their way, or just arrived, said in their tile.
+  const storeTiles = $derived([
+    ...(store?.ours ?? []).filter((t) => !t.added).map((t) => ({ ...t, ours: true })),
+    ...(catalogue?.available ? catalogue.plugins : [])
+      .filter((p) => p.state === 'available' || jobOf(p.id) || catalogueSaid[p.id]),
+  ].sort((a, b) => a.name.localeCompare(b.name)));
+  const AREA_WORDS = {
+    sources: 'Sources', library: 'Library', display: 'Display', audio: 'Audio', handoff: 'Handoff',
+    enrichment: 'Enrichment', device: 'Device', system: 'System',
+  };
+  const storeAreas = $derived(Object.keys(AREA_WORDS).filter((a) => storeTiles.some((t) => t.area === a)));
+  const storeShown = $derived(storeArea === 'all' ? storeTiles : storeTiles.filter((t) => t.area === storeArea));
+  //: One of ours added: its notice first when it has one (a download from
+  //: its maker), then on, with its download on its row.
+  function addOurs(t) {
+    const go = async () => {
+      const got = await askPlayer(`/plugins/${encodeURIComponent(t.id)}/add`, { method: 'POST' }).catch(() => null);
+      if (!got || !got.response.ok) {
+        task = { title: t.name, phase: 'failed', text: got ? (got.body.error ?? `The player answered HTTP ${got.response.status}.`) : UNREACHED };
+        return;
+      }
+      await loadSettings();
+      await readStore();
+    };
+    if (t.notice) ask = { title: `Add ${t.name}?`, text: t.notice, confirm: 'Add', run: go };
+    else go();
+  }
+  //: Something from the catalogue is on its way to this row's plugin: no
+  //: Remove until it is over.
+  const arriving = (row) => { const job = jobOf(pluginIdOf(row)); return !!job && job.phase !== 'failed'; };
+  const catalogueUpdates = $derived((catalogue?.plugins ?? []).filter((p) => p.state === 'update').length);
+  //: A job the core is still on - or, once installed, the restart that
+  //: follows (ADR-0106), until the core is back without it.
+  const catalogueMoving = $derived(
+    Object.values(catalogue?.jobs ?? {}).some((j) => j.phase !== 'failed') || Object.keys(catalogueStarted).length > 0
+  );
+
+  async function readCatalogue(refresh = false) {
+    if (catalogueAsking && !refresh) return catalogueAsking;
+    const asking = (async () => {
+      const asked = Date.now();
+      const got = await askPlayer(`/plugins/catalogue${refresh ? '?refresh=1' : ''}`, { cache: 'no-store' },
+                                  refresh ? LONG_REQUEST_TIMEOUT_MS : undefined).catch(() => null);
+      // Not reached - a restart, a dropped link: the last answer stands.
+      if (!got) return;
+      // A core without the catalogue (404, 503) has nothing to offer.
+      catalogue = got.response.ok ? got.body : null;
+      if (got.response.ok) settle(got.body, asked);
+    })();
+    catalogueAsking = asking;
+    try {
+      await asking;
+    } finally {
+      if (catalogueAsking === asking) catalogueAsking = null;
+    }
+  }
+  //: An install started here ends in a line on its row: failed with the
+  //: core's reason, or - once the core answers without the job, which only
+  //: a restart takes away - done, or lost if its version is not there. A
+  //: read asked before the install started says nothing about it.
+  function settle(view, asked) {
+    for (const [id, s] of Object.entries(catalogueStarted)) {
+      if (asked < s.since) continue;
+      const job = view.jobs?.[id];
+      const listed = view.plugins?.find((p) => p.id === id);
+      if (job?.phase === 'failed') {
+        delete catalogueStarted[id];
+      } else if (!job) {
+        catalogueSaid[id] = listed?.installed === s.version
+          ? { done: true, version: s.version, previous: s.previous }
+          : { error: `${s.version} was not installed. Try again.` };
+        delete catalogueStarted[id];
+      }
+    }
+  }
+  $effect(() => {
+    // Read with the settings: a restart, or a plugin put on or taken off.
+    groups;
+    untrack(() => {
+      readCatalogue();
+      readStore();
+    });
+  });
+  $effect(() => {
+    if (!catalogueMoving) return;
+    const timer = setInterval(() => readCatalogue(), 1000);
+    return () => clearInterval(timer);
+  });
+  // What an install ended with belongs to the visit that saw it: another
+  // group opened, and it goes (found on sofapi, 2026-10-30: a panel left on
+  // Plugins still said "just now" hours later).
+  $effect(() => {
+    cat;
+    drilled;
+    untrack(() => (catalogueSaid = {}));
+  });
+  //: The line on a plugin's own row: a first install's "switched off" no
+  //: longer holds once its switch is on.
+  function saidOnRow(r, id) {
+    const said = catalogueSaid[id];
+    return said && !(said.done && !said.previous && toggleOn(r)) ? said : null;
+  }
+  async function openCatalogue() {
+    catalogueOpen = true;
+    catalogueSaid = {};
+    storeArea = 'all';
+    catalogueReading = true;
+    readStore();
+    await readCatalogue(true);
+    catalogueReading = false;
+  }
+  function installListed(p, { asked = false } = {}) {
+    const go = async () => {
+      delete catalogueSaid[p.id];
+      const got = await askPlayer('/plugins/catalogue/install', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        // ADR-0170: what the notice listed, agreed to.
+        body: JSON.stringify({ id: p.id, grant: (p.permissions ?? []).map((x) => x.name) }),
+      }).catch(() => null);
+      if (!got || !got.response.ok) {
+        catalogueSaid[p.id] = { error: got ? (got.body.error ?? `The player answered HTTP ${got.response.status}.`) : UNREACHED };
+        return;
+      }
+      catalogueStarted[p.id] = { version: got.body.version, previous: p.installed, since: Date.now() };
+      catalogue = { ...catalogue, jobs: { ...(catalogue?.jobs ?? {}), [p.id]: got.body } };
+    };
+    // The notice comes once, before the first install (George, 2026-10-29);
+    // an update and a Retry go straight on - unless the version asks for
+    // more than was agreed (ADR-0170): then the notice lists what is new.
+    const fresh = (p.permissions ?? []).filter((x) => (p.asks ?? []).includes(x.name));
+    if ((asked || p.installed) && !fresh.length) return go();
+    ask = p.installed
+      ? { title: `Update ${p.name}?`, text: 'This version asks for more than the one installed:', asks: fresh, confirm: 'Update', run: go }
+      : { title: `Add ${p.name}?`, text: CATALOGUE_NOTICE, asks: p.permissions ?? [], confirm: 'Add', run: go };
+  }
+  //: The line under a listed plugin, or on its own row in Plugins: its
+  //: download while one runs, else where it stands on this player.
+  function listedLine(p, job, said) {
+    if (job?.phase === 'downloading') {
+      const share = job.total ? job.done / job.total : null;
+      return `Downloading ${job.version}` + (share != null ? ` · ${Math.round(share * 100)}%` : '…');
+    }
+    if (job?.phase === 'installing' || job?.phase === 'installed') return `Installing ${job.version}. The player restarts to finish.`;
+    if (job?.phase === 'failed') return `${job.version} was not installed: ${job.error}.`;
+    if (said?.error) return said.error;
+    if (said?.done) {
+      return said.previous
+        ? `Updated just now from ${said.previous} · ${said.version}`
+        : `Installed just now · ${said.version}. It is switched off: its switch is on the Plugins page.`;
+    }
+    if (!p) return '';
+    switch (p.state) {
+      case 'available': return `Not installed · ${p.version} · ${sizeSaid(p.size)}`;
+      case 'installed': return `Installed · ${p.installed}`;
+      case 'update': return `Installed · ${p.installed}${p.reason ? ` · withdrawn: ${p.reason}` : ''} · ${p.version} is listed`;
+      case 'withdrawn': return `Installed · ${p.installed} · Withdrawn: ${p.reason}`;
+      case 'blocked': return `Blocked, and switched off: ${p.reason}`;
+      case 'uploaded': return `Uploaded here · ${p.installed}. The catalogue does not replace an upload; remove it to install this one.`;
+      default: return '';
+    }
+  }
+  function listedDetail(job) {
+    if (job?.phase !== 'downloading' || job.done == null) return '';
+    return job.total ? `${MB(job.done)} of ${MB(job.total)} MB` : `${MB(job.done)} MB`;
+  }
+  const listedFailed = (p, job, said) => job?.phase === 'failed' || !!said?.error || p?.state === 'blocked';
+  const KIND_WORDS = { renderer: 'Source', service: 'Service' };
+  const listedFacts = (p) => [KIND_WORDS[p.kind] ?? p.kind, p.author && `by ${p.author}`, p.licence].filter(Boolean);
+  const MONTH_WORDS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  function daySaid(when) {
+    const d = typeof when === 'number' ? new Date(when * 1000) : new Date(String(when ?? ''));
+    return Number.isNaN(d.getTime()) ? '' : `${d.getDate()} ${MONTH_WORDS[d.getMonth()]} ${d.getFullYear()}`;
   }
 
   //: **An explanation is said once** (George, 2026-10-03: "if a setting opens
@@ -982,6 +1222,9 @@
     // button, and that Remove did nothing (George, 2026-10-03). The row
     // itself still opens nothing.
     if (row.type === 'readonly') return;
+    // ADR-0168: a blocked plugin's row holds its Remove, so it is not
+    // disabled; its switch still does nothing.
+    if (toggleBlocked(row)) return;
     if (row.type === 'document') openDocument(row);
     // ADR-0098: a switch with a warning asks before it turns ON - the
     // notice before a plugin's software is downloaded. Off
@@ -1929,25 +2172,21 @@
           </div>
         {:else}
           <div class="list" class:list--wide={wide} data-noscrollbar>
-            {#if current?.id === 'plugins' && !embedded}
-              <!-- ADR-0106: a phone or computer only; the panel has no file
-                   picker and does not offer it. **First and on its own**, in
-                   no group (George, 2026-09-30), and a file icon rather than
-                   a chevron: it opens the device's files, not a page. -->
-              <button class="row row--upload" type="button" onclick={pickPlugin}>
+            {#if current?.id === 'plugins'}
+              <!-- ADR-0169: one store for every plugin - ours not added beside
+                   the catalogue's, and a file on a phone or computer. First,
+                   on every screen, with the updates waiting. -->
+              <button class="row row--store" class:row--apart={embedded} type="button" onclick={openCatalogue}>
                 <span class="row__body">
+                  <span class="store__plus" aria-hidden="true"></span>
                   <span class="row__text">
-                    <span class="row__label"><span class="row__name">Upload a plugin</span></span>
-                    <span class="row__note">Opens your files to choose a package (.tar.gz). Not part of Gexis Player.</span>
+                    <span class="row__label"><span class="row__name">Add plugins</span></span>
+                    <span class="row__note">By Gexis Player and by other authors.</span>
                   </span>
-                  <svg class="upload__icon" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
-                    <path d="M14 3v5h5" />
-                    <path d="M12 17v-6m-3 3 3-3 3 3" />
-                  </svg>
+                  {#if catalogueUpdates}<span class="row__value row__value--go">{catalogueUpdates === 1 ? '1 update' : `${catalogueUpdates} updates`}</span>{/if}
+                  <span class="chev"></span>
                 </span>
               </button>
-              <input class="upload__input" type="file" accept=".tar.gz,.tgz,application/gzip" bind:this={pluginFile} onchange={onPluginPicked} />
             {/if}
             {#if current?.id === 'system' && hwPrompt}
               <div class="hwprompt">
@@ -2143,7 +2382,7 @@
                   class:row--readonly={(r.type === 'readonly' && r.kind !== 'equaliser') || toggleBlocked(r)}
                   class:row--dl={!!r.component}
                   type="button"
-                  disabled={(r.type === 'readonly' && !r.uploaded && r.kind !== 'equaliser') || toggleBlocked(r)}
+                  disabled={(r.type === 'readonly' && !r.uploaded && r.kind !== 'equaliser') || (toggleBlocked(r) && !r.uploaded)}
                   data-unwired={r.wired ? undefined : 'settings'}
                   onclick={() => tap(r)}
                 >
@@ -2151,6 +2390,8 @@
                     <span class="row__text">
                       <span class="row__label">
                         <span class="row__name">{r.kind === 'share' ? 'Add share' : r.label}</span>
+                        <!-- ADR-0169: where a plugin came from, in place of a note. -->
+                        {#if isPluginRow(r)}<span class="row__tag row__tag--{sourceOf(r)}">{SOURCE_TAG[sourceOf(r)]}</span>{/if}
                         <!-- ADR-0167: a few words a plugin puts beside its name
                              (AirPlay's Limited testing), in the Tested tag's look. -->
                         {#if r.tag}<span class="row__tag">{r.tag}</span>{/if}
@@ -2171,16 +2412,42 @@
                              again - the row is the button; this says so. -->
                         <span class="row__again">{r.again}</span>
                       {/if}
-                      {#if r.uploaded && (r.key.endsWith('.missing') || !r.value) && !embedded}
-                        <!-- ADR-0106: an uploaded plugin is removed from here,
-                             switched off first. -->
+                      {#if (isPluginRow(r) && !toggleOn(r) || r.uploaded && r.key.endsWith('.missing'))
+                           && (!embedded || sourceOf(r) !== 'file') && !arriving(r)}
+                        <!-- ADR-0169: every plugin is removed from its row once
+                             switched off, back to Add plugins. An upload's only
+                             on a phone or computer, where it can be uploaded
+                             again (ADR-0106). -->
                         <span
                           class="dl__retry"
                           role="button"
                           tabindex="0"
-                          onclick={(e) => { e.stopPropagation(); uninstallPlugin(r); }}
-                          onkeydown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); uninstallPlugin(r); } }}
+                          onclick={(e) => { e.stopPropagation(); removePlugin(r); }}
+                          onkeydown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); removePlugin(r); } }}
                         >Remove</span>
+                      {/if}
+                      {#if r.uploaded}
+                        <!-- ADR-0168: its download from the catalogue while one
+                             runs - an update, or a restore's - and Update when a
+                             newer version is listed (decision 4). -->
+                        {@const id = pluginIdOf(r)}
+                        {@const job = jobOf(id)}
+                        {@const listed = r.catalogue ? listedOf(id) : null}
+                        {@const said = saidOnRow(r, id)}
+                        {#if job || said}
+                          <span class="row__note dl__line" class:dl--failed={listedFailed(null, job, said)}>
+                            {listedLine(null, job, said)}{#if listedDetail(job)}<span class="dl__sub"> · {listedDetail(job)}</span>{/if}
+                          </span>
+                        {/if}
+                        {#if listed?.state === 'update' && (!job || job.phase === 'failed')}
+                          <span
+                            class="dl__retry dl__go"
+                            role="button"
+                            tabindex="0"
+                            onclick={(e) => { e.stopPropagation(); installListed(listed, { asked: !!job }); }}
+                            onkeydown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); installListed(listed, { asked: !!job }); } }}
+                          >{job ? 'Retry' : `Update to ${listed.version}`}</span>
+                        {/if}
                       {/if}
                       {#if r.component}
                         <!-- ADR-0100 as amended: the plugin's download, inside
@@ -2190,17 +2457,6 @@
                         <span class="row__note dl__line" class:dl--failed={c.state === 'failed'}>
                           {downloadLine(c)}{#if downloadDetail(c)}<span class="dl__sub"> · {downloadDetail(c)}</span>{/if}
                         </span>
-                        {#if c.state === 'installed' && !r.value && rowOf(r.key.replace(/\.enabled$/, '.remove'))}
-                          <!-- ADR-0100, amended 2026-09-28: off stops it; Remove
-                               deletes the download, after asking. -->
-                          <span
-                            class="dl__retry"
-                            role="button"
-                            tabindex="0"
-                            onclick={(e) => { e.stopPropagation(); openSheet(rowOf(r.key.replace(/\.enabled$/, '.remove'))); }}
-                            onkeydown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); openSheet(rowOf(r.key.replace(/\.enabled$/, '.remove'))); } }}
-                          >Remove</span>
-                        {/if}
                         {#if c.state === 'failed'}
                           <span
                             class="dl__retry"
@@ -2250,6 +2506,12 @@
                       {@const c = $components[r.component]}
                       <span class="dl__bar" class:dl__bar--busy={!downloadShare(c)}>
                         <span style:width={`${Math.round((downloadShare(c) ?? 0) * 100)}%`}></span>
+                      </span>
+                    {/if}
+                    {#if r.uploaded && arriving(r)}
+                      {@const job = jobOf(pluginIdOf(r))}
+                      <span class="dl__bar" class:dl__bar--busy={job.phase !== 'downloading' || !job.total}>
+                        <span style:width={`${Math.round((job.total ? job.done / job.total : 0) * 100)}%`}></span>
                       </span>
                     {/if}
                     {#if r.links?.length && !onPanel()}
@@ -2344,6 +2606,147 @@
         </div>
       </div>
     </div>
+  {/if}
+
+  {#if catalogueOpen}
+    <!-- ADR-0169: Add plugins - one store for every plugin: ours not added
+         beside the catalogue's, each a tile with one button, and a file on a
+         phone or computer. Grouped by the Settings page each belongs on. -->
+    <div class="picker" data-dpad-layer>
+      {#if !flat}
+        <div class="weave"></div>
+        <div class="veil"></div>
+      {/if}
+      <div class="picker__head" class:head--wide={wide}>
+        <button
+          class="back"
+          class:is-pressed={press.is('catalogue-back')}
+          type="button"
+          aria-label="Back"
+          data-dpad-back
+          onpointerdown={() => press.down('catalogue-back')}
+          onpointerup={press.up}
+          onpointercancel={press.up}
+          onclick={() => press.act(() => (catalogueOpen = false))}
+        ><span></span></button>
+        <div class="head__text">
+          <div class="title" class:title--wide={wide}>Add plugins</div>
+          <div class="subtitle">By Gexis Player and others</div>
+        </div>
+      </div>
+      <div class="picker__body">
+        <div class="list" class:list--wide={wide} data-noscrollbar data-dpad-start>
+          {#if storeAreas.length > 1}
+            <div class="store__chips" role="group" aria-label="Show">
+              <button type="button" class="store__chip" class:is-on={storeArea === 'all'} onclick={() => (storeArea = 'all')}>All</button>
+              {#each storeAreas as a (a)}
+                <button type="button" class="store__chip" class:is-on={storeArea === a} onclick={() => (storeArea = a)}>{AREA_WORDS[a]}</button>
+              {/each}
+            </div>
+          {/if}
+          {#if catalogue?.available && catalogue.error && !catalogueReading}
+            <p class="listed__note">The catalogue could not be read again just now. This is the one read on {daySaid(catalogue.checked)}.</p>
+          {/if}
+          {#if catalogue?.keyed && !catalogue?.available && !catalogueReading}
+            <div class="row row--tile">
+              <span class="row__body">
+                <span class="row__text">
+                  <span class="row__label"><span class="row__name">The catalogue could not be read</span></span>
+                  <span class="row__note">Other authors' plugins need the internet. Check that the player is connected, then try again.</span>
+                </span>
+                <button type="button" class="tile__btn" onclick={openCatalogue}>Try again</button>
+              </span>
+            </div>
+          {/if}
+          {#if !storeTiles.length && !catalogueReading}
+            <p class="listed__note">Everything there is to add is on the Plugins page already.</p>
+          {/if}
+          <!-- Two columns on the panel, three on a bar (the mock-ups). -->
+          <div class="store__tiles" class:store__tiles--wide={wide && screen.family !== 'bar'} class:store__tiles--bar={wide && screen.family === 'bar'}>
+          {#each storeShown as p (p.ours ? `ours-${p.id}` : p.id)}
+            {@const job = p.ours ? null : jobOf(p.id)}
+            {@const said = p.ours ? null : catalogueSaid[p.id]}
+            {@const moving = job && job.phase !== 'failed'}
+            {@const offered = p.ours || (!moving && !said?.done && p.state === 'available')}
+            <div class="row row--tile listed">
+              <span class="row__body">
+                <span class="row__text">
+                  <span class="row__label">
+                    <span class="row__name">{p.name}</span>
+                    <span class="row__tag row__tag--{p.ours ? 'ours' : 'catalogue'}">{p.ours ? 'Gexis Player' : 'Catalogue'}</span>
+                    {#if p.tag}<span class="row__tag">{p.tag}</span>{/if}
+                  </span>
+                  {#if p.summary}<span class="row__note">{p.summary}</span>{/if}
+                  <!-- Each fact whole, as the title's (a licence broke at its hyphen). -->
+                  <span class="row__note row__version listed__facts">
+                    {#if p.ours}
+                      <span class="listed__fact">{KIND_WORDS[p.kind] ?? p.kind}</span><span class="listed__fact">· in the player, updated with it</span>
+                    {:else}
+                      {#each listedFacts(p) as fact, i (i)}<span class="listed__fact">{i ? `· ${fact}` : fact}</span>{/each}
+                    {/if}
+                  </span>
+                  {#if p.permissions?.length}
+                    <!-- ADR-0170: what it asks for beyond the sandbox. -->
+                    <span class="row__note listed__asks">Asks to: {p.permissions.map((x) => x.words).join('; ')}</span>
+                  {/if}
+                  {#if p.source && onPanel()}
+                    <!-- Shown, not followed: the panel has nowhere to go. -->
+                    <span class="row__note row__version listed__source">{p.source.replace(/^https:\/\//, '')}</span>
+                  {/if}
+                  {#if !p.ours && (job || said)}
+                    <span class="row__note dl__line" class:dl--failed={listedFailed(p, job, said)}>
+                      {listedLine(p, job, said)}{#if listedDetail(job)}<span class="dl__sub"> · {listedDetail(job)}</span>{/if}
+                    </span>
+                  {:else if !p.ours}
+                    <span class="row__note row__version">{p.version} · {sizeSaid(p.size)}</span>
+                  {/if}
+                </span>
+                {#if offered || job?.phase === 'failed' || (p.source && !onPanel())}
+                  <span class="listed__actions">
+                    {#if job?.phase === 'failed'}
+                      <button type="button" class="tile__btn tile__btn--go" onclick={() => installListed(p, { asked: true })}>Retry</button>
+                    {:else if offered}
+                      <button type="button" class="tile__btn tile__btn--go" onclick={() => (p.ours ? addOurs(p) : installListed(p))}>Add</button>
+                    {/if}
+                    {#if p.source && !onPanel()}
+                      <a class="tile__btn listed__link" href={p.source} target="_blank" rel="noopener">Source code ↗</a>
+                    {/if}
+                  </span>
+                {/if}
+              </span>
+              {#if moving}
+                <span class="dl__bar" class:dl__bar--busy={job.phase !== 'downloading' || !job.total}>
+                  <span style:width={`${Math.round((job.total ? job.done / job.total : 0) * 100)}%`}></span>
+                </span>
+              {/if}
+            </div>
+          {/each}
+          </div>
+          {#if !embedded && storeArea === 'all'}
+            <!-- ADR-0106: a phone or computer only; the panel has no file
+                 picker. A file icon rather than a button: it opens the
+                 device's files, not a page. -->
+            <div class="subhead"><span class="subhead__label">From a file</span><span class="subhead__rule"></span></div>
+            <button class="row row--upload" type="button" onclick={pickPlugin}>
+              <span class="row__body">
+                <span class="row__text">
+                  <span class="row__label"><span class="row__name">Upload a plugin</span></span>
+                  <span class="row__note">A package (.tar.gz) from this phone or computer, for a plugin you write or were given. Not part of Gexis Player.</span>
+                </span>
+                <svg class="upload__icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+                  <path d="M14 3v5h5" />
+                  <path d="M12 17v-6m-3 3 3-3 3 3" />
+                </svg>
+              </span>
+            </button>
+          {/if}
+        </div>
+      </div>
+    </div>
+  {/if}
+  {#if !embedded}
+    <input class="upload__input" type="file" accept=".tar.gz,.tgz,application/gzip" bind:this={pluginFile} onchange={onPluginPicked} />
   {/if}
 
   {#if eqPage}
@@ -3121,6 +3524,23 @@
           <span class="warn__mark">!</span>
           <span class="warn__text">{ask.text}</span>
         </div>
+        {#if ask.asks?.length}
+          <!-- ADR-0170: what it asks for beyond the sandbox, each in words. -->
+          {#if ask.text === CATALOGUE_NOTICE}<div class="ask__label">It asks to</div>{/if}
+          <ul class="ask__asks">
+            {#each ask.asks as x (x.name)}<li>{x.words}</li>{/each}
+          </ul>
+        {/if}
+        {#if ask.keep}
+          <!-- ADR-0169: Remove keeps what is the person's unless told not to. -->
+          <button type="button" class="ask__keep" role="switch" aria-checked={keepData} onclick={() => (keepData = !keepData)}>
+            <span class="ask__keep-text">
+              <span class="ask__keep-name">Keep its settings and sign-in</span>
+              <span class="ask__keep-note">Add it again and it starts where it left off.</span>
+            </span>
+            <span class="toggle" class:is-on={keepData}><span></span></span>
+          </button>
+        {/if}
         <div class="ask__buttons">
           <button type="button" class="btn" data-dpad-back onclick={() => answerAsk(false)}>Cancel</button>
           <button type="button" class="btn btn--confirm" class:btn--danger={ask.danger} onclick={() => answerAsk(true)}>{ask.confirm}</button>
@@ -3588,8 +4008,9 @@
   }
   .row__label {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 9px;
+    gap: 6px 9px;
   }
   .row__name {
     font-size: 18px;
@@ -3606,6 +4027,88 @@
     border-radius: 6px;
     border: 1px solid rgba(233, 238, 242, 0.14);
     white-space: nowrap;
+  }
+  /* ADR-0169: where a plugin came from, each its own colour (the mock-ups'). */
+  .row__tag--ours {
+    color: var(--accent-lms);
+    border-color: rgba(126, 214, 188, 0.4);
+  }
+  .row__tag--catalogue {
+    color: var(--accent-bluetooth);
+    border-color: rgba(159, 180, 232, 0.4);
+  }
+  .row__tag--file {
+    color: var(--accent-warn);
+    border-color: rgba(224, 167, 88, 0.45);
+  }
+  .row__value--go {
+    color: var(--accent-lms);
+    font-weight: 700;
+  }
+  /* Add plugins: the Plugins page's first row, with a plus. */
+  .row--store {
+    background: rgba(126, 214, 188, 0.08);
+    border-color: rgba(126, 214, 188, 0.35);
+  }
+  .store__plus {
+    position: relative;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: rgba(126, 214, 188, 0.2);
+  }
+  .store__plus::before,
+  .store__plus::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 14px;
+    height: 2.5px;
+    border-radius: 2px;
+    background: var(--accent-lms);
+    transform: translate(-50%, -50%);
+  }
+  .store__plus::after {
+    transform: translate(-50%, -50%) rotate(90deg);
+  }
+  .store__tiles {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .store__tiles--wide,
+  .store__tiles--bar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    align-items: start;
+  }
+  .store__tiles--bar {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .store__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 6px;
+  }
+  .store__chip {
+    min-height: 44px;
+    padding: 0 16px;
+    border-radius: var(--r-pill);
+    border: 1px solid rgba(233, 238, 242, 0.16);
+    background: none;
+    color: rgba(233, 238, 242, 0.78);
+    font: inherit;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .store__chip.is-on {
+    background: rgba(126, 214, 188, 0.16);
+    border-color: rgba(126, 214, 188, 0.45);
+    color: var(--accent-lms);
   }
   .row--danger .row__name {
     color: var(--accent-warn);
@@ -5142,6 +5645,60 @@
   .upload__input {
     display: none;
   }
+  /* ADR-0168: the store's tiles, apart from the groups where Upload a plugin
+     does not follow it (the panel, the bars). */
+  .row--apart {
+    margin-bottom: 18px;
+  }
+  /* Update, in the row's Retry shape but the colour of going ahead. */
+  .dl__go {
+    border-color: var(--accent-lms);
+    color: var(--accent-lms);
+  }
+  .listed__note {
+    margin: 0 4px 6px;
+    font-size: 14px;
+    line-height: 1.4;
+    color: rgba(233, 238, 242, 0.55);
+    text-wrap: pretty;
+  }
+  .listed__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  /* Wide - the panel, the bars - its button at the right, as a row's
+     switch is: a bar is 400 px tall. */
+  .list--wide .listed .row__body {
+    flex-direction: row;
+    align-items: center;
+  }
+  .list--wide .listed .listed__actions {
+    flex-shrink: 0;
+  }
+  .listed__link {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+  }
+  .listed__source {
+    word-break: break-all;
+  }
+  /* ADR-0170: what it asks for beyond the sandbox. */
+  .listed__asks {
+    color: var(--accent-warn);
+  }
+  .listed__facts {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: 0.6em;
+  }
+  .listed__fact {
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
   .row--upload {
     margin-bottom: 18px;
     border-style: dashed;
@@ -5166,6 +5723,13 @@
     justify-content: center;
     padding: 16px;
     background: var(--bg-scrim);
+  }
+  /* Inside the phone's remote (ADR-0164) Settings is one half of a track
+     slid by half its width, and a fixed dialog was centred on the track:
+     half off the screen, its title and Cancel out of reach (found
+     2026-10-29). There it covers Settings' own area instead. */
+  .settings.is-flat .ask {
+    position: absolute;
   }
   .ask__card {
     width: min(560px, 100%);
@@ -5206,6 +5770,51 @@
     display: flex;
     gap: 10px;
     justify-content: flex-end;
+  }
+  .ask__label {
+    margin-bottom: -8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+  .ask__asks {
+    margin: 0;
+    padding-left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 16px;
+    line-height: 1.4;
+  }
+  .ask__keep {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 13px;
+    border: 1px solid rgba(233, 238, 242, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+    color: inherit;
+    font: inherit;
+    text-align: left;
+  }
+  .ask__keep-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .ask__keep-name {
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .ask__keep-note {
+    font-size: 13px;
+    line-height: 1.4;
+    color: rgba(233, 238, 242, 0.6);
   }
 
   .toast {

@@ -282,6 +282,15 @@ Each carries an `id`; the plugin answers exactly once:
   is connected**, so one that is down misses nothing: it is handed every
   current value at `welcome`.
 
+### What a plugin may ask for
+
+A manifest may carry **`permissions`** (ADR-0170): devices beyond the
+sandbox, from a fixed list - `cec` (the TV's HDMI-CEC connection), `gpio`,
+`usb`. A name the player does not know refuses the package. The person
+adding the plugin is shown the list first, and the player grants exactly
+those with a drop-in for the plugin's unit; an update that asks for more
+asks again. *Writing a plugin*, section 3, has what each opens.
+
 ### A plugin's own settings
 
 A manifest may carry `settings`, and those rows are merged into the registry

@@ -19,7 +19,7 @@ from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
 from gexis_core import alsa, bluetooth_adapter_state, bluetooth_agent, device_name, journal, meters, screen_detect, skins, wifi
-from gexis_core import board_apply, placement, screen_apply, screen_watch, screens, skin_packs, skin_previews
+from gexis_core import board_apply, panel_token, placement, plugin_permissions, plugin_store, screen_apply, screen_watch, screens, skin_packs, skin_previews
 from gexis_core.adapters.base import VolumeMechanism
 from gexis_core.adapters.bluetooth import BluetoothAdapter
 from gexis_core.adapters.lms import LmsAdapter
@@ -90,10 +90,12 @@ from gexis_core.softvol_boot import (
     FIXED, HARDWARE, SOFTWARE, SOFTWARE_LEVEL_FIRST_DB, SOFTWARE_LEVEL_KEY, VOLUME_KEY,
     start_level, volume_mode,
 )
-from gexis_core.settings_registry import InvalidValue, Settings, UnknownSetting, load_registry
+from gexis_core.settings_registry import InvalidValue, Settings, UnknownSetting, catalogue_note, load_registry
+from gexis_core.settings_registry import plugin_line as settings_registry_line
 from gexis_core.splash import Splash
 from gexis_core.state import StateStore
 from gexis_core import announce, backups, bluealsa_volume, components, outputs, plugin_env, plugins, uploads
+from gexis_core import plugin_catalogue
 from gexis_core import eq_control
 from gexis_core import group as group_module
 from gexis_core import multiroom as multiroom_module
@@ -778,6 +780,17 @@ async def main() -> None:
         uploads.remember()
     except OSError as exc:
         logger.warning("uploads: cannot record the uploaded plugins: %s", exc)
+    # ADR-0170: what each plugin asked for and its person agreed to, granted
+    # before this core starts any; one systemd started at boot, before these
+    # were written, is restarted with them.
+    try:
+        regranted = plugin_permissions.apply(uploads.grants())
+    except OSError as exc:
+        regranted = []
+        logger.warning("permissions: not written: %s", exc)
+    if regranted:
+        subprocess.run(["systemctl", "daemon-reload"], check=False, capture_output=True)
+        subprocess.run(["systemctl", "try-restart", *regranted], check=False, capture_output=True)
     # ADR-0142: what was announced for plugins goes with the core that wrote
     # it; each plugin asks again when it connects.
     try:
@@ -787,6 +800,26 @@ async def main() -> None:
     restored_missing = [m for m in uploads.missing() if m["id"] not in shipped_ids]
     if restored_missing:
         logger.info("uploads: restored without a package: %s", ", ".join(m["id"] for m in restored_missing))
+    # **ADR-0168: the plugin catalogue** - other authors' plugins, installed
+    # through the upload's path. Its last good read marks what it withdrew
+    # or blocked before the rows are built; a plugin blocked now is
+    # switched off before uploaded plugins are started.
+    catalogue = plugin_catalogue.Service(
+        release=updates.installed_release,
+        installed=uploads.versions,
+        from_catalogue=lambda: {k for k, v in uploads.origins().items() if v == uploads.CATALOGUE},
+        ours=shipped_ids,
+        install_archive=lambda archive, plugin_id, restart, permissions: _install_from_catalogue(
+            archive, plugin_id, restart, permissions),
+        granted=uploads.granted,
+        switch_off=lambda plugin_id, why: _switch_off_blocked(plugin_id, why),
+        restart_core=lambda: _restart_core_soon(),
+        on_change=lambda: state_store.bump_settings_revision(),
+    )
+    installed_plugins = [
+        replace(p, pulled=plugin_catalogue.pulled_for(catalogue.catalogue, p.id, p.version)) if p.catalogue else p
+        for p in installed_plugins]
+    blocked_at_start = catalogue.blocked()
     if installed_plugins:
         logger.info(
             "plugins: %s", ", ".join(f"{p.id} ({p.kind})" for p in installed_plugins)
@@ -2204,6 +2237,10 @@ async def main() -> None:
         async with lock:
             if plugin.enabled_row is None:
                 on = settings.value(f"{plugin.id}.enabled") is not False
+            if on and plugin.id in catalogue.blocked():
+                # ADR-0168 decision 5: blocked stays off.
+                logger.warning("catalogue: %s is blocked; not switched on", plugin.id)
+                on = False
             await _apply_plugin_unit_now(plugin, on)
 
     async def _apply_plugin_unit_now(plugin, on: bool) -> None:
@@ -2620,9 +2657,32 @@ async def main() -> None:
                 personalise.put_off(settings, personalise.first())
         asyncio.ensure_future(_put_off_at_start())
 
+    # ADR-0169: one store for every plugin. Ours are added or not, a record
+    # of its own; what is not added waits in *Add plugins*.
+    optional_plugins = plugin_store.optional(installed_plugins)
+
+    def _enabled_row(plugin) -> str:
+        return plugin.enabled_row or f"{plugin.id}.enabled"
+
+    def _first_added() -> list[str]:
+        status = components.all_status()
+        return plugin_store.first(
+            [p.id for p in optional_plugins],
+            on=lambda pid: settings.value(_enabled_row(next(p for p in optional_plugins if p.id == pid))) is True,
+            downloaded=lambda pid: pid in downloads and (status.get(downloads[pid]) or {}).get("state") == "installed",
+            skins=settings.value("visualiser_skins") is True)
+
+    def _added() -> set[str]:
+        stored = plugin_store.read(settings_store.get(plugin_store.ADDED))
+        return stored if stored is not None else set(_first_added())
+
     settings = Settings(
         settings_store,
         shown={"cable": cable.shown,
+               # ADR-0169: a plugin of ours not added shows in *Add plugins*,
+               # not on the Plugins page.
+               **{_enabled_row(p): (lambda pid=p.id: pid in _added()) for p in optional_plugins},
+               "visualiser_skins": lambda: plugin_store.SKINS in _added(),
                # ADR-0141 D2: a choice only while both ports have something on them.
                "screen_port": lambda: not settings_store.get("headless")
                and len(screen_detect.ports()) >= 2,
@@ -2707,7 +2767,13 @@ async def main() -> None:
                       # ADR-0141 D2: a port with nothing on it cannot take the
                       # screen - greyed, with why, in the picker.
                       "screen_port": lambda: {_port_label(p.connector): "Nothing connected"
-                                              for p in screen_detect.ports() if not p.connected}},
+                                              for p in screen_detect.ports() if not p.connected},
+                      # ADR-0168 decision 5: a blocked plugin's switch does
+                      # not turn on, and says why.
+                      **{f"{plugin.id}.enabled":
+                         (lambda plugin_id=plugin.id: catalogue.switch_unavailable(plugin_id))
+                         for plugin in installed_plugins
+                         if plugin.catalogue and plugin.enabled_row is None}},
         options={
             "skin_corpus": skins_offered,
             # ADR-0055 §1: discovered, not written down. Re-read on every
@@ -2747,7 +2813,15 @@ async def main() -> None:
                "screen": lambda: _reports_note("screen", hardware_report.screen_reports(settings_store.get("screen"))),
                # The Lyrion server's first start says what it is doing.
                **({"lyrion-server.enabled": lambda: _lyrion_note(settings.value("lyrion-server.enabled") is True)}
-                  if any(p.id == "lyrion-server" for p in installed_plugins) else {})},
+                  if any(p.id == "lyrion-server" for p in installed_plugins) else {}),
+               # ADR-0168: withdrawn or blocked by a read during the run, said
+               # without waiting for a restart.
+               **{f"{plugin.id}.enabled":
+                  (lambda plugin_id=plugin.id, p=plugin: catalogue_note(
+                      catalogue.pulled(plugin_id),
+                      catalogue.summary(plugin_id) or settings_registry_line(p, "catalogue")))
+                  for plugin in installed_plugins
+                  if plugin.catalogue and plugin.enabled_row is None}},
         # Wired = something reads it (ADR-0035). The token is read on every
         # Popular lookup, so it takes effect as soon as it is typed.
         # Wired = something reads it, or something happens. `lms_server` is
@@ -2979,6 +3053,10 @@ async def main() -> None:
     # is refused, ends cleanly, and systemd has no failure to restart; the
     # core restarts next and knows it, but nothing started it again. So
     # whatever is switched on and not running is started here.
+    for plugin in installed_plugins:
+        if plugin.id in blocked_at_start:
+            settings_store.set(f"{plugin.id}.enabled", False)
+            await set_unit_enabled(plugin.unit, False)
     asyncio.ensure_future(asyncio.to_thread(_start_uploaded, installed_plugins))
 
     # The fourth corpus word was `Random` until 2026-09-22 and is `All`
@@ -4197,6 +4275,10 @@ async def main() -> None:
         await _restart_visualiser()
 
     asyncio.ensure_future(_visualiser_running())
+    # ADR-0168: the catalogue read a minute after the start and daily; what a
+    # restore brought back from it without its package is installed again.
+    asyncio.ensure_future(catalogue.run(
+        restore=[m for m in restored_missing if m.get("origin") == uploads.CATALOGUE]))
 
     # **ADR-0109 decision 5: Keep this screen?** A screen chosen before this
     # start waits for a touch on the panel. The countdown starts at the
@@ -4331,8 +4413,21 @@ async def main() -> None:
         await asyncio.sleep(1.5)
         await asyncio.create_subprocess_exec("systemctl", "restart", "gexis-core")
 
-    async def _upload_plugin(archive: bytes) -> dict:
+    async def _upload_plugin(archive: bytes, origin: str | None = None, restart: bool = True,
+                             grant: tuple[str, ...] = ()) -> dict:
+        # ADR-0170: what it asks for beyond the sandbox, agreed to now
+        # (`grant`) or for an earlier version; else nothing is installed and
+        # the screen asks. An update that asks for no more goes straight on.
+        checked = await asyncio.to_thread(uploads.check, archive, ours=shipped_ids, installed=uploads.versions())
+        agreed = set(grant) | set(uploads.granted().get(checked.id, ()))
+        missing = tuple(n for n in checked.permissions if n not in agreed)
+        if missing:
+            raise uploads.NeedsConsent(checked, missing)
         checked = await asyncio.to_thread(uploads.install, archive, ours=shipped_ids)
+        await asyncio.to_thread(uploads.grant, checked.id, checked.permissions)
+        # ADR-0168: where it came from, for its row and for a restore. An
+        # upload of a plugin first installed from the catalogue is an upload.
+        await asyncio.to_thread(uploads.set_origin, checked.id, origin)
         # **A new version replaces the running one** (found 2026-09-30: the
         # renderer under test had its test3 installed and test2 went on
         # running - the unit had been started from the old folder, and
@@ -4340,7 +4435,8 @@ async def main() -> None:
         # never starts a plugin.
         unit = uploads.unit_for(checked.id, checked.kind)
         await restart_if_enabled(unit)
-        asyncio.ensure_future(_restart_core_soon())
+        if restart:
+            asyncio.ensure_future(_restart_core_soon())
         # What the page tells the user: a first install arrives off; an update
         # keeps the switch as it was (George, 2026-09-30: the page said
         # "switched off" of an update that was running).
@@ -4349,7 +4445,40 @@ async def main() -> None:
                 "enabled": await asyncio.to_thread(_unit_is_enabled, unit),
                 "restarting": True}
 
-    async def _uninstall_plugin(plugin_id: str) -> bool:
+    async def _install_from_catalogue(archive: bytes, plugin_id: str, restart: bool = True,
+                                      permissions: tuple[str, ...] = ()) -> dict:
+        """ADR-0168: a listed archive, checked as an upload is and installed
+        the same way; only its record says where it came from. A restore
+        installs several, then restarts once. ADR-0170: it asks for exactly
+        what its listing said, which its person agreed to before the
+        download began."""
+        checked = await asyncio.to_thread(uploads.check, archive, ours=shipped_ids, installed=uploads.versions())
+        if checked.id != plugin_id:
+            raise uploads.Refused(f"the archive is {checked.id}, not {plugin_id}")
+        if tuple(sorted(checked.permissions)) != tuple(sorted(permissions)):
+            raise uploads.Refused("it asks for other permissions than its listing says")
+        return await _upload_plugin(archive, origin=uploads.CATALOGUE, restart=restart, grant=tuple(permissions))
+
+    #: One restart however many plugins a read of the catalogue blocks.
+    block_restart = {"scheduled": False}
+
+    async def _switch_off_blocked(plugin_id: str, why: str) -> None:
+        """ADR-0168 decision 5: off now, and the core restarted once so the
+        plugin's row says why - unless it was blocked when this core started."""
+        plugin = next((p for p in installed_plugins if p.id == plugin_id), None)
+        if plugin is None or plugin_id in blocked_at_start:
+            return
+        blocked_at_start[plugin_id] = why
+        settings_store.set(f"{plugin_id}.enabled", False)
+        await set_unit_enabled(plugin.unit, False)
+        if not block_restart["scheduled"]:
+            block_restart["scheduled"] = True
+            asyncio.ensure_future(_restart_core_soon())
+
+    async def _uninstall_plugin(plugin_id: str, keep: bool = False) -> bool:
+        """Remove an uploaded or catalogue plugin. ADR-0169: with `keep`, its
+        settings and data stay for when it is added again."""
+        catalogue.jobs.pop(plugin_id, None)
         plugin = next((p for p in installed_plugins if p.id == plugin_id and p.uploaded), None)
         if plugin is None and any(m["id"] == plugin_id for m in restored_missing):
             # Restored without its package, and not wanted any more: its data,
@@ -4363,13 +4492,60 @@ async def main() -> None:
             return False
         await asyncio.to_thread(_set_unit_enabled, plugin.unit, False)
         await asyncio.to_thread(uploads.remove, plugin_id)
-        await asyncio.to_thread(uploads.remove_data, plugin_id)
         await asyncio.to_thread(uploads.forget, plugin_id)
-        for row in plugin.settings:
-            if row.get("key"):
-                settings_store.delete(f"{plugin_id}.{row['key']}")
+        if not keep:
+            await asyncio.to_thread(uploads.remove_data, plugin_id)
+            for row in plugin.settings:
+                if row.get("key"):
+                    settings_store.delete(f"{plugin_id}.{row['key']}")
         settings_store.delete(plugin.enabled_row or f"{plugin_id}.enabled")
         asyncio.ensure_future(_restart_core_soon())
+        return True
+
+    def _store_view() -> dict:
+        """ADR-0169: ours for *Add plugins*, each with whether it is added."""
+        return {"ours": plugin_store.tiles(optional_plugins, _added())}
+
+    def _set_added(plugin_id: str, on: bool) -> None:
+        added = _added()
+        (added.add if on else added.discard)(plugin_id)
+        settings_store.set(plugin_store.ADDED, sorted(added))
+        state_store.bump_settings_revision()
+
+    async def _store_add(plugin_id: str) -> bool:
+        """ADR-0169: one of ours added and switched on - its download as a
+        switch-on starts it. The page has shown its notice first."""
+        if plugin_id == plugin_store.SKINS:
+            _set_added(plugin_id, True)
+            settings.set("visualiser_skins", True)
+            return True
+        plugin = next((p for p in optional_plugins if p.id == plugin_id), None)
+        if plugin is None:
+            return False
+        _set_added(plugin_id, True)
+        settings.set(_enabled_row(plugin), True)
+        return True
+
+    async def _store_remove(plugin_id: str, keep: bool) -> bool:
+        """ADR-0169: off, what it downloaded deleted, back to *Add plugins*.
+        Without `keep`, its settings go too (George: kept unless the switch
+        in the dialog is turned off)."""
+        if plugin_id == plugin_store.SKINS:
+            settings.set("visualiser_skins", False)
+            _set_added(plugin_id, False)
+            return True
+        plugin = next((p for p in optional_plugins if p.id == plugin_id), None)
+        if plugin is None:
+            return await _uninstall_plugin(plugin_id, keep=keep)
+        if settings.value(_enabled_row(plugin)) is not False:
+            settings.set(_enabled_row(plugin), False)
+        if plugin_id in downloads:
+            await _remove_download(plugin)
+        if not keep:
+            for row in plugin.settings:
+                if row.get("key"):
+                    settings_store.delete(f"{plugin_id}.{row['key']}")
+        _set_added(plugin_id, False)
         return True
 
     async def _park_renderers(stop_all: bool = False) -> bool:
@@ -4408,6 +4584,11 @@ async def main() -> None:
 
     setup_network = SetupNetwork(on_change=_setup_changed)
     setup_ref["net"] = setup_network
+    # ADR-0169 (George, 2026-10-30): an updated player starts from what is in
+    # use. A new one leaves it to setup, which records what it chose.
+    if plugin_store.read(settings_store.get(plugin_store.ADDED)) is None and not setup_network.needed:
+        settings_store.set(plugin_store.ADDED, _first_added())
+        logger.info("plugins: added from what is in use: %s", ", ".join(settings_store.get(plugin_store.ADDED)) or "none")
     setup_flow = SetupFlow(setup_network, settings, reboot=_reboot, plugins=_offered_plugins,
                            owed=_personalise_owed)
     asyncio.ensure_future(cable.follow())
@@ -4449,6 +4630,8 @@ async def main() -> None:
     plugin_art = PluginArtwork()
     state_server = StateServer(
         state_store,
+        # ADR-0170: the panel proves itself; a plugin on loopback does not.
+        panel_token=panel_token.ensure(),
         plugin_artwork=plugin_art,
         lyrion_known=lyrion_known,
         cable=cable,
@@ -4515,6 +4698,11 @@ async def main() -> None:
         on_painted=None,
         upload_plugin=_upload_plugin,
         uninstall_plugin=_uninstall_plugin,
+        # ADR-0169: one store for every plugin.
+        store_view=_store_view,
+        store_add=_store_add,
+        store_remove=_store_remove,
+        catalogue=catalogue,
         # ADR-0047: the idle screen's two providers.
         weather=forecast,
         wallpapers=wallpapers,

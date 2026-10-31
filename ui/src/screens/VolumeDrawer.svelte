@@ -47,6 +47,7 @@
   //: only where there is one.
   let others = $state([]);
   let selfName = $state('');
+  let selfId = $state(null);
   async function loadPlayers() {
     try {
       const response = await fetch('/players');
@@ -54,6 +55,7 @@
       const body = await response.json();
       others = Array.isArray(body.others) ? body.others : [];
       selfName = body.self?.name ?? '';
+      selfId = body.self?.id ?? null;
     } catch {
       // No network answer: the row waits for the next opening.
     }
@@ -125,7 +127,7 @@
     >
       <div class="rail">
         <div class="fill" class:is-muted={muted} style:width={`${pct}%`}></div>
-        <div class="knob" class:is-muted={muted} style:left={`${pct}%`}></div>
+        <div class="knob" class:is-muted={muted} style:left={`${pct}%`} data-dpad-knob></div>
       </div>
     </div>
 
@@ -150,7 +152,7 @@
   </div>
 </div>
 
-<PanelAddPlayers open={open && page === 'add'} {g} {others} leader={leaderName}
+<PanelAddPlayers open={open && page === 'add'} {g} {others} {selfId} leader={leaderName}
                  onback={() => (page = 'main')} onflash={flash} onjoined={loadPlayers} />
 <PanelUndoConfirm open={open && confirming && !!g} {g} oncancel={() => (confirming = false)}
                   ondone={() => (confirming = false)} onflash={flash} />
