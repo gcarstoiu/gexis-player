@@ -31,6 +31,8 @@ PrivateTmp=yes
 ProtectKernelTunables=yes
 ProtectKernelModules=yes
 ProtectControlGroups=yes
+# RAAT asks for real-time scheduling; a limit lets it without root.
+LimitRTPRIO=50
 # No device but the Roon loopback card, which gexis-core grants by a drop-in
 # under /run at its start (plugin_permissions.apply_card).
 DevicePolicy=closed

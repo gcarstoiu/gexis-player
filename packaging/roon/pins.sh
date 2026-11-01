@@ -4,4 +4,4 @@
 PLUGIN_VERSION="0.1.0"
 PLUGIN_ASSET="gexis-roon-${PLUGIN_VERSION}.tar.gz"
 PLUGIN_URL="https://github.com/gcarstoiu/gexis-roon/releases/download/v${PLUGIN_VERSION}/${PLUGIN_ASSET}"
-PLUGIN_SHA256="4d8d6b163d5e61af6caeca718b065a8ee76618c9dc1ddaf9bf2a0df7a0d127ef"
+PLUGIN_SHA256="7c7a7bc96cb11c99248ae994544397cfdc4e9fd814718ee9fe2075bbddd1c0ea"
