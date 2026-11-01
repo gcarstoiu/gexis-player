@@ -55,11 +55,12 @@ build from `~/projects/gexis-player-next` unless `WT` names another worktree.
 
 **Now: Phase 25, themes** (`ph-themes`, worktree
 `~/projects/gexis-player-themes`), started 2026-11-01. Claude Design's
-handover is in `~/projects/scratch/ph25-themes-design` (to be unpacked over
-`design/` on the branch; its monos come from fontsource).
-[ADR-0171](docs/decisions/0171-themes.md) proposed on the branch; George's
-decisions asked one at a time. The size of it: 2,031 colour literals in the
-components, which go through the tokens first with today's look unchanged.
+export is on the branch in `design/source/28` and `design/themes/` (its
+monos come from fontsource). [ADR-0171](docs/decisions/0171-themes.md)
+accepted on the branch (George): six themes built in, one per player, the
+row in Display with Deep Teal the default. Next: the 2,031 colour literals in
+the components go through the tokens with today's look unchanged, checked
+pixel by pixel, then the five themes.
 
 **Next: Phase 26, Roon** (`ph-roon`), added 2026-11-01 right after themes
 (George), ADR first. George's Roon over AirPlay did not play; what sofapi's
