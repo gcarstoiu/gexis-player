@@ -303,7 +303,9 @@
 
 <svelte:window bind:innerHeight={panelHeight} bind:innerWidth={panelWidth} />
 
-<div class="idle" class:idle--bar={bar} transition:fade={{ duration: 520 }} style:--stroke={stroke} data-dpad-cover>
+<!-- ADR-0171 (George, 2026-11-01): today's look in every theme - white type
+     and a slate contour are what read on any photograph. -->
+<div class="idle theme-keep" class:idle--bar={bar} transition:fade={{ duration: 520 }} style:--stroke={stroke} data-dpad-cover>
   <!-- The picture, shared with the waiting screen (ADR-0133). -->
   <Backdrop {settings} active={!external} bind:picture bind:shown />
   {#if !external}

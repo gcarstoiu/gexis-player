@@ -64,6 +64,12 @@ for (const T of THEMES) {
   if (T.light) lines.push('  color-scheme: light;');
   blocks.push('', `:root[data-theme="${T.id}"] {`, ...lines, '}');
 }
+//: **What keeps today's look in every theme** (ADR-0171): an element marked
+//: `theme-keep` - the idle screen, over its photograph - gets back today's
+//: value of every token a theme changes, the mono included.
+const changed = new Set();
+for (const T of THEMES) for (const [name, value] of today) if (norm(themed(name, value, T)) !== norm(value)) changed.add(name);
+blocks.push('', ':root[data-theme] .theme-keep {', ...[...changed].map((n) => `  ${n}: ${today.get(n)};`), '  color-scheme: dark;', '}');
 const css = blocks.join('\n') + '\n';
 
 let failed = 0;

@@ -480,7 +480,10 @@ panel, the bar and every phone of the player alike.
   equaliser's ramps, Plexamp's and AirPlay's colours, white and black at
   full strength), the setup screen's QR code, masks, and the pictures of
   other screens (the weather icons, the test pattern, Personalise's
-  miniatures). The visualiser and the boot animation are not themed.
+  miniatures). The visualiser and the boot animation are not themed, and
+  nor is the idle screen: it is marked `theme-keep`, for which `themes.css`
+  restores today's value of every token a theme changes (its white type and
+  slate contour are what read on a photograph).
 - **The monos**: one per theme, from fontsource (`styles/monos.css`), each
   with the design's size scale as `size-adjust`, loaded only when its theme
   is on. Our Bluetooth mark is drawn (`lib/BluetoothMark.svelte`) in

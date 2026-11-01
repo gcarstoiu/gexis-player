@@ -112,6 +112,12 @@ in the bundle. How themes ship and are chosen is left to this record.
   Sage the knobs are white with a faint edge and the curve and the figures
   pale. George chose that over asking Claude Design or new colours of
   Claude's.
+- **The idle screen keeps today's look** (2026-11-01): on the preview,
+  George found its type unreadable in a theme, the highs and lows above all.
+  It sits on a photograph, and white type with a slate contour is what reads
+  on any picture; recoloured, Bauhaus drew black type with a pale contour
+  and red and violet figures. It is marked `theme-keep`, and themes.css
+  gives such an element back today's value of every token a theme changes.
 
 ## Built (2026-11-01)
 

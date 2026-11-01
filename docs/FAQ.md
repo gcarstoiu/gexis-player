@@ -348,9 +348,9 @@ Yes: *Settings → Display → Theme* offers six looks - Deep Teal, as it comes,
 Bauhaus and Sage (light), and Velvet, Ink and Gauge (dark). A theme changes
 the colours, the corners and the typeface of figures and labels; nothing
 moves or changes size. It applies at once, on the player's screen and on
-every phone showing that player, and each player has its own. The
-visualiser's skins, the weather icons and the boot screen keep their own
-look. The themes are part of the player: a plugin cannot add one.
+every phone showing that player, and each player has its own. The idle
+screen keeps its own look, white over its picture, so that it reads on any
+photograph; so do the visualiser's skins and the boot screen. The themes are part of the player: a plugin cannot add one.
 
 ## Idle screen and visualiser
 
