@@ -3625,6 +3625,12 @@ that is settled.
 
 **ID:** `ph-roon` · added 2026-11-01 as 26, right after themes (George).
 
+**Started 2026-11-01** (George), on `ph-roon` from `next`, while Phase 25's
+preview waits for his look; [ADR-0172](decisions/0172-roon.md) accepted the
+same day (Roon Bridge as a plugin, fetched from Roon Labs and kept current by
+its own updates; through the player's output by a loopback; Now Playing by
+Roon's extension).
+
 **Added 2026-11-01** (George: a plugin for Roon, after themes). Roon plays to
 devices of its own kinds; the player is none of them today. George tried
 Roon to sofapi over AirPlay on 2026-10-30 and it did not play (his try,

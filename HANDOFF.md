@@ -70,9 +70,13 @@ gives it on the light themes, and the idle screen keeps today's look
 sofapi, after George's OK; `gen_personalise.py` out of step since Phase 23
 (the first-use page's header says so).
 
-**Next: Phase 26, Roon** (`ph-roon`), added 2026-11-01 right after themes
-(George), ADR first. George's Roon over AirPlay did not play; what sofapi's
-log shows is in its section of `docs/DEVELOPMENT.md` (to-do `roon-airplay`).
+**Also now: Phase 26, Roon** (`ph-roon`, worktree
+`~/projects/gexis-player-roon`), started 2026-11-01 (George).
+[ADR-0172](docs/decisions/0172-roon.md) accepted: Roon Bridge as a plugin
+(fetched on switch-on, Roon's own updates, a user of its own), through a
+third `snd-aloop` card into `pcm.output`, Now Playing by Roon's extension API.
+Roon over AirPlay already plays since 1.10.0 (classic AirPlay; Roon's
+*Compatibility mode*; FAQ on `fix-roon-airplay`).
 
 **Phase 23, AirPlay 2** (`ph-airplay`), in every release since 1.9.0 and on
 Stable with 1.10.0, marked *Limited testing* (no Apple device yet).
