@@ -449,6 +449,43 @@ screen (`.cards`, `.card` in `Library.svelte`), width only on a bar
 scale factor) was tried first and set aside: the layouts are drawn for a
 1280 x 800 page (400 high on a bar) and clipped or left a third empty.
 
+### Themes (ADR-0171)
+
+A theme is a set of token values over today's, chosen by `theme` (Deep Teal,
+Bauhaus, Sage, Velvet, Ink, Gauge) and worn as `data-theme` on `<html>`
+(`App.svelte`, from `lib/theme.js`); Deep Teal is no attribute at all. On the
+panel, the bar and every phone of the player alike.
+
+- **The design's rule is the theme.** `lib/themeRule.js` is Claude Design's
+  `design/source/28/build.js`: a colour is recoloured by its family (the ink,
+  each accent, the grounds, the weave), on a light theme the ink's alphas are
+  raised and black shadows lightened, and a corner of 4 px up to 899 is
+  scaled by the theme's factor. `scripts/themes.mjs` writes
+  `styles/themes.css` (one `:root[data-theme]` block each, only what
+  changes) from `styles/tokens.css` and `styles/palette.css` by it, and
+  checks every name the design's token sets share with ours against
+  `design/themes/tokens-<id>.css`. `npm run build` runs it with `--check`,
+  so a token changed without `npm run themes` fails the build.
+- **Every colour and corner a theme changes is a token.** `palette.css`
+  names the ones the design does not, by value: `--c-<family>-<alpha>`
+  (`--c-ink-62`), `--c-dark-<hex>-<alpha>` for one-off dark grounds,
+  `--c-<family>-rgb` for an `r, g, b` used as `rgba(var(--x), a)`, and
+  `--r-<px>` for corners; the three cover veils and `--weave-angle` too.
+  `core/tests/test_ui_themes.py` reads the components and fails on a colour
+  literal the rule would change, or a corner it would scale, in a style.
+- **A colour a script hands to a style** is a `var()` string when it is
+  fixed, or goes through `tone(colour, $theme)` when it comes from data
+  (`Glyph`, `Disc`, the bar's jump strip).
+- **Left as they are**: the colours the rule does not change (the
+  equaliser's ramps, Plexamp's and AirPlay's colours, white and black at
+  full strength), the setup screen's QR code, masks, and the pictures of
+  other screens (the weather icons, the test pattern, Personalise's
+  miniatures). The visualiser and the boot animation are not themed.
+- **The monos**: one per theme, from fontsource (`styles/monos.css`), each
+  with the design's size scale as `size-adjust`, loaded only when its theme
+  is on. Our Bluetooth mark is drawn (`lib/BluetoothMark.svelte`) in
+  `--accent-bluetooth`.
+
 ### Waiting screen (LMS off)
 
 `WaitingHome.svelte` (ADR-0079, drawn as ADR-0133) is the panel's root while

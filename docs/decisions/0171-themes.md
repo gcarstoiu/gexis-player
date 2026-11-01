@@ -108,6 +108,47 @@ in the bundle. How themes ship and are chosen is left to this record.
   default Deep Teal, applied at once, shown on every player, a headless one
   too. Faded 80s and Graphite go.
 
+## Built (2026-11-01)
+
+On `ph-themes`, where it differs from the proposal:
+- **The design's rule is the theme.** Claude Design made each token set by
+  one rule (`design/source/28/build.js`): a colour recoloured by its family,
+  the ink's alphas raised and black shadows lightened on a light theme, a
+  corner from 4 px scaled by the theme's factor. Run over
+  `design/tokens.css` it gives all 222 declarations of each of the five
+  sets. `ui/src/lib/themeRule.js` is that rule; `ui/scripts/themes.mjs`
+  writes one generated `styles/themes.css` from our tokens by it (not a
+  file per theme copied from the design, item 2: ours hold names the
+  design's lack) and checks it: 515 values, every name we share with the
+  design at today's value in both, come out as the design has them. The
+  UI's build runs the check.
+- **Through the tokens** (3): in the components' styles and `style=`
+  attributes, 637 colour literals became the UI's own tokens and 596 new
+  ones, 291 corners became corner tokens, with the three veils and the
+  weave's angle; `styles/palette.css` names them by value (149 colours,
+  five `r, g, b` triplets, 17 corners). In scripts, 116 colour strings that
+  only reach a style became `var()` strings, and a colour from data goes
+  through `tone()` (the glyphs, their discs, the bar's jump strip). Left as
+  they are: the colours the rule does not change, the setup screen's QR
+  code (inverted on a light theme a phone may not read it), masks, and the
+  pictures of other screens - the weather icons, the test pattern,
+  Personalise's miniatures. `core/tests/test_ui_themes.py` reads the
+  sources and fails on a literal or corner a theme would change; on the
+  sources before this change it failed in 64 files.
+- **The veils** (5): all three are the theme's veil - its alphas are at
+  least today's strongest in all five.
+- **The mono's size** (6): `size-adjust` on each mono's face
+  (`styles/monos.css`), not a token, so every size in that face is scaled.
+- **Found on the way**: `tools/design/gen_personalise.py` no longer makes
+  `FirstUsePage.svelte` and `PanelMini.svelte` - AirPlay was added to them
+  by hand in Phase 23 - so the first-use page was changed by hand like any
+  other, and its header says so.
+- **Contrast**, re-measured from the built tokens as the handover's spec
+  measures it: every text token in all five themes clears its floor on the
+  three grounds and over a white and a black cover. Deep Teal, unchanged,
+  does not over a near-white cover at the title (its veil is the light
+  one): as it was before this phase.
+
 ## Settings (ADR-0022)
 
 `theme`: today's row, surfaced, as decision 3 has it; appended to ADR-0022's
