@@ -100,12 +100,13 @@ in the bundle. How themes ship and are chosen is left to this record.
 
 - **Decision 1, built in** (2026-11-01): the six themes are part of the
   player, as (1) proposes; no theme plugins in this phase.
+- **Decision 2, per player** (2026-11-01): each player has its own theme,
+  and its screen and every phone remote on it show that one, as (9)
+  proposes; a change anywhere shows everywhere for that player.
 
 ## For George
 
 To be asked one at a time:
-- **Who has a theme**: each player its own, followed by its bar and phone
-  remotes (9), or the phone choosing its own.
 - **Today's theme's name**, Deep Teal in the inventory, and the row's options
   (ADR-0022, appended only once confirmed).
 
