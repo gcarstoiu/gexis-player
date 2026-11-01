@@ -103,8 +103,8 @@
   .skip {
     width: var(--sk);
     height: var(--sk);
-    background: rgba(233, 238, 242, 0.09);
-    color: #e9eef2;
+    background: var(--c-ink-09);
+    color: var(--ink);
   }
   .skip svg {
     width: var(--sk-glyph);
@@ -113,9 +113,9 @@
   .play {
     width: var(--pl);
     height: var(--pl);
-    background: #f2a48f;
-    color: #16232c;
-    box-shadow: 0 0 22px rgba(242, 164, 143, 0.22), 0 12px 30px rgba(242, 164, 143, 0.35);
+    background: var(--accent-artist);
+    color: var(--bg-panel);
+    box-shadow: 0 0 22px var(--c-artist-22), 0 12px 30px var(--c-artist-35);
   }
   .play__pause {
     width: var(--pl-pause);

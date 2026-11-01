@@ -124,8 +124,8 @@
     position: relative;
     height: 104px;
     flex-shrink: 0;
-    border-top: 1px solid rgba(233, 238, 242, 0.09);
-    background: rgba(18, 29, 37, 0.82);
+    border-top: 1px solid var(--c-ink-09);
+    background: var(--c-dark-121d25-82);
     display: grid;
     grid-template-columns: 1fr auto 1fr;
     align-items: center;
@@ -149,7 +149,7 @@
     right: 0;
     top: 0;
     height: 2px;
-    background: rgba(233, 238, 242, 0.08);
+    background: var(--c-ink-08);
     /* Clips the translated fill below, which is full width. */
     overflow: hidden;
   }
@@ -185,7 +185,7 @@
   .thumb {
     width: 64px;
     height: 64px;
-    border-radius: 12px;
+    border-radius: var(--r-md);
     overflow: hidden;
     position: relative;
     flex-shrink: 0;
@@ -245,7 +245,7 @@
   .elapsed {
     font-family: var(--font-mono);
     font-size: 16px;
-    color: rgba(233, 238, 242, 0.5);
+    color: var(--ink-tab-off);
     flex-shrink: 0;
   }
 
@@ -273,7 +273,7 @@
     width: 64px;
     height: 64px;
     background: var(--play-fill);
-    box-shadow: 0 0 18px rgba(242, 164, 143, 0.22), 0 8px 20px rgba(242, 164, 143, 0.32);
+    box-shadow: 0 0 18px var(--c-artist-22), 0 8px 20px var(--c-artist-32);
   }
   .play:active {
     transform: scale(0.95);

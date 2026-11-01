@@ -118,7 +118,7 @@
     gap: 16px;
     padding: 0 40px;
     box-sizing: border-box;
-    border-top: 1px solid rgba(233, 238, 242, 0.08);
+    border-top: 1px solid var(--c-ink-08);
     text-transform: none;
     letter-spacing: normal;
     color: var(--ink);
@@ -131,7 +131,7 @@
     gap: 4px;
   }
   .title { font-size: 20px; font-weight: 700; }
-  .sub { font-size: 15px; line-height: 1.35; color: rgba(233, 238, 242, 0.6); }
+  .sub { font-size: 15px; line-height: 1.35; color: var(--ink-quiet); }
   .cards {
     flex: 1;
     min-width: 0;
@@ -148,9 +148,9 @@
     flex-shrink: 0;
     width: 330px;
     height: 116px;
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(233, 238, 242, 0.1);
+    border-radius: var(--r-18);
+    background: var(--c-white-04);
+    border: 1px solid var(--ink-line);
     box-sizing: border-box;
     padding: 0 12px 0 18px;
     display: flex;
@@ -178,19 +178,19 @@
   .status {
     font-size: 15px;
     line-height: 1.3;
-    color: rgba(233, 238, 242, 0.72);
+    color: var(--ink-muted);
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
   .status.is-joining { color: var(--group-ink); }
-  .status.is-off { color: rgba(233, 238, 242, 0.6); }
+  .status.is-off { color: var(--ink-quiet); }
   .join {
     flex-shrink: 0;
     height: 56px;
     padding: 0 20px;
-    border-radius: 15px;
+    border-radius: var(--r-15);
     box-sizing: border-box;
     display: flex;
     align-items: center;
@@ -206,10 +206,10 @@
   .done {
     height: 56px;
     padding: 0 22px;
-    border-radius: 15px;
+    border-radius: var(--r-15);
     box-sizing: border-box;
     background: var(--ink-fill);
-    border: 1px solid rgba(233, 238, 242, 0.14);
+    border: 1px solid var(--mark-line);
     color: var(--ink);
     display: flex;
     align-items: center;

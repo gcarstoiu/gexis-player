@@ -83,7 +83,7 @@ const BOOST_LOW = [239, 143, 122];
 const BOOST_HIGH = [242, 179, 94];
 const CUT_LOW = [127, 176, 220];
 const CUT_HIGH = [164, 140, 232];
-const ZERO = 'rgba(233, 238, 242, 0.6)';
+const ZERO = 'var(--ink-quiet)';
 const mix = (a, b, t) => a.map((v, j) => Math.round(v + (b[j] - v) * t));
 
 /** **A band's value colour** (the design's): a boost warms from coral to

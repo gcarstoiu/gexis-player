@@ -300,9 +300,9 @@
     position: fixed;
     inset: 0;
     overflow: hidden;
-    background: #101a21;
+    background: var(--bg-base);
     font-family: var(--font-ui);
-    color: #e9eef2;
+    color: var(--ink);
     -webkit-tap-highlight-color: transparent;
     user-select: none;
     -webkit-user-select: none;
@@ -377,9 +377,9 @@
     flex: 1;
     min-width: 0;
     height: 54px;
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(233, 238, 242, 0.1);
+    border-radius: var(--r-lg);
+    background: var(--c-white-04);
+    border: 1px solid var(--ink-line);
     box-sizing: border-box;
     padding: 0 8px 0 10px;
     display: flex;
@@ -391,7 +391,7 @@
     text-align: left;
   }
   .picker:active {
-    background: rgba(255, 255, 255, 0.07);
+    background: var(--c-white-07);
   }
   .picker img {
     width: 30px;
@@ -414,7 +414,7 @@
   }
   .picker__state {
     font-size: 12px;
-    color: rgba(233, 238, 242, 0.72);
+    color: var(--ink-muted);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -423,7 +423,7 @@
     width: 22px;
     height: 22px;
     flex-shrink: 0;
-    fill: rgba(233, 238, 242, 0.72);
+    fill: var(--ink-muted);
     transition: transform 160ms ease;
   }
   .picker__chev.is-open {
@@ -434,7 +434,7 @@
     display: flex;
     height: 54px;
     padding: 3px;
-    border-radius: 16px;
+    border-radius: var(--r-lg);
     box-sizing: border-box;
     /* As the quick actions, not the drawing's dark ground (George,
        2026-10-27). */
@@ -448,7 +448,7 @@
     top: 3px;
     width: 56px;
     height: 46px;
-    border-radius: 13px;
+    border-radius: var(--r-13);
     background: var(--remote-select);
     transition: transform var(--remote-slide);
     pointer-events: none;
@@ -462,11 +462,11 @@
     display: grid;
     place-items: center;
     cursor: pointer;
-    color: rgba(233, 238, 242, 0.72);
+    color: var(--ink-muted);
     transition: color 200ms ease;
   }
   .seg.is-on {
-    color: #7ed6bc;
+    color: var(--accent-lms);
   }
   .seg svg {
     width: 22px;
@@ -513,9 +513,9 @@
     right: 16px;
     bottom: calc(76px + env(safe-area-inset-bottom, 0px));
     padding: 10px 14px;
-    border-radius: 12px;
-    background: #16232c;
-    border: 1px solid rgba(233, 238, 242, 0.14);
+    border-radius: var(--r-md);
+    background: var(--bg-panel);
+    border: 1px solid var(--c-ink-14);
     font-size: 14px;
     color: var(--accent-warn);
     z-index: 20;

@@ -33,3 +33,9 @@ contract real rather than a convention inside one codebase.
   what happens when a plugin stops responding.
 - The contract must be versioned, because plugins in other repositories will lag
   the core.
+
+## Amended 2026-11-01
+
+**Themes are not something plugins provide** ([ADR-0171](0171-themes.md),
+George's decision 1): a theme is a set of token values with no process, and
+the six themes are built into the UI.

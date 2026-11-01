@@ -5,8 +5,10 @@
 -->
 <script>
   import { SHAPES } from './glyphs.js';
+  import { theme } from './theme.js';
+  import { tone } from './themeRule.js';
 
-  let { name = 'Folder', ink = '#e9eef2', size = 26 } = $props();
+  let { name = 'Folder', ink = 'var(--ink)', size = 26 } = $props();
 
   const parts = $derived(SHAPES[name] ?? SHAPES.Folder);
   const k = $derived(size / 26);
@@ -16,7 +18,7 @@
     let out = `left:${left}px;top:${top}px;width:${width}px;height:${height}px;`;
     for (const [key, value] of Object.entries(style)) {
       const prop = key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
-      const v = typeof value === 'string' ? value.replace(/\bI\b/g, ink) : typeof value === 'number' && !['opacity'].includes(key) ? `${value}px` : value;
+      const v = typeof value === 'string' ? value.replace(/\bI\b/g, tone(ink, $theme)) : typeof value === 'number' && !['opacity'].includes(key) ? `${value}px` : value;
       out += `${prop}:${v};`;
     }
     return out;

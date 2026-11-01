@@ -7,7 +7,7 @@
 -->
 <script>
   import spotifyMark from '../assets/icon-spotify.png';
-  import bluetoothMark from '../assets/icon-bluetooth.png';
+  import BluetoothMark from './BluetoothMark.svelte';
   import { sources } from './state.js';
 
   //: **ADR-0086: `mark` is a manifest's own glyph**, served by the daemon at
@@ -50,10 +50,12 @@
       <i style:width={`${bar}px`} style:height={`${Math.round(size * h)}px`} style:background={color}></i>
     {/each}
   </span>
-{:else if source === 'spotify' || source === 'bluetooth'}
+{:else if source === 'bluetooth'}
+  <BluetoothMark {size} {opacity} />
+{:else if source === 'spotify'}
   <img
     class="mark"
-    src={source === 'bluetooth' ? bluetoothMark : spotifyMark}
+    src={spotifyMark}
     alt=""
     style:height={`${size}px`}
     style:opacity
@@ -87,7 +89,7 @@
     flex-shrink: 0;
     box-sizing: border-box;
     border-style: solid;
-    border-color: rgba(233, 238, 242, 0.7);
+    border-color: var(--c-ink-70);
     border-radius: 50%;
     font-weight: 800;
     line-height: 1;
