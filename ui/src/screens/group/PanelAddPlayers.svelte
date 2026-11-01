@@ -78,7 +78,7 @@
   <div class="head">
     <button class="back" type="button" aria-label="Back" data-dpad-back onclick={onback}>
       <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
-        <path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z" fill="#e9eef2" />
+        <path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z" style="fill: var(--ink)" />
       </svg>
     </button>
     <div class="head__text">
@@ -121,10 +121,10 @@
     max-height: min(760px, calc(100% - 24px));
     background: var(--bg-panel);
     border: 1px solid var(--group-line);
-    border-radius: 28px;
+    border-radius: var(--r-28);
     padding: 26px;
     box-sizing: border-box;
-    box-shadow: 0 34px 90px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 34px 90px var(--c-black-60);
     display: flex;
     flex-direction: column;
     gap: 14px;
@@ -150,7 +150,7 @@
     width: 56px;
     height: 56px;
     border-radius: 50%;
-    background: rgba(233, 238, 242, 0.07);
+    background: var(--ink-fill);
     border: 0;
     padding: 0;
     display: grid;
@@ -161,15 +161,15 @@
   .back:active, .done:active, .join:active { transform: scale(0.95); }
   .head__text { flex: 1; min-width: 0; }
   .title { font-size: 25px; font-weight: 700; letter-spacing: -0.01em; }
-  .sub { font-size: 15px; margin-top: 4px; color: rgba(233, 238, 242, 0.6); text-wrap: pretty; }
+  .sub { font-size: 15px; margin-top: 4px; color: var(--ink-quiet); text-wrap: pretty; }
   .done {
     font: inherit;
     height: 56px;
     padding: 0 22px;
-    border-radius: 15px;
+    border-radius: var(--r-15);
     box-sizing: border-box;
-    background: rgba(233, 238, 242, 0.07);
-    border: 1px solid rgba(233, 238, 242, 0.14);
+    background: var(--ink-fill);
+    border: 1px solid var(--mark-line);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -189,7 +189,7 @@
     gap: 8px;
   }
   .rows::-webkit-scrollbar { display: none; }
-  .row-wrap { flex-shrink: 0; border-radius: 16px; overflow: hidden; }
+  .row-wrap { flex-shrink: 0; border-radius: var(--r-lg); overflow: hidden; }
   .row {
     display: flex;
     align-items: center;
@@ -221,7 +221,7 @@
     letter-spacing: var(--group-leads-tracking);
     text-transform: uppercase;
     padding: 5px 7px;
-    border-radius: 7px;
+    border-radius: var(--r-7);
     background: var(--group-leads-ground);
     color: var(--group-ink);
   }
@@ -230,16 +230,16 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: rgba(233, 238, 242, 0.72);
+    color: var(--ink-muted);
   }
   .status.is-joining { color: var(--group-ink); }
-  .status.is-quiet { color: rgba(233, 238, 242, 0.6); }
+  .status.is-quiet { color: var(--ink-quiet); }
   .join {
     font: inherit;
     flex-shrink: 0;
     height: 52px;
     padding: 0 20px;
-    border-radius: 14px;
+    border-radius: var(--r-14);
     box-sizing: border-box;
     display: flex;
     align-items: center;

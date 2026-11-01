@@ -208,6 +208,7 @@ or removed from Settings, with its progress shown in the switch itself.
 | 🖼️ **Now playing** | Artwork · synced or plain lyrics · artist information and photos · the Lyrion queue |
 | 📈 **Visualiser** | Up to 287 skins, depending on the screen · VU meters, spectrum, turntables and tape decks · progress, time, volume and play-state in each skin's own style · skins that rotate per track |
 | 🖥️ **Screens** | HDMI touchscreens from 7" to 13.3", including 7.9" and 11.9" bar displays, and DSI screens on the Pi's own display connector, leaving HDMI free for sound · recognised and laid out for their shape · or Headless, with no screen at all |
+| 🎨 **Themes** | Deep Teal, Bauhaus, Sage, Velvet, Ink and Gauge, one per player, on its screen and on every phone showing it · the colours, the corners and the typeface of figures and labels; nothing moves or changes size |
 | 🧭 **Setup** | Over the player's own Wi-Fi (WPA2, password on the panel) or your network on a cable · only what the player needs to run, then *make it yours* from your home Wi-Fi · a wrong password brings setup back with the reason · a player that starts without its Wi-Fi offers setup again after 90 seconds |
 | 💾 **Backup & restore** | Settings, pairings and source logins in one archive, on a network share or downloaded to your phone · restored during setup, which asks for this player's output and screen and lets you change the rest · one player's backup can start a second one, leaving the first one's sign-ins behind · a factory reset starts the player over without re-flashing |
 | ⬆️ **Updates** | Over the network, with release notes · *Testing* gets each release first, *Stable* once it has been tried |
@@ -275,8 +276,9 @@ Rough, and subject to change:
   card. A ten-band equaliser with presets and your own settings. The phone as
   a remote, with a touchpad or a D-pad for the screen. Multiroom for every
   source. AirPlay 2 from an iPhone, iPad or Mac. A plugin catalogue: other
-  authors' plugins installed from Settings.
-- 🔜 **Next:** themes.
+  authors' plugins installed from Settings. Themes: six looks for the screen
+  and the phone.
+- 🔜 **Next:** Roon, with the player as a Roon device.
 - 🎨 **Later:** room correction with a USB microphone, for the bass and then the full range; internet radio without a Lyrion server. With Plex switched on, your own Plex server fills in
   the artist and album information other sources leave out.
 - 💭 **Maybe:** the DAC's own filter and polarity options.

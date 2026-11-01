@@ -32,7 +32,7 @@
   .chip {
     height: 36px;
     max-width: 100%;
-    border-radius: 18px;
+    border-radius: var(--r-18);
     box-sizing: border-box;
     padding: 0 18px 0 14px;
     display: flex;

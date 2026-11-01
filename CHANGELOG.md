@@ -6,6 +6,17 @@
 Every release of Gexis Player and its notes, newest first. The player
 shows the last 10 under Settings → System → Change logs.
 
+## 1.11.0 — 1 November 2026
+
+### New
+
+- Themes, in Settings → Display → Theme: Deep Teal as before, Bauhaus and Sage (light), Velvet, Ink and Gauge (dark). A theme changes the colours, the corners and the typeface of figures and labels, on the player's screen and on every phone showing it.
+
+### Good to know
+
+- The idle screen keeps its own look in every theme, so that it reads over any picture; so do the visualiser's skins and the boot screen.
+- Roon plays to the player over AirPlay; with Compatibility mode switched on for the player in Roon, it starts at once.
+
 ## 1.10.0 — 31 October 2026
 
 ### New

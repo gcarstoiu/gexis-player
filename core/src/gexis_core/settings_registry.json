@@ -509,14 +509,16 @@
         "type": "choice",
         "label": "Theme",
         "marks": "R",
-        "note": null,
+        "note": "How this player looks, on its screen and on every phone on it. Applies at once.",
         "options": [
           "Deep Teal",
-          "Faded 80s",
-          "Graphite"
+          "Bauhaus",
+          "Sage",
+          "Velvet",
+          "Ink",
+          "Gauge"
         ],
-        "default": "Deep Teal",
-        "surfaced": false
+        "default": "Deep Teal"
       },
       {
         "key": "brightness",

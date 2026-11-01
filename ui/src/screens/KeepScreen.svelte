@@ -145,7 +145,7 @@
     overflow: hidden;
     color: var(--ink);
     background:
-      radial-gradient(130% 105% at 20% 42%, rgba(20, 33, 42, 0.72), rgba(13, 21, 28, 0.96)),
+      var(--cover-veil-deep),
       var(--bg-base);
     user-select: none;
   }
@@ -155,7 +155,7 @@
     right: 0;
     bottom: 0;
     height: 8px;
-    background: rgba(233, 238, 242, 0.08);
+    background: var(--c-ink-08);
   }
   .drain__left {
     position: absolute;
@@ -209,18 +209,18 @@
   }
   .btn--keep {
     border: 0;
-    border-radius: 24px;
+    border-radius: var(--r-card);
     background: var(--accent-lms);
     color: var(--ink-on-accent);
     font-size: 32px;
     font-weight: 800;
-    box-shadow: 0 12px 30px rgba(126, 214, 188, 0.3);
+    box-shadow: 0 12px 30px var(--c-lms-30);
   }
   .btn--back {
     height: 74px;
-    border-radius: 18px;
+    border-radius: var(--r-18);
     background: var(--ink-fill);
-    border: 1px solid rgba(233, 238, 242, 0.16);
+    border: 1px solid var(--c-ink-16);
     font-weight: 700;
   }
 
@@ -251,7 +251,7 @@
     align-items: center;
     gap: 16px;
     padding: 14px 24px;
-    border-radius: 16px;
+    border-radius: var(--r-lg);
     font-size: 24px;
     color: var(--accent-warn);
     background: color-mix(in srgb, var(--accent-warn) 12%, transparent);

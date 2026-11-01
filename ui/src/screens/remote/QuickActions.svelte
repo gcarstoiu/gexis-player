@@ -72,7 +72,7 @@
     cursor: pointer;
     background: var(--remote-button-ground);
     border: 1px solid var(--remote-button-line);
-    color: #e9eef2;
+    color: var(--ink);
   }
   .act:active {
     transform: scale(0.97);
@@ -80,7 +80,7 @@
   .act.is-on {
     background: var(--remote-select);
     border-color: var(--remote-button-on-line);
-    color: #7ed6bc;
+    color: var(--accent-lms);
   }
   .act.is-dim {
     opacity: 0.45;

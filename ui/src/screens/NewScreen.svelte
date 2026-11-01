@@ -39,7 +39,7 @@
     position: fixed;
     inset: 0;
     z-index: 60;
-    background: rgba(8, 12, 16, 0.62);
+    background: var(--bg-scrim);
   }
   .sheet {
     position: absolute;
@@ -49,9 +49,9 @@
     width: calc(100% - 44px);
     max-width: 560px;
     background: var(--bg-panel);
-    border: 1px solid rgba(233, 238, 242, 0.14);
-    border-radius: 22px;
-    box-shadow: 0 30px 70px rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--c-ink-14);
+    border-radius: var(--r-xl);
+    box-shadow: 0 30px 70px var(--c-black-50);
     padding: 26px;
     display: flex;
     flex-direction: column;
@@ -66,7 +66,7 @@
   .sheet__note {
     font-size: 15px;
     line-height: 1.5;
-    color: rgba(233, 238, 242, 0.6);
+    color: var(--ink-quiet);
   }
   .sheet__actions {
     display: flex;
@@ -75,20 +75,20 @@
   .btn {
     flex: 1;
     height: 58px;
-    border-radius: 15px;
-    background: rgba(233, 238, 242, 0.07);
-    border: 1px solid rgba(233, 238, 242, 0.14);
+    border-radius: var(--r-15);
+    background: var(--ink-fill);
+    border: 1px solid var(--c-ink-14);
     color: var(--ink);
     font-family: inherit;
     font-size: 17px;
     font-weight: 600;
   }
   .btn:active {
-    background: rgba(233, 238, 242, 0.2);
+    background: var(--c-ink-20);
   }
   .btn--confirm {
-    background: rgba(126, 214, 188, 0.16);
-    border-color: rgba(126, 214, 188, 0.4);
+    background: var(--c-lms-16);
+    border-color: var(--c-lms-40);
     color: var(--accent-lms);
   }
 </style>

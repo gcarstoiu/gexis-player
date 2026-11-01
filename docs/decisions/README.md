@@ -191,6 +191,7 @@ been written properly. **0098 has no record either.**
 | [0168](0168-a-plugin-catalogue.md) | A plugin catalogue | Accepted 2026-10-29 (Phase 24; George's seven answers, no setting): `gcarstoiu/gexis-plugins`, others' plugins listed by pull request, every version read and pinned, George merges; *More plugins* everywhere, through the upload's sandbox |
 | [0169](0169-one-store-for-every-plugin.md) | One store for every plugin | Accepted 2026-10-30 (Phase 24, George): *Add plugins* holds ours and the catalogue's alike; the Plugins page what is added; one Remove |
 | [0170](0170-plugins-that-ask-for-more.md) | Plugins that ask for more | Accepted 2026-10-30 (Phase 24, George): declared permissions `cec`, `gpio`, `usb`, granted as declared and asked for; a CEC plugin first |
+| [0171](0171-themes.md) | Themes | Accepted 2026-11-01 (Phase 25, George): six themes built in, one per player; today's colours through the tokens first |
 | [0172](0172-roon.md) | Roon | Accepted 2026-11-01 (Phase 26, George): Roon Bridge fetched on the player as a plugin, through the player's output by a loopback; Now Playing by Roon's extension API |
 
 ## Cross-cutting rules

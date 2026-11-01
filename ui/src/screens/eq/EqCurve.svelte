@@ -54,7 +54,7 @@
     left: 0;
     right: 0;
     height: 1px;
-    background: rgba(233, 238, 242, 0.05);
+    background: var(--c-ink-05);
   }
   svg {
     position: absolute;
@@ -70,7 +70,7 @@
     right: 0;
     top: 50%;
     height: 1px;
-    background: rgba(233, 238, 242, 0.3);
+    background: var(--c-ink-30);
   }
   .dot {
     position: absolute;
@@ -80,7 +80,7 @@
     border-radius: 50%;
     box-sizing: border-box;
     border: 2px solid #f4f1ea;
-    background: #0d151c;
+    background: var(--ink-on-accent);
   }
   .dot.is-dragging {
     background: #f4f1ea;
@@ -95,6 +95,6 @@
     text-align: center;
     font-family: var(--font-mono);
     font-size: 11px;
-    color: rgba(233, 238, 242, 0.6);
+    color: var(--ink-quiet);
   }
 </style>

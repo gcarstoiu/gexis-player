@@ -344,7 +344,7 @@
       onpointerup={(event) => press.lift(event, () => (second = eqBand ? null : 'eq'))} onclick={() => press.click(() => (second = eqBand ? null : 'eq'))}>
       <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
         <path d="M6 4v16M12 4v16M18 4v16" />
-        <circle cx="6" cy="14" r="2.6" fill="#16232c" /><circle cx="12" cy="8" r="2.6" fill="#16232c" /><circle cx="18" cy="15" r="2.6" fill="#16232c" />
+        <circle cx="6" cy="14" r="2.6" style="fill: var(--bg-panel)" /><circle cx="12" cy="8" r="2.6" style="fill: var(--bg-panel)" /><circle cx="18" cy="15" r="2.6" style="fill: var(--bg-panel)" />
       </svg>
       <span class="eqbtn__name">{eqName}</span>
       <span class="eqbtn__chev" class:is-open={eqBand}></span>
@@ -446,7 +446,7 @@
     inset: 0;
     z-index: 12;
     touch-action: none;
-    background: rgba(8, 12, 16, 0.55);
+    background: var(--c-dark-080c10-55);
     pointer-events: none;
     visibility: hidden;
     transition: opacity 220ms ease, visibility 0s linear 220ms;
@@ -474,9 +474,9 @@
     flex-direction: column;
     padding: 0 0 14px;
     background: var(--bg-panel);
-    border-radius: 0 0 24px 24px;
-    border-bottom: 1px solid rgba(233, 238, 242, 0.12);
-    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.5);
+    border-radius: 0 0 var(--r-card) var(--r-card);
+    border-bottom: 1px solid var(--c-ink-12);
+    box-shadow: 0 18px 44px var(--c-black-50);
     visibility: hidden;
     transition:
       transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1),
@@ -503,28 +503,28 @@
     height: 120px;
     flex-shrink: 0;
     padding: 0 40px;
-    border-top: 1px solid rgba(233, 238, 242, 0.08);
+    border-top: 1px solid var(--c-ink-08);
   }
   .eqbtn {
     position: relative;
     z-index: 1;
     height: 60px;
     padding: 0 20px 0 18px;
-    border-radius: 30px;
+    border-radius: var(--r-30);
     box-sizing: border-box;
     display: flex;
     align-items: center;
     gap: 12px;
     flex-shrink: 0;
-    background: rgba(233, 238, 242, 0.07);
-    border: 1px solid rgba(233, 238, 242, 0.14);
-    color: rgba(233, 238, 242, 0.82);
+    background: var(--ink-fill);
+    border: 1px solid var(--mark-line);
+    color: var(--ink-body);
     font: inherit;
   }
   .eqbtn.is-lit {
-    background: rgba(126, 214, 188, 0.12);
-    border-color: rgba(126, 214, 188, 0.45);
-    color: #7ed6bc;
+    background: var(--group-on-ground);
+    border-color: var(--group-on-line);
+    color: var(--accent-lms);
   }
   .eqbtn:active {
     transform: scale(0.95);
@@ -537,8 +537,8 @@
   .eqbtn__chev {
     width: 9px;
     height: 9px;
-    border-right: 2.5px solid rgba(233, 238, 242, 0.6);
-    border-bottom: 2.5px solid rgba(233, 238, 242, 0.6);
+    border-right: 2.5px solid var(--ink-quiet);
+    border-bottom: 2.5px solid var(--ink-quiet);
     transform: rotate(45deg) translate(-2px, -2px);
     transition: transform 160ms ease;
   }
@@ -563,7 +563,7 @@
     height: 6px;
     margin-left: -44px;
     border-radius: 3px;
-    background: rgba(233, 238, 242, 0.42);
+    background: var(--c-ink-42);
     pointer-events: none;
     z-index: 2;
   }
@@ -584,7 +584,7 @@
   }
   .btn:active,
   .btn.is-pressed { transform: scale(0.95); }
-  .i-dash { width: 26px; height: 26px; fill: none; stroke: rgba(233, 238, 242, 0.85); stroke-width: 2; stroke-linejoin: round; }
+  .i-dash { width: 26px; height: 26px; fill: none; stroke: var(--c-ink-85); stroke-width: 2; stroke-linejoin: round; }
   .btn--home {
     width: 64px;
     height: 64px;
@@ -597,7 +597,7 @@
     grid-template-rows: 1fr 1fr;
     gap: 4px;
   }
-  .i-tiles i { border-radius: 3px; background: rgba(233, 238, 242, 0.85); }
+  .i-tiles i { border-radius: 3px; background: var(--c-ink-85); }
   .i-sliders {
     position: relative;
     width: 22px;
@@ -638,16 +638,16 @@
   .divider {
     width: 1px;
     height: 44px;
-    background: rgba(233, 238, 242, 0.14);
+    background: var(--mark-line);
     flex-shrink: 0;
   }
 
   .mute {
-    border: 1px solid rgba(233, 238, 242, 0.12);
+    border: 1px solid var(--c-ink-12);
   }
   .mute.is-muted {
-    background: rgba(224, 167, 88, 0.14);
-    border-color: rgba(224, 167, 88, 0.45);
+    background: var(--group-undo-ground);
+    border-color: var(--c-warn-45);
   }
   .i-muted {
     position: relative;
@@ -662,7 +662,7 @@
     transform: translateY(-50%);
     width: 15px;
     height: 26px;
-    background: rgba(233, 238, 242, 0.45);
+    background: var(--c-ink-45);
     clip-path: polygon(0 27%, 42% 27%, 100% 0, 100% 100%, 42% 73%, 0 73%);
     display: block;
   }
@@ -698,7 +698,7 @@
     width: 100%;
     height: 10px;
     border-radius: var(--r-pill);
-    background: rgba(233, 238, 242, 0.15);
+    background: var(--c-ink-15);
     position: relative;
   }
   .fill {
@@ -710,7 +710,7 @@
     background: var(--accent-lms);
     transition: background 160ms ease;
   }
-  .fill.is-muted { background: rgba(224, 167, 88, 0.5); }
+  .fill.is-muted { background: var(--c-warn-50); }
   .knob {
     position: absolute;
     top: 50%;
@@ -719,9 +719,9 @@
     border-radius: 50%;
     transform: translate(-50%, -50%);
     background: var(--ink);
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.45);
+    box-shadow: 0 3px 10px var(--c-black-45);
   }
-  .knob.is-muted { background: rgba(233, 238, 242, 0.55); }
+  .knob.is-muted { background: var(--c-ink-55); }
   .readout {
     font-family: var(--font-mono);
     font-size: 26px;
@@ -743,14 +743,14 @@
     gap: 20px;
     min-height: 78px;
     padding: 0 24px;
-    border-radius: 18px;
-    background: rgba(233, 238, 242, 0.05);
-    border: 1px solid rgba(233, 238, 242, 0.12);
+    border-radius: var(--r-18);
+    background: var(--c-ink-05);
+    border: 1px solid var(--c-ink-12);
   }
   .fixed__lock {
     display: flex;
     flex-shrink: 0;
-    color: rgba(233, 238, 242, 0.7);
+    color: var(--c-ink-70);
   }
   .fixed__text {
     flex: 1;
@@ -773,7 +773,7 @@
     font-size: 15px;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: rgba(233, 238, 242, 0.55);
+    color: var(--c-ink-55);
     flex-shrink: 0;
   }
   .fixed__level.is-muted {
@@ -786,11 +786,11 @@
     left: 50%;
     bottom: 40px;
     transform: translateX(-50%) translateY(12px);
-    background: rgba(22, 35, 44, 0.97);
-    border: 1px solid rgba(126, 214, 188, 0.3);
-    border-radius: 14px;
+    background: var(--c-dark-16232c-97);
+    border: 1px solid var(--c-lms-30);
+    border-radius: var(--r-14);
     padding: 16px 26px;
-    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 18px 50px var(--c-black-50);
     transition: opacity 220ms ease, transform 220ms ease;
     opacity: 0;
     pointer-events: none;

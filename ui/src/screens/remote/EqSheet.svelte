@@ -169,7 +169,7 @@
     position: absolute;
     inset: 0;
     z-index: 50;
-    background: rgba(4, 8, 10, 0.55);
+    background: var(--c-dark-04080a-55);
     opacity: 0;
     pointer-events: none;
     transition: opacity 260ms ease;
@@ -184,14 +184,14 @@
     right: 0;
     bottom: 0;
     z-index: 51;
-    background: #16232c;
-    border-top: 1px solid rgba(233, 238, 242, 0.16);
-    border-radius: 24px 24px 0 0;
+    background: var(--bg-panel);
+    border-top: 1px solid var(--c-ink-16);
+    border-radius: var(--r-card) var(--r-card) 0 0;
     padding: 10px 16px calc(22px + env(safe-area-inset-bottom, 0px));
     display: flex;
     flex-direction: column;
     gap: 14px;
-    box-shadow: 0 -10px 32px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 -10px 32px var(--c-black-60);
     transform: translateY(calc(100% + 24px));
     transition: transform var(--remote-slide);
     /* Sideways is the chips' scroll; down is the sheet's. */
@@ -222,7 +222,7 @@
     width: 36px;
     height: 4px;
     border-radius: 2px;
-    background: rgba(233, 238, 242, 0.24);
+    background: var(--c-ink-24);
   }
   .head {
     display: flex;
@@ -242,7 +242,7 @@
     font-size: 13px;
     letter-spacing: 0.06em;
     margin-top: 4px;
-    color: rgba(233, 238, 242, 0.72);
+    color: var(--ink-muted);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -268,17 +268,17 @@
   .track {
     width: 56px;
     height: 32px;
-    border-radius: 16px;
+    border-radius: var(--r-lg);
     position: relative;
     box-sizing: border-box;
     display: block;
-    background: rgba(233, 238, 242, 0.08);
-    border: 1px solid rgba(233, 238, 242, 0.16);
+    background: var(--remote-vol-ground);
+    border: 1px solid var(--c-ink-16);
     transition: background 140ms ease;
   }
   .track.is-on {
-    background: rgba(126, 214, 188, 0.32);
-    border-color: rgba(126, 214, 188, 0.5);
+    background: var(--c-lms-32);
+    border-color: var(--c-lms-50);
   }
   .knob {
     position: absolute;
@@ -288,12 +288,12 @@
     height: 24px;
     border-radius: 50%;
     display: block;
-    background: rgba(233, 238, 242, 0.6);
+    background: var(--ink-quiet);
     transition: left 140ms ease;
   }
   .track.is-on .knob {
     left: 27px;
-    background: #7ed6bc;
+    background: var(--accent-lms);
   }
   .chips {
     display: flex;
@@ -319,14 +319,14 @@
     width: 1px;
     align-self: stretch;
     margin: 10px 3px;
-    background: rgba(233, 238, 242, 0.16);
+    background: var(--c-ink-16);
     flex-shrink: 0;
   }
   .chip {
     flex-shrink: 0;
     height: 44px;
     padding: 0 16px;
-    border-radius: 12px;
+    border-radius: var(--r-md);
     box-sizing: border-box;
     display: flex;
     align-items: center;
@@ -335,9 +335,9 @@
     font-weight: 600;
     white-space: nowrap;
     cursor: pointer;
-    background: rgba(233, 238, 242, 0.07);
-    border: 1px solid rgba(233, 238, 242, 0.12);
-    color: #e9eef2;
+    background: var(--ink-fill);
+    border: 1px solid var(--remote-touch-line);
+    color: var(--ink);
   }
   /* Custom, Phase 20's: a dot before the name. */
   .chip__dot {
@@ -345,26 +345,26 @@
     height: 7px;
     margin-right: 8px;
     border-radius: 50%;
-    background: #e0a758;
+    background: var(--accent-warn);
     flex-shrink: 0;
   }
   .chip.is-sel {
-    background: rgba(126, 214, 188, 0.16);
-    border-color: rgba(126, 214, 188, 0.55);
-    color: #7ed6bc;
+    background: var(--remote-select);
+    border-color: var(--remote-button-on-line);
+    color: var(--accent-lms);
   }
   .note {
     font-size: 14px;
     line-height: 1.4;
-    color: rgba(233, 238, 242, 0.6);
+    color: var(--ink-quiet);
     text-wrap: pretty;
   }
   .edit {
     height: 48px;
-    border-radius: 14px;
+    border-radius: var(--r-14);
     box-sizing: border-box;
-    background: rgba(233, 238, 242, 0.07);
-    border: 1px solid rgba(233, 238, 242, 0.14);
+    background: var(--ink-fill);
+    border: 1px solid var(--c-ink-14);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -372,7 +372,7 @@
     font: inherit;
     font-size: 16px;
     font-weight: 600;
-    color: #e9eef2;
+    color: var(--ink);
     cursor: pointer;
   }
   .edit:active {
@@ -381,8 +381,8 @@
   .edit__chev {
     width: 8px;
     height: 8px;
-    border-right: 2px solid rgba(233, 238, 242, 0.6);
-    border-top: 2px solid rgba(233, 238, 242, 0.6);
+    border-right: 2px solid var(--ink-quiet);
+    border-top: 2px solid var(--ink-quiet);
     transform: rotate(45deg);
     display: block;
   }

@@ -108,8 +108,8 @@
     position: relative;
     height: 186px;
     flex-shrink: 0;
-    border-top: 1px solid rgba(159, 180, 232, 0.24);
-    background: rgba(20, 31, 40, 0.78);
+    border-top: 1px solid var(--c-bluetooth-24);
+    background: var(--c-dark-141f28-78);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -143,7 +143,7 @@
   }
   .is-bare .name,
   .is-bare .status {
-    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.6);
+    text-shadow: 0 1px 10px var(--c-black-60);
   }
   .row {
     display: flex;
@@ -175,7 +175,7 @@
     width: var(--wait-ring);
     height: var(--wait-ring);
     border-radius: 50%;
-    border: 2px solid rgba(233, 238, 242, 0.6);
+    border: 2px solid var(--ink-quiet);
     animation: ring 2800ms ease-out infinite;
     box-sizing: border-box;
   }
@@ -191,15 +191,15 @@
     height: var(--wait-disc);
     border-radius: 50%;
     background: var(--ink-fill);
-    border: 1px solid rgba(233, 238, 242, 0.16);
+    border: 1px solid var(--c-ink-16);
     display: flex;
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
   }
   .is-lead .disc {
-    background: rgba(126, 214, 188, 0.14);
-    border-color: rgba(126, 214, 188, 0.4);
+    background: var(--c-lms-14);
+    border-color: var(--c-lms-40);
   }
   .label {
     text-align: center;

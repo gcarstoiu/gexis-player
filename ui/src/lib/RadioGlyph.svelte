@@ -13,15 +13,15 @@
   //: Read by colour and silhouette before they are read by word; anything
   //: LMS reports that is not here - and every station - falls back to arcs.
   const RADIO_LOOK = {
-    'Radio Now Playing': ['arcs', '#7ed6bc'],
-    'My Presets': ['star', '#e0a758'],
-    'Local Radio': ['pin', '#9fb4e8'],
-    Music: ['note', '#f2a48f'],
-    Sports: ['ball', '#7ed6bc'],
+    'Radio Now Playing': ['arcs', 'var(--accent-lms)'],
+    'My Presets': ['star', 'var(--accent-warn)'],
+    'Local Radio': ['pin', 'var(--accent-bluetooth)'],
+    Music: ['note', 'var(--accent-artist)'],
+    Sports: ['ball', 'var(--accent-lms)'],
     News: ['lines', '#b0bcc4'],
-    Talk: ['mic', '#c8a2d8'],
+    Talk: ['mic', 'var(--accent-display)'],
     'By Location': ['globe', '#8fc4d8'],
-    'By Language': ['speech', '#9fb4e8'],
+    'By Language': ['speech', 'var(--accent-bluetooth)'],
     // The design lists Rss among its shapes and assigns it no tint, so it
     // takes the fallback's - inventing one would be a colour nothing chose.
     Rss: ['rss', '#8fc4d8'],
@@ -39,7 +39,7 @@
     box-sizing: border-box;
     width: 46px;
     height: 46px;
-    border-radius: 13px;
+    border-radius: var(--r-13);
     background: color-mix(in srgb, var(--tint) 14%, transparent);
     border: 1px solid color-mix(in srgb, var(--tint) 30%, transparent);
     display: flex;
@@ -108,11 +108,11 @@
 
   /* mic */
   .rglyph--mic { width: 16px; height: 21px; }
-  .rglyph--mic i:nth-child(1) { left: 4px; top: 0; width: 8px; height: 12px; border-radius: 4px; }
+  .rglyph--mic i:nth-child(1) { left: 4px; top: 0; width: 8px; height: 12px; border-radius: var(--r-4); }
   .rglyph--mic i:nth-child(2) {
     left: 1px; top: 9px; width: 14px; height: 7px; background: none;
     border: 2px solid currentColor; border-top-color: transparent;
-    border-radius: 0 0 8px 8px;
+    border-radius: 0 0 var(--r-sm) var(--r-sm);
   }
   .rglyph--mic i:nth-child(3) { left: 50%; bottom: 0; width: 2px; height: 4px; transform: translateX(-50%); }
 
@@ -129,7 +129,7 @@
   .rglyph--speech { width: 20px; height: 18px; }
   .rglyph--speech i:nth-child(1) {
     left: 0; top: 0; width: 20px; height: 14px; background: none;
-    border: 2px solid currentColor; border-radius: 6px;
+    border: 2px solid currentColor; border-radius: var(--r-6);
   }
   .rglyph--speech i:nth-child(2) {
     left: 4px; bottom: 0; width: 6px; height: 6px;

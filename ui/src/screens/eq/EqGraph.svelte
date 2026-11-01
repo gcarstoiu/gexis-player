@@ -66,8 +66,8 @@
       {@const dragging = drag === i}
       <div class="val">
         <span class="chip" class:is-on={dragging}
-              style:background={dragging ? (Math.round(g) === 0 ? '#e9eef2' : valueInk(g)) : 'transparent'}
-              style:color={dragging ? '#0d151c' : valueInk(g)}>{fmt(g)}</span>
+              style:background={dragging ? (Math.round(g) === 0 ? 'var(--ink)' : valueInk(g)) : 'transparent'}
+              style:color={dragging ? 'var(--ink-on-accent)' : valueInk(g)}>{fmt(g)}</span>
       </div>
     {/each}
   </div>
@@ -164,7 +164,7 @@
     flex-shrink: 0;
     font-family: var(--font-mono);
     font-size: 12px;
-    color: rgba(233, 238, 242, 0.6);
+    color: var(--ink-quiet);
   }
   .graph--bar .axis {
     width: 40px;
@@ -189,11 +189,11 @@
     font-weight: 600;
     line-height: 1;
     padding: 6px 9px;
-    border-radius: 9px;
+    border-radius: var(--r-9);
   }
   .graph--bar .chip {
     padding: 5px 8px;
-    border-radius: 8px;
+    border-radius: var(--r-sm);
   }
 
   .box {
@@ -210,7 +210,7 @@
     transform: translateY(-50%);
   }
   .axis--scale .zero {
-    color: rgba(233, 238, 242, 0.82);
+    color: var(--ink-body);
   }
   .plot {
     flex: 1;
@@ -222,7 +222,7 @@
     left: 0;
     right: 0;
     height: 1px;
-    background: rgba(233, 238, 242, 0.05);
+    background: var(--c-ink-05);
   }
   svg {
     position: absolute;
@@ -238,7 +238,7 @@
     right: 0;
     top: 50%;
     height: 1px;
-    background: rgba(233, 238, 242, 0.3);
+    background: var(--c-ink-30);
     pointer-events: none;
   }
   .cols {
@@ -260,22 +260,22 @@
     right: 8px;
     top: 0;
     bottom: 0;
-    border-radius: 16px;
+    border-radius: var(--r-lg);
     background: transparent;
   }
   .graph--bar .col__ground {
     left: 6px;
     right: 6px;
-    border-radius: 14px;
+    border-radius: var(--r-14);
   }
   .col.is-dragging .col__ground {
-    background: rgba(233, 238, 242, 0.05);
+    background: var(--c-ink-05);
   }
   .col__centre {
     position: absolute;
     left: 50%;
     width: 0;
-    border-left: 1px dashed rgba(233, 238, 242, 0.1);
+    border-left: 1px dashed var(--ink-line);
   }
   .knob {
     position: absolute;
@@ -286,12 +286,12 @@
     border-radius: 50%;
     box-sizing: border-box;
     border: 4px solid #f4f1ea;
-    background: #0d151c;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+    background: var(--ink-on-accent);
+    box-shadow: 0 3px 10px var(--c-black-50);
   }
   .knob.is-dragging {
     background: #f4f1ea;
-    box-shadow: 0 0 0 8px rgba(244, 241, 234, 0.18), 0 3px 10px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 0 0 8px rgba(244, 241, 234, 0.18), 0 3px 10px var(--c-black-50);
   }
 
   .hz {
@@ -309,7 +309,7 @@
     text-align: center;
     font-family: var(--font-mono);
     font-size: 15px;
-    color: rgba(233, 238, 242, 0.72);
+    color: var(--ink-muted);
   }
   .graph--bar .hz__band {
     font-size: 16px;

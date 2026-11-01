@@ -100,11 +100,11 @@
     overflow-wrap: anywhere;
   }
   .title.is-none {
-    color: rgba(233, 238, 242, 0.6);
+    color: var(--ink-quiet);
   }
   .artist {
     font-size: 15px;
-    color: rgba(233, 238, 242, 0.72);
+    color: var(--ink-muted);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -124,18 +124,18 @@
     height: 4px;
     border-radius: 2px;
     overflow: hidden;
-    background: rgba(233, 238, 242, 0.14);
+    background: var(--c-ink-14);
   }
   /* No duration (Bluetooth, a live stream): the design's inert rule. */
   .bar.is-live {
-    background: linear-gradient(90deg, rgba(233, 238, 242, 0), rgba(233, 238, 242, 0.15) 16%, rgba(233, 238, 242, 0.15) 84%, rgba(233, 238, 242, 0));
+    background: linear-gradient(90deg, var(--c-ink-00), var(--c-ink-15) 16%, var(--c-ink-15) 84%, var(--c-ink-00));
   }
   .bar__fill {
     position: absolute;
     left: 0;
     top: 0;
     bottom: 0;
-    background: #7ed6bc;
+    background: var(--accent-lms);
   }
   .times {
     display: flex;
@@ -143,7 +143,7 @@
     font-family: var(--font-mono);
     font-size: 12px;
     line-height: 16px;
-    color: rgba(233, 238, 242, 0.6);
+    color: var(--ink-quiet);
   }
   .volume {
     margin-top: 12px;

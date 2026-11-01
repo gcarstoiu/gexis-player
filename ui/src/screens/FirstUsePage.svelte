@@ -10,13 +10,16 @@
   screens, paths, copy, Back and Next - kept verbatim, with the documented
   replacements where the prototype simulates what the player does. Change
   the design, then generate again; do not restyle by hand.
+  **Changed by hand since it was generated**: AirPlay (Phase 23,
+  2026-10-28) and the colours through the tokens (ADR-0171, 2026-11-01);
+  the generator has neither, so generating again would take both out.
 -->
 <script>
   import { onMount, untrack } from 'svelte';
   import mark from '../assets/gexis-mark.svg';
   import lyrionIcon from '../assets/icon-lyrion.svg';
   import spotifyIcon from '../assets/icon-spotify.png';
-  import btIcon from '../assets/icon-bluetooth.png';
+  import BluetoothMark from '../lib/BluetoothMark.svelte';
   //: ADR-0167 decision 6: our own neutral mark (design/marks/airplay.svg).
   import airplayIcon from '../assets/icon-airplay.png';
   import calmWall from '../assets/personalise/calm.webp';
@@ -44,10 +47,10 @@
 
   // ===== The design's logic, from Setup Prototype.dc.html =====
 
-const C = { music: '#b0bcc4', lyr: '#9fb4e8', fold: '#f2a48f', browse: '#8fd9a8', spo: '#7ed6bc', air: '#b9c4ce', bt: '#d8c88f', scr: '#c8a2d8', idle: '#e8a0b4', stby: '#8fc4d8', ext: '#a8d68f', plex: '#e0a758', rev: '#7ed6bc' };
-const SEL = 'rgba(126,214,188,0.1)', SELB = 'rgba(126,214,188,0.45)', OFF = 'rgba(255,255,255,0.05)', OFFB = 'rgba(233,238,242,0.1)', RING = 'rgba(233,238,242,0.42)', MUTE = 'rgba(233,238,242,0.6)';
-const TAGS = { ok: ['rgba(126,214,188,0.14)', '#7ed6bc'], warn: ['rgba(224,167,88,0.14)', '#e0a758'], plain: ['rgba(233,238,242,0.08)', 'rgba(233,238,242,0.72)'] };
-const TONES = { info: ['#8fc4d8', OFF, OFFB], ok: ['#7ed6bc', OFF, OFFB], warn: ['#e0a758', 'rgba(224,167,88,0.08)', 'rgba(224,167,88,0.45)'] };
+const C = { music: '#b0bcc4', lyr: 'var(--accent-bluetooth)', fold: 'var(--accent-artist)', browse: 'var(--accent-spotify)', spo: 'var(--accent-lms)', air: '#b9c4ce', bt: '#d8c88f', scr: 'var(--accent-display)', idle: '#e8a0b4', stby: '#8fc4d8', ext: '#a8d68f', plex: 'var(--accent-warn)', rev: 'var(--accent-lms)' };
+const SEL = 'var(--c-lms-10)', SELB = 'var(--c-lms-45)', OFF = 'var(--c-white-05)', OFFB = 'var(--ink-line)', RING = 'var(--c-ink-42)', MUTE = 'var(--ink-quiet)';
+const TAGS = { ok: ['var(--c-lms-14)', 'var(--accent-lms)'], warn: ['var(--c-warn-14)', 'var(--accent-warn)'], plain: ['var(--c-ink-08)', 'var(--ink-muted)'] };
+const TONES = { info: ['#8fc4d8', OFF, OFFB], ok: ['var(--accent-lms)', OFF, OFFB], warn: ['var(--accent-warn)', 'var(--c-warn-08)', 'var(--c-warn-45)'] };
 const LETTER = { plex: 'P', viz: 'V', clk: 'C', stby: 'S', besz: 'B', lib: 'M', fold: 'F', browse: 'B', ext: '+' };
 const BTYPES = ['Sub', 'List', 'Note', 'Field', 'Status', 'P', 'Btn', 'Pics', 'Where', 'Split', 'Seg', 'Pick', 'Num', 'Code', 'Party', 'Dev', 'Prog', 'Cast', 'Sum', 'Clock', 'Addr', 'Iv', 'Head', 'Rule'];
 const noop = () => {};
@@ -55,26 +58,26 @@ const noop = () => {};
 const LIMITED = ['Limited testing', 'plain'];
 const SRCN = { lyr: 'Lyrion', spo: 'Spotify', air: 'AirPlay', bt: 'Bluetooth', plex: 'Plexamp' };
 const tagOf = tag => {
-  if (!tag) return { tagDisplay: 'none', tag: '', tagBg: 'transparent', tagInk: '#e9eef2' };
+  if (!tag) return { tagDisplay: 'none', tag: '', tagBg: 'transparent', tagInk: 'var(--ink)' };
   const [text, tone] = Array.isArray(tag) ? tag : [tag, 'plain'];
   return { tagDisplay: 'block', tag: text, tagBg: TAGS[tone][0], tagInk: TAGS[tone][1] };
 };
 function row(o) {
   const k = o.k, radio = k === 'radio', net = k === 'net', ghost = k === 'ghost', sel = (radio || net || k === 'chk' || k === 'pick') && o.on;
   const img = ['lyr', 'spo', 'air', 'bt'].includes(o.icon), letter = LETTER[o.icon] || '';
-  const bar = n => n <= (o.lvl || 0) ? '#8fc4d8' : 'rgba(233,238,242,0.22)';
+  const bar = n => n <= (o.lvl || 0) ? '#8fc4d8' : 'var(--c-ink-22)';
   return Object.assign({
-    label: o.label, labelInk: ghost ? MUTE : '#e9eef2', note: o.note || '', noteDisplay: o.note ? 'block' : 'none', meta: o.meta || '', metaDisplay: o.meta ? 'block' : 'none',
+    label: o.label, labelInk: ghost ? MUTE : 'var(--ink)', note: o.note || '', noteDisplay: o.note ? 'block' : 'none', meta: o.meta || '', metaDisplay: o.meta ? 'block' : 'none',
     onClick: o.fn || (k === 'pick' ? o.tick : null) || noop, onTick: k === 'pick' && o.fn ? o.tick : null, cursor: o.fn || o.tick ? 'pointer' : 'default',
-    bg: ghost ? 'transparent' : sel ? SEL : OFF, border: ghost ? 'rgba(233,238,242,0.3)' : sel ? SELB : OFFB, bs: ghost ? 'dashed' : 'solid',
-    radioDisplay: radio || net ? 'flex' : 'none', ring: sel ? '#7ed6bc' : RING, dotDisplay: sel ? 'block' : 'none',
+    bg: ghost ? 'transparent' : sel ? SEL : OFF, border: ghost ? 'var(--c-ink-30)' : sel ? SELB : OFFB, bs: ghost ? 'dashed' : 'solid',
+    radioDisplay: radio || net ? 'flex' : 'none', ring: sel ? 'var(--accent-lms)' : RING, dotDisplay: sel ? 'block' : 'none',
     iconDisplay: img || letter ? 'flex' : 'none', isLyr: o.icon === 'lyr', isSpo: o.icon === 'spo', isAir: o.icon === 'air', isBt: o.icon === 'bt', letter, letterDisplay: letter && !img ? 'flex' : 'none',
     barsDisplay: net ? 'flex' : 'none', b1: bar(1), b2: bar(2), b3: bar(3), b4: bar(4),
-    togDisplay: k === 'tog' ? 'block' : 'none', togBg: o.on ? '#7ed6bc' : 'rgba(233,238,242,0.07)', togBorder: o.on ? '#7ed6bc' : 'rgba(233,238,242,0.18)',
-    knobLeft: o.on ? '31px' : '3px', knobBg: o.on ? '#0d151c' : 'rgba(233,238,242,0.55)',
-    chkDisplay: k === 'chk' || k === 'pick' ? 'flex' : 'none', boxBg: sel ? '#7ed6bc' : 'transparent', chevDisplay: k === 'hub' || (k === 'pick' && o.fn) ? 'block' : 'none',
+    togDisplay: k === 'tog' ? 'block' : 'none', togBg: o.on ? 'var(--accent-lms)' : 'var(--ink-fill)', togBorder: o.on ? 'var(--accent-lms)' : 'var(--ink-fill-press)',
+    knobLeft: o.on ? '31px' : '3px', knobBg: o.on ? 'var(--ink-on-accent)' : 'var(--c-ink-55)',
+    chkDisplay: k === 'chk' || k === 'pick' ? 'flex' : 'none', boxBg: sel ? 'var(--accent-lms)' : 'transparent', chevDisplay: k === 'hub' || (k === 'pick' && o.fn) ? 'block' : 'none',
     srcs: (o.srcs || []).map(x => ({ isLyr: x === 'lyr', isSpo: x === 'spo', isAir: x === 'air', isBt: x === 'bt', isPlex: x === 'plex', name: SRCN[x] })), srcDisplay: o.srcs ? 'flex' : 'none',
-    foot: o.foot || '', footMeta: o.footMeta || '', footDisplay: o.foot ? 'flex' : 'none', footDot: o.footDot || '#7ed6bc'
+    foot: o.foot || '', footMeta: o.footMeta || '', footDisplay: o.foot ? 'flex' : 'none', footDot: o.footDot || 'var(--accent-lms)'
   }, tagOf(o.tag));
 }
 function block(b) {
@@ -96,22 +99,22 @@ function block(b) {
     o.cols = rows ? 'minmax(0,1fr)' : g3 ? 'repeat(3,minmax(0,1fr))' : 'repeat(2,minmax(0,1fr))';
     o.items = b.items.map(p => Object.assign({
       kind: p.kind, marks: p.marks || [], rpm: p.rpm || 33, label: p.label, note: p.note || '', noteDisplay: p.note ? 'block' : 'none', onClick: p.fn,
-      bg: p.on ? 'rgba(143,217,168,0.1)' : OFF, border: p.on ? 'rgba(143,217,168,0.5)' : OFFB, wire: p.on ? '#8fd9a8' : 'rgba(233,238,242,0.18)',
-      ring: p.on ? '#7ed6bc' : RING, dot: p.on ? 'block' : 'none',
+      bg: p.on ? 'var(--c-spotify-10)' : OFF, border: p.on ? 'var(--c-spotify-50)' : OFFB, wire: p.on ? 'var(--accent-spotify)' : 'var(--ink-fill-press)',
+      ring: p.on ? 'var(--accent-lms)' : RING, dot: p.on ? 'block' : 'none',
       lfs: g3 ? '13px' : '15px', dir: rows ? 'row' : 'column', mw: rows ? '46%' : '100%', gap: rows ? '14px' : '10px', ai: rows ? 'center' : 'stretch', lpr: rows ? '30px' : '4px'
     }, tagOf(p.tag)));
   }
   if (b.t === 'Where') o.items = [['here', 'On this player'], ['pc', 'On a computer or NAS']].map(w => { const on = w[0] === b.sel, far = w[0] === 'pc';
-    return { label: w[1], onClick: () => b.fn(w[0]), bg: on ? SEL : OFF, border: on ? SELB : OFFB, ring: on ? '#7ed6bc' : RING, dot: on ? 'block' : 'none', wire: on ? '#9fb4e8' : 'rgba(233,238,242,0.4)', isHere: !far, isFar: far }; });
+    return { label: w[1], onClick: () => b.fn(w[0]), bg: on ? SEL : OFF, border: on ? SELB : OFFB, ring: on ? 'var(--accent-lms)' : RING, dot: on ? 'block' : 'none', wire: on ? 'var(--accent-bluetooth)' : 'var(--c-ink-40)', isHere: !far, isFar: far }; });
   if (b.t === 'Split') Object.assign(o, { lhead: b.lhead, rhead: b.rhead, left: b.left.map(t => ({ t })), right: b.right.map(t => ({ t })) });
-  if (b.t === 'Seg') o.opts = b.opts.map((x, i) => ({ label: x, onClick: () => b.fn(i), bg: i === b.on ? b.accent : 'transparent', ink: i === b.on ? '#0d151c' : '#e9eef2' }));
+  if (b.t === 'Seg') o.opts = b.opts.map((x, i) => ({ label: x, onClick: () => b.fn(i), bg: i === b.on ? b.accent : 'transparent', ink: i === b.on ? 'var(--ink-on-accent)' : 'var(--ink)' }));
   if (b.t === 'Pick') { const multi = Array.isArray(b.sel); o.multiDisplay = multi ? 'inline' : 'none'; o.items = b.opts.map(x => { const on = multi ? b.sel.includes(x) : x === b.sel;
-    return multi ? { label: x, onClick: () => b.fn(x), radius: '10px', bg: on ? 'rgba(233,238,242,0.08)' : 'transparent', ink: '#e9eef2', border: on ? b.accent : 'rgba(233,238,242,0.22)', boxDisplay: 'flex', boxBg: on ? b.accent : 'transparent', boxBorder: on ? b.accent : 'rgba(233,238,242,0.45)', tick: on ? '✓' : '' }
-      : { label: x, onClick: () => b.fn(x), radius: '999px', bg: on ? b.accent : OFF, ink: on ? '#0d151c' : '#e9eef2', border: on ? b.accent : 'rgba(233,238,242,0.14)', boxDisplay: 'none', boxBg: 'transparent', boxBorder: 'transparent', tick: '' }; }); }
-  if (b.t === 'Num') o.items = b.items.map((x, i) => { const st = x[1]; return { n: st === 'done' ? '✓' : String(i + 1), t: x[0], bg: st === 'done' ? '#7ed6bc' : 'transparent', ring: st === 'done' ? '#7ed6bc' : st === 'now' ? '#d8c88f' : 'rgba(233,238,242,0.3)', ink: st === 'done' ? '#0d151c' : st === 'now' ? '#d8c88f' : MUTE, tc: st === 'next' ? MUTE : '#e9eef2' }; });
-  if (b.t === 'Dev') { o.head = b.head || 'Trusted devices'; o.items = b.items.map(d => ({ name: d.name, meta: d.meta, metaInk: /just now/.test(d.meta) ? '#7ed6bc' : MUTE, onForget: d.fn })); o.empty = b.empty; o.emptyDisplay = b.items.length ? 'none' : 'flex'; }
-  if (b.t === 'Prog') Object.assign(o, { label: b.label, meta: b.meta || (b.pct >= 100 ? 'Done' : Math.round(b.pct) + '%'), pct: b.pct + '%', ink: b.pct >= 100 ? '#7ed6bc' : C.plex,
-    st: b.st || '', stDisplay: b.st ? 'flex' : 'none', stTick: b.stOk ? '✓' : '', stBg: b.stOk ? '#7ed6bc' : 'transparent', stBorder: b.stOk ? '#7ed6bc' : 'rgba(233,238,242,0.45)' });
+    return multi ? { label: x, onClick: () => b.fn(x), radius: '10px', bg: on ? 'var(--c-ink-08)' : 'transparent', ink: 'var(--ink)', border: on ? b.accent : 'var(--c-ink-22)', boxDisplay: 'flex', boxBg: on ? b.accent : 'transparent', boxBorder: on ? b.accent : 'var(--c-ink-45)', tick: on ? '✓' : '' }
+      : { label: x, onClick: () => b.fn(x), radius: '999px', bg: on ? b.accent : OFF, ink: on ? 'var(--ink-on-accent)' : 'var(--ink)', border: on ? b.accent : 'var(--c-ink-14)', boxDisplay: 'none', boxBg: 'transparent', boxBorder: 'transparent', tick: '' }; }); }
+  if (b.t === 'Num') o.items = b.items.map((x, i) => { const st = x[1]; return { n: st === 'done' ? '✓' : String(i + 1), t: x[0], bg: st === 'done' ? 'var(--accent-lms)' : 'transparent', ring: st === 'done' ? 'var(--accent-lms)' : st === 'now' ? '#d8c88f' : 'var(--c-ink-30)', ink: st === 'done' ? 'var(--ink-on-accent)' : st === 'now' ? '#d8c88f' : MUTE, tc: st === 'next' ? MUTE : 'var(--ink)' }; });
+  if (b.t === 'Dev') { o.head = b.head || 'Trusted devices'; o.items = b.items.map(d => ({ name: d.name, meta: d.meta, metaInk: /just now/.test(d.meta) ? 'var(--accent-lms)' : MUTE, onForget: d.fn })); o.empty = b.empty; o.emptyDisplay = b.items.length ? 'none' : 'flex'; }
+  if (b.t === 'Prog') Object.assign(o, { label: b.label, meta: b.meta || (b.pct >= 100 ? 'Done' : Math.round(b.pct) + '%'), pct: b.pct + '%', ink: b.pct >= 100 ? 'var(--accent-lms)' : C.plex,
+    st: b.st || '', stDisplay: b.st ? 'flex' : 'none', stTick: b.stOk ? '✓' : '', stBg: b.stOk ? 'var(--accent-lms)' : 'transparent', stBorder: b.stOk ? 'var(--accent-lms)' : 'var(--c-ink-45)' });
   if (b.t === 'Cast') Object.assign(o, { device: b.device, text: b.text });
   if (b.t === 'Sum') o.rows = b.rows.map(r => ({ what: r[0], value: r[1], onClick: r[2] || noop, actDisplay: r[2] ? 'block' : 'none' }));
   if (b.t === 'Iv') Object.assign(o, { items: b.items, noneDisplay: b.noneDisplay, addOp: b.addOp, onAdd: b.onAdd });
@@ -137,7 +140,7 @@ const prog = (label, pct, meta, st, stOk) => ({ t: 'Prog', label, pct, meta, st,
 const sum = (rows, head) => ({ t: 'Sum', rows, head });
 
 const P1N = ['Network', 'Start', 'Name', 'Time', 'Output', 'Screen', 'Review'], P1B = ['Network', 'Start', 'Output', 'Screen', 'Review'];
-const P1C = { Network: '#8fc4d8', Start: '#b0bcc4', Name: '#e8a0b4', Time: '#c8a2d8', Output: '#7ed6bc', Screen: '#8fd9a8', Review: '#f2a48f' };
+const P1C = { Network: '#8fc4d8', Start: '#b0bcc4', Name: '#e8a0b4', Time: 'var(--accent-display)', Output: 'var(--accent-lms)', Screen: 'var(--accent-spotify)', Review: 'var(--accent-artist)' };
 const P1AT = { p1net: 'Network', p1start: 'Start', p1backup: 'Start', p1name: 'Name', p1clock: 'Time', p1output: 'Output', p1screen: 'Screen', p1review: 'Review', p1restore: 'Review' };
 const P2M = { listen: ['Listen', C.music], mix: ['Listen', C.music], lyrion: ['Lyrion', C.lyr], folders: ['Folders', C.fold], plexamp: ['Plexamp', C.plex], browse: ['Browse', C.browse], spotify: ['Spotify', C.spo], airplay: ['AirPlay', C.air], bluetooth: ['Bluetooth', C.bt], touchpad: ['Touchpad', C.ext], visualiser: ['Visualiser', C.scr], idle: ['When idle', C.idle], wait: ['While it waits', C.idle], standby: ['Standby', C.stby], plexsign: ['Plex sign-in', C.plex], review: ['Review', C.rev] };
 const LABEL = { p1welcome: 'Welcome', p1net: 'Network', p1start: 'New player or backup', p1backup: 'Upload a backup', p1name: 'Name', p1clock: 'Clock', p1output: 'Output', p1screen: 'Screen', p1review: 'Check it over', p1join: 'Joining the network', p1restore: 'Check it over', p1restored: 'Restoring', listen: 'How will you listen?', mix: 'My own mix', lyrion: 'Where Lyrion runs', folders: 'Where your music is', plexamp: 'Plexamp', browse: 'Browse', spotify: 'Spotify', airplay: 'AirPlay', bluetooth: 'Bluetooth', touchpad: 'Touchpad', visualiser: 'Visualiser', idle: 'When idle', wait: 'While it waits', standby: 'Standby', plexsign: 'Plex sign-in', review: 'Your setup', done: 'Getting ready', later: 'Kept the defaults' };
@@ -187,21 +190,21 @@ class Component extends DCLogic {
   }
   p1Path(s) { return s.start === 'new' ? ['p1welcome', 'p1net', 'p1start', 'p1name', 'p1clock', 'p1output', 'p1screen', 'p1review', 'p1join'] : ['p1welcome', 'p1net', 'p1start', 'p1backup', 'p1output', 'p1screen', 'p1restore', 'p1restored']; }
   ivBlock(s) {
-    const A = '#7ed6bc', ON = { bg: 'rgba(126,214,188,0.16)', border: A, ink: A }, LINE = 'rgba(233,238,242,0.1)', FILL = 'rgba(233,238,242,0.07)';
+    const A = 'var(--accent-lms)', ON = { bg: 'var(--c-lms-16)', border: A, ink: A }, LINE = 'var(--ink-line)', FILL = 'var(--ink-fill)';
     const up = (i, f) => this.setState(st => ({ ivs: st.ivs.map((x, k) => k === i ? Object.assign({}, x, f(x)) : x) }));
     const items = s.ivs.map((iv, i) => {
       const pk = s.ivPick && s.ivPick.i === i ? s.ivPick.which : null, [hh, mm] = pk ? iv[pk].split(':') : [];
       const setT = (part, v) => up(i, x => { const [a, b] = x[pk].split(':'); return { [pk]: part === 'h' ? v + ':' + b : a + ':' + v }; });
-      const cell = (label, sel, fn) => Object.assign({ label, onTap: fn, weight: sel ? 700 : 400 }, sel ? ON : { bg: FILL, border: LINE, ink: 'rgba(233,238,242,0.82)' });
+      const cell = (label, sel, fn) => Object.assign({ label, onTap: fn, weight: sel ? 700 : 400 }, sel ? ON : { bg: FILL, border: LINE, ink: 'var(--ink-body)' });
       return {
         onRemove: () => this.setState(st => { const ivs = st.ivs.filter((_, k) => k !== i); return { ivPick: null, ivs, standby: ivs.length ? st.standby : false }; }),
-        times: [['from', 'From'], ['until', 'Until']].map(([w, label]) => ({ label, value: iv[w], border: pk === w ? A : LINE, ink: pk === w ? A : '#e9eef2', onTap: () => this.setState({ ivPick: pk === w ? null : { i, which: w } }) })),
+        times: [['from', 'From'], ['until', 'Until']].map(([w, label]) => ({ label, value: iv[w], border: pk === w ? A : LINE, ink: pk === w ? A : 'var(--ink)', onTap: () => this.setState({ ivPick: pk === w ? null : { i, which: w } }) })),
         pickDisplay: pk ? 'flex' : 'none',
         hours: HOURS.map(x => cell(x, x === hh, () => setT('h', x))),
         quarters: QUARTERS.map(x => cell(':' + x, x === mm, () => { setT('m', x); this.setState({ ivPick: null }); })),
         days: DAYS.map(d => { const sel = iv.days.includes(d);
           return Object.assign({ label: d, onTap: () => { if (sel && iv.days.length === 1) return; up(i, x => ({ days: sel ? x.days.filter(y => y !== d) : DAYS.filter(y => y === d || x.days.includes(y)) })); } },
-            sel ? ON : { bg: FILL, border: LINE, ink: 'rgba(233,238,242,0.72)' }); })
+            sel ? ON : { bg: FILL, border: LINE, ink: 'var(--ink-muted)' }); })
       };
     });
     return { t: 'Iv', items, noneDisplay: items.length ? 'none' : 'block', addOp: items.length >= 6 ? 0.45 : 1,
@@ -371,7 +374,7 @@ class Component extends DCLogic {
       case 'listen': { const st = s.lyrState, found = st === 'found', pk = p => () => set({ preset: p, presetTouched: true });
         const stat = null;
         const lfoot = { back: false, alt: 'Do it later', altFn: () => this.go('later'), nextOff: !s.preset };
-          const mine = R('My music + streaming', '', s.preset === 'mine', pk('mine'), Object.assign({ srcs: ['lyr', 'spo', 'air', 'bt'] }, found ? { foot: 'Lyrion found on ' + s.net, footMeta: s.lyrMeta } : st === 'none' ? { foot: 'No Lyrion found on ' + s.net, footMeta: 'Set it up on the next screen', footDot: 'rgba(233,238,242,0.4)' } : {}));
+          const mine = R('My music + streaming', '', s.preset === 'mine', pk('mine'), Object.assign({ srcs: ['lyr', 'spo', 'air', 'bt'] }, found ? { foot: 'Lyrion found on ' + s.net, footMeta: s.lyrMeta } : st === 'none' ? { foot: 'No Lyrion found on ' + s.net, footMeta: 'Set it up on the next screen', footDot: 'var(--c-ink-40)' } : {}));
           const rest = [R('Plex + streaming', '', s.preset === 'plex', pk('plex'), { srcs: ['plex', 'spo', 'air', 'bt'] }),
             R('Streaming only', '', s.preset === 'stream', pk('stream'), { srcs: ['spo', 'air', 'bt'] })];
           const own = R('My own mix', 'Choose from any of these on the next screen.', s.preset === 'custom', pk('custom'), { srcs: ['lyr', 'plex', 'spo', 'air', 'bt'] });
@@ -543,7 +546,7 @@ class Component extends DCLogic {
 
   renderVals() {
     const s = this.state, d = this.d(s), sc = this.screenDef(s, d), p1 = s.screen.startsWith('p1'), W = s.wide;
-    let rail = null, at = -1, accent = '#7ed6bc', stepName = '';
+    let rail = null, at = -1, accent = 'var(--accent-lms)', stepName = '';
     if (p1 && P1AT[s.screen]) { rail = s.start === 'new' ? P1N : P1B; stepName = P1AT[s.screen]; at = rail.indexOf(stepName); accent = P1C[stepName]; }
     else if (P2M[s.screen]) { rail = uniq(this.p2Path(s).map(x => P2M[x][0])); stepName = P2M[s.screen][0]; at = rail.indexOf(stepName); accent = P2M[s.screen][1]; }
     const crumb = sc.crumb || (s.ret === 'review' ? 'Review · ' + stepName : s.ret ? 'Check it over · ' + stepName : rail && at >= 0 ? 'Step ' + (at + 1) + ' of ' + rail.length : 'Make it yours');
@@ -559,8 +562,8 @@ class Component extends DCLogic {
     const looks = d.lyr ? { kind: KNAV[s.browse] } : { kind: 'wait', marks: d.marks, clock: s.waitClock, black: s.waitBg === 'Black' };
     const sidePv = pv || (p1 ? { kind: 'setup', head: 'The player’s screen' } : d.headless ? null : Object.assign({ head: (s.name.trim() || 'The player') + '’s screen', time: s.fmt ? '9:04 pm' : '21:04', player: s.name }, looks));
     const nav = id => {
-      const on = id === s.screen, c = P1AT[id] ? P1C[P1AT[id]] : P2M[id] ? P2M[id][1] : '#7ed6bc';
-      return { label: LABEL[id], code: CODES[id] || '', c, onClick: () => this.go(id), bg: on ? 'rgba(233,238,242,0.09)' : 'transparent', ink: on ? '#e9eef2' : 'rgba(233,238,242,0.66)', fw: on ? 700 : 500 };
+      const on = id === s.screen, c = P1AT[id] ? P1C[P1AT[id]] : P2M[id] ? P2M[id][1] : 'var(--accent-lms)';
+      return { label: LABEL[id], code: CODES[id] || '', c, onClick: () => this.go(id), bg: on ? 'var(--c-ink-09)' : 'transparent', ink: on ? 'var(--ink)' : 'var(--c-ink-66)', fw: on ? 700 : 500 };
     };
     const p2 = s.start === 'new' ? this.p2Path(s).concat(['done']) : [];
     let code = CODES[s.screen] || '';
@@ -569,9 +572,9 @@ class Component extends DCLogic {
     if (s.screen === 'visualiser') code = { turn: '5A7t', tape: '5A7c' }[s.skin] || '5A7';
     if (s.screen === 'plexsign') code = s.plexPct < 100 ? 'X2–' : s.plexState === 'ok' ? 'X4' : s.plexState === 'expired' ? 'X3' : 'X2';
     const sims = this.sims(s);
-    const optOf = (opts, cur, fn) => opts.map(o => ({ label: o[1], onClick: () => fn(o[0]), bg: cur === o[0] ? '#e9eef2' : 'transparent', ink: cur === o[0] ? '#0d151c' : '#e9eef2' }));
+    const optOf = (opts, cur, fn) => opts.map(o => ({ label: o[1], onClick: () => fn(o[0]), bg: cur === o[0] ? 'var(--ink)' : 'transparent', ink: cur === o[0] ? 'var(--ink-on-accent)' : 'var(--ink)' }));
     return {
-      flows: FLOWS.map(x => { const on = s.flow === x[0]; return { id: x[0], title: x[1], text: x[2], onClick: () => this.restart({ flow: x[0] }), bg: on ? 'rgba(242,164,143,0.08)' : OFF, border: on ? 'rgba(242,164,143,0.55)' : OFFB, badgeBg: on ? '#f2a48f' : 'rgba(233,238,242,0.1)', badgeInk: on ? '#0d151c' : '#e9eef2' }; }),
+      flows: FLOWS.map(x => { const on = s.flow === x[0]; return { id: x[0], title: x[1], text: x[2], onClick: () => this.restart({ flow: x[0] }), bg: on ? 'var(--c-artist-08)' : OFF, border: on ? 'var(--c-artist-55)' : OFFB, badgeBg: on ? 'var(--accent-artist)' : 'var(--ink-line)', badgeInk: on ? 'var(--ink-on-accent)' : 'var(--ink)' }; }),
       startOpts: optOf([['p1', 'Part 1'], ['p2', 'Part 2']], s.startAt, v => this.restart({ startAt: v })),
       layoutOpts: optOf([[false, 'Phone'], [true, 'Wide']], s.wide, v => this.setState({ wide: v })),
       listenPvOpts: optOf(PHOTOS.map(x => [x[0], x[1]]), s.listenPic, v => this.setState({ listenPic: v })),
@@ -1318,18 +1321,18 @@ class Component extends DCLogic {
 </script>
 
 
-<div style="position:fixed;inset:0;height:100dvh;background:#0c1014;color:#e9eef2;font-family:'Nunito Sans Variable','Nunito Sans','Avenir Next','Segoe UI',system-ui,sans-serif;">
+<div style="position:fixed;inset:0;height:100dvh;background:var(--bg-desk);color:var(--ink);font-family:'Nunito Sans Variable','Nunito Sans','Avenir Next','Segoe UI',system-ui,sans-serif;">
 {#if st.shown}
-    <div style="position:relative;flex-shrink:0;overflow:hidden;background:#101a21;box-sizing:border-box;display:flex;flex-direction:column;width:{V.fw};height:{V.fh};border-radius:{V.rad};">
-      <div style="position:absolute;inset:0;background:#37505f;"></div>
-      <div style="position:absolute;inset:0;background:radial-gradient(130% 105% at 20% 42%,rgba(20,33,42,0.72),rgba(13,21,28,0.96));"></div>
+    <div style="position:relative;flex-shrink:0;overflow:hidden;background:var(--bg-base);box-sizing:border-box;display:flex;flex-direction:column;width:{V.fw};height:{V.fh};border-radius:{V.rad};">
+      <div style="position:absolute;inset:0;background:var(--c-weave-m);"></div>
+      <div style="position:absolute;inset:0;background:var(--cover-veil-deep);"></div>
 
       <div style="position:relative;flex-shrink:0;display:flex;flex-direction:column;padding:{V.headPad};">
         <div style="display:flex;align-items:center;gap:16px;min-width:0;">
           <img src={mark} alt="" width="34" height="34" style="width:34px;height:34px;flex-shrink:0;display:block;">
-          <div style="flex:1;min-width:0;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{V.crumb}</div>
+          <div style="flex:1;min-width:0;font-family:var(--font-mono);font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:var(--ink-quiet);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{V.crumb}</div>
         </div>
-        <div style="height:3px;border-radius:2px;background:rgba(233,238,242,0.1);margin-top:22px;overflow:hidden;display:{V.progDisplay};">
+        <div style="height:3px;border-radius:2px;background:var(--ink-line);margin-top:22px;overflow:hidden;display:{V.progDisplay};">
           <div style="height:100%;transition:width 300ms ease;width:{V.prog};background:{V.accent};"></div>
         </div>
       </div>
@@ -1337,32 +1340,32 @@ class Component extends DCLogic {
       <div style="position:relative;flex:1;min-height:0;display:flex;padding:{V.bodyPad};gap:{V.colGap};">
         <div style="width:calc(50% - 24px);flex-shrink:0;flex-direction:column;justify-content:center;gap:12px;display:{V.leftDisplay};">
           {#if V.hasSidePv}
-            <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">{V.sidePv.head}</div>
+            <div style="font-family:var(--font-mono);font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:var(--ink-quiet);">{V.sidePv.head}</div>
             <PanelMini kind={V.sidePv.kind} marks={V.sidePv.marks} time={V.sidePv.time} place={V.sidePv.place} player={V.sidePv.player} weather={V.sidePv.weather} bg={V.sidePv.bg} wallSrc={V.sidePv.wallSrc} photo={V.sidePv.photo} clock={V.sidePv.clock} black={V.sidePv.black} rpm={V.sidePv.rpm} animate={V.sidePv.animate} secs={V.sidePv.secs} phone={V.sidePv.phone} pointer={V.sidePv.pointer} />
           {/if}
           {#if V.noSidePv}
-            <div style="aspect-ratio:16/10;border-radius:12px;border:2px dashed rgba(233,238,242,0.2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:24px;box-sizing:border-box;text-align:center;">
+            <div style="aspect-ratio:16/10;border-radius:var(--r-md);border:2px dashed var(--c-ink-20);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:24px;box-sizing:border-box;text-align:center;">
               <div style="font-size:18px;font-weight:700;">No screen on this player</div>
-              <div style="font-size:14px;line-height:1.45;color:rgba(233,238,242,0.6);max-width:34ch;text-wrap:pretty;">Headless was chosen in part 1, so part 2 skips Browse and the three screen questions.</div>
+              <div style="font-size:14px;line-height:1.45;color:var(--ink-quiet);max-width:34ch;text-wrap:pretty;">Headless was chosen in part 1, so part 2 skips Browse and the three screen questions.</div>
             </div>
           {/if}
         </div>
 
         <div style="flex:1;min-width:0;display:flex;flex-direction:column;">
           <div bind:this={refs.scrollRef} style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;display:flex;flex-direction:column;gap:22px;padding:2px 0 12px;">
-            <div style="align-items:center;gap:11px;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;flex-shrink:0;display:{V.eyebrowDisplay};color:{V.accent};">
+            <div style="align-items:center;gap:11px;font-family:var(--font-mono);font-size:13px;letter-spacing:0.2em;text-transform:uppercase;flex-shrink:0;display:{V.eyebrowDisplay};color:{V.accent};">
               <span style="width:9px;height:9px;border-radius:50%;flex-shrink:0;display:block;background:{V.accent};"></span>
               <span>{V.stepName}</span>
-              <span style="flex:1;height:1px;background:rgba(233,238,242,0.1);display:block;"></span>
+              <span style="flex:1;height:1px;background:var(--ink-line);display:block;"></span>
             </div>
             <div style="flex-shrink:0;">
               <div style="font-weight:800;letter-spacing:-0.015em;line-height:1.15;text-wrap:pretty;font-size:{V.tSize};">{V.title}</div>
-              <div style="font-size:16px;line-height:1.5;color:rgba(233,238,242,0.66);margin-top:8px;text-wrap:pretty;display:{V.subDisplay};">{V.sub}</div>
+              <div style="font-size:16px;line-height:1.5;color:var(--c-ink-66);margin-top:8px;text-wrap:pretty;display:{V.subDisplay};">{V.sub}</div>
             </div>
 
             {#if V.hasInlinePv}
               <div style="display:flex;flex-direction:column;gap:10px;flex-shrink:0;">
-                <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">{V.pv.head}</div>
+                <div style="font-family:var(--font-mono);font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:var(--ink-quiet);">{V.pv.head}</div>
                 <PanelMini kind={V.pv.kind} marks={V.pv.marks} time={V.pv.time} place={V.pv.place} player={V.pv.player} weather={V.pv.weather} bg={V.pv.bg} wallSrc={V.pv.wallSrc} photo={V.pv.photo} clock={V.pv.clock} black={V.pv.black} rpm={V.pv.rpm} animate={V.pv.animate} secs={V.pv.secs} phone={V.pv.phone} pointer={V.pv.pointer} />
               </div>
             {/if}
@@ -1372,41 +1375,41 @@ class Component extends DCLogic {
 
                 {#if b.isList}
                   <div style="display:flex;flex-direction:column;gap:6px;">
-                    <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);padding:4px 2px;display:{b.headDisplay};">{b.head}</div>
+                    <div style="font-family:var(--font-mono);font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:var(--ink-quiet);padding:4px 2px;display:{b.headDisplay};">{b.head}</div>
                     <div style="display:flex;flex-direction:column;gap:6px;{b.scrollStyle}">{#each b.rows as o}
-                      <div onclick={o.onClick} style="display:flex;flex-wrap:wrap;align-items:center;gap:14px;min-height:64px;padding:12px 16px;border-radius:14px;box-sizing:border-box;transition:background 150ms,border-color 150ms;cursor:{o.cursor};background:{o.bg};border:1px {o.bs} {o.border};">
+                      <div onclick={o.onClick} style="display:flex;flex-wrap:wrap;align-items:center;gap:14px;min-height:64px;padding:12px 16px;border-radius:var(--r-14);box-sizing:border-box;transition:background 150ms,border-color 150ms;cursor:{o.cursor};background:{o.bg};border:1px {o.bs} {o.border};">
                         <span style="width:24px;height:24px;border-radius:50%;flex-shrink:0;box-sizing:border-box;align-items:center;justify-content:center;display:{o.radioDisplay};border:2px solid {o.ring};">
-                          <span style="width:11px;height:11px;border-radius:50%;background:#7ed6bc;display:{o.dotDisplay};"></span>
+                          <span style="width:11px;height:11px;border-radius:50%;background:var(--accent-lms);display:{o.dotDisplay};"></span>
                         </span>
-                        <span style="width:40px;height:40px;border-radius:12px;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.12);box-sizing:border-box;flex-shrink:0;align-items:center;justify-content:center;display:{o.iconDisplay};">
+                        <span style="width:40px;height:40px;border-radius:var(--r-md);background:var(--ink-fill);border:1px solid var(--c-ink-12);box-sizing:border-box;flex-shrink:0;align-items:center;justify-content:center;display:{o.iconDisplay};">
                           {#if o.isLyr}<img src={lyrionIcon} alt="" style="display:block;width:28px;height:21px;">{/if}
                           {#if o.isSpo}<img src={spotifyIcon} alt="" style="display:block;width:22px;height:22px;">{/if}
                           {#if o.isAir}<img src={airplayIcon} alt="" style="display:block;width:22px;height:22px;">{/if}
-                          {#if o.isBt}<img src={btIcon} alt="" style="display:block;width:22px;height:22px;">{/if}
-                          <span style="width:22px;height:22px;border-radius:50%;border:2px solid rgba(233,238,242,0.7);box-sizing:border-box;align-items:center;justify-content:center;font-size:11px;font-weight:800;display:{o.letterDisplay};">{o.letter}</span>
+                          {#if o.isBt}<BluetoothMark size={22} />{/if}
+                          <span style="width:22px;height:22px;border-radius:50%;border:2px solid var(--c-ink-70);box-sizing:border-box;align-items:center;justify-content:center;font-size:11px;font-weight:800;display:{o.letterDisplay};">{o.letter}</span>
                         </span>
                         <span style="flex:1;min-width:0;">
                           <span style="display:block;font-size:17px;font-weight:600;text-wrap:pretty;color:{o.labelInk};">{o.label}</span>
-                          <span style="font-size:14px;line-height:1.4;color:rgba(233,238,242,0.6);margin-top:3px;text-wrap:pretty;display:{o.noteDisplay};">{o.note}</span>
-                          <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.04em;margin-top:3px;color:rgba(233,238,242,0.6);display:{o.metaDisplay};">{o.meta}</span>
+                          <span style="font-size:14px;line-height:1.4;color:var(--ink-quiet);margin-top:3px;text-wrap:pretty;display:{o.noteDisplay};">{o.note}</span>
+                          <span style="font-family:var(--font-mono);font-size:13px;letter-spacing:0.04em;margin-top:3px;color:var(--ink-quiet);display:{o.metaDisplay};">{o.meta}</span>
                           <span style="flex-wrap:wrap;gap:6px;margin-top:9px;display:{o.srcDisplay};">
                             {#each o.srcs as sx}
-                              <span style="display:flex;align-items:center;gap:7px;height:30px;padding:0 11px 0 7px;border-radius:999px;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.12);box-sizing:border-box;font-size:13px;font-weight:600;color:rgba(233,238,242,0.85);">
+                              <span style="display:flex;align-items:center;gap:7px;height:30px;padding:0 11px 0 7px;border-radius:999px;background:var(--ink-fill);border:1px solid var(--c-ink-12);box-sizing:border-box;font-size:13px;font-weight:600;color:var(--c-ink-85);">
                                 {#if sx.isLyr}<img src={lyrionIcon} alt="" style="display:block;width:20px;height:15px;">{/if}
                                 {#if sx.isSpo}<img src={spotifyIcon} alt="" style="display:block;width:16px;height:16px;">{/if}
                                 {#if sx.isAir}<img src={airplayIcon} alt="" style="display:block;width:16px;height:16px;">{/if}
-                                {#if sx.isBt}<img src={btIcon} alt="" style="display:block;width:16px;height:16px;">{/if}
-                                {#if sx.isPlex}<span style="width:16px;height:16px;border-radius:50%;border:2px solid rgba(233,238,242,0.7);box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;">P</span>{/if}
+                                {#if sx.isBt}<BluetoothMark size={16} />{/if}
+                                {#if sx.isPlex}<span style="width:16px;height:16px;border-radius:50%;border:2px solid var(--c-ink-70);box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;">P</span>{/if}
                                 <span>{sx.name}</span>
                               </span>
                             {/each}
                           </span>
                         </span>
-                        <span style="order:9;flex-basis:100%;align-items:baseline;flex-wrap:wrap;column-gap:10px;row-gap:2px;padding-top:10px;border-top:1px solid rgba(233,238,242,0.1);display:{o.footDisplay};">
-                          <span style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:rgba(233,238,242,0.75);"><span style="width:7px;height:7px;border-radius:50%;background:{o.footDot};flex-shrink:0;"></span>{o.foot}</span>
-                          <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;color:rgba(233,238,242,0.5);">{o.footMeta}</span>
+                        <span style="order:9;flex-basis:100%;align-items:baseline;flex-wrap:wrap;column-gap:10px;row-gap:2px;padding-top:10px;border-top:1px solid var(--ink-line);display:{o.footDisplay};">
+                          <span style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--c-ink-75);"><span style="width:7px;height:7px;border-radius:50%;background:{o.footDot};flex-shrink:0;"></span>{o.foot}</span>
+                          <span style="font-family:var(--font-mono);font-size:12px;color:var(--ink-tab-off);">{o.footMeta}</span>
                         </span>
-                        <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;padding:4px 8px;border-radius:6px;flex-shrink:0;display:{o.tagDisplay};background:{o.tagBg};color:{o.tagInk};">{o.tag}</span>
+                        <span style="font-family:var(--font-mono);font-size:11px;letter-spacing:0.14em;text-transform:uppercase;padding:4px 8px;border-radius:var(--r-6);flex-shrink:0;display:{o.tagDisplay};background:{o.tagBg};color:{o.tagInk};">{o.tag}</span>
                         <span style="align-items:flex-end;gap:3px;height:18px;flex-shrink:0;display:{o.barsDisplay};">
                           <span style="width:4px;height:6px;border-radius:1px;display:block;background:{o.b1};"></span>
                           <span style="width:4px;height:10px;border-radius:1px;display:block;background:{o.b2};"></span>
@@ -1416,46 +1419,46 @@ class Component extends DCLogic {
                         <span style="width:58px;height:30px;border-radius:999px;flex-shrink:0;position:relative;box-sizing:border-box;transition:background 150ms;display:{o.togDisplay};background:{o.togBg};border:1px solid {o.togBorder};">
                           <span style="position:absolute;top:2px;width:24px;height:24px;border-radius:50%;display:block;transition:left 150ms;left:{o.knobLeft};background:{o.knobBg};"></span>
                         </span>
-                        <span onclick={(e) => { if (o.onTick) { e.stopPropagation(); o.onTick(); } }} style="display:{o.chkDisplay};padding:12px;margin:-12px;flex-shrink:0;"><span style="width:24px;height:24px;border-radius:7px;box-sizing:border-box;flex-shrink:0;align-items:center;justify-content:center;display:flex;background:{o.boxBg};border:2px solid {o.ring};">
-                          <span style="width:11px;height:6px;border-left:2.5px solid #0d151c;border-bottom:2.5px solid #0d151c;transform:rotate(-45deg);margin-top:-3px;display:{o.dotDisplay};"></span>
+                        <span onclick={(e) => { if (o.onTick) { e.stopPropagation(); o.onTick(); } }} style="display:{o.chkDisplay};padding:12px;margin:-12px;flex-shrink:0;"><span style="width:24px;height:24px;border-radius:var(--r-7);box-sizing:border-box;flex-shrink:0;align-items:center;justify-content:center;display:flex;background:{o.boxBg};border:2px solid {o.ring};">
+                          <span style="width:11px;height:6px;border-left:2.5px solid var(--ink-on-accent);border-bottom:2.5px solid var(--ink-on-accent);transform:rotate(-45deg);margin-top:-3px;display:{o.dotDisplay};"></span>
                         </span></span>
-                        <span style="width:11px;height:11px;border-right:2.5px solid rgba(233,238,242,0.42);border-top:2.5px solid rgba(233,238,242,0.42);transform:rotate(45deg);flex-shrink:0;margin-right:4px;display:{o.chevDisplay};"></span>
+                        <span style="width:11px;height:11px;border-right:2.5px solid var(--c-ink-42);border-top:2.5px solid var(--c-ink-42);transform:rotate(45deg);flex-shrink:0;margin-right:4px;display:{o.chevDisplay};"></span>
                       </div>
                     {/each}</div>
                   </div>
                 {/if}
 
                 {#if b.isNote}
-                  <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;border-radius:16px;box-sizing:border-box;background:{b.bg};border:1px solid {b.border};">
+                  <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;border-radius:var(--r-lg);box-sizing:border-box;background:{b.bg};border:1px solid {b.border};">
                     <span style="width:4px;align-self:stretch;border-radius:2px;flex-shrink:0;display:block;background:{b.bar};"></span>
                     <span style="flex:1;min-width:0;">
                       <span style="font-size:16px;font-weight:600;margin-bottom:4px;display:{b.titleDisplay};">{b.title}</span>
-                      <span style="display:block;font-size:15px;line-height:1.45;color:rgba(233,238,242,0.7);text-wrap:pretty;">{b.text}</span>
+                      <span style="display:block;font-size:15px;line-height:1.45;color:var(--c-ink-70);text-wrap:pretty;">{b.text}</span>
                     </span>
                   </div>
                 {/if}
 
                 {#if b.isField}
                   <div style="display:flex;flex-direction:column;gap:8px;">
-                    <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">{b.label}</span>
-                    <div style="position:relative;"><input type={b.type === 'password' && pwShown ? 'text' : b.type} value={b.value} placeholder={b.ph} oninput={b.onChange} readonly={b.ro} style="width:100%;height:56px;border-radius:14px;background:rgba(8,12,16,0.6);border:1px solid rgba(233,238,242,0.18);padding:0 {b.type === 'password' ? '60px' : '18px'} 0 18px;box-sizing:border-box;font-family:'IBM Plex Mono','Courier New',monospace;font-size:16px;color:#e9eef2;outline:none;opacity:{b.op};cursor:{b.cur};" />{#if b.type === 'password'}<button type="button" aria-label={pwShown ? 'Hide the password' : 'Show the password'} aria-pressed={pwShown} onclick={() => (pwShown = !pwShown)} style="position:absolute;right:6px;top:5px;width:46px;height:46px;border:0;border-radius:12px;background:transparent;color:rgba(233,238,242,0.7);display:grid;place-items:center;cursor:pointer;"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" />{#if pwShown}<path d="M4 4l16 16" />{/if}</svg></button>{/if}</div>
-                    <span style="font-size:14px;line-height:1.4;color:rgba(233,238,242,0.6);text-wrap:pretty;display:{b.hintDisplay};">{b.hint}</span>
+                    <span style="font-family:var(--font-mono);font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:var(--ink-quiet);">{b.label}</span>
+                    <div style="position:relative;"><input type={b.type === 'password' && pwShown ? 'text' : b.type} value={b.value} placeholder={b.ph} oninput={b.onChange} readonly={b.ro} style="width:100%;height:56px;border-radius:var(--r-14);background:var(--c-dark-080c10-60);border:1px solid var(--ink-fill-press);padding:0 {b.type === 'password' ? '60px' : '18px'} 0 18px;box-sizing:border-box;font-family:var(--font-mono);font-size:16px;color:var(--ink);outline:none;opacity:{b.op};cursor:{b.cur};" />{#if b.type === 'password'}<button type="button" aria-label={pwShown ? 'Hide the password' : 'Show the password'} aria-pressed={pwShown} onclick={() => (pwShown = !pwShown)} style="position:absolute;right:6px;top:5px;width:46px;height:46px;border:0;border-radius:var(--r-md);background:transparent;color:var(--c-ink-70);display:grid;place-items:center;cursor:pointer;"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" />{#if pwShown}<path d="M4 4l16 16" />{/if}</svg></button>{/if}</div>
+                    <span style="font-size:14px;line-height:1.4;color:var(--ink-quiet);text-wrap:pretty;display:{b.hintDisplay};">{b.hint}</span>
                   </div>
                 {/if}
 
                 {#if b.isStatus}
-                  <div style="display:flex;flex-direction:column;gap:12px;box-sizing:border-box;border-radius:14px;padding:12px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);">
+                  <div style="display:flex;flex-direction:column;gap:12px;box-sizing:border-box;border-radius:var(--r-14);padding:12px 14px;background:var(--c-white-05);border:1px solid var(--ink-line);">
                   <div style="display:flex;align-items:center;gap:14px;">
-                    <div style="width:30px;height:30px;border-radius:50%;box-sizing:border-box;border:3px solid rgba(233,238,242,0.14);border-top-color:#7ed6bc;animation:fuSpin 900ms linear infinite;flex-shrink:0;display:{b.spinDisplay};"></div>
-                    <span style="width:30px;height:30px;border-radius:50%;background:rgba(126,214,188,0.16);flex-shrink:0;align-items:center;justify-content:center;display:{b.doneDisplay};"><span style="width:12px;height:7px;border-left:2.5px solid #7ed6bc;border-bottom:2.5px solid #7ed6bc;transform:rotate(-45deg);margin-top:-3px;display:block;"></span></span>
-                    <span style="width:30px;height:30px;border-radius:50%;border:2px dashed rgba(233,238,242,0.4);box-sizing:border-box;flex-shrink:0;display:{b.noneDisplay};"></span>
-                    <span style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0;"><span style="font-size:16px;font-weight:700;text-wrap:pretty;">{b.text}</span><span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;color:rgba(233,238,242,0.6);display:{b.metaDisplay};">{b.meta}</span></span>
-                    <span onclick={b.onAct} style="flex-shrink:0;padding:8px 14px;border-radius:999px;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.16);font-size:13px;font-weight:700;white-space:nowrap;cursor:pointer;display:{b.actDisplay};">{b.act}</span>
+                    <div style="width:30px;height:30px;border-radius:50%;box-sizing:border-box;border:3px solid var(--c-ink-14);border-top-color:var(--accent-lms);animation:fuSpin 900ms linear infinite;flex-shrink:0;display:{b.spinDisplay};"></div>
+                    <span style="width:30px;height:30px;border-radius:50%;background:var(--c-lms-16);flex-shrink:0;align-items:center;justify-content:center;display:{b.doneDisplay};"><span style="width:12px;height:7px;border-left:2.5px solid var(--accent-lms);border-bottom:2.5px solid var(--accent-lms);transform:rotate(-45deg);margin-top:-3px;display:block;"></span></span>
+                    <span style="width:30px;height:30px;border-radius:50%;border:2px dashed var(--c-ink-40);box-sizing:border-box;flex-shrink:0;display:{b.noneDisplay};"></span>
+                    <span style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0;"><span style="font-size:16px;font-weight:700;text-wrap:pretty;">{b.text}</span><span style="font-family:var(--font-mono);font-size:13px;color:var(--ink-quiet);display:{b.metaDisplay};">{b.meta}</span></span>
+                    <span onclick={b.onAct} style="flex-shrink:0;padding:8px 14px;border-radius:999px;background:var(--ink-fill);border:1px solid var(--c-ink-16);font-size:13px;font-weight:700;white-space:nowrap;cursor:pointer;display:{b.actDisplay};">{b.act}</span>
                   </div>
                   <div style="flex-direction:column;gap:8px;padding-left:44px;display:{b.fieldDisplay};">
-                    <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">{b.fLabel}</span>
-                    <input type="text" value={b.fValue} placeholder={b.fPh} oninput={b.fOnChange} style="width:100%;height:52px;border-radius:12px;background:rgba(8,12,16,0.6);border:1px solid rgba(233,238,242,0.18);padding:0 16px;box-sizing:border-box;font-family:'IBM Plex Mono','Courier New',monospace;font-size:16px;color:#e9eef2;outline:none;" />
-                    <span style="font-size:14px;line-height:1.4;color:rgba(233,238,242,0.6);text-wrap:pretty;">{b.fHint}</span>
+                    <span style="font-family:var(--font-mono);font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:var(--ink-quiet);">{b.fLabel}</span>
+                    <input type="text" value={b.fValue} placeholder={b.fPh} oninput={b.fOnChange} style="width:100%;height:52px;border-radius:var(--r-md);background:var(--c-dark-080c10-60);border:1px solid var(--ink-fill-press);padding:0 16px;box-sizing:border-box;font-family:var(--font-mono);font-size:16px;color:var(--ink);outline:none;" />
+                    <span style="font-size:14px;line-height:1.4;color:var(--ink-quiet);text-wrap:pretty;">{b.fHint}</span>
                   </div>
                   </div>
                 {/if}
@@ -1463,42 +1466,42 @@ class Component extends DCLogic {
                 {#if b.isSub}
                   <div style="display:flex;align-items:center;gap:14px;padding:22px 2px 8px;">
                     <span style="width:9px;height:9px;border-radius:50%;flex-shrink:0;background:{b.accent};"></span>
-                    <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;flex-shrink:0;color:{b.accent};">{b.text}</span>
-                    <span style="flex:1;height:1px;background:rgba(233,238,242,0.1);"></span>
+                    <span style="font-family:var(--font-mono);font-size:13px;letter-spacing:0.2em;text-transform:uppercase;flex-shrink:0;color:{b.accent};">{b.text}</span>
+                    <span style="flex:1;height:1px;background:var(--ink-line);"></span>
                   </div>
                 {/if}
 
                 {#if b.isRule}
-                  <div style="margin-top:14px;height:1px;background:rgba(233,238,242,0.1);"></div>
+                  <div style="margin-top:14px;height:1px;background:var(--ink-line);"></div>
                 {/if}
 
                 {#if b.isHead}
-                  <div style="margin-top:14px;padding-top:18px;border-top:1px solid rgba(233,238,242,0.1);font-size:19px;font-weight:800;color:#e9eef2;">{b.text}</div>
+                  <div style="margin-top:14px;padding-top:18px;border-top:1px solid var(--ink-line);font-size:19px;font-weight:800;color:var(--ink);">{b.text}</div>
                 {/if}
 
                 {#if b.isP}
-                  <div style="font-size:16px;line-height:1.5;color:rgba(233,238,242,0.72);text-wrap:pretty;">{b.text}</div>
+                  <div style="font-size:16px;line-height:1.5;color:var(--ink-muted);text-wrap:pretty;">{b.text}</div>
                 {/if}
 
                 {#if b.isBtn}
-                  <div onclick={b.onClick} style="align-self:flex-start;padding:12px 22px;border-radius:999px;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.16);font-size:15px;font-weight:700;box-sizing:border-box;cursor:pointer;">{b.label}</div>
+                  <div onclick={b.onClick} style="align-self:flex-start;padding:12px 22px;border-radius:999px;background:var(--ink-fill);border:1px solid var(--c-ink-16);font-size:15px;font-weight:700;box-sizing:border-box;cursor:pointer;">{b.label}</div>
                 {/if}
 
                 {#if b.isPics}
                   <div style="display:flex;flex-direction:column;gap:10px;">
-                    <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);display:{b.headDisplay};">{b.head}</div>
+                    <div style="font-family:var(--font-mono);font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:var(--ink-quiet);display:{b.headDisplay};">{b.head}</div>
                     <div style="display:grid;gap:10px;grid-template-columns:{b.cols};">
                       {#each b.items as p}
-                        <div onclick={p.onClick} style="position:relative;border-radius:16px;box-sizing:border-box;display:flex;cursor:pointer;padding:10px;transition:background 150ms,border-color 150ms;background:{p.bg};border:1px solid {p.border};flex-direction:{p.dir};gap:{p.gap};align-items:{p.ai};">
+                        <div onclick={p.onClick} style="position:relative;border-radius:var(--r-lg);box-sizing:border-box;display:flex;cursor:pointer;padding:10px;transition:background 150ms,border-color 150ms;background:{p.bg};border:1px solid {p.border};flex-direction:{p.dir};gap:{p.gap};align-items:{p.ai};">
                           <div style="flex-shrink:0;width:{p.mw};">
                             <PanelMini kind={p.kind} marks={p.marks} wire={p.wire} rpm={p.rpm} />
                           </div>
                           <div style="flex:1;min-width:0;padding:0 4px 4px;padding-right:{p.lpr};">
                             <div style="font-size:{p.lfs};font-weight:700;line-height:1.3;text-wrap:pretty;">{p.label}</div>
-                            <div style="font-size:13px;line-height:1.4;color:rgba(233,238,242,0.6);margin-top:4px;text-wrap:pretty;display:{p.noteDisplay};">{p.note}</div>
-                            <div style="margin-top:8px;display:{p.tagDisplay};"><span style="display:inline-block;font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;padding:4px 8px;border-radius:6px;background:{p.tagBg};color:{p.tagInk};">{p.tag}</span></div>
+                            <div style="font-size:13px;line-height:1.4;color:var(--ink-quiet);margin-top:4px;text-wrap:pretty;display:{p.noteDisplay};">{p.note}</div>
+                            <div style="margin-top:8px;display:{p.tagDisplay};"><span style="display:inline-block;font-family:var(--font-mono);font-size:11px;letter-spacing:0.14em;text-transform:uppercase;padding:4px 8px;border-radius:var(--r-6);background:{p.tagBg};color:{p.tagInk};">{p.tag}</span></div>
                           </div>
-                          <span style="position:absolute;top:16px;right:16px;width:22px;height:22px;border-radius:50%;box-sizing:border-box;background:#0d151c;display:flex;align-items:center;justify-content:center;border:2px solid {p.ring};"><span style="width:10px;height:10px;border-radius:50%;background:#7ed6bc;display:{p.dot};"></span></span>
+                          <span style="position:absolute;top:16px;right:16px;width:22px;height:22px;border-radius:50%;box-sizing:border-box;background:var(--ink-on-accent);display:flex;align-items:center;justify-content:center;border:2px solid {p.ring};"><span style="width:10px;height:10px;border-radius:50%;background:var(--accent-lms);display:{p.dot};"></span></span>
                         </div>
                       {/each}
                     </div>
@@ -1508,36 +1511,36 @@ class Component extends DCLogic {
                 {#if b.isWhere}
                   <div style="display:flex;flex-direction:column;gap:10px;">
                     {#each b.items as w}
-                      <div onclick={w.onClick} style="padding:12px;border-radius:16px;box-sizing:border-box;display:flex;align-items:center;gap:14px;cursor:pointer;transition:background 150ms,border-color 150ms;background:{w.bg};border:1px solid {w.border};">
-                        <div style="width:128px;height:84px;flex-shrink:0;border-radius:10px;background:rgba(8,12,16,0.5);display:flex;align-items:center;justify-content:center;">
+                      <div onclick={w.onClick} style="padding:12px;border-radius:var(--r-lg);box-sizing:border-box;display:flex;align-items:center;gap:14px;cursor:pointer;transition:background 150ms,border-color 150ms;background:{w.bg};border:1px solid {w.border};">
+                        <div style="width:128px;height:84px;flex-shrink:0;border-radius:var(--r-10);background:var(--c-dark-080c10-50);display:flex;align-items:center;justify-content:center;">
                           {#if w.isHere}
                             <div style="display:flex;flex-direction:column;align-items:center;">
-                              <div style="width:78px;height:49px;border-radius:6px;box-sizing:border-box;border:2px solid {w.wire};background:#0d151b;box-shadow:0 6px 12px -6px rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;gap:7px;">
+                              <div style="width:78px;height:49px;border-radius:var(--r-6);box-sizing:border-box;border:2px solid {w.wire};background:var(--c-ground27);box-shadow:0 6px 12px -6px var(--c-black-80);display:flex;align-items:center;justify-content:center;gap:7px;">
                                 <img src={lyrionIcon} alt="" style="width:22px;height:17px;display:block;">
-                                <div style="display:flex;flex-direction:column;gap:3px;"><div style="width:22px;height:2px;border-radius:1px;background:rgba(233,238,242,0.45);"></div><div style="width:16px;height:2px;border-radius:1px;background:rgba(233,238,242,0.3);"></div><div style="width:19px;height:2px;border-radius:1px;background:rgba(233,238,242,0.3);"></div><div style="width:13px;height:2px;border-radius:1px;background:rgba(233,238,242,0.3);"></div></div>
+                                <div style="display:flex;flex-direction:column;gap:3px;"><div style="width:22px;height:2px;border-radius:1px;background:var(--c-ink-45);"></div><div style="width:16px;height:2px;border-radius:1px;background:var(--c-ink-30);"></div><div style="width:19px;height:2px;border-radius:1px;background:var(--c-ink-30);"></div><div style="width:13px;height:2px;border-radius:1px;background:var(--c-ink-30);"></div></div>
                               </div>
-                                                            <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(233,238,242,0.6);margin-top:6px;">This player</span>
+                                                            <span style="font-family:var(--font-mono);font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink-quiet);margin-top:6px;">This player</span>
                             </div>
                           {/if}
                           {#if w.isFar}
                             <div style="display:flex;align-items:flex-end;gap:4px;">
                               <div style="display:flex;flex-direction:column;align-items:center;">
-                                <div style="width:42px;height:28px;border-radius:5px;box-sizing:border-box;border:2px solid {w.wire};background:#0d151b;display:flex;align-items:flex-end;justify-content:center;gap:2px;padding-bottom:5px;"><div style="width:3px;height:6px;background:#7ed6bc;border-radius:1px;"></div><div style="width:3px;height:11px;background:#7ed6bc;border-radius:1px;"></div><div style="width:3px;height:8px;background:#7ed6bc;border-radius:1px;"></div><div style="width:3px;height:13px;background:#7ed6bc;border-radius:1px;"></div></div>
+                                <div style="width:42px;height:28px;border-radius:var(--r-5);box-sizing:border-box;border:2px solid {w.wire};background:var(--c-ground27);display:flex;align-items:flex-end;justify-content:center;gap:2px;padding-bottom:5px;"><div style="width:3px;height:6px;background:var(--accent-lms);border-radius:1px;"></div><div style="width:3px;height:11px;background:var(--accent-lms);border-radius:1px;"></div><div style="width:3px;height:8px;background:var(--accent-lms);border-radius:1px;"></div><div style="width:3px;height:13px;background:var(--accent-lms);border-radius:1px;"></div></div>
                                 
-                                <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:9px;letter-spacing:0.08em;text-transform:uppercase;color:rgba(233,238,242,0.6);margin-top:6px;">Player</span>
+                                <span style="font-family:var(--font-mono);font-size:9px;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-quiet);margin-top:6px;">Player</span>
                               </div>
-                              <div style="width:10px;border-top:2px dashed rgba(233,238,242,0.4);margin-bottom:35px;"></div>
+                              <div style="width:10px;border-top:2px dashed var(--c-ink-40);margin-bottom:35px;"></div>
                               <div style="display:flex;flex-direction:column;align-items:center;">
-                                <div style="width:30px;height:44px;border-radius:5px;box-sizing:border-box;border:2px solid {w.wire};background:#0d151b;display:flex;flex-direction:column;align-items:center;gap:3px;padding-top:5px;">
+                                <div style="width:30px;height:44px;border-radius:var(--r-5);box-sizing:border-box;border:2px solid {w.wire};background:var(--c-ground27);display:flex;flex-direction:column;align-items:center;gap:3px;padding-top:5px;">
                                   <img src={lyrionIcon} alt="" style="width:16px;height:12px;display:block;margin-bottom:2px;">
-                                  <div style="width:20px;height:5px;border-radius:2px;background:rgba(233,238,242,0.12);display:flex;align-items:center;justify-content:flex-end;padding-right:2px;box-sizing:border-box;"><div style="width:3px;height:3px;border-radius:50%;background:#7ed6bc;"></div></div><div style="width:20px;height:5px;border-radius:2px;background:rgba(233,238,242,0.12);display:flex;align-items:center;justify-content:flex-end;padding-right:2px;box-sizing:border-box;"><div style="width:3px;height:3px;border-radius:50%;background:#7ed6bc;"></div></div><div style="width:20px;height:5px;border-radius:2px;background:rgba(233,238,242,0.12);display:flex;align-items:center;justify-content:flex-end;padding-right:2px;box-sizing:border-box;"><div style="width:3px;height:3px;border-radius:50%;background:#7ed6bc;"></div></div>
+                                  <div style="width:20px;height:5px;border-radius:2px;background:var(--c-ink-12);display:flex;align-items:center;justify-content:flex-end;padding-right:2px;box-sizing:border-box;"><div style="width:3px;height:3px;border-radius:50%;background:var(--accent-lms);"></div></div><div style="width:20px;height:5px;border-radius:2px;background:var(--c-ink-12);display:flex;align-items:center;justify-content:flex-end;padding-right:2px;box-sizing:border-box;"><div style="width:3px;height:3px;border-radius:50%;background:var(--accent-lms);"></div></div><div style="width:20px;height:5px;border-radius:2px;background:var(--c-ink-12);display:flex;align-items:center;justify-content:flex-end;padding-right:2px;box-sizing:border-box;"><div style="width:3px;height:3px;border-radius:50%;background:var(--accent-lms);"></div></div>
                                 </div>
-                                <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:9px;letter-spacing:0.08em;text-transform:uppercase;color:rgba(233,238,242,0.6);margin-top:6px;white-space:nowrap;">PC · NAS</span>
+                                <span style="font-family:var(--font-mono);font-size:9px;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-quiet);margin-top:6px;white-space:nowrap;">PC · NAS</span>
                               </div>
                             </div>
                           {/if}
                         </div>
-                        <span style="width:20px;height:20px;border-radius:50%;flex-shrink:0;box-sizing:border-box;display:flex;align-items:center;justify-content:center;border:2px solid {w.ring};"><span style="width:9px;height:9px;border-radius:50%;background:#7ed6bc;display:{w.dot};"></span></span>
+                        <span style="width:20px;height:20px;border-radius:50%;flex-shrink:0;box-sizing:border-box;display:flex;align-items:center;justify-content:center;border:2px solid {w.ring};"><span style="width:9px;height:9px;border-radius:50%;background:var(--accent-lms);display:{w.dot};"></span></span>
                         <span style="font-size:15px;font-weight:700;line-height:1.25;">{w.label}</span>
                       </div>
                     {/each}
@@ -1545,21 +1548,21 @@ class Component extends DCLogic {
                 {/if}
 
                 {#if b.isSplit}
-                  <div style="display:grid;grid-template-columns:minmax(0,1fr);border-radius:16px;overflow:hidden;border:1px solid rgba(233,238,242,0.1);">
-                    <div style="padding:14px;background:rgba(126,214,188,0.07);display:flex;flex-direction:column;gap:9px;">
-                      <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#7ed6bc;">{b.lhead}</div>
+                  <div style="display:grid;grid-template-columns:minmax(0,1fr);border-radius:var(--r-lg);overflow:hidden;border:1px solid var(--ink-line);">
+                    <div style="padding:14px;background:var(--c-lms-07);display:flex;flex-direction:column;gap:9px;">
+                      <div style="font-family:var(--font-mono);font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:var(--accent-lms);">{b.lhead}</div>
                       {#each b.left as i}
                         <div style="display:flex;gap:8px;align-items:flex-start;font-size:14px;line-height:1.35;">
-                          <span style="width:16px;height:16px;border-radius:50%;background:#7ed6bc;flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-top:1px;"><span style="width:7px;height:4px;border-left:2px solid #0d151c;border-bottom:2px solid #0d151c;transform:rotate(-45deg);margin-top:-2px;display:block;"></span></span>
+                          <span style="width:16px;height:16px;border-radius:50%;background:var(--accent-lms);flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-top:1px;"><span style="width:7px;height:4px;border-left:2px solid var(--ink-on-accent);border-bottom:2px solid var(--ink-on-accent);transform:rotate(-45deg);margin-top:-2px;display:block;"></span></span>
                           <span>{i.t}</span>
                         </div>
                       {/each}
                     </div>
-                    {#if b.right.length}<div style="padding:14px;background:rgba(255,255,255,0.03);display:flex;flex-direction:column;gap:9px;border-top:1px solid rgba(233,238,242,0.1);">
-                      <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#e0a758;">{b.rhead}</div>
+                    {#if b.right.length}<div style="padding:14px;background:var(--c-white-03);display:flex;flex-direction:column;gap:9px;border-top:1px solid var(--ink-line);">
+                      <div style="font-family:var(--font-mono);font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:var(--accent-warn);">{b.rhead}</div>
                       {#each b.right as i}
                         <div style="display:flex;gap:8px;align-items:flex-start;font-size:14px;line-height:1.35;">
-                          <span style="width:16px;height:16px;border-radius:50%;border:2px solid #e0a758;box-sizing:border-box;flex-shrink:0;display:block;margin-top:1px;"></span>
+                          <span style="width:16px;height:16px;border-radius:50%;border:2px solid var(--accent-warn);box-sizing:border-box;flex-shrink:0;display:block;margin-top:1px;"></span>
                           <span>{i.t}</span>
                         </div>
                       {/each}
@@ -1569,8 +1572,8 @@ class Component extends DCLogic {
 
                 {#if b.isSeg}
                   <div style="display:flex;flex-direction:column;gap:10px;">
-                    <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);display:{b.headDisplay};">{b.head}</div>
-                    <div style="display:flex;gap:4px;padding:4px;border-radius:999px;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);">
+                    <div style="font-family:var(--font-mono);font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:var(--ink-quiet);display:{b.headDisplay};">{b.head}</div>
+                    <div style="display:flex;gap:4px;padding:4px;border-radius:999px;background:var(--c-white-05);border:1px solid var(--ink-line);">
                       {#each b.opts as x}
                         <span onclick={x.onClick} style="flex:1;text-align:center;padding:11px 8px;border-radius:999px;font-size:15px;font-weight:700;cursor:pointer;transition:background 150ms;background:{x.bg};color:{x.ink};">{x.label}</span>
                       {/each}
@@ -1580,10 +1583,10 @@ class Component extends DCLogic {
 
                 {#if b.isPick}
                   <div style="display:flex;flex-direction:column;gap:10px;">
-                    <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);display:{b.headDisplay};">{b.head}<span style="display:{b.multiDisplay};color:rgba(233,238,242,0.45);">&#32;· pick any</span></div>
+                    <div style="font-family:var(--font-mono);font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:var(--ink-quiet);display:{b.headDisplay};">{b.head}<span style="display:{b.multiDisplay};color:var(--c-ink-45);">&#32;· pick any</span></div>
                     <div style="display:flex;flex-wrap:wrap;gap:8px;">
                       {#each b.items as c}
-                        <span onclick={c.onClick} style="display:flex;align-items:center;gap:9px;padding:10px 16px;border-radius:{c.radius};font-size:15px;font-weight:700;box-sizing:border-box;cursor:pointer;transition:background 150ms;background:{c.bg};color:{c.ink};border:1px solid {c.border};"><span style="display:{c.boxDisplay};align-items:center;justify-content:center;width:18px;height:18px;border-radius:5px;box-sizing:border-box;flex-shrink:0;font-size:13px;font-weight:800;line-height:1;color:#0d151c;background:{c.boxBg};border:1.5px solid {c.boxBorder};">{c.tick}</span>{c.label}</span>
+                        <span onclick={c.onClick} style="display:flex;align-items:center;gap:9px;padding:10px 16px;border-radius:{c.radius};font-size:15px;font-weight:700;box-sizing:border-box;cursor:pointer;transition:background 150ms;background:{c.bg};color:{c.ink};border:1px solid {c.border};"><span style="display:{c.boxDisplay};align-items:center;justify-content:center;width:18px;height:18px;border-radius:var(--r-5);box-sizing:border-box;flex-shrink:0;font-size:13px;font-weight:800;line-height:1;color:var(--ink-on-accent);background:{c.boxBg};border:1.5px solid {c.boxBorder};">{c.tick}</span>{c.label}</span>
                       {/each}
                     </div>
                   </div>
@@ -1594,12 +1597,12 @@ class Component extends DCLogic {
                 {/if}
 
                 {#if b.isCode}
-                  <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:24px 16px;border-radius:14px;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);box-sizing:border-box;text-align:center;">
+                  <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:24px 16px;border-radius:var(--r-14);background:var(--c-white-05);border:1px solid var(--ink-line);box-sizing:border-box;text-align:center;">
                     <span style="font-size:16px;font-weight:700;text-wrap:pretty;">{b.label}</span>
-                    <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:40px;font-weight:600;letter-spacing:0.12em;color:#e9eef2;">{b.code}</span>
+                    <span style="font-family:var(--font-mono);font-size:40px;font-weight:600;letter-spacing:0.12em;color:var(--ink);">{b.code}</span>
                     <div style="display:flex;align-items:center;gap:10px;">
-                      <div style="width:18px;height:18px;border-radius:50%;box-sizing:border-box;border:2px solid rgba(233,238,242,0.14);border-top-color:#7ed6bc;animation:fuSpin 900ms linear infinite;flex-shrink:0;"></div>
-                      <span style="font-size:14px;line-height:1.4;color:rgba(233,238,242,0.6);text-wrap:pretty;">{b.text}</span>
+                      <div style="width:18px;height:18px;border-radius:50%;box-sizing:border-box;border:2px solid var(--c-ink-14);border-top-color:var(--accent-lms);animation:fuSpin 900ms linear infinite;flex-shrink:0;"></div>
+                      <span style="font-size:14px;line-height:1.4;color:var(--ink-quiet);text-wrap:pretty;">{b.text}</span>
                     </div>
                   </div>
                 {/if}
@@ -1617,56 +1620,56 @@ class Component extends DCLogic {
 
                 {#if b.isDev}
                   <div style="display:flex;flex-direction:column;gap:6px;">
-                    <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);padding:4px 2px;">{b.head}</div>
+                    <div style="font-family:var(--font-mono);font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:var(--ink-quiet);padding:4px 2px;">{b.head}</div>
                     {#each b.items as it}
-                      <div style="display:flex;align-items:center;gap:16px;min-height:66px;padding:12px 18px;border-radius:14px;box-sizing:border-box;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);">
+                      <div style="display:flex;align-items:center;gap:16px;min-height:66px;padding:12px 18px;border-radius:var(--r-14);box-sizing:border-box;background:var(--c-white-05);border:1px solid var(--ink-line);">
                         <span style="flex:1;min-width:0;display:block;">
-                          <span style="display:block;font-size:17px;font-weight:600;color:#e9eef2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{it.name}</span>
-                          <span style="display:block;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;letter-spacing:0.04em;margin-top:4px;color:{it.metaInk};">{it.meta}</span>
+                          <span style="display:block;font-size:17px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{it.name}</span>
+                          <span style="display:block;font-family:var(--font-mono);font-size:13px;letter-spacing:0.04em;margin-top:4px;color:{it.metaInk};">{it.meta}</span>
                         </span>
-                        <span onclick={it.onForget} style="flex-shrink:0;height:44px;padding:0 18px;border-radius:12px;background:rgba(224,167,88,0.14);border:1px solid rgba(224,167,88,0.4);display:flex;align-items:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#e0a758;cursor:pointer;">Forget</span>
+                        <span onclick={it.onForget} style="flex-shrink:0;height:44px;padding:0 18px;border-radius:var(--r-md);background:var(--c-warn-14);border:1px solid var(--c-warn-40);display:flex;align-items:center;font-family:var(--font-mono);font-size:13px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:var(--accent-warn);cursor:pointer;">Forget</span>
                       </div>
                     {/each}
                     <div style="flex-direction:column;align-items:center;gap:14px;padding:22px 20px;display:{b.emptyDisplay};">
-                      <span style="width:58px;height:58px;border-radius:50%;border:2px dashed rgba(233,238,242,0.28);display:block;"></span>
-                      <span style="font-size:16px;line-height:1.45;color:rgba(233,238,242,0.62);text-align:center;text-wrap:pretty;max-width:36ch;">{b.empty}</span>
+                      <span style="width:58px;height:58px;border-radius:50%;border:2px dashed var(--c-ink-28);display:block;"></span>
+                      <span style="font-size:16px;line-height:1.45;color:var(--c-ink-62);text-align:center;text-wrap:pretty;max-width:36ch;">{b.empty}</span>
                     </div>
                   </div>
                 {/if}
 
                 {#if b.isProg}
-                  <div style="display:flex;flex-direction:column;gap:10px;padding:14px 16px;border-radius:14px;box-sizing:border-box;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);">
+                  <div style="display:flex;flex-direction:column;gap:10px;padding:14px 16px;border-radius:var(--r-14);box-sizing:border-box;background:var(--c-white-05);border:1px solid var(--ink-line);">
                     <div style="display:flex;align-items:baseline;gap:12px;">
                       <span style="flex:1;min-width:0;font-size:16px;font-weight:700;">{b.label}</span>
-                      <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:13px;flex-shrink:0;color:{b.ink};">{b.meta}</span>
+                      <span style="font-family:var(--font-mono);font-size:13px;flex-shrink:0;color:{b.ink};">{b.meta}</span>
                     </div>
-                    <div style="height:6px;border-radius:3px;background:rgba(233,238,242,0.1);overflow:hidden;"><div style="height:100%;border-radius:3px;transition:width 900ms linear;background:{b.ink};width:{b.pct};"></div></div>
+                    <div style="height:6px;border-radius:3px;background:var(--ink-line);overflow:hidden;"><div style="height:100%;border-radius:3px;transition:width 900ms linear;background:{b.ink};width:{b.pct};"></div></div>
                     <div style="align-items:center;gap:8px;padding-top:2px;display:{b.stDisplay};">
-                      <span style="width:16px;height:16px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;line-height:1;background:{b.stBg};color:#0d151c;border:1.5px solid {b.stBorder};box-sizing:border-box;">{b.stTick}</span>
-                      <span style="font-size:14px;color:rgba(233,238,242,0.8);">{b.st}</span>
+                      <span style="width:16px;height:16px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;line-height:1;background:{b.stBg};color:var(--ink-on-accent);border:1.5px solid {b.stBorder};box-sizing:border-box;">{b.stTick}</span>
+                      <span style="font-size:14px;color:var(--c-ink-80);">{b.st}</span>
                     </div>
                   </div>
                 {/if}
 
                 {#if b.isCast}
                   <div style="display:flex;flex-direction:column;gap:10px;">
-                    <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">In the Spotify app, on your phone</div>
+                    <div style="font-family:var(--font-mono);font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:var(--ink-quiet);">In the Spotify app, on your phone</div>
                     <div style="position:relative;width:100%;height:250px;">
                       <PhoneDeviceList device={b.device} />
                     </div>
-                    <div style="font-size:15px;line-height:1.45;color:rgba(233,238,242,0.75);text-wrap:pretty;">{b.text}</div>
+                    <div style="font-size:15px;line-height:1.45;color:var(--c-ink-75);text-wrap:pretty;">{b.text}</div>
                   </div>
                 {/if}
 
                 {#if b.isSum}
                   <div style="display:flex;flex-direction:column;gap:10px;">
-                    <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);display:{b.headDisplay};">{b.head}</div>
-                    <div style="display:flex;flex-direction:column;gap:1px;border-radius:16px;overflow:hidden;border:1px solid rgba(233,238,242,0.1);">
+                    <div style="font-family:var(--font-mono);font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:var(--ink-quiet);display:{b.headDisplay};">{b.head}</div>
+                    <div style="display:flex;flex-direction:column;gap:1px;border-radius:var(--r-lg);overflow:hidden;border:1px solid var(--ink-line);">
                       {#each b.rows as r}
-                        <div style="display:flex;align-items:center;gap:12px;padding:11px 14px;min-height:34px;background:rgba(255,255,255,0.04);">
-                          <span style="flex-shrink:0;width:96px;font-size:14px;color:rgba(233,238,242,0.6);">{r.what}</span>
+                        <div style="display:flex;align-items:center;gap:12px;padding:11px 14px;min-height:34px;background:var(--c-white-04);">
+                          <span style="flex-shrink:0;width:96px;font-size:14px;color:var(--ink-quiet);">{r.what}</span>
                           <span style="flex:1;min-width:0;font-size:15px;font-weight:600;text-wrap:pretty;overflow-wrap:anywhere;">{r.value}</span>
-                          <span onclick={r.onClick} style="flex-shrink:0;padding:6px 12px;border-radius:999px;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.16);font-size:13px;font-weight:700;cursor:pointer;display:{r.actDisplay};">Change</span>
+                          <span onclick={r.onClick} style="flex-shrink:0;padding:6px 12px;border-radius:999px;background:var(--ink-fill);border:1px solid var(--c-ink-16);font-size:13px;font-weight:700;cursor:pointer;display:{r.actDisplay};">Change</span>
                         </div>
                       {/each}
                     </div>
@@ -1674,57 +1677,57 @@ class Component extends DCLogic {
                 {/if}
 
                 {#if b.isClock}
-                  <div style="display:flex;align-items:center;gap:16px;padding:20px;border-radius:16px;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);box-sizing:border-box;">
+                  <div style="display:flex;align-items:center;gap:16px;padding:20px;border-radius:var(--r-lg);background:var(--c-white-05);border:1px solid var(--ink-line);box-sizing:border-box;">
                     <div style="flex:1;min-width:0;">
-                      <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">{b.label}</div>
+                      <div style="font-family:var(--font-mono);font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:var(--ink-quiet);">{b.label}</div>
                       <div style="font-size:22px;font-weight:700;margin-top:8px;">{b.value}</div>
                     </div>
-                    <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:28px;font-weight:600;">{b.time}</div>
+                    <div style="font-family:var(--font-mono);font-size:28px;font-weight:600;">{b.time}</div>
                   </div>
                 {/if}
 
                 {#if b.isAddr}
-                  <div style="padding:16px 18px;border-radius:16px;background:rgba(255,255,255,0.05);border:1px solid rgba(233,238,242,0.1);box-sizing:border-box;">
-                    <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">{b.label}</div>
-                    <div style="font-family:'IBM Plex Mono','Courier New',monospace;font-weight:600;margin-top:8px;font-size:19px;word-break:break-all;">{b.value}</div>
+                  <div style="padding:16px 18px;border-radius:var(--r-lg);background:var(--c-white-05);border:1px solid var(--ink-line);box-sizing:border-box;">
+                    <div style="font-family:var(--font-mono);font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:var(--ink-quiet);">{b.label}</div>
+                    <div style="font-family:var(--font-mono);font-weight:600;margin-top:8px;font-size:19px;word-break:break-all;">{b.value}</div>
                   </div>
                 {/if}
 
                 {#if b.isIv}
                   <div style="display:flex;flex-direction:column;gap:12px;">
-                    <span style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Standby times</span>
+                    <span style="font-family:var(--font-mono);font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:var(--ink-quiet);">Standby times</span>
                     {#each b.items as iv}
-                      <div style="position:relative;display:flex;flex-direction:column;gap:12px;padding:14px 16px;border-radius:16px;background:rgba(255,255,255,0.04);border:1px solid rgba(233,238,242,0.1);box-sizing:border-box;">
-                        <div onclick={iv.onRemove} style="position:absolute;top:8px;right:8px;width:44px;height:44px;display:grid;place-items:center;border-radius:50%;border:1px solid rgba(233,238,242,0.1);background:rgba(233,238,242,0.07);color:rgba(233,238,242,0.72);box-sizing:border-box;cursor:pointer;"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M7 7l10 10M17 7L7 17"></path></svg></div>
+                      <div style="position:relative;display:flex;flex-direction:column;gap:12px;padding:14px 16px;border-radius:var(--r-lg);background:var(--c-white-04);border:1px solid var(--ink-line);box-sizing:border-box;">
+                        <div onclick={iv.onRemove} style="position:absolute;top:8px;right:8px;width:44px;height:44px;display:grid;place-items:center;border-radius:50%;border:1px solid var(--ink-line);background:var(--ink-fill);color:var(--ink-muted);box-sizing:border-box;cursor:pointer;"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M7 7l10 10M17 7L7 17"></path></svg></div>
                         <div style="display:flex;flex-direction:column;gap:8px;padding-right:56px;">
                           {#each iv.times as t}
                             <div style="display:flex;align-items:center;gap:12px;">
-                              <span style="min-width:56px;font-family:'IBM Plex Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">{t.label}</span>
-                              <div onclick={t.onTap} style="min-width:104px;min-height:48px;padding:0 16px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;border-radius:12px;border:1px solid {t.border};background:rgba(233,238,242,0.07);color:{t.ink};font-size:22px;font-weight:600;font-variant-numeric:tabular-nums;cursor:pointer;">{t.value}</div>
+                              <span style="min-width:56px;font-family:var(--font-mono);font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:var(--ink-quiet);">{t.label}</span>
+                              <div onclick={t.onTap} style="min-width:104px;min-height:48px;padding:0 16px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;border-radius:var(--r-md);border:1px solid {t.border};background:var(--ink-fill);color:{t.ink};font-size:22px;font-weight:600;font-variant-numeric:tabular-nums;cursor:pointer;">{t.value}</div>
                             </div>
                           {/each}
                         </div>
                         <div style="flex-direction:column;gap:8px;display:{iv.pickDisplay};">
                           <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;">
                             {#each iv.hours as c}
-                              <div onclick={c.onTap} style="min-height:44px;display:flex;align-items:center;justify-content:center;border-radius:12px;border:1px solid {c.border};background:{c.bg};color:{c.ink};font-size:16px;font-weight:{c.weight};font-variant-numeric:tabular-nums;box-sizing:border-box;cursor:pointer;">{c.label}</div>
+                              <div onclick={c.onTap} style="min-height:44px;display:flex;align-items:center;justify-content:center;border-radius:var(--r-md);border:1px solid {c.border};background:{c.bg};color:{c.ink};font-size:16px;font-weight:{c.weight};font-variant-numeric:tabular-nums;box-sizing:border-box;cursor:pointer;">{c.label}</div>
                             {/each}
                           </div>
                           <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;">
                             {#each iv.quarters as c}
-                              <div onclick={c.onTap} style="min-height:44px;display:flex;align-items:center;justify-content:center;border-radius:12px;border:1px solid {c.border};background:{c.bg};color:{c.ink};font-size:16px;font-weight:{c.weight};font-variant-numeric:tabular-nums;box-sizing:border-box;cursor:pointer;">{c.label}</div>
+                              <div onclick={c.onTap} style="min-height:44px;display:flex;align-items:center;justify-content:center;border-radius:var(--r-md);border:1px solid {c.border};background:{c.bg};color:{c.ink};font-size:16px;font-weight:{c.weight};font-variant-numeric:tabular-nums;box-sizing:border-box;cursor:pointer;">{c.label}</div>
                             {/each}
                           </div>
                         </div>
                         <div style="display:flex;flex-wrap:wrap;gap:6px;">
                           {#each iv.days as d}
-                            <div onclick={d.onTap} style="min-width:50px;min-height:44px;padding:0 10px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;border-radius:22px;border:1px solid {d.border};background:{d.bg};color:{d.ink};font-size:15px;font-weight:600;cursor:pointer;">{d.label}</div>
+                            <div onclick={d.onTap} style="min-width:50px;min-height:44px;padding:0 10px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;border-radius:var(--r-xl);border:1px solid {d.border};background:{d.bg};color:{d.ink};font-size:15px;font-weight:600;cursor:pointer;">{d.label}</div>
                           {/each}
                         </div>
                       </div>
                     {/each}
-                    <span style="color:rgba(233,238,242,0.6);display:{b.noneDisplay};">No standby times yet.</span>
-                    <div onclick={b.onAdd} style="min-height:52px;display:flex;align-items:center;justify-content:center;border-radius:16px;border:1px dashed rgba(233,238,242,0.1);color:#e9eef2;font-size:16px;font-weight:600;box-sizing:border-box;cursor:pointer;opacity:{b.addOp};">Add standby time</div>
+                    <span style="color:var(--ink-quiet);display:{b.noneDisplay};">No standby times yet.</span>
+                    <div onclick={b.onAdd} style="min-height:52px;display:flex;align-items:center;justify-content:center;border-radius:var(--r-lg);border:1px dashed var(--ink-line);color:var(--ink);font-size:16px;font-weight:600;box-sizing:border-box;cursor:pointer;opacity:{b.addOp};">Add standby time</div>
                   </div>
                 {/if}
 
@@ -1733,9 +1736,9 @@ class Component extends DCLogic {
           </div>
 
           <div style="align-items:center;gap:10px;flex-shrink:0;padding-top:14px;display:{V.foot.display};">
-            <div onclick={V.foot.onBack} style="padding:12px 20px;border-radius:999px;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.16);font-size:15px;font-weight:700;box-sizing:border-box;flex-shrink:0;cursor:pointer;display:{V.foot.backDisplay};">Back</div>
-            <div onclick={V.foot.onAlt} style="padding:12px 20px;border-radius:999px;background:rgba(233,238,242,0.07);border:1px solid rgba(233,238,242,0.16);font-size:15px;font-weight:700;box-sizing:border-box;flex-shrink:0;white-space:nowrap;cursor:pointer;display:{V.foot.altDisplay};">{V.foot.alt}</div>
-            <div onclick={V.foot.onNext} style="flex:1;text-align:center;padding:17px 18px;border-radius:999px;box-sizing:border-box;font-size:17px;font-weight:800;color:#0d151c;white-space:nowrap;transition:background 200ms,opacity 200ms;background:{V.accent};opacity:{V.foot.nextOp};cursor:{V.foot.nextCursor};">{V.foot.next}</div>
+            <div onclick={V.foot.onBack} style="padding:12px 20px;border-radius:999px;background:var(--ink-fill);border:1px solid var(--c-ink-16);font-size:15px;font-weight:700;box-sizing:border-box;flex-shrink:0;cursor:pointer;display:{V.foot.backDisplay};">Back</div>
+            <div onclick={V.foot.onAlt} style="padding:12px 20px;border-radius:999px;background:var(--ink-fill);border:1px solid var(--c-ink-16);font-size:15px;font-weight:700;box-sizing:border-box;flex-shrink:0;white-space:nowrap;cursor:pointer;display:{V.foot.altDisplay};">{V.foot.alt}</div>
+            <div onclick={V.foot.onNext} style="flex:1;text-align:center;padding:17px 18px;border-radius:999px;box-sizing:border-box;font-size:17px;font-weight:800;color:var(--ink-on-accent);white-space:nowrap;transition:background 200ms,opacity 200ms;background:{V.accent};opacity:{V.foot.nextOp};cursor:{V.foot.nextCursor};">{V.foot.next}</div>
           </div>
         </div>
       </div>
