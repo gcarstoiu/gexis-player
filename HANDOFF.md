@@ -65,7 +65,8 @@ the 10", 7" and TV sizes, bar, phone); the monos from fontsource; a core test
 against new literals. The harness: `~/projects/scratch/ph25/` (`run.sh`,
 `capture.py`, `compare.py`; `THEME`, `COVER`, `EQ` for the mocked core; do
 not edit `run.sh` while a capture runs). The equaliser stays as the rule
-gives it on the light themes (George, 2026-11-01). **Open**: a preview on
+gives it on the light themes, and the idle screen keeps today's look
+(George, 2026-11-01). **Open**: a preview on
 sofapi, after George's OK; `gen_personalise.py` out of step since Phase 23
 (the first-use page's header says so).
 
@@ -96,8 +97,9 @@ archive (2026-10-28).
 `GEXIS_RELEASE_GNUPGHOME=~/projects/gexis-release-key`; the scripts default
 to `~/.gnupg-gexis-release`, which no longer exists.
 
-**The players** (2026-11-01): sofapi on the themes preview (core and UI
-`1.10.0+git9.da56e56`, player `1.10.0+git11.ec43085`, from `ph-themes`) with
+**The players** (2026-11-01): sofapi on the themes preview (core
+`1.10.0+git9.da56e56`, UI and player `1.10.0+git12.a36666b`, from
+`ph-themes`: the idle screen keeping today's look, George) with
 `tv-remote` 0.1.1, DevTools off, its preview packages in `~/gexis-pc`; the
 other three on 1.9.1 through their updaters (2026-10-29); all four on
 Testing, where 1.10.0 is offered. sofapi and the bar grouped; AirPlay on at
