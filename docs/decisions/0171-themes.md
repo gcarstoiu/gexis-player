@@ -107,6 +107,11 @@ in the bundle. How themes ship and are chosen is left to this record.
   Teal; the row offers Deep Teal, Bauhaus, Sage, Velvet, Ink and Gauge,
   default Deep Teal, applied at once, shown on every player, a headless one
   too. Faded 80s and Graphite go.
+- **The equaliser on the light themes, as the rule gives it** (2026-11-01):
+  the design does not draw it, and its own colours stay - on Bauhaus and
+  Sage the knobs are white with a faint edge and the curve and the figures
+  pale. George chose that over asking Claude Design or new colours of
+  Claude's.
 
 ## Built (2026-11-01)
 
