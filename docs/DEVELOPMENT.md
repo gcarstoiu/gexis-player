@@ -3625,12 +3625,13 @@ that is settled.
 
 **Added 2026-11-01** (George: a plugin for Roon, after themes). Roon plays to
 devices of its own kinds; the player is none of them today. George tried
-Roon to a player over AirPlay and it did not play. sofapi's log of
-2026-10-30 shows five AirPlay sessions in eight minutes, not yet confirmed
-as that try: Shairport Sync refused three whose sender asked for NTP timing
-(*can not handle NTP streams*; its author has no plans for it, upstream
-issue 1407), and all five were stopped by the group rule ADR-0166 fixed on
-2026-10-31, sofapi being in a group.
+Roon to sofapi over AirPlay on 2026-10-30 and it did not play (his try,
+he confirmed on 2026-11-01). The log shows five sessions in eight minutes:
+Shairport Sync refused three whose sender asked for NTP timing (*can not
+handle NTP streams*; its author has no plans for it, upstream issue 1407),
+and all five were stopped by the group rule ADR-0166 fixed on 2026-10-31,
+sofapi being in a group. The two it accepted were stopped only by that
+rule, so whether Roon plays to a player outside a group is not yet known.
 
 **A decision is owed before anything is built**: which way into Roon - its
 own endpoint software from Roon Labs, a certified device, or AirPlay - what
