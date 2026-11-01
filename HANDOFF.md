@@ -53,9 +53,17 @@ phone test of the dialogs is still owed (to-do `fix-remote-dialogs-test`).
 The mocked-screen checks (`~/projects/scratch/dpad`, `~/projects/scratch/ph24`)
 build from `~/projects/gexis-player-next` unless `WT` names another worktree.
 
-**Next: Phase 25, themes** (`ph-themes`), its ADR first. George's mock-ups
-from Claude Design arrived on 2026-10-31 and wait outside the repository
-until the phase starts.
+**Now: Phase 25, themes** (`ph-themes`, worktree
+`~/projects/gexis-player-themes`), started 2026-11-01. Claude Design's
+handover is in `~/projects/scratch/ph25-themes-design` (to be unpacked over
+`design/` on the branch; its monos come from fontsource).
+[ADR-0171](docs/decisions/0171-themes.md) proposed on the branch; George's
+decisions asked one at a time. The size of it: 2,031 colour literals in the
+components, which go through the tokens first with today's look unchanged.
+
+**Next: Phase 26, Roon** (`ph-roon`), added 2026-11-01 right after themes
+(George), ADR first. George's Roon over AirPlay did not play; what sofapi's
+log shows is in its section of `docs/DEVELOPMENT.md` (to-do `roon-airplay`).
 
 **Phase 23, AirPlay 2** (`ph-airplay`), in every release since 1.9.0 and on
 Stable with 1.10.0, marked *Limited testing* (no Apple device yet).
@@ -128,9 +136,10 @@ them for a review (their template).
 from Phase 20: the measurement through a card (to-do `eq-measure`, at a time
 George picks).
 
-After themes, 26-30 in order, each ADR first (`docs/DEVELOPMENT.md`, the IDs
-there); MPD parked (ADR-0151). **Raspberry Pi Imager** (ADR-0159, a task):
-Imager's own list stays open as it is (George, 2026-10-24).
+After themes, Roon (26), then 27-31 in order, each ADR first
+(`docs/DEVELOPMENT.md`, the IDs there); MPD parked (ADR-0151). **Raspberry
+Pi Imager** (ADR-0159, a task): Imager's own list stays open as it is
+(George, 2026-10-24).
 
 The shared to-do list (an artifact with a `todos` collection; its address is
 in Claude's memory, not here) holds the open items with their detail.
@@ -145,8 +154,8 @@ Closed: 0-21 and 24 (13 with letters a-f). Phases are numbered
 consecutively without letters, each with a stable ID (George, 2026-10-13);
 20 (the equaliser) and 21 (the phone remote) closed 2026-10-27 with 1.7.0,
 24 (the plugin catalogue) 2026-10-31 with 1.10.0; 22 (multiroom) and 23
-(AirPlay 2, limited testing) on Stable with work open; next 25 (themes),
-then 26-27 (room correction), 28-30; MPD parked. `docs/DEVELOPMENT.md`
+(AirPlay 2, limited testing) on Stable with work open; 25 (themes) in
+progress, then 26 (Roon), 27-28 (room correction), 29-31; MPD parked. `docs/DEVELOPMENT.md`
 holds each phase's acceptance criteria.
 
 ## Machines
