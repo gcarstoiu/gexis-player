@@ -20,7 +20,15 @@ and the ideas as Must / Should / Could. It follows `docs/DEVELOPMENT.md`'s
 phases; change it when a phase opens, closes or moves, and show George first. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 1.10.0 on Testing and Stable** (2026-10-31: Testing
+**1.11.0 on Testing** (2026-11-01, serial 62, read back with a good
+signature): Phase 25, themes, with the idle screen keeping today's look and
+the FAQ's Roon over AirPlay; notes approved by George. PR #91 open for George
+to merge; Stable still 1.10.0 until George promotes. Image
+`image/deploy/2026-11-01-gexis-player-v1.11.0.img` (152 checks passed); build
+output `~/projects/gexis-release-out/r1.11.0`; worktree
+`~/projects/gexis-player-r1.11.0`.
+
+**Stable: 1.10.0** (2026-10-31: Testing
 serial 61, Stable serial 12, each read back with a good signature; the image
 downloaded through the README's link, its checksum matching). PR #90 merged
 by George (2026-11-01). 1.10.0 carries Phase 24 (the plugin catalogue, one
