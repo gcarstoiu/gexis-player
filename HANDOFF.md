@@ -96,13 +96,12 @@ archive (2026-10-28).
 `GEXIS_RELEASE_GNUPGHOME=~/projects/gexis-release-key`; the scripts default
 to `~/.gnupg-gexis-release`, which no longer exists.
 
-**The players** (2026-11-01): sofapi on the TV-remote preview of 2026-10-31
-(core, system and player `1.9.1+git68.87294a6`, UI `1.9.1+git66.1e0411e`)
-with `tv-remote` 0.1.1, DevTools off; the other three on 1.9.1 through their
-updaters (2026-10-29); all four on Testing, where 1.10.0 is now offered.
-sofapi and the bar grouped; AirPlay on at sofapi and guestpi. Each has its
-own Lyrion server. sofapi's `~/gexis-pc` still holds that day's preview
-packages.
+**The players** (2026-11-01): sofapi on the themes preview (core and UI
+`1.10.0+git9.da56e56`, player `1.10.0+git11.ec43085`, from `ph-themes`) with
+`tv-remote` 0.1.1, DevTools off, its preview packages in `~/gexis-pc`; the
+other three on 1.9.1 through their updaters (2026-10-29); all four on
+Testing, where 1.10.0 is offered. sofapi and the bar grouped; AirPlay on at
+sofapi and guestpi. Each has its own Lyrion server.
 
 **The test venv imports the core from `~/projects/gexis-player-next`** (an
 editable install): in another worktree run the suite with `PYTHONPATH=src`
