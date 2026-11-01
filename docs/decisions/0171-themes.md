@@ -1,8 +1,8 @@
 # ADR-0171 — Themes
 
-**Status:** **Proposed** 2026-11-01, Phase 25 (`ph-themes`). The five themes
-are George's choice from Claude Design (2026-10-28); everything below is
-Claude's proposal until George decides the points under *For George*.
+**Status:** **Accepted** 2026-11-01 (George: decisions 1-3), Phase 25
+(`ph-themes`). The five themes are George's choice from Claude Design
+(2026-10-28); the rest is Claude's proposal.
 Amends [ADR-0016](0016-plugins-as-separate-processes.md): themes are not
 something plugins provide (decision 1).
 
@@ -103,17 +103,15 @@ in the bundle. How themes ship and are chosen is left to this record.
 - **Decision 2, per player** (2026-11-01): each player has its own theme,
   and its screen and every phone remote on it show that one, as (9)
   proposes; a change anywhere shows everywhere for that player.
-
-## For George
-
-To be asked one at a time:
-- **Today's theme's name**, Deep Teal in the inventory, and the row's options
-  (ADR-0022, appended only once confirmed).
+- **Decision 3, the row** (2026-11-01): today's theme keeps its name, Deep
+  Teal; the row offers Deep Teal, Bauhaus, Sage, Velvet, Ink and Gauge,
+  default Deep Teal, applied at once, shown on every player, a headless one
+  too. Faded 80s and Graphite go.
 
 ## Settings (ADR-0022)
 
-`theme`: today's row, surfaced, its options today's theme and the five; the
-row's text to be confirmed by George before it is appended.
+`theme`: today's row, surfaced, as decision 3 has it; appended to ADR-0022's
+inventory on 2026-11-01 after George confirmed it.
 
 ## Measured before it is called done
 
