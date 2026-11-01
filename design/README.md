@@ -26,6 +26,7 @@ are all final unless a row below says otherwise. Recreate them exactly.
 | `source/20/` | Phase 20: the equaliser, its editor on panel, bars and phone and the quick change. George chose look 3a. Read its `README.md` (the backdrop PNGs in `eq/` kept out of git). |
 | `source/21/` | Phase 21: the phone remote, for a player with a screen and one without. Read its `README.md`. |
 | `source/22/` | Phase 22: multiroom - grouping on the phone's player list, the panel's volume drawer and the bar's tray, the grouped mark and the group volume. Read its `README.md` (the PNG per state and the backdrops in `eq/` kept out of git). |
+| `source/28/` | Phase 25 (numbered 28 when it was designed): five themes, each a token set in `themes/tokens-<id>.css`. Open `Theme Spec.dc.html`; read its `README.md` and `HANDOFF.md`. |
 | `assets/` | Service marks and the two sample images. |
 
 ---
@@ -436,6 +437,20 @@ slider and each player's own. The export's own hand-over note is
 drawn over pictures of the design files, and only what Phase 22 adds is
 built. Tokens at the end of `tokens.css` under *Phase 22*. The locked
 designs are unchanged.
+
+---
+
+## Changed 2026-11-01
+
+**Phase 25, themes** - `source/28/` (the folder keeps the number the phase
+had when it was designed). George kept five of ten on 2026-10-28: Bauhaus
+and Sage (light), Velvet, Ink and Gauge (dark); today's theme, Deep Teal,
+stays. Each is a complete set of values for the names in `tokens.css`, in
+`themes/tokens-<id>.css`; `Theme Spec.dc.html?theme=<id>` shows every
+artboard and the contrast figures. The export's own hand-over note is
+`source/28/HANDOFF.md`. **Production wins**: only token values change. The
+monos each theme names are not in `fonts/`; the UI takes them from
+fontsource (ADR-0171). The locked designs are unchanged.
 
 ---
 
