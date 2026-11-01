@@ -33,11 +33,11 @@
     height: 100%;
     border-radius: var(--remote-cover-radius);
     overflow: hidden;
-    background: rgba(233, 238, 242, 0.07);
+    background: var(--ink-fill);
     display: grid;
     place-items: center;
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
-    color: rgba(233, 238, 242, 0.5);
+    box-shadow: 0 12px 32px var(--c-black-40);
+    color: var(--ink-tab-off);
     --ring: 48px;
     --dot: 12px;
     --label: 10px;
@@ -46,8 +46,8 @@
     --note: 44px;
   }
   .cover.is-big {
-    border-radius: 24px;
-    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.5);
+    border-radius: var(--r-card);
+    box-shadow: 0 18px 48px var(--c-black-50);
     --ring: 110px;
     --dot: 26px;
     --label: 13px;
@@ -71,13 +71,13 @@
     align-items: center;
     justify-content: center;
     gap: var(--gap);
-    background: linear-gradient(160deg, rgba(126, 214, 188, 0.07), rgba(242, 164, 143, 0.06)), #17242d;
+    background: linear-gradient(160deg, var(--c-lms-07), var(--c-artist-06)), var(--bg-well);
   }
   .pending__ring {
     width: var(--ring);
     height: var(--ring);
     border-radius: 50%;
-    border: 2px solid rgba(126, 214, 188, 0.4);
+    border: 2px solid var(--c-lms-40);
     box-sizing: border-box;
     display: flex;
     align-items: center;
@@ -87,13 +87,13 @@
     width: var(--dot);
     height: var(--dot);
     border-radius: 50%;
-    background: rgba(126, 214, 188, 0.45);
+    background: var(--c-lms-45);
   }
   .pending__label {
     font-family: var(--font-mono);
     font-size: var(--label);
     letter-spacing: var(--label-spacing);
-    color: rgba(233, 238, 242, 0.6);
+    color: var(--ink-quiet);
     text-transform: uppercase;
     white-space: nowrap;
   }
@@ -106,7 +106,7 @@
     position: absolute;
     inset: 0;
     border-radius: inherit;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 0 0 1px var(--c-white-08);
     pointer-events: none;
   }
 </style>

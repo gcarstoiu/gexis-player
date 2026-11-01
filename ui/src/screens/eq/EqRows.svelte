@@ -114,17 +114,17 @@
     gap: 12px;
     height: 52px;
     padding: 0 12px;
-    border-radius: 12px;
+    border-radius: var(--r-md);
   }
   .row.is-dragging {
-    background: rgba(126, 214, 188, 0.1);
+    background: var(--c-lms-10);
   }
   .label {
     width: 38px;
     flex-shrink: 0;
     font-family: var(--font-mono);
     font-size: 15px;
-    color: rgba(233, 238, 242, 0.82);
+    color: var(--ink-body);
   }
   .slider {
     flex: 1;
@@ -149,7 +149,7 @@
     height: 6px;
     margin-top: -3px;
     border-radius: 3px;
-    background: rgba(233, 238, 242, 0.14);
+    background: var(--c-ink-14);
   }
   .tick {
     left: 50%;
@@ -157,7 +157,7 @@
     height: 16px;
     margin: -8px 0 0 -1px;
     border-radius: 1px;
-    background: rgba(233, 238, 242, 0.4);
+    background: var(--c-ink-40);
   }
   .fill {
     height: 6px;
@@ -171,12 +171,12 @@
     border-radius: 50%;
     box-sizing: border-box;
     border: 3px solid #f4f1ea;
-    background: #0d151c;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+    background: var(--ink-on-accent);
+    box-shadow: 0 3px 10px var(--c-black-50);
   }
   .knob.is-dragging {
     background: #f4f1ea;
-    box-shadow: 0 0 0 8px rgba(244, 241, 234, 0.18), 0 3px 10px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 0 0 8px rgba(244, 241, 234, 0.18), 0 3px 10px var(--c-black-50);
   }
   .value {
     width: 34px;

@@ -35,7 +35,7 @@
     position: absolute;
     inset: 0;
     z-index: 16;
-    background: rgba(8, 12, 16, 0.62);
+    background: var(--bg-scrim);
     transition: opacity 200ms ease;
     opacity: 0;
     pointer-events: none;
@@ -48,11 +48,11 @@
     z-index: 17;
     width: 560px;
     background: var(--bg-panel);
-    border: 1px solid rgba(233, 238, 242, 0.14);
-    border-radius: 22px;
+    border: 1px solid var(--mark-line);
+    border-radius: var(--r-xl);
     padding: 26px;
     box-sizing: border-box;
-    box-shadow: 0 34px 90px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 34px 90px var(--c-black-60);
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -67,16 +67,16 @@
     pointer-events: auto;
   }
   .title { font-size: 25px; font-weight: 700; }
-  .body { font-size: 17px; line-height: 1.45; color: rgba(233, 238, 242, 0.72); text-wrap: pretty; }
+  .body { font-size: 17px; line-height: 1.45; color: var(--ink-muted); text-wrap: pretty; }
   .actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 10px; }
   .button {
     font: inherit;
     height: 58px;
     padding: 0 22px;
-    border-radius: 15px;
+    border-radius: var(--r-15);
     box-sizing: border-box;
-    background: rgba(233, 238, 242, 0.07);
-    border: 1px solid rgba(233, 238, 242, 0.14);
+    background: var(--ink-fill);
+    border: 1px solid var(--mark-line);
     display: flex;
     align-items: center;
     justify-content: center;

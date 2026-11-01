@@ -513,6 +513,66 @@
       ]
     },
     {
+      "name": "Space Mono",
+      "group": "fonts",
+      "role": "The Bauhaus theme's figures and labels.",
+      "author": "The Space Mono Project Authors",
+      "licence": "OFL-1.1",
+      "url": "https://github.com/googlefonts/spacemono",
+      "arrives": "Bundled into the panel's screens",
+      "packages": [
+        "@fontsource/space-mono"
+      ]
+    },
+    {
+      "name": "Martian Mono",
+      "group": "fonts",
+      "role": "The Sage theme's figures and labels.",
+      "author": "The Martian Mono Project Authors",
+      "licence": "OFL-1.1",
+      "url": "https://github.com/evilmartians/mono",
+      "arrives": "Bundled into the panel's screens",
+      "packages": [
+        "@fontsource/martian-mono"
+      ]
+    },
+    {
+      "name": "Red Hat Mono",
+      "group": "fonts",
+      "role": "The Velvet theme's figures and labels.",
+      "author": "The Red Hat Project Authors",
+      "licence": "OFL-1.1",
+      "url": "https://github.com/RedHatOfficial/RedHatFont",
+      "arrives": "Bundled into the panel's screens",
+      "packages": [
+        "@fontsource/red-hat-mono"
+      ]
+    },
+    {
+      "name": "JetBrains Mono",
+      "group": "fonts",
+      "role": "The Ink theme's figures and labels.",
+      "author": "The JetBrains Mono Project Authors",
+      "licence": "OFL-1.1",
+      "url": "https://github.com/JetBrains/JetBrainsMono",
+      "arrives": "Bundled into the panel's screens",
+      "packages": [
+        "@fontsource/jetbrains-mono"
+      ]
+    },
+    {
+      "name": "Chivo Mono",
+      "group": "fonts",
+      "role": "The Gauge theme's figures and labels.",
+      "author": "The Chivo Project Authors",
+      "licence": "OFL-1.1",
+      "url": "https://github.com/Omnibus-Type/Chivo",
+      "arrives": "Bundled into the panel's screens",
+      "packages": [
+        "@fontsource/chivo-mono"
+      ]
+    },
+    {
       "name": "DejaVu fonts",
       "group": "fonts",
       "role": "The visualiser's titles.",

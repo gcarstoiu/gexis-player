@@ -7,7 +7,7 @@
 // helpers; Glyph.svelte draws one.
 //
 // A part is [left, top, width, height, style]; 'I' in a style is the ink.
-const GROUND = '#101a21';
+const GROUND = 'var(--bg-base)';
 function b(l, t, w, h, r, x) { return [l, t, w, h, Object.assign({ borderRadius: r || 0, background: 'I' }, x || {})]; }
 function o(l, t, w, h, r, hide, x, bw) {
   var s = { borderRadius: r || 0, border: (bw || 2.5) + 'px solid I', boxSizing: 'border-box' };

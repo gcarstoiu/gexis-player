@@ -153,12 +153,12 @@
     overflow-wrap: anywhere;
   }
   .title.is-none {
-    color: rgba(233, 238, 242, 0.6);
+    color: var(--ink-quiet);
   }
   .by {
     max-width: 100%;
     font-size: 17px;
-    color: rgba(233, 238, 242, 0.72);
+    color: var(--ink-muted);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -191,17 +191,17 @@
     border-radius: 3px;
     overflow: hidden;
     display: block;
-    background: rgba(233, 238, 242, 0.14);
+    background: var(--c-ink-14);
   }
   .seek__track.is-live {
-    background: linear-gradient(90deg, rgba(233, 238, 242, 0), rgba(233, 238, 242, 0.15) 16%, rgba(233, 238, 242, 0.15) 84%, rgba(233, 238, 242, 0));
+    background: linear-gradient(90deg, var(--c-ink-00), var(--c-ink-15) 16%, var(--c-ink-15) 84%, var(--c-ink-00));
   }
   .seek__fill {
     position: absolute;
     left: 0;
     top: 0;
     bottom: 0;
-    background: #7ed6bc;
+    background: var(--accent-lms);
     display: block;
   }
   .seek__knob {
@@ -211,8 +211,8 @@
     height: 18px;
     margin: -9px 0 0 -9px;
     border-radius: 50%;
-    background: #e9eef2;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    background: var(--ink);
+    box-shadow: 0 1px 4px var(--c-black-40);
     display: block;
     pointer-events: none;
   }
@@ -223,7 +223,7 @@
     font-family: var(--font-mono);
     font-size: 12px;
     line-height: 16px;
-    color: rgba(233, 238, 242, 0.6);
+    color: var(--ink-quiet);
   }
   .transport {
     flex-shrink: 0;

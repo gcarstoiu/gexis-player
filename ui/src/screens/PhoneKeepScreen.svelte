@@ -58,10 +58,10 @@
     align-items: center;
     gap: 14px 16px;
     padding: 16px 18px;
-    border-radius: 18px;
+    border-radius: var(--r-18);
     background: var(--bg-panel);
-    border: 1px solid rgba(224, 167, 88, 0.55);
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--c-warn-55);
+    box-shadow: 0 20px 50px var(--c-black-50);
     color: var(--ink);
   }
   .keep__text {
@@ -84,7 +84,7 @@
   .keep__btn {
     min-width: 96px;
     height: 48px;
-    border-radius: 14px;
+    border-radius: var(--r-14);
     font-size: 16px;
     font-weight: 700;
     color: var(--ink-on-accent);
@@ -94,7 +94,7 @@
   .keep__btn--back {
     color: var(--ink);
     background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.25);
+    border: 1px solid var(--c-white-25);
   }
   .keep__btn:disabled {
     opacity: 0.6;

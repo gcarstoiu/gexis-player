@@ -845,7 +845,7 @@
     position: absolute;
     pointer-events: none;
     inset: 0;
-    background: radial-gradient(130% 105% at 20% 42%, rgba(22, 36, 46, 0.3), rgba(14, 23, 30, 0.86));
+    background: var(--cover-veil);
   }
 
   .screen__accent {
@@ -896,7 +896,7 @@
     border-radius: var(--r-card);
     overflow: hidden;
     background: var(--bg-well);
-    box-shadow: 0 28px 64px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 28px 64px var(--c-black-50);
   }
   .art img {
     width: 100%;
@@ -909,7 +909,7 @@
     position: absolute;
     inset: 0;
     border-radius: var(--r-card);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 0 0 1px var(--c-white-08);
     pointer-events: none;
   }
 
@@ -921,7 +921,7 @@
     align-items: center;
     justify-content: center;
     gap: 20px;
-    background: linear-gradient(160deg, rgba(126, 214, 188, 0.07), rgba(242, 164, 143, 0.06));
+    background: linear-gradient(160deg, var(--c-lms-07), var(--c-artist-06));
   }
   .art__glyph {
     width: 110px;
@@ -959,7 +959,7 @@
     align-self: flex-start;
     flex-shrink: 0;
     margin-bottom: 18px;
-    border-bottom: 1px solid rgba(233, 238, 242, 0.12);
+    border-bottom: 1px solid var(--c-ink-12);
   }
   .tab {
     font-family: var(--font-mono);
@@ -1016,7 +1016,7 @@
   }
   .trackblock__rule {
     height: 1px;
-    background: rgba(233, 238, 242, 0.12);
+    background: var(--c-ink-12);
     margin-top: 20px;
     flex-shrink: 0;
   }
@@ -1075,7 +1075,7 @@
     position: relative;
     flex-shrink: 0;
     background: var(--ink-fill);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+    box-shadow: inset 0 0 0 1px var(--c-white-14);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1130,25 +1130,25 @@
     white-space: nowrap;
   }
   .gtag--0 {
-    background: rgba(126, 214, 188, 0.14);
-    border: 1px solid rgba(126, 214, 188, 0.3);
+    background: var(--c-lms-14);
+    border: 1px solid var(--c-lms-30);
     color: var(--accent-lms);
   }
   .gtag--1 {
-    background: rgba(242, 164, 143, 0.14);
-    border: 1px solid rgba(242, 164, 143, 0.3);
+    background: var(--c-artist-14);
+    border: 1px solid var(--c-artist-30);
     color: var(--accent-artist);
   }
   .gtag--2 {
-    background: rgba(159, 180, 232, 0.14);
-    border: 1px solid rgba(159, 180, 232, 0.3);
+    background: var(--c-bluetooth-14);
+    border: 1px solid var(--c-bluetooth-30);
     color: var(--accent-bluetooth);
   }
 
   .reltab__art {
     width: 64px;
     height: 64px;
-    border-radius: 10px;
+    border-radius: var(--r-10);
     overflow: hidden;
     position: relative;
     flex-shrink: 0;
@@ -1191,9 +1191,9 @@
     align-items: center;
     height: 26px;
     padding: 0 10px;
-    border-radius: 8px;
-    background: rgba(159, 180, 232, 0.14);
-    border: 1px solid rgba(159, 180, 232, 0.3);
+    border-radius: var(--r-sm);
+    background: var(--c-bluetooth-14);
+    border: 1px solid var(--c-bluetooth-30);
     font-family: var(--font-mono);
     font-size: var(--t-micro);
     letter-spacing: 0.12em;
@@ -1215,7 +1215,7 @@
     text-align: left;
     max-width: 100%;
   }
-  .artist--link:active:not(:disabled) { color: #f8c4b4; }
+  .artist--link:active:not(:disabled) { color: var(--c-artist-hi); }
 
   .lyrics--fill {
     position: absolute;
@@ -1233,19 +1233,19 @@
   }
   .looking__bar {
     height: 19px;
-    border-radius: 6px;
-    background: rgba(233, 238, 242, 0.09);
+    border-radius: var(--r-6);
+    background: var(--c-ink-09);
     animation: npSkel 1800ms ease-in-out infinite;
     width: 78%;
   }
   .looking__bar:nth-child(2) {
     width: 62%;
-    background: rgba(233, 238, 242, 0.07);
+    background: var(--ink-fill);
     animation-delay: 220ms;
   }
   .looking__bar:nth-child(3) {
     width: 70%;
-    background: rgba(233, 238, 242, 0.05);
+    background: var(--c-ink-05);
     animation-delay: 440ms;
   }
   .looking__label {
@@ -1420,8 +1420,8 @@
   .skel span {
     display: block;
     height: 13px;
-    border-radius: 4px;
-    background: rgba(233, 238, 242, 0.09);
+    border-radius: var(--r-4);
+    background: var(--c-ink-09);
     animation: npSkel 1500ms ease-in-out infinite;
   }
   .skel span:nth-child(1) { width: 100%; }
@@ -1472,9 +1472,9 @@
     align-items: center;
     gap: 14px;
     height: 52px;
-    border-radius: 14px;
-    background: rgba(233, 238, 242, 0.05);
-    border: 1px solid rgba(233, 238, 242, 0.12);
+    border-radius: var(--r-14);
+    background: var(--c-ink-05);
+    border: 1px solid var(--c-ink-12);
     padding: 0 18px;
   }
   .offline span {
@@ -1488,9 +1488,9 @@
     align-items: center;
     height: 36px;
     padding: 0 15px;
-    border-radius: 9px;
-    background: rgba(159, 180, 232, 0.16);
-    border: 1px solid rgba(159, 180, 232, 0.35);
+    border-radius: var(--r-9);
+    background: var(--c-bluetooth-16);
+    border: 1px solid var(--c-bluetooth-35);
     font-family: var(--font-mono);
     font-size: var(--t-label-sm);
     letter-spacing: 0.14em;
@@ -1498,7 +1498,7 @@
     color: var(--accent-bluetooth);
     flex-shrink: 0;
   }
-  .offline__retry:active { background: rgba(159, 180, 232, 0.3); }
+  .offline__retry:active { background: var(--c-bluetooth-30); }
 
   .similar {
     display: flex;
@@ -1510,9 +1510,9 @@
     align-items: center;
     height: 30px;
     padding: 0 12px;
-    border-radius: 9px;
-    background: rgba(159, 180, 232, 0.14);
-    border: 1px solid rgba(159, 180, 232, 0.3);
+    border-radius: var(--r-9);
+    background: var(--c-bluetooth-14);
+    border: 1px solid var(--c-bluetooth-30);
     font-size: 15px;
     color: var(--accent-bluetooth);
     white-space: nowrap;
@@ -1563,7 +1563,7 @@
   .album {
     font-size: var(--t-h2);
     line-height: 1.35;
-    color: rgba(233, 238, 242, 0.6);
+    color: var(--ink-quiet);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1605,7 +1605,7 @@
     position: absolute;
     inset: 0;
     border-radius: var(--r-pill);
-    background: rgba(233, 238, 242, 0.13);
+    background: var(--c-ink-13);
     overflow: hidden;
   }
   /* **Translated, not resized** ([Finding 057](../../../docs/findings/057-the-progress-bar-is-what-keeps-the-panel-awake.md)).
@@ -1634,7 +1634,7 @@
     font-family: var(--font-mono);
     font-size: 16px;
     letter-spacing: 0.04em;
-    color: rgba(233, 238, 242, 0.62);
+    color: var(--c-ink-62);
   }
 
   /* No position (Bluetooth): a separator faded at both ends, times hidden,
@@ -1643,10 +1643,10 @@
   .screen[data-position='none'] .progress__track {
     background: linear-gradient(
       90deg,
-      rgba(233, 238, 242, 0),
-      rgba(233, 238, 242, 0.15) 16%,
-      rgba(233, 238, 242, 0.15) 84%,
-      rgba(233, 238, 242, 0)
+      var(--c-ink-00),
+      var(--c-ink-15) 16%,
+      var(--c-ink-15) 84%,
+      var(--c-ink-00)
     );
   }
   .screen[data-position='none'] .progress__times { visibility: hidden; }
@@ -1694,14 +1694,14 @@
   .btn--lg {
     width: var(--ctl-lg);
     height: var(--ctl-lg);
-    background: rgba(233, 238, 242, 0.09);
+    background: var(--c-ink-09);
   }
   .btn--play {
     width: var(--ctl-play);
     height: var(--ctl-play);
     background: var(--play-fill);
     color: var(--ink-on-accent);
-    box-shadow: 0 0 22px rgba(242, 164, 143, 0.22), 0 12px 30px rgba(242, 164, 143, 0.35);
+    box-shadow: 0 0 22px var(--c-artist-22), 0 12px 30px var(--c-artist-35);
   }
   /* The design presses play by shrinking it, not by the other buttons' grey
      fill - which on this one read as a flash (George, 2026-09-16). */
@@ -1790,14 +1790,14 @@
 
   /* Shuffle and repeat, off and on - the design's values. */
   .btn--toggle {
-    background: rgba(233, 238, 242, 0.07);
-    border: 1px solid rgba(233, 238, 242, 0.12);
-    --toggle-ink: rgba(233, 238, 242, 0.66);
+    background: var(--ink-fill);
+    border: 1px solid var(--c-ink-12);
+    --toggle-ink: var(--c-ink-66);
   }
   .btn--toggle.is-on {
-    background: rgba(126, 214, 188, 0.16);
-    border-color: rgba(126, 214, 188, 0.42);
-    --toggle-ink: #7ed6bc;
+    background: var(--c-lms-16);
+    border-color: var(--c-lms-42);
+    --toggle-ink: var(--accent-lms);
   }
   /* Pressed by shrinking, like play (George, 2026-09-17: the design's grey
      press fill read as a flash here too). The fill stays what the state is. */
@@ -1805,9 +1805,9 @@
   .btn--lg:not(:disabled):active {
     transform: scale(0.95);
   }
-  .btn--toggle:not(:disabled):active { background: rgba(233, 238, 242, 0.07); }
-  .btn--toggle.is-on:not(:disabled):active { background: rgba(126, 214, 188, 0.16); }
-  .btn--lg:not(:disabled):active { background: rgba(233, 238, 242, 0.09); }
+  .btn--toggle:not(:disabled):active { background: var(--ink-fill); }
+  .btn--toggle.is-on:not(:disabled):active { background: var(--c-lms-16); }
+  .btn--lg:not(:disabled):active { background: var(--c-ink-09); }
   .btn--toggle .i-shuffle i,
   .btn--toggle .i-repeat i { background: var(--toggle-ink); }
   .btn--toggle .i-shuffle b { border-left-color: var(--toggle-ink); }
@@ -1856,8 +1856,8 @@
   .i-repeat b:nth-child(6) { left: 0.5px; top: 17px; border-bottom: 7px solid var(--ink-body); }
 
   .btn--queue {
-    background: rgba(159, 180, 232, 0.12);
-    border: 1px solid rgba(159, 180, 232, 0.3);
+    background: var(--c-bluetooth-12);
+    border: 1px solid var(--c-bluetooth-30);
     flex-direction: column;
     display: flex;
     align-items: center;
@@ -1894,8 +1894,8 @@
     width: 52px;
     height: 52px;
     border-radius: 50%;
-    border: 1px solid rgba(233, 238, 242, 0.24);
-    background: rgba(12, 16, 20, 0.5);
+    border: 1px solid var(--c-ink-24);
+    background: var(--c-dark-0c1014-50);
     display: grid;
     place-items: center;
     padding: 0;
@@ -1935,5 +1935,5 @@
   .similar__chip--link:active {
     opacity: 0.7;
   }
-  .i-dash { width: 26px; height: 26px; fill: none; stroke: rgba(233, 238, 242, 0.85); stroke-width: 2; stroke-linejoin: round; }
+  .i-dash { width: 26px; height: 26px; fill: none; stroke: var(--c-ink-85); stroke-width: 2; stroke-linejoin: round; }
 </style>

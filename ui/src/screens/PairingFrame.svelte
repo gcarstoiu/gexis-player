@@ -219,7 +219,7 @@
     /* Above the handoff and the idle screen: a request that cannot be seen
        cannot be answered, and it lapses in thirty seconds either way. */
     z-index: 32;
-    background: rgba(13, 21, 27, 0.95);
+    background: var(--c-ground27-95);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -256,11 +256,11 @@
     border-radius: 50%;
     box-sizing: border-box;
     border: 2px solid var(--accent-bluetooth);
-    background: rgba(159, 180, 232, 0.14);
+    background: var(--c-bluetooth-14);
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 0 46px rgba(159, 180, 232, 0.2);
+    box-shadow: 0 0 46px var(--c-bluetooth-20);
   }
   .pair__ring {
     position: absolute;
@@ -326,9 +326,9 @@
   .pair__btn {
     height: 74px;
     padding: 0 44px;
-    border-radius: 18px;
+    border-radius: var(--r-18);
     background: var(--ink-fill);
-    border: 1px solid rgba(233, 238, 242, 0.16);
+    border: 1px solid var(--c-ink-16);
     font: inherit;
     font-size: 21px;
     font-weight: 700;
@@ -343,8 +343,8 @@
     opacity: 0.55;
   }
   .pair__btn--accept {
-    background: rgba(159, 180, 232, 0.2);
-    border-color: rgba(159, 180, 232, 0.5);
+    background: var(--c-bluetooth-20);
+    border-color: var(--c-bluetooth-50);
     color: var(--accent-bluetooth);
   }
   .pair__countdown {
@@ -370,7 +370,7 @@
     box-sizing: border-box;
   }
   .pair__tick {
-    background: rgba(159, 180, 232, 0.18);
+    background: var(--c-bluetooth-18);
     border: 2px solid var(--accent-bluetooth);
   }
   .pair__tick i {
@@ -395,8 +395,8 @@
     transform-origin: left center;
   }
   .pair__cross {
-    background: rgba(233, 238, 242, 0.08);
-    border: 2px solid rgba(233, 238, 242, 0.4);
+    background: var(--c-ink-08);
+    border: 2px solid var(--c-ink-40);
   }
   .pair__cross i {
     position: absolute;
@@ -511,7 +511,7 @@
     right: 0;
     bottom: 0;
     height: 6px;
-    background: rgba(233, 238, 242, 0.08);
+    background: var(--c-ink-08);
   }
   .pb__left {
     position: absolute;

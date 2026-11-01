@@ -169,13 +169,13 @@
     display: flex;
     gap: 6px;
     padding: 4px;
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.06);
+    border-radius: var(--r-14);
+    background: var(--c-white-06);
   }
   .seg button {
     flex: 1;
     height: 44px;
-    border-radius: 10px;
+    border-radius: var(--r-10);
     border: none;
     font-size: 16px;
     font-weight: 600;
@@ -183,8 +183,8 @@
     background: transparent;
   }
   .seg button.on {
-    background: rgba(126, 214, 188, 0.2);
-    color: #7ed6bc;
+    background: var(--c-lms-20);
+    color: var(--accent-lms);
   }
   .field {
     display: flex;
@@ -196,19 +196,19 @@
   .field input {
     height: 48px;
     padding: 0 14px;
-    border-radius: 12px;
-    border: 1px solid rgba(233, 238, 242, 0.18);
-    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--r-md);
+    border: 1px solid var(--ink-fill-press);
+    background: var(--c-white-05);
     color: var(--ink);
     font-family: var(--font-mono);
     font-size: 16px;
   }
   .cable__save {
     height: 52px;
-    border-radius: 14px;
-    border: 1px solid rgba(126, 214, 188, 0.45);
-    background: rgba(126, 214, 188, 0.14);
-    color: #7ed6bc;
+    border-radius: var(--r-14);
+    border: 1px solid var(--c-lms-45);
+    background: var(--c-lms-14);
+    color: var(--accent-lms);
     font-size: 17px;
     font-weight: 600;
   }

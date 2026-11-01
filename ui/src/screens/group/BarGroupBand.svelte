@@ -50,7 +50,7 @@
     gap: 16px;
     padding: 0 40px;
     box-sizing: border-box;
-    border-top: 1px solid rgba(233, 238, 242, 0.08);
+    border-top: 1px solid var(--c-ink-08);
     text-transform: none;
     letter-spacing: normal;
     color: var(--ink);
@@ -78,10 +78,10 @@
   .action {
     height: 53px;
     padding: 0 22px;
-    border-radius: 15px;
+    border-radius: var(--r-15);
     box-sizing: border-box;
     background: var(--ink-fill);
-    border: 1px solid rgba(233, 238, 242, 0.14);
+    border: 1px solid var(--mark-line);
     color: var(--ink);
     display: flex;
     align-items: center;

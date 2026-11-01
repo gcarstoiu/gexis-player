@@ -214,7 +214,7 @@
     display: block;
     height: 6px;
     border-radius: 3px;
-    background: rgba(233, 238, 242, 0.12);
+    background: var(--c-ink-12);
     overflow: hidden;
   }
   .task__bar span {
@@ -228,9 +228,9 @@
   }
   .notes {
     padding: 14px 16px;
-    border-radius: 14px;
-    background: rgba(233, 238, 242, 0.05);
-    border: 1px solid rgba(233, 238, 242, 0.12);
+    border-radius: var(--r-14);
+    background: var(--c-ink-05);
+    border: 1px solid var(--c-ink-12);
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -240,9 +240,9 @@
     align-items: flex-start;
     gap: 14px;
     padding: 16px 18px;
-    border-radius: 14px;
-    background: rgba(224, 167, 88, 0.12);
-    border: 1px solid rgba(224, 167, 88, 0.42);
+    border-radius: var(--r-14);
+    background: var(--c-warn-12);
+    border: 1px solid var(--c-warn-42);
   }
   .warn__mark {
     flex-shrink: 0;
@@ -271,9 +271,9 @@
   .btn {
     flex: 1;
     height: 58px;
-    border-radius: 15px;
-    background: rgba(233, 238, 242, 0.07);
-    border: 1px solid rgba(233, 238, 242, 0.14);
+    border-radius: var(--r-15);
+    background: var(--ink-fill);
+    border: 1px solid var(--c-ink-14);
     color: var(--ink);
     display: flex;
     align-items: center;
@@ -281,11 +281,11 @@
     font-size: 17px;
     font-weight: 600;
   }
-  .btn:active { background: rgba(233, 238, 242, 0.2); }
+  .btn:active { background: var(--c-ink-20); }
   .btn--confirm {
     font-weight: 700;
-    background: rgba(126, 214, 188, 0.16);
-    border-color: rgba(126, 214, 188, 0.4);
+    background: var(--c-lms-16);
+    border-color: var(--c-lms-40);
     color: var(--accent-lms);
   }
   @keyframes busy {

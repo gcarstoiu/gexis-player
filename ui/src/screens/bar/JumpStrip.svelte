@@ -10,6 +10,9 @@
   colour as an "r, g, b" triple for the current step.
 -->
 <script>
+  import { theme } from '../../lib/theme.js';
+  import { tone } from '../../lib/themeRule.js';
+
   let { have = () => true, on = null, tint = '159, 180, 232', onpick } = $props();
 
   //: Round 2's thirteen two-letter steps, and the "#" the panel's rail has
@@ -24,7 +27,7 @@
   ];
 </script>
 
-<div class="jump" style:--tint={tint}>
+<div class="jump" style:--tint={tone(tint, $theme)}>
   {#each STEPS as step (step.label)}
     {@const first = step.letters.find((l) => have(l))}
     <button
@@ -56,9 +59,9 @@
     font-size: 16px;
     font-weight: 600;
     letter-spacing: 0.06em;
-    background: rgba(233, 238, 242, 0.05);
-    border: 1px solid rgba(233, 238, 242, 0.1);
-    color: rgba(233, 238, 242, 0.78);
+    background: var(--c-ink-05);
+    border: 1px solid var(--ink-line);
+    color: var(--c-ink-78);
     cursor: pointer;
   }
   .jump__step.is-on {
@@ -67,7 +70,7 @@
     color: rgb(var(--tint));
   }
   .jump__step:disabled {
-    color: rgba(233, 238, 242, 0.3);
+    color: var(--c-ink-30);
     cursor: default;
   }
   .jump__step:not(:disabled):active { transform: scale(0.96); }

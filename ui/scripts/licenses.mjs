@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // ADR-0099: the licences of what is bundled into the panel's screens go with
 // them, into dist/licenses/ - the Svelte runtime, Vite's module-preload helper,
-// the two fonts (OFL-1.1 asks for its text with every copy), and uqr, which
-// draws the setup screen's QR codes (ADR-0104).
+// the fonts (OFL-1.1 asks for its text with every copy; the five monos are
+// the themes', ADR-0171), and uqr, which draws the setup screen's QR codes
+// (ADR-0104).
 import { copyFileSync, mkdirSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
-const BUNDLED = ['svelte', 'vite', '@fontsource-variable/nunito-sans', '@fontsource/ibm-plex-mono', 'uqr'];
+const BUNDLED = ['svelte', 'vite', '@fontsource-variable/nunito-sans', '@fontsource/ibm-plex-mono',
+  '@fontsource/space-mono', '@fontsource/martian-mono', '@fontsource/red-hat-mono', '@fontsource/jetbrains-mono',
+  '@fontsource/chivo-mono', 'uqr'];
 const out = join('dist', 'licenses');
 
 for (const name of BUNDLED) {

@@ -168,16 +168,16 @@
     font-size: 13px;
     letter-spacing: 0.06em;
     margin-top: 5px;
-    color: rgba(233, 238, 242, 0.72);
+    color: var(--ink-muted);
   }
 
   .button {
     font: inherit;
     padding: 0 22px;
-    border-radius: 15px;
+    border-radius: var(--r-15);
     box-sizing: border-box;
-    background: rgba(233, 238, 242, 0.07);
-    border: 1px solid rgba(233, 238, 242, 0.14);
+    background: var(--ink-fill);
+    border: 1px solid var(--mark-line);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -216,7 +216,7 @@
     position: relative;
     width: 58px;
     height: 58px;
-    border-radius: 15px;
+    border-radius: var(--r-15);
     flex-shrink: 0;
     display: flex;
     align-items: center;
@@ -239,7 +239,7 @@
     width: 100%;
     height: 14px;
     border-radius: var(--r-pill);
-    background: rgba(233, 238, 242, 0.14);
+    background: var(--mark-line);
     position: relative;
   }
   .fill {
@@ -250,7 +250,7 @@
     border-radius: var(--r-pill);
     background: var(--group-ink);
   }
-  .fill.is-muted { background: rgba(126, 214, 188, 0.35); }
+  .fill.is-muted { background: var(--c-lms-35); }
   .knob {
     position: absolute;
     top: 50%;
@@ -258,7 +258,7 @@
     height: 40px;
     border-radius: 50%;
     transform: translate(-50%, -50%);
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+    box-shadow: 0 4px 14px var(--c-black-45);
     background: var(--ink);
   }
   .value {
@@ -274,7 +274,7 @@
   .rule {
     flex-shrink: 0;
     height: 1px;
-    background: rgba(233, 238, 242, 0.08);
+    background: var(--c-ink-08);
     margin: 8px 0 4px;
   }
 

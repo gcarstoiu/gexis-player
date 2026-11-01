@@ -100,7 +100,7 @@
     flex-direction: column;
     gap: 10px;
     padding: 16px;
-    border-radius: var(--r-lg, 16px);
+    border-radius: var(--r-lg, var(--r-lg));
     border: 1px solid var(--ink-line);
     background: var(--ink-fill);
   }
@@ -130,9 +130,9 @@
     justify-content: center;
     min-height: 52px;
     padding: 0 14px;
-    border-radius: 15px;
-    border: 1px solid rgba(233, 238, 242, 0.14);
-    background: rgba(233, 238, 242, 0.07);
+    border-radius: var(--r-15);
+    border: 1px solid var(--c-ink-14);
+    background: var(--ink-fill);
     color: var(--ink);
     font-size: 16px;
     font-weight: 600;
@@ -151,16 +151,16 @@
   .way__copy:active,
   .way__copy.is-pressed {
     transform: scale(0.96);
-    background: rgba(233, 238, 242, 0.16);
+    background: var(--c-ink-16);
   }
   .way__go--main:active,
   .way__go--main.is-pressed {
-    background: rgba(126, 214, 188, 0.28);
+    background: var(--c-lms-28);
   }
   .way__go--main {
     font-weight: 700;
-    background: rgba(126, 214, 188, 0.16);
-    border-color: rgba(126, 214, 188, 0.4);
+    background: var(--c-lms-16);
+    border-color: var(--c-lms-40);
     color: var(--accent-lms);
   }
   .way__go--wait {
@@ -183,7 +183,7 @@
     gap: 6px;
     min-height: 36px;
     padding: 0 14px;
-    border-radius: 10px;
+    border-radius: var(--r-10);
     border: 1px solid var(--ink-line);
     background: var(--ink-fill);
     color: var(--ink);
@@ -191,8 +191,8 @@
     font-size: 14px;
   }
   .way__copy.is-copied {
-    background: rgba(126, 214, 188, 0.16);
-    border-color: rgba(126, 214, 188, 0.4);
+    background: var(--c-lms-16);
+    border-color: var(--c-lms-40);
     color: var(--accent-lms);
   }
   .way__tick {

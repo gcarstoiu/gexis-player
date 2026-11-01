@@ -186,7 +186,7 @@
     position: absolute;
     inset: 0;
     z-index: 52;
-    background: rgba(4, 8, 10, 0.55);
+    background: var(--c-dark-04080a-55);
     opacity: 0;
     pointer-events: none;
     transition: opacity 260ms ease;
@@ -203,14 +203,14 @@
     z-index: 53;
     max-height: calc(100% - 40px);
     box-sizing: border-box;
-    background: #16232c;
-    border-top: 1px solid rgba(233, 238, 242, 0.16);
-    border-radius: 24px 24px 0 0;
+    background: var(--bg-panel);
+    border-top: 1px solid var(--c-ink-16);
+    border-radius: var(--r-card) var(--r-card) 0 0;
     padding: 10px 16px calc(22px + env(safe-area-inset-bottom, 0px));
     display: flex;
     flex-direction: column;
     gap: 12px;
-    box-shadow: 0 -10px 32px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 -10px 32px var(--c-black-60);
     transform: translateY(calc(100% + 24px));
     transition: transform var(--remote-slide);
     /* Down is the sheet's, as on the EQ sheet; the rows scroll their own way. */
@@ -242,7 +242,7 @@
     width: 36px;
     height: 4px;
     border-radius: 2px;
-    background: rgba(233, 238, 242, 0.24);
+    background: var(--c-ink-24);
   }
   .head {
     flex-shrink: 0;
@@ -256,7 +256,7 @@
     font-size: 13px;
     letter-spacing: 0.06em;
     margin-top: 4px;
-    color: rgba(233, 238, 242, 0.72);
+    color: var(--ink-muted);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -279,8 +279,8 @@
     position: relative;
     flex: 1;
     min-width: 0;
-    border-radius: 12px;
-    background: rgba(233, 238, 242, 0.08);
+    border-radius: var(--r-md);
+    background: var(--remote-vol-ground);
     overflow: hidden;
     cursor: pointer;
     touch-action: none;
@@ -288,7 +288,7 @@
   }
   .all__bar {
     height: 44px;
-    border: 1px solid rgba(126, 214, 188, 0.35);
+    border: 1px solid var(--c-lms-35);
     box-sizing: border-box;
   }
   .bar {
@@ -299,7 +299,7 @@
     left: 0;
     top: 0;
     bottom: 0;
-    background: #7ed6bc;
+    background: var(--accent-lms);
   }
   .fill.is-muted {
     opacity: 0.35;
@@ -315,7 +315,7 @@
     font-size: 16px;
     font-weight: 600;
     pointer-events: none;
-    color: #e9eef2;
+    color: var(--ink);
   }
   .value.is-dark {
     color: var(--remote-vol-ink-on-fill);
@@ -323,7 +323,7 @@
   .rule {
     flex-shrink: 0;
     height: 1px;
-    background: rgba(233, 238, 242, 0.1);
+    background: var(--ink-line);
   }
   .rows {
     min-height: 0;
@@ -365,7 +365,7 @@
     letter-spacing: 0.14em;
     text-transform: uppercase;
     white-space: nowrap;
-    color: rgba(233, 238, 242, 0.6);
+    color: var(--ink-quiet);
   }
   .who__tag:empty {
     display: none;
@@ -379,14 +379,14 @@
     top: 2px;
     width: 32px;
     height: 32px;
-    border-radius: 10px;
+    border-radius: var(--r-10);
     border: 0;
     padding: 0;
     background: none;
     display: grid;
     place-items: center;
     cursor: pointer;
-    color: #e9eef2;
+    color: var(--ink);
   }
   .mute.is-dark {
     color: var(--remote-vol-ink-on-fill);
@@ -401,9 +401,9 @@
     flex: 1;
     min-width: 0;
     height: 36px;
-    border-radius: 12px;
-    background: rgba(233, 238, 242, 0.05);
-    border: 1px solid rgba(233, 238, 242, 0.12);
+    border-radius: var(--r-md);
+    background: var(--remote-fixed-ground);
+    border: 1px solid var(--remote-touch-line);
     box-sizing: border-box;
     display: flex;
     align-items: center;
@@ -430,9 +430,9 @@
     top: 0;
     width: 10px;
     height: 8px;
-    border: 2px solid rgba(233, 238, 242, 0.7);
+    border: 2px solid var(--c-ink-70);
     border-bottom: none;
-    border-radius: 5px 5px 0 0;
+    border-radius: var(--r-5) var(--r-5) 0 0;
     box-sizing: border-box;
     display: block;
   }
@@ -443,7 +443,7 @@
     width: 14px;
     height: 9px;
     border-radius: 2.5px;
-    background: rgba(233, 238, 242, 0.7);
+    background: var(--c-ink-70);
     display: block;
   }
   .fixed__text {
@@ -459,20 +459,20 @@
     flex: 1;
     min-width: 0;
     height: 36px;
-    border-radius: 12px;
-    border: 1px dashed rgba(233, 238, 242, 0.16);
+    border-radius: var(--r-md);
+    border: 1px dashed var(--c-ink-16);
     box-sizing: border-box;
     display: flex;
     align-items: center;
     padding: 0 14px;
     font-size: 14px;
-    color: rgba(233, 238, 242, 0.6);
+    color: var(--ink-quiet);
   }
   .note {
     flex-shrink: 0;
     font-size: 14px;
     line-height: 1.4;
-    color: rgba(233, 238, 242, 0.6);
+    color: var(--ink-quiet);
     text-wrap: pretty;
   }
 </style>
