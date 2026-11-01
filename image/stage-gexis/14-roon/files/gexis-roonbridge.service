@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# ADR-0172: Roon Bridge, Roon Labs' endpoint software, for the Roon plugin.
+# Fetched from Roon Labs before its first start (gexis-fetch@roonbridge), and
+# kept up to date by itself in its own folder, the one place it may write.
+[Unit]
+Description=Roon Bridge, for Gexis Player's Roon plugin (ADR-0172)
+Documentation=https://help.roonlabs.com/portal/en/kb/articles/roonbridge
+Requires=gexis-fetch@roonbridge.service
+After=gexis-fetch@roonbridge.service network-online.target
+Wants=network-online.target
+# Started and stopped with the plugin, whose switch is the consent.
+PartOf=gexis-roon.service
+
+[Service]
+Type=simple
+User=roonbridge
+Group=roonbridge
+SupplementaryGroups=audio
+StateDirectory=roonbridge
+Environment=ROON_DATAROOT=/var/lib/roonbridge
+Environment=ROON_ID_DIR=/var/lib/roonbridge
+Environment=HOME=/var/lib/roonbridge
+ExecStart=/opt/RoonBridge/start.sh
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/opt/RoonBridge
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+# No device but the Roon loopback card, which gexis-core grants by a drop-in
+# under /run at its start (plugin_permissions.apply_card).
+DevicePolicy=closed

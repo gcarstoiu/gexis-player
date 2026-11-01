@@ -372,6 +372,18 @@
       ]
     },
     {
+      "name": "gexis-roon",
+      "group": "renderer",
+      "role": "Connects Roon Bridge to the player, through its own output.",
+      "author": "George Carstoiu",
+      "licence": "GPL-3.0-or-later",
+      "url": "https://github.com/gcarstoiu/gexis-roon",
+      "arrives": "Fetched from its release when the packages are built, checked against a pinned checksum",
+      "sources": [
+        "github.com/gcarstoiu/gexis-roon"
+      ]
+    },
+    {
       "name": "Beszel agent and hub",
       "group": "system",
       "role": "Optional system monitoring: the agent reports, the hub keeps the history. Both off unless you switch them on.",
@@ -724,6 +736,18 @@
       "arrives": "Not in the image. Downloaded from Plex on the device when you switch Plexamp on, checked against a pinned checksum",
       "sources": [
         "plexamp.plex.tv"
+      ]
+    },
+    {
+      "name": "Roon Bridge",
+      "group": "downloaded",
+      "role": "Makes the player a Roon device.",
+      "author": "Roon Labs LLC",
+      "licence": "Proprietary; Roon's terms (roon.app/en/termsandconditions)",
+      "url": "https://help.roonlabs.com/portal/en/kb/articles/roonbridge",
+      "arrives": "Not in the image. Downloaded from Roon Labs on the device when you switch Roon on, and kept up to date by itself",
+      "sources": [
+        "download.roonlabs.net"
       ]
     },
     {
