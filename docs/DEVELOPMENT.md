@@ -3590,7 +3590,9 @@ installs through the upload's checks and sandbox and offers listed updates.
 
 **Started 2026-11-01** (George), on `ph-themes` from `next`, with Claude
 Design's handover of 2026-10-29 unpacked over `design/`;
-[ADR-0171](decisions/0171-themes.md) proposed the same day.
+[ADR-0171](decisions/0171-themes.md) accepted the same day (George: six
+themes built in, one per player, the row in Display with Deep Teal the
+default; criterion 2's *Faded 80s* and *Graphite* went with it).
 
 **Cut out of Phase 10 on 2026-09-25** (George): *"Themes to be cut out and have
 its own phase at the end of the current list."* It was that phase's criterion

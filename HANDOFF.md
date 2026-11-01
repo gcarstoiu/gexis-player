@@ -54,13 +54,20 @@ The mocked-screen checks (`~/projects/scratch/dpad`, `~/projects/scratch/ph24`)
 build from `~/projects/gexis-player-next` unless `WT` names another worktree.
 
 **Now: Phase 25, themes** (`ph-themes`, worktree
-`~/projects/gexis-player-themes`), started 2026-11-01. Claude Design's
-export is on the branch in `design/source/28` and `design/themes/` (its
-monos come from fontsource). [ADR-0171](docs/decisions/0171-themes.md)
-accepted on the branch (George): six themes built in, one per player, the
-row in Display with Deep Teal the default. Next: the 2,031 colour literals in
-the components go through the tokens with today's look unchanged, checked
-pixel by pixel, then the five themes.
+`~/projects/gexis-player-themes`, pushed up to the ADR; local since), started
+2026-11-01. [ADR-0171](docs/decisions/0171-themes.md) accepted (George: six
+themes built in, one per player, the row in Display with Deep Teal the
+default). **Built, not yet on a player**: the design's rule as
+`ui/src/lib/themeRule.js`, `ui/scripts/themes.mjs` writing `themes.css`
+(checked against the design by the build); today's colours and corners
+through tokens - Deep Teal pixel-identical on 101 mocked screens (panel at
+the 10", 7" and TV sizes, bar, phone); the monos from fontsource; a core test
+against new literals. The harness: `~/projects/scratch/ph25/` (`run.sh`,
+`capture.py`, `compare.py`; `THEME`, `COVER`, `EQ` for the mocked core; do
+not edit `run.sh` while a capture runs). The equaliser stays as the rule
+gives it on the light themes (George, 2026-11-01). **Open**: a preview on
+sofapi, after George's OK; `gen_personalise.py` out of step since Phase 23
+(the first-use page's header says so).
 
 **Next: Phase 26, Roon** (`ph-roon`), added 2026-11-01 right after themes
 (George), ADR first. George's Roon over AirPlay did not play; what sofapi's
