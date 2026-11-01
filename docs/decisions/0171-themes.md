@@ -3,8 +3,8 @@
 **Status:** **Proposed** 2026-11-01, Phase 25 (`ph-themes`). The five themes
 are George's choice from Claude Design (2026-10-28); everything below is
 Claude's proposal until George decides the points under *For George*.
-Amends [ADR-0016](0016-plugins-as-separate-processes.md) (what plugins
-provide) if decision 1 goes as proposed.
+Amends [ADR-0016](0016-plugins-as-separate-processes.md): themes are not
+something plugins provide (decision 1).
 
 ## Context
 
@@ -96,11 +96,14 @@ in the bundle. How themes ship and are chosen is left to this record.
 11. **The design folder stays `design/source/28`**, as exported: its files
     name each other by that path. `design/README.md` says 28 is Phase 25.
 
+## Decided (George)
+
+- **Decision 1, built in** (2026-11-01): the six themes are part of the
+  player, as (1) proposes; no theme plugins in this phase.
+
 ## For George
 
 To be asked one at a time:
-- **Decision 1**: built in (1), or a theme as a plugin that ships data and
-  never runs.
 - **Who has a theme**: each player its own, followed by its bar and phone
   remotes (9), or the phone choosing its own.
 - **Today's theme's name**, Deep Teal in the inventory, and the row's options
