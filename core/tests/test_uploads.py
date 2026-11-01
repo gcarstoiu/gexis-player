@@ -115,7 +115,8 @@ def test_an_uploaded_plugins_switch_starts_off_and_says_it_was_uploaded(tmp_path
     registry = Settings.with_plugins(load_registry(), [plugin], {})
     rows = [r for g in registry for r in g.get("rows", []) if r.get("key") == "radiofoo.enabled"]
     assert rows and rows[0]["default"] is False and rows[0]["uploaded"] is True
-    assert "Not part of Gexis Player" in rows[0]["note"]
+    # ADR-0169: its tag says it was uploaded; its note what it does.
+    assert rows[0]["note"].endswith("installed from a file.")
 
 
 def test_a_restore_without_the_package_is_listed_as_needing_it_again(tmp_path):

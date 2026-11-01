@@ -303,6 +303,21 @@ before); one that stops before it plays never leads. Lyrion playing in the group
 sync still never leads (its leader plays it too), checked again when it
 plays. George agreed, the same day.
 
+## Fixed 2026-10-31: the wait was never kept
+
+As built in 1.9.1, the source did not wait. Each change of a member's state
+was looked at 50 ms later, and that look (C1) stopped any source of the
+member's own while another player led, so a new one was stopped before it
+played (sofapi, 2026-10-31, in a group led by the bar: Lyrion, active as its
+player switches on and playing only once the device is free, stopped within
+half a second three times; and with it Lyrion's sync on both, so nothing
+played). The logs of sofapi and ShelvesPi show no member taking the lead
+since 1.9.1 was installed, AirPlay included. The tests had missed it: their
+players were never started, and starting is what ties a change of state to
+that look (lesson 87). The fix (`fix-group-lead`): a source started on a member has ten
+seconds to play and lead before C1 stops it, and Lyrion playing in the
+leader's own sync is never stopped there - its leader plays it too.
+
 ## Not in this record
 
 - AirPlay 2 (Phase 23) and its own multiroom from Apple's devices.

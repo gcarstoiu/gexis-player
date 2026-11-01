@@ -118,7 +118,7 @@
        onpointerdown={allDrag.down} onpointermove={allDrag.move} onpointerup={allDrag.up} onpointercancel={allDrag.up}>
     <div class="rail">
       <div class="fill" class:is-muted={g.muted} style:width={`${allLevel}%`}></div>
-      <div class="knob" style:left={`${allLevel}%`}></div>
+      <div class="knob" style:left={`${allLevel}%`} data-dpad-knob></div>
     </div>
   </div>
   <span class="value">{allText}</span>

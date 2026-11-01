@@ -102,14 +102,13 @@
    From design/tokens.css, *Phase 19: the D-pad's focus* (George's teal ring,
    Jump). lib/dpad.js places it over the focused control's box; it takes no
    part in layout and moves with `transform`, with no transition and no blur.
-   Above every sheet and drawer, below the phone's pointer (1000). */
+   Above every sheet and drawer, below the phone's pointer (1000). The
+   design's arrows beside a slider's ring are not drawn, and its band is 3 px,
+   not 6 (George, 2026-10-31). */
 :root {
   --focus-ink:           #7ed6bc;
-  --focus-band:          6px;
+  --focus-band:          3px;
   --focus-keyline-ink:   rgba(8, 12, 16, 0.8);
-  --focus-arrow-out:     32px;
-  --focus-arrow-nudge:   5px;
-  --focus-arrow-dim:     0.35;
 }
 .dpad-ring {
   position: fixed;
@@ -123,40 +122,6 @@
 }
 .dpad-ring[hidden] {
   display: none;
-}
-.dpad-ring__arrow {
-  display: none;
-  position: absolute;
-  top: 50%;
-  width: 20px;
-  height: 28px;
-  margin-top: -14px;
-  overflow: visible;
-}
-.dpad-ring__arrow path {
-  fill: var(--focus-ink);
-  stroke: var(--focus-keyline-ink);
-  stroke-width: 2.5;
-  stroke-linejoin: round;
-}
-.dpad-ring--slider .dpad-ring__arrow {
-  display: block;
-}
-.dpad-ring__arrow--left {
-  left: calc(-1 * var(--focus-arrow-out));
-}
-.dpad-ring__arrow--right {
-  right: calc(-1 * var(--focus-arrow-out));
-}
-.dpad-ring--left .dpad-ring__arrow--left {
-  transform: translateX(calc(-1 * var(--focus-arrow-nudge)));
-}
-.dpad-ring--right .dpad-ring__arrow--right {
-  transform: translateX(var(--focus-arrow-nudge));
-}
-.dpad-ring--left .dpad-ring__arrow--right,
-.dpad-ring--right .dpad-ring__arrow--left {
-  opacity: var(--focus-arrow-dim);
 }
 
 /* ---- ADR-0164: the phone remote -------------------------------------------

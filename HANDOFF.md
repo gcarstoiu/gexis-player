@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-10-28, late (on R2D2).
+Last updated: 2026-10-31 (on R2D2).
 
 ## Start here
 
@@ -20,48 +20,137 @@ and the ideas as Must / Should / Could. It follows `docs/DEVELOPMENT.md`'s
 phases; change it when a phase opens, closes or moves, and show George first. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 1.9.0 on Testing, 1.7.0 on Stable** (2026-10-28:
-Testing serial 59 read back with a good signature; Stable serial 11). 1.9.0
-carries Phase 23 (AirPlay 2, marked *Limited testing*) and the group-latency
-fix; PR #88 merged into `main` (2026-10-28). Release worktree
-`~/projects/gexis-player-r190`; image
-`image/deploy/2026-10-28-gexis-player-v1.9.0.img` (149 checks passed); build
-output `~/projects/gexis-release-out/r1.9.0`. 1.8.0's story is in the
-archive (2026-10-28). A release worktree needs its pi-gen submodule
-initialised before `make image`.
+**Current release: 1.9.1 on Testing, 1.7.0 on Stable** (2026-10-29:
+Testing serial 60 read back with a good signature; Stable serial 11). 1.9.1
+carries the two multiroom changes previewed on 2026-10-28: another group
+shown and joined whole, and a source leads once it plays. PR #89 merged by
+George (2026-10-29). Image `image/deploy/2026-10-29-gexis-player-v1.9.1.img`
+(149 checks passed); build output `~/projects/gexis-release-out/r1.9.1`. A
+release worktree needs its pi-gen submodule initialised before `make
+image`.
 **Before the next Stable promotion, remind George** (his request,
 2026-10-28; to-do `ph22-eq-check`): a group heard in sync with the
 equaliser on at one player only. 1.8.0 plays such a player about 46 ms late
-(lesson 85); the fix, `c913bdc6`, is in 1.9.0 (not yet heard): promote 1.9.0,
-not 1.8.0, once it is heard. The four players run it now (the preview
-below).
+(lesson 85); the fix, `c913bdc6`, is in 1.9.0 and 1.9.1 (not yet heard).
+**Stable waits for the catalogue's release** (George, 2026-10-29): the
+promotion comes after it, heard then, in one session with the two
+measurements (to-dos `ph22-measure`, `eq-measure`).
 **R2D2's `/` fills up**: Docker's containerd store keeps images on `/`, not
 in `/home/docker`, and pi-gen rebuilds its 1.16 GB build image on every
-image build; check `df -h /` before one (1.9 GB free after 1.8.0's, 213 MB at its lowest while pi-gen rebuilt).
-**Now: Phase 23, AirPlay 2** (`ph-airplay`, closed as a branch) - in 1.9.0
-on Testing, marked *Limited testing*: released before it is tried, no Apple
-device yet (George, 2026-10-28). [ADR-0167](docs/decisions/0167-airplay-2-as-a-plugin.md)
-accepted. Shairport Sync 5.6.2 and NQPTP 1.2.9 are built by us
-(`packaging/shairport-sync`, `packaging/nqptp`); the adapter is
-`gcarstoiu/gexis-airplay` (local copy `~/projects/gexis-airplay`). **Open:**
-the test with an Apple device (to-do `ph23-test`), then T1-T9 to George and
-the tag removed. The build's story is in the archive (2026-10-28, evening).
+image build, about 1.7 GB at a build's peak; check `df -h /` before one
+(4.1 GB free on 2026-10-29, after the clean-up).
+**Now: Phase 24, the plugin catalogue** (`ph-plugin-catalogue`), brought
+forward with themes (25) before room correction (now 26 and 27), which still
+cannot be auditioned (George, 2026-10-29).
+[ADR-0168](docs/decisions/0168-a-plugin-catalogue.md) accepted the same day
+(George's seven answers, each as recommended; no setting). Plan step 1
+done: `gcarstoiu/gexis-plugins` public, GPL-3.0-or-later (local copy
+`~/projects/gexis-plugins`; ADR-0168, *Built*); its main has a ruleset
+(pull requests, the listing check required; the admin merges a tools change
+past it). Steps 2 and 3, the core and the screens, built on
+`ph-plugin-catalogue` (worktree
+`~/projects/gexis-player-ph-plugin-catalogue`), checked from mocked data
+(`~/projects/scratch/ph24`: `run.sh` with `catalogue_layout.py` and
+`shots.py`), not yet on a player. George confirmed or changed their choices
+the same evening (ADR-0168, *Confirmed and changed*): the notice before a
+first install only, and a restore all in one go - both built. **The
+catalogue key exists** (ADR-0168, *The catalogue key*): R2D2 keeps the
+subkey in `~/projects/gexis-catalogue-key`; the master and revocation
+certificate wait in `~/projects/gexis-catalogue-key-for-george` until
+George has them, then that folder is deleted. **Step 4 done** (2026-10-30;
+ADR-0168, *The first listing on a test player*): the samples
+(`gcarstoiu/gexis-sample-plugins`, local copy
+`~/projects/gexis-sample-plugins`) installed, updated, restored, withdrawn
+and blocked on sofapi; `gexis-plugins` #1-#9 merged; **serial 4 published**
+(both samples withdrawn; `tools/publish.sh`,
+`GEXIS_CATALOGUE_GNUPGHOME=~/projects/gexis-catalogue-key`). The signature
+is now `catalogue-<serial>.json.sig` (George, after GitHub's cache paired a
+catalogue with the previous signature). The ADR's three measurements done.
+Step 5 done the same day (the manual, the FAQ, *Writing a plugin*, the
+README, the technical guide, on the phase branch). **The phase grew the
+same evening** (George; ADR-0168, *Changed*): one store for every plugin
+(option B of the mock-ups, a Claude Design canvas *Plugins: one look or one
+store*), and declared permissions with a CEC plugin as the first to use
+them, both before 1.10.0. Mock-ups approved; ADR-0169 (the store) and ADR-0170
+(permissions `cec`, `gpio`, `usb`; a CEC plugin first) accepted the same
+day. The loopback fix (`fix-panel-loopback`, merged into the
+phase branch), the permissions and the store were built the same evening
+and tried on sofapi, in that evening's preview (`1.9.1+git46.d41c73e`;
+core, UI, system, player; replaced 2026-10-31, below). Pushed (George): both branches; `gexis-plugins` #10
+(a version's permissions, an entry's area) and #11 (`tools/player-ref` at
+the phase's `1e26c75e`, whose upload check knows permissions). CEC (ADR-0170, *CEC on a test player*):
+sofapi's second HDMI port goes to a receiver feeding a TV; the bus, waking the
+TV and taking the input shown; the plugin `tv-remote` 0.1.0 written
+(`~/projects/gexis-tv-remote`, local) and running on sofapi. George's key
+test (2026-10-31, ADR-0170): Back did nothing, Exit worked as Back; 0.1.1
+(local, committed, not pushed; on sofapi since 10:38) tries its hello again
+and logs a key it does not use. Next: Back again with 0.1.1, and the receiver's own remote, then the
+plugin's public repository and listing (asked first).
+**Found in George's test, 2026-10-31, fixed apart** (branches from `next`,
+worktrees `~/projects/gexis-player-<branch>`, committed, not pushed; merged
+into the phase branch locally, so they ship with 1.10.0 - George, the same
+day; sofapi runs that preview, core `1.9.1+git54.c9e52ad`, UI and player
+`1.9.1+git58.b2aa8e1`): `fix-group-lead` - a member's new source
+was stopped before it played, so no member led since 1.9.1 (ADR-0166, *Fixed
+2026-10-31*; lesson 87); `fix-group-list` - after *Undo group* the lists
+showed the other player's old group with this player in it, *Not reachable*;
+`fix-lyrics-wrap` - the Track tab's three lyric lines wrote over each other
+when the current one wrapped (the manual's sentence changed with it).
+**Found in George's TV-remote test the same afternoon, fixed apart** (the
+same way: from `next`, committed, not pushed, merged into the phase branch
+locally for 1.10.0; George's four decisions in ADR-0161, *Changed after
+George's test with a TV remote*): `fix-dpad-reach` - the equaliser's switch
+reached, a long biography read through, a slider's ring round its knob with
+no arrows, no stop on the queue's hidden Remove, the A-Z letter lit instead
+of the ring, Right on a queue row shows Remove (the manual and the technical
+guide with it); `fix-album-title` - the title stops at three lines and the
+cover gives way, so *Add to queue* stays above the mini player;
+`fix-visualiser-size` - the visualiser's window back at the screen's size on
+each show, after the TV's output came back at 640 x 480 (ADR-0147, *Amended
+2026-10-31*; only a real drop shows it works). Lesson 88. Their preview is
+built (core, system and player `1.9.1+git68.87294a6`, UI `1.9.1+git66.1e0411e`),
+on sofapi since 17:57 (George's OK; dry run clean, core, kiosk and
+visualiser restarted). Seen then: a visualiser stopped while it was still
+starting ignored the stop for 90 s and was killed - the kiosk's restart had
+already restarted it.
+**George's second test the same evening**: CEC works; the ring was too thick
+and lay over the Popular rows' numbers and lengths; the visualiser's first
+press after a drop showed nothing (the core looked for the window as the
+driver resized it, and restarted it). Fixed on the same branches (ADR-0161
+25-26, ADR-0147): a 3 px band, a ring outside a row rather than over its
+text (checked on every mocked screen at four sizes), and a show that asks
+again before restarting. Second preview built (core `1.9.1+git72.04b0e1d`,
+UI `1.9.1+git74.8426a20`, player `1.9.1+git76.fdc800e`), not yet installed.
+Next, as George asked: the release (1.10.0), the plugin's repository and
+listing, Stable.
+The samples left `tools/`
+for that repository. The wiki Roadmap shows the new order (pushed
+2026-10-29 with George's OK).
+**Found in step 3, fixed apart**: on a phone the confirm, its progress card
+and the update dialog sat half off the screen (since 1.7.0); branch
+`fix-remote-dialogs` (worktree `~/projects/gexis-player-fix-remote-dialogs`),
+merged into the phase branch, into `next` after George's test. **sofapi
+runs the phase's preview** (`1.9.1+git26.81918c4` core and player,
+`1.9.1+git25.1b14a2e` UI; files in `~/gexis-pc`), which carries the fix:
+George's phone test of the dialogs can be done there.
+**`fix-vite`** (worktree `~/projects/gexis-player-fix-vite`): Vite 8.3.3
+for the Dependabot alerts on its development server (George; six open on
+2026-10-31, all Vite 8.3.0-8.3.2, all fixed by 8.3.3); the built
+UI compared with 8.3.0's, the same mocked screens pixel for pixel; into
+`next` with the next release.
 
-**Preview on all four players, for George's tests** (2026-10-28, late):
-`1.9.0+git9.484bd6d`, core and player from `group-join-whole` (worktree
-`~/projects/gexis-player-join`), into which `fix-lead-on-restart` is merged.
-`group-join-whole`: another group is shown as a group and joined whole
-(ADR-0166 decision 11, George's option A). `fix-lead-on-restart`: a source
-takes the lead only once it plays (ADR-0166 amended; lesson 86) - before,
-a member's core restart moved the lead with nothing playing. Seen after the
-install: sofapi's restart left the lead with the bar. The lead is on the bar
-since the earlier restart; music played on sofapi takes it back. Once
-George's tests pass, both branches into `next`, then a release.
+**Phase 23, AirPlay 2** (`ph-airplay`), in 1.9.0 and 1.9.1 on Testing,
+marked *Limited testing* (no Apple device yet).
+[ADR-0167](docs/decisions/0167-airplay-2-as-a-plugin.md) accepted; the
+adapter is `gcarstoiu/gexis-airplay` (local copy `~/projects/gexis-airplay`).
+**Open:** the test with an Apple device (to-do `ph23-test`), then T1-T9 to
+George and the tag removed.
 
-**Phase 22, multiroom for every source**, in 1.8.0 and 1.9.0 on Testing;
+**Phase 22, multiroom for every source**, in 1.8.0 to 1.9.1 on Testing;
 [ADR-0166](docs/decisions/0166-multiroom-for-every-source.md) all confirmed
 by George (D7 amended 2026-10-28: a player with the equaliser on plays
-earlier by CamillaDSP's hold, fixed in 1.9.0, not yet heard). **Open:** the
+earlier by CamillaDSP's hold, fixed in 1.9.0, not yet heard; decision 11 and
+the lead taken only on play, in 1.9.1). **Open:** the
 check by ear before the next Stable promotion (above); the measurement
 session (at 192 kHz the bar lost sync over Wi-Fi; a card's own delay, USB or
 optical, is measured there too); the Home Assistant integration's join and
@@ -74,11 +163,13 @@ the build's story are in the archive (2026-10-28).
 `GEXIS_RELEASE_GNUPGHOME=~/projects/gexis-release-key`; the scripts default
 to `~/.gnupg-gexis-release`, which no longer exists.
 
-**The players** (2026-10-28, late): all four on the preview above
-(`1.9.0+git9.484bd6d`, 1.9.0's content and the two multiroom branches);
-sofapi and the bar grouped, the bar leading; AirPlay on at sofapi and
-guestpi. Each has its own Lyrion server. Back to a release through the
-updater once the branches are released.
+**The players** (2026-10-29): all four on 1.9.1 through their updaters, on
+Testing (sofapi moved from Stable to Testing for it, George), dpkg clean;
+sofapi since 2026-10-30 on the phase's preview (above), no catalogue
+plugins installed, DevTools off; `~/gexis-pd` removed. sofapi and the bar grouped;
+AirPlay on at sofapi and guestpi. Each has its own Lyrion server. The old
+preview folders are gone (of those named, only `gexis-lead` and `gexis-pj`
+were still there, on sofapi and the bar).
 
 **The test venv imports the core from `~/projects/gexis-player-next`** (an
 editable install): in another worktree run the suite with `PYTHONPATH=src`
@@ -105,7 +196,6 @@ against a local copy, so losing that folder means re-uploading every OS file.
 - **Glass** (foonerd's Rust PeppyMeter, Finding 133): George, 2026-10-22,
   *"Glass is too young now"* - **remind him at the beginning of 2027** and
   measure it again (to-do `glass-revisit-2027`).
-- George's look at the moon before sunrise.
 
 **The Home Assistant integration** (Phase 19, closed 2026-10-25):
 `gcarstoiu/gexis-player-homeassistant` at 0.5.0 (2026-10-27: the card as the
@@ -121,7 +211,7 @@ them for a review (their template).
 from Phase 20: the measurement through a card (to-do `eq-measure`, at a time
 George picks).
 
-Then 23-30 in order, each ADR first (`docs/DEVELOPMENT.md`, the IDs
+Then 25-30 in order, each ADR first (`docs/DEVELOPMENT.md`, the IDs
 there); MPD parked (ADR-0151). **Raspberry Pi Imager** (ADR-0159, a task):
 Imager's own list stays open as it is (George, 2026-10-24).
 
@@ -130,14 +220,16 @@ in Claude's memory, not here) holds the open items with their detail.
 
 **Routine clean-up** (`docs/ROUTINE-CLEANUP.md`, George 2026-10-12): after
 every merged release PR, otherwise weekly on Sunday evening. **Last run:
-2026-10-28, after 1.9.0** (/home 220 -> 234 GB free, / 826 MB -> 1.9 GB).
+2026-10-29, after 1.9.1** (/home 220 -> 234 GB free, / 3.0 -> 4.1 GB).
 
 ## Phases
 
 Closed: 0-21 (13 with letters a-f). Phases are numbered consecutively
 without letters, each with a stable ID (George, 2026-10-13); 20 (the
 equaliser) and 21 (the phone remote) closed 2026-10-27 with 1.7.0; 22
-(multiroom) and 23 (AirPlay 2, limited testing) on Testing, 24-30 to come, MPD parked. `docs/DEVELOPMENT.md` holds each phase's acceptance criteria.
+(multiroom) and 23 (AirPlay 2, limited testing) on Testing; 24 (the plugin
+catalogue) being planned, then 25 (themes), 26-27 (room correction), 28-30;
+MPD parked. `docs/DEVELOPMENT.md` holds each phase's acceptance criteria.
 
 ## Machines
 
@@ -152,46 +244,8 @@ equaliser) and 21 (the phone remote) closed 2026-10-27 with 1.7.0; 22
 
 The full list, with how each was found, is in the archive (2026-10-12 block).
 
-- **The release tag goes on the release-notes commit, nothing after it**
-  (1.4.0, 2026-10-22): a package's version is the last commit that touched it,
-  and the notes are core's last change - a documents fix committed after them
-  and tagged built core as `1.3.1+git67`. A fix found after the notes goes in
-  *before* them (reorder the unpushed commits), then the tag.
-- **A cancelled run blocks the release PR** (1.5.0, 2026-10-24): pushing
-  `next` again cancels the run on the release commit, and `main`'s ruleset
-  counts a cancelled *Core tests* as failed, though the PR's own run passed.
-  Re-run it (`gh run rerun <id>`), or push `next` once.
-
-**Building**
-- **Clear space with `make prune`, never `make clean`**: `clean` destroys the
-  warm pi-gen stages (~9 GB; a cold build is ~40 min against ~15).
-- **Never `docker start pigen_work`** - it starts a build. Read its volumes
-  with a throwaway `docker run --rm --volumes-from pigen_work ...`.
-- **Do not edit `core/`, `ui/dist`, `skins` or `stage-gexis` while an image
-  builds**: they are bind-mounted live, and the `.info` would name a commit
-  the image does not hold.
-- **If the copy-out dies after a finished build, `make fetch-deploy`**
-  recovers the image; an interrupted copy can truncate an older file in
-  `deploy/` - check sizes.
-- **Deleting a stage does not delete what it installed** until
-  `stage-gexis`'s work directory is cleared (LESSONS 45).
-- **A pinned package can vanish from the archive** (`alsa-lib`, ADR-0021):
-  `make image` then stops at `00-alsa`; read the archive's own `Packages`
-  index before changing anything.
-- **Package versions take 7 hex characters** (`build.sh --abbrev=7`); a
-  history rewrite after previews makes dpkg see a downgrade - put a preview
-  device back with `apt-get install --allow-downgrades`, dry run first.
-
-**Releasing**
-- **Run `verify-image.sh` from the release worktree**: from the main checkout it
-  compares against code the release does not carry (0.11.0: five false fails).
-- **A skin pack whose version did not change ships the published file**
-  (1.4.0): a rebuilt archive with the same files differs in bytes, and the
-  repository refuses one version with two contents. Copy the published debs
-  from the release that built them (for 1.4.0, `out/r1.3.0/repos/skins-*/`)
-  into the release's `packaging/out` before `publish.sh`.
-- **GitHub caches `channels/<name>` for minutes after a publish**: verify the
-  new file with `gh release download channels`, not the public URL.
+- **Building or releasing: read `docs/BUILD-TRAPS.md` first** (moved
+  there from here, 2026-10-29).
 
 **On the players**
 - **DSD silence is the byte `0x69`**, not zero; never play `/dev/urandom` or

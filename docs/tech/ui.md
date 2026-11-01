@@ -89,6 +89,29 @@ flowchart LR
   opens or Settings is left; a set the core refuses puts the copy back
   (2026-10-16, as the standby times do). Each tap used to wait for its
   write and a full reload, 0.4-0.65 s on sofapi.
+- **Add plugins** (ADR-0168, ADR-0169, ADR-0170): Settings reads
+  `GET /plugins/store` (ours, each `added` or not) and `GET /plugins/catalogue`
+  with every settings read - for the row on the Plugins page and its count of
+  updates, and each plugin's *Update to …* - with `?refresh=1` when the page
+  opens, and every second while one of its `jobs` runs or an install started
+  here has not ended. That covers the restart an install makes: the reads
+  fail until the core is back, and the install has ended once the core
+  answers without the job and with the version installed. Its page is a
+  `.picker` over Settings: chips by `area`, a tile per plugin that can be
+  added - ours not added (`POST /plugins/{id}/add`, after its `notice` if it
+  has one) and the catalogue's not installed (`POST /plugins/catalogue/install`
+  with `grant`) - in two columns on the panel and three on a bar, and on a
+  phone or computer *Upload a plugin* at its end. The notice (ADR-0168
+  decision 6, with what the plugin `permissions` asks for listed) comes
+  before a first install; an update and a Retry start at once, unless the
+  version asks for more than was agreed (`asks`). An upload answered `409`
+  lists what it asks for and is sent again with `?grant=`. On the Plugins
+  page every plugin row carries its tag (`sourceOf`: ours, catalogue,
+  uploaded) and, switched off, one *Remove* (`POST /plugins/{id}/remove`
+  with `keep`, the dialog's *Keep its settings and sign-in*); an upload's
+  only on a phone or computer. What an install ended with stays on the
+  plugin's row until another group is opened, and a first install's
+  "switched off" goes once its switch is on.
 - **Settings' requests end** (George, 2026-10-12). One the player took but
   never answered used to leave a sheet spinning; Settings' requests now go
   through `ask()` in `lib/settings.js`, which aborts one
@@ -96,7 +119,8 @@ flowchart LR
   (20 s); `LONG_REQUEST_TIMEOUT_MS` (120 s) for what is slow on purpose - a
   Wi-Fi join, anything on the network shares (search, browse, add, forget),
   a Wi-Fi scan, making a backup, an address change (`CableSheet.svelte`), a
-  plugin's removal, a problem report's start, and a plugin upload (an
+  plugin's removal, *Add plugins*' read of the catalogue (`?refresh=1`), a
+  problem report's start, and a plugin upload (an
   `XMLHttpRequest`, for its progress), where the limit counts silence (no bytes going out, or no answer once all are sent) rather
   than the whole request; `RESTORE_TIMEOUT_MS` (15 min) for a restore, which
   answers only once every file is back. A timeout ends as the failure its
@@ -110,7 +134,9 @@ flowchart LR
 
 The same `index.html` is served to everyone. On mount, `App.svelte` asks
 `GET /surface`. The core answers `panel` when the request comes from loopback
-(the kiosk loads `http://127.0.0.1:8090/`) and `remote` for anything else.
+with this boot's token (the kiosk loads `http://127.0.0.1:8090/#panel=…`, and
+`lib/panel-token.js`, loaded first, adds it to every request as
+`X-Gexis-Panel`; ADR-0170) and `remote` for anything else.
 If the request fails it is asked again, backing off to every 5 s, and nothing
 is drawn meanwhile: a phone taken for a panel would draw at panel size and
 report its taps as the panel's (code review, 2026-10-12). **The panel then
@@ -263,8 +289,15 @@ keyboard's arrows, Enter and Escape - from the core's virtual keyboard (Home
 Assistant's remote, `POST /panel/key`) or a USB keyboard; made-up events are
 ignored. It moves a ring (`.dpad-ring`, styled in `styles/tokens.css` from
 the design's tokens) to the nearest control in the pressed direction within
-the topmost layer, scrolling lists to keep it in view. Screens take part by
-attributes and two events, so a new screen needs nothing in the module:
+the topmost layer, scrolling lists to keep it in view; Left and Right go
+first to a control level with the focused one. A control 1 px or less across
+is never a stop. The ring goes inside a control on rows and wherever a
+neighbour is under 12 px or the ring would leave the screen, outside
+otherwise - and outside after all when inside it would lie over the control's
+own text and outside over none. A control taller than the list it scrolls in (an opened
+biography): Up and Down scroll through it before they leave it, and the ring
+goes round the part in view. Screens take part by attributes and two events,
+so a new screen needs nothing in the module:
 
 | | |
 |---|---|
@@ -276,7 +309,10 @@ attributes and two events, so a new screen needs nothing in the module:
 | `dpadstep` event | Left or Right on a custom slider (`detail.step`: +1 or -1); Up or Down on one with `aria-orientation="vertical"` (the equaliser's bands), whose Left and Right go to its neighbours |
 | `data-step` | a custom slider's step in its own units (`aria-valuemin` to `aria-valuemax`): a scroll along it sends one `dpadstep` per step's length (`lib/scrollSlide.js`) |
 | `data-dpad-box` | inside a control: the parts the ring goes round |
+| `data-dpad-knob` | a horizontal slider's knob: the ring takes in its whole travel, the same width at every value |
 | `data-dpad-ring="inset"` / `"outside"` | the ring's form, where the rule would choose the other |
+| `data-dpad-ring="none"`, `data-dpad-focus` | no ring on this control (the A-Z rail's letters); the control the ring is on carries `data-dpad-focus` while it shows, for a look of its own |
+| `data-dpad-aside` | reached only with Left or Right; Up and Down pass it by (the queue row's Remove, behind the row's end) |
 | `data-dpad-skip`, `data-dpad-off` | not a stop; a screen the D-pad leaves alone (setup, updates) |
 | `data-dpad-cover` | a screen over everything (the idle screen, a takeover's): no ring while it is up, and a press only takes it down |
 
@@ -512,8 +548,12 @@ two pages side by side. Settings is `Settings.svelte` with
 `switcher={false}` and `flat` (its pages, choosers and the equaliser editor
 on the modals' solid `--bg-panel`, no weave or veil), mounted on its first
 visit; while it shows, the remote's own `--bg-panel` layer fades in over its
-background, behind the top bar too. During setup, first use and
-*Personalise*, `FirstUsePage` takes the page instead, as before.
+background, behind the top bar too. The two pages are one track slid by
+half its width, so nothing inside Settings may be `position: fixed`: its
+confirm, its progress card and the update dialog are `absolute` there
+(`.settings.is-flat`), over Settings' own area, as its sheets are (found
+2026-10-29: fixed, they sat half off the screen). During setup, first use
+and *Personalise*, `FirstUsePage` takes the page instead, as before.
 
 The Remote page, **with a screen** (`RemoteScreen.svelte`): the cover
 (`RemoteCover.svelte`: the renderer's or the core's found one, else the
@@ -558,7 +598,8 @@ Remote page scrolls.
 One WebSocket, `/touchpad`, between the phones and the panel (ADR-0121). The
 core relays messages and never interprets them:
 
-- It tells the two ends apart by loopback (the panel) or LAN (a phone).
+- It tells the two ends apart by loopback with the panel's token (`?panel=`,
+  ADR-0170) or anything else (a phone).
 - It accepts only `move`, `tap`, `text`, `key`, `scroll`, `zoom` from phones
   and `over`, `focus`, `ring`, `untyped` from the panel.
 - It drops messages over 2 KB, and drops everything while the

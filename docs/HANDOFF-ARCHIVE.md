@@ -8223,3 +8223,34 @@ From *Things that will bite*, kept elsewhere as rules (LESSONS 10, 38, 54, 55, 6
   (LESSONS 10, 38, 66).
 - **`systemctl is-active` does not mean working**: check the symptom (audio,
   `fuser` on the PCM node).
+
+## 2026-10-29: 1.9.0's release block, Phase 23 as Now, and the multiroom preview (moved from HANDOFF verbatim when 1.9.1 was cut)
+
+**Current release: 1.9.0 on Testing, 1.7.0 on Stable** (2026-10-28:
+Testing serial 59 read back with a good signature; Stable serial 11). 1.9.0
+carries Phase 23 (AirPlay 2, marked *Limited testing*) and the group-latency
+fix; PR #88 merged into `main` (2026-10-28). Release worktree
+`~/projects/gexis-player-r190`; image
+`image/deploy/2026-10-28-gexis-player-v1.9.0.img` (149 checks passed); build
+output `~/projects/gexis-release-out/r1.9.0`. 1.8.0's story is in the
+archive (2026-10-28). A release worktree needs its pi-gen submodule
+initialised before `make image`.
+**Now: Phase 23, AirPlay 2** (`ph-airplay`, closed as a branch) - in 1.9.0
+on Testing, marked *Limited testing*: released before it is tried, no Apple
+device yet (George, 2026-10-28). [ADR-0167](docs/decisions/0167-airplay-2-as-a-plugin.md)
+accepted. Shairport Sync 5.6.2 and NQPTP 1.2.9 are built by us
+(`packaging/shairport-sync`, `packaging/nqptp`); the adapter is
+`gcarstoiu/gexis-airplay` (local copy `~/projects/gexis-airplay`). **Open:**
+the test with an Apple device (to-do `ph23-test`), then T1-T9 to George and
+the tag removed. The build's story is in the archive (2026-10-28, evening).
+
+**Preview on all four players, for George's tests** (2026-10-28, late):
+`1.9.0+git9.484bd6d`, core and player from `group-join-whole` (worktree
+`~/projects/gexis-player-join`), into which `fix-lead-on-restart` is merged.
+`group-join-whole`: another group is shown as a group and joined whole
+(ADR-0166 decision 11, George's option A). `fix-lead-on-restart`: a source
+takes the lead only once it plays (ADR-0166 amended; lesson 86) - before,
+a member's core restart moved the lead with nothing playing. Seen after the
+install: sofapi's restart left the lead with the bar. The lead is on the bar
+since the earlier restart; music played on sofapi takes it back. Once
+George's tests pass, both branches into `next`, then a release.

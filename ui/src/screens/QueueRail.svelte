@@ -394,9 +394,10 @@
           {/if}
         </button>
         <!-- A swipe has no accessible name and nothing to focus, so the
-             action keeps a control - off screen, not absent. -->
+             action keeps a control: behind the row's end, where a swipe
+             uncovers Remove, reached with Right from the row. -->
         <button class="qrow__away" type="button" aria-label="Remove {item.title ?? 'track'} from the queue"
-                onclick={() => queueAction(at, 'remove')}></button>
+                data-dpad-aside onclick={() => queueAction(at, 'remove')}></button>
       </div>
     {:else}
       <div class="empty">
@@ -713,6 +714,8 @@
        of this scroller's raster (Finding 059). */
     background: var(--bg-panel);
     border-radius: 12px;
+    position: relative;
+    z-index: 1;
     transform: translateX(var(--dx, 0px));
     transition: transform 190ms cubic-bezier(0.2, 0.8, 0.2, 1);
   }
@@ -812,26 +815,29 @@
     color: rgba(233, 238, 242, 0.5);
     flex-shrink: 0;
   }
-  /* **Off screen, not gone** (ADR-0062). A swipe has no accessible name
-     and nothing to focus; this does, and it costs no paint. */
+  /* **Behind the row, not gone** (ADR-0062). A swipe has no accessible
+     name and nothing to focus; this does. Under the row, so a tap never
+     reaches it; with the D-pad's ring or a keyboard's focus on it the row
+     slides aside as a swipe does and shows Remove (George, 2026-10-31). */
   .qrow__away {
     position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 96px;
     padding: 0;
     border: 0;
+    border-radius: 12px;
+    background: none;
+    pointer-events: none;
   }
-  .qrow__away:focus-visible {
-    position: static;
-    width: auto;
-    height: 44px;
-    clip-path: none;
-    padding: 0 14px;
-    border-radius: 11px;
-    background: var(--ink-fill);
-    color: var(--ink-strong);
+  .qrow:has(> .qrow__away:focus-visible) .qrow__hit,
+  .qrow:has(> .qrow__away:global([data-dpad-focus])) .qrow__hit {
+    transform: translateX(-96px);
+  }
+  .qrow:has(> .qrow__away:focus-visible) .qrow__behind,
+  .qrow:has(> .qrow__away:global([data-dpad-focus])) .qrow__behind {
+    opacity: 1;
   }
 
   /* What stands in for the rows that are not built (ADR-0067). */

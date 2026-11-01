@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """A takeover and a return through an uploaded renderer, checked on the device.
 
-LMS plays, the sample renderer (`tools/sample-renderer`, installed as the
-uploaded plugin `tone`) takes the card from it, and LMS is picked again. What
+LMS plays, the sample renderer (`tone`, from gcarstoiu/gexis-sample-plugins,
+run as an uploaded plugin) takes the card from it, and LMS is picked again. What
 it checks is what broke on 2026-09-30 without anything saying so (LESSONS 47):
 
 - the core sees the uploaded renderer **holding the card** while it plays -
@@ -21,9 +21,9 @@ module answers:
 
     sudo /opt/gexis-core/venv/bin/python handover-check.py
 
-Needs: nothing playing, LMS with something in its queue, and `tone` uploaded
-(Settings -> Plugins -> Upload a plugin, with the package `package.sh` in
-`tools/sample-renderer` builds). The tone plugin's switch is put back as it
+Needs: nothing playing, LMS with something in its queue, and `tone` installed
+(Settings -> Plugins -> More plugins, or uploaded from the package that
+repository's `package.sh tone` builds). The tone plugin's switch is put back as it
 was; LMS is left paused. Both finish a couple of seconds after the script
 exits: squeezelite closes the card 1 s after a pause, and switching the tone
 off took 1.7 s (2026-09-30).
@@ -88,7 +88,7 @@ def main() -> int:
         return 2
     was_on = tone_switch()
     if was_on is None:
-        print("The sample renderer is not installed: upload tools/sample-renderer's package first.")
+        print("The sample renderer is not installed: install Tone (sample) from More plugins first.")
         return 2
 
     results: list[tuple[str, bool]] = []

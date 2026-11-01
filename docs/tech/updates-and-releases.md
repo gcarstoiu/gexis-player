@@ -623,6 +623,17 @@ into `/var/lib/gexis/plugins/<id>/<version>/` with `current` pointing at it and
 the previous version kept, and run under the sandboxed template
 `gexis-uploaded-<kind>@<id>.service`. Uploading a newer version updates it.
 
+**Plugins from the catalogue** (ADR-0168) reach a player without a release
+too, but only as versions someone has read. `gcarstoiu/gexis-plugins` lists
+each version with its download URL, size and sha256; a pull request adding
+one is checked there (the player's own upload check runs on the archive) and
+read before it is merged. `tools/publish.sh` in that repository then signs
+`catalogue.json` with the catalogue key - its own, not the release key - and
+puts it on the release `index`, with a serial one past the last. The player
+verifies it as it does a channel file, installs a version as an upload, and
+offers a newer listed version on the plugin's row; nothing updates by
+itself.
+
 ---
 
 ## 8. What still needs a reflash

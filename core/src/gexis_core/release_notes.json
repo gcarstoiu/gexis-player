@@ -1,6 +1,10 @@
 {
  "_about": "Every release's notes, newest first, exactly as published and signed (ADR-0116). publish.sh reads a release's notes from here; Settings -> Change logs shows the last 10.",
  "releases": {
+  "1.10.0": {
+   "date": "2026-10-31",
+   "notes": "New\n• Add plugins, in Settings → Plugins: plugins by other authors from a signed catalogue, installed and updated there; the player's own plugins are in the same store.\n• A plugin that needs the TV's HDMI-CEC connection, the GPIO pins or a USB device asks for it first; no plugin gets them otherwise.\n• With a D-pad or a TV's remote, Right on a queue row shows Remove, a long biography scrolls through, and the A-Z letter lights up; the ring is thinner and keeps off text.\n\nFixed\n• Music started on a grouped player that does not lead plays again; after Undo group the player lists no longer show the old group.\n• On a phone, confirmations and the update dialog sit fully on the screen.\n• Long lyric lines on the Track tab no longer write over each other.\n• A long album title no longer hides Add to queue.\n• The visualiser fills the screen again after a TV's picture drops and comes back.\n\nGood to know\n• Plugins under Add plugins come from other authors: each version is checked before it is listed, and runs in the player's sandbox at the user's own risk."
+  },
   "1.9.1": {
    "date": "2026-10-29",
    "notes": "New\n• From a player in no group, other groups show as groups, with the player that leads each; Join this group adds the player to the whole group.\n\nFixed\n• A player in a group, restarted, no longer takes the lead from the player that leads; a player leads once music plays on it."

@@ -567,7 +567,7 @@ All under the core's HTTP server on port 8090 (`wsserver.py`):
 
 | Route | Purpose |
 |---|---|
-| `GET /setup/status` | state; the **password only to a loopback caller** (the panel). Phones and the `/state` broadcast get `public_status()` without it |
+| `GET /setup/status` | state; the **password only to the panel** (loopback with its token, ADR-0170). Phones and the `/state` broadcast get `public_status()` without it |
 | `GET/POST /setup/answers` | read (resume) / save one step |
 | `GET /setup/networks` | Wi-Fi scan, the setup network itself removed |
 | `GET /setup/screen` | the Screen step: what the screen reports, the suggested model, all models |
@@ -676,7 +676,7 @@ connected network's details). One change waits at a time.
   saved, modified and brought up; if the port refuses, they are put back.
 - **The safeguard:** the change is pending for 60 s. `POST /network/keep`
   keeps it only if the request arrived at the new address (the socket's own
-  address) or from loopback (the panel); otherwise the saved settings come
+  address) or from the panel (loopback with its token); otherwise the saved settings come
   back. Every page shows `CableKeep` while `GET /network/cable` has `pending`,
   read again whenever `settings_revision` moves.
 

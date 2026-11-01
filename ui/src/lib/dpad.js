@@ -6,13 +6,19 @@
 //
 // - The focus moves by position (D3): the nearest control in the pressed
 //   direction, measured on the screen, within the topmost layer - a sheet,
-//   drawer, tray or dialog over the screen - scrolled into view.
+//   drawer, tray or dialog over the screen - scrolled into view. Left and
+//   Right go first to a control level with the focused one.
+// - A control taller than the list it scrolls in (an opened biography):
+//   Up and Down scroll through it before they leave it, and the ring goes
+//   round the part in view.
 // - It is hidden until the first press, which only shows it (D4): on the
 //   control focused last in that layer, or on its main one. A touch hides it,
 //   and so do the phone's touchpad and a screen over everything (the idle
 //   screen).
 // - Its look is the design's (`design/source/19/Focus Ring.dc.html`, George's
-//   teal ring, Jump): one element over the control's box, in no layout.
+//   teal ring, Jump): one element over the control's box, in no layout;
+//   without the arrows beside a slider's, and outside a row rather than
+//   over its text (George, 2026-10-31).
 //
 // Components take part through attributes and two events, so a new screen
 // needs nothing here:
@@ -26,6 +32,13 @@
 //   (Left and Right; Up and Down on one with `aria-orientation="vertical"`;
 //   a scroll along it sends the same, one per `data-step`, scrollSlide.js),
 //   and `data-dpad-box` inside a control on the parts the ring goes round;
+// - `data-dpad-aside` on a control reached only with Left or Right (the
+//   queue row's Remove, behind the row's end); Up and Down pass it by;
+// - `data-dpad-ring="none"` on a control too small for the ring (the A-Z
+//   rail's letters), which draws its own look on `data-dpad-focus` - set on
+//   the control the ring is on, while it shows;
+// - `data-dpad-knob` on a slider's knob that runs past its ends: the ring
+//   takes in the knob's whole travel, the same at every value;
 // - `data-dpad-off` on the screens the D-pad leaves to the phone (D8);
 // - `data-dpad-cover` on a screen over everything that a press only takes
 //   down (the idle screen, a takeover's).
@@ -47,12 +60,18 @@ const LAYERS = '[data-dpad-layer], [role="dialog"], [role="alertdialog"]';
 const COVERS = '[data-dpad-cover]';
 const TEXT = /^(text|search|email|url|tel|password|number)$/;
 
-// The design's ring (design/tokens.css, *Phase 19: the D-pad's focus*).
+// The design's ring (design/tokens.css, *Phase 19: the D-pad's focus*),
+// its band half as wide (George, 2026-10-31: too thick); BAND is
+// `--focus-band` in styles/tokens.css.
 const GAP = 4;
-const BAND = 6;
+const BAND = 3;
 const OUT = GAP + BAND;
 const INSET = 2;
 const NEIGHBOUR = 12;
+// The dark line either side of the band (`.dpad-ring`'s box-shadow).
+const KEYLINE = 2;
+// Less text than this under the band (px²) is a glancing touch, not a cover.
+const COVER_MIN = 4;
 // Kept clear of a scrolled list's edge, so the ring outside it shows.
 const SCROLL_MARGIN = 24;
 
@@ -60,7 +79,9 @@ function visible(el) {
   if (!el.isConnected || el.closest('[inert], [aria-hidden="true"], .is-kept')) return false;
   if (el.checkVisibility && !el.checkVisibility({ opacityProperty: true, visibilityProperty: true })) return false;
   const r = el.getBoundingClientRect();
-  return r.width > 0 && r.height > 0;
+  // A control kept for a keyboard but drawn as nothing (the queue row's
+  // Remove, 1 x 1) is not one the ring can show.
+  return r.width > 1 && r.height > 1;
 }
 
 function layerShown(el) {
@@ -111,6 +132,46 @@ function union(rects) {
 // The gap between two intervals; 0 when they overlap.
 const gap = (a1, a2, b1, b2) => Math.max(0, Math.max(a1, b1) - Math.min(a2, b2));
 
+// The part of `r` its scroll areas show, along the way each one scrolls.
+function inView(el, r) {
+  let { left, top, right, bottom } = r;
+  for (const { el: box, x, y } of scrollers(el)) {
+    const b = box.getBoundingClientRect();
+    if (y) {
+      top = Math.max(top, b.top);
+      bottom = Math.min(bottom, b.bottom);
+    }
+    if (x) {
+      left = Math.max(left, b.left);
+      right = Math.min(right, b.right);
+    }
+  }
+  return { left, top, right, bottom, width: Math.max(0, right - left), height: Math.max(0, bottom - top) };
+}
+
+// The list a control is taller than, which it cannot be scrolled into
+// whole; null for any other.
+function taller(el) {
+  const s = scrollers(el).find((one) => one.y);
+  if (!s) return null;
+  const b = s.el.getBoundingClientRect();
+  return el.getBoundingClientRect().height > b.height - 2 * SCROLL_MARGIN ? s : null;
+}
+
+// How far Up or Down scrolls such a control's list before the press leaves
+// the control; null when it shows the control's end that way.
+function through(el, dir) {
+  const s = taller(el);
+  if (!s) return null;
+  const r = el.getBoundingClientRect();
+  const b = s.el.getBoundingClientRect();
+  const rest = dir === 'down'
+    ? Math.min(r.bottom - (b.bottom - SCROLL_MARGIN), s.el.scrollHeight - s.el.clientHeight - s.el.scrollTop)
+    : Math.min(b.top + SCROLL_MARGIN - r.top, s.el.scrollTop);
+  if (rest <= 1) return null;
+  return { box: s.el, by: Math.min(rest, b.height * 0.75) * (dir === 'down' ? 1 : -1) };
+}
+
 function score(c, r, dir) {
   const cx = c.left + c.width / 2, cy = c.top + c.height / 2;
   const rx = r.left + r.width / 2, ry = r.top + r.height / 2;
@@ -136,21 +197,68 @@ function readingOrder(a, b) {
   return Math.abs(ra.top - rb.top) > 8 ? ra.top - rb.top : ra.left - rb.left;
 }
 
+// What the ring goes round: the control, or its `data-dpad-box` parts; a
+// slider's widened by half its knob each way, so the knob stays inside at
+// either end.
+function ringBox(el, boxes, slider) {
+  const r = boxes.length > 1 ? union(boxes.map((b) => b.getBoundingClientRect()))
+    : (boxes[0] ?? el).getBoundingClientRect();
+  const knob = slider ? el.querySelector('[data-dpad-knob]') : null;
+  if (!knob) return r;
+  const k = knob.getBoundingClientRect();
+  return union([
+    { left: r.left - k.width / 2, top: r.top, right: r.right + k.width / 2, bottom: r.bottom },
+    { left: r.left, top: k.top, right: r.right, bottom: k.bottom },
+  ]);
+}
+
+const area = (a, b) => Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left))
+  * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+const grown = (r, by) => ({ left: r.left - by, top: r.top - by, right: r.right + by, bottom: r.bottom + by });
+
+// `r` as far as the boxes round `el` that clip it let it show - a line cut
+// off by an ellipsis or a clamp included.
+function clipped(el, r, stop) {
+  let { left, top, right, bottom } = r;
+  for (let p = el.parentElement; p && p !== stop; p = p.parentElement) {
+    const s = getComputedStyle(p);
+    if (s.overflowX === 'visible' && s.overflowY === 'visible') continue;
+    const b = p.getBoundingClientRect();
+    if (s.overflowX !== 'visible') { left = Math.max(left, b.left); right = Math.min(right, b.right); }
+    if (s.overflowY !== 'visible') { top = Math.max(top, b.top); bottom = Math.min(bottom, b.bottom); }
+  }
+  return { left, top, right, bottom };
+}
+
+// How much text, of `scope`'s that `take` accepts, lies under the band of a
+// ring round `r`, inside or outside it: each line's letters taken as the
+// middle of its line box, about the font's size high.
+function textUnder(r, inside, scope, take) {
+  const outer = inside ? r : grown(r, OUT + KEYLINE);
+  const inner = inside ? grown(r, -(INSET + BAND + KEYLINE)) : grown(r, GAP - KEYLINE);
+  let under = 0;
+  const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const host = node.parentElement;
+    if (!host || !take(host) || !node.textContent.trim() || !area(host.getBoundingClientRect(), outer)) continue;
+    if (!visible(host)) continue;
+    const size = parseFloat(getComputedStyle(host).fontSize) || 16;
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    for (const line of range.getClientRects()) {
+      const middle = (line.top + line.bottom) / 2;
+      const ink = clipped(node, { left: line.left, right: line.right, top: middle - 0.36 * size, bottom: middle + 0.36 * size }, scope.parentElement);
+      under += area(ink, outer) - area(ink, inner);
+    }
+  }
+  return under;
+}
+
 function makeRing() {
   const ring = document.createElement('div');
   ring.className = 'dpad-ring';
   ring.dataset.focusRing = 'ring';
   ring.hidden = true;
-  const arrow = (side, d) => {
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('viewBox', '0 0 20 28');
-    svg.setAttribute('class', `dpad-ring__arrow dpad-ring__arrow--${side}`);
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', d);
-    svg.append(path);
-    return svg;
-  };
-  ring.append(arrow('left', 'M17 3 L4 14 L17 25 Z'), arrow('right', 'M3 3 L16 14 L3 25 Z'));
   document.body.append(ring);
   return ring;
 }
@@ -175,8 +283,6 @@ export function startDpad({ root, onkey = () => {}, wake = () => false, trayUp =
   // lands again, so it never outlives the drawer's fade.
   let lost = false;
   let follow = 0;
-  let nudge = null;
-  let nudgeTimer;
   let lostTimer;
   // What OK pressed, newest last: Back brings the ring back to the control
   // that opened the screen it leaves, found by its name (screens are drawn
@@ -275,6 +381,18 @@ export function startDpad({ root, onkey = () => {}, wake = () => false, trayUp =
     return false;
   }
 
+  // **The ring lies over no letters where it can help it** (George,
+  // 2026-10-31: over a Popular row's number and length): inside by the rule
+  // but over the control's own text, it goes outside when there it would
+  // cover none and the screen has room.
+  function form(el, r, list, layer) {
+    const inside = inset(el, r, list);
+    if (!inside || el.matches('[data-dpad-ring]')) return inside;
+    if (r.left - OUT < 0 || r.top - OUT < 0 || r.right + OUT > innerWidth || r.bottom + OUT > innerHeight) return true;
+    if (textUnder(r, true, el, () => true) < COVER_MIN) return true;
+    return textUnder(r, false, layer, (host) => !el.contains(host)) >= COVER_MIN;
+  }
+
   let ringField = false;
   function tell() {
     // A field, or a control that opens one focused (`data-text-entry`).
@@ -285,9 +403,21 @@ export function startDpad({ root, onkey = () => {}, wake = () => false, trayUp =
   }
 
   let placed = '';
+  // The control the ring is on carries `data-dpad-focus` while it shows,
+  // for a look of its own (`data-dpad-ring="none"`, the A-Z rail's letter).
+  let marked = null;
+  function mark(el) {
+    if (el === marked) return;
+    marked?.removeAttribute('data-dpad-focus');
+    marked = el;
+    el?.setAttribute('data-dpad-focus', '');
+  }
+
   function draw() {
     tell();
-    if (!shown || lost || !current || !visible(current)) {
+    const on = shown && !lost && !!current && visible(current);
+    mark(on ? current : null);
+    if (!on || current.matches('[data-dpad-ring="none"]')) {
       if (!ring.hidden) ring.hidden = true;
       placed = '';
       return;
@@ -296,19 +426,19 @@ export function startDpad({ root, onkey = () => {}, wake = () => false, trayUp =
     // tray's slider) names the part the ring goes round: `data-dpad-box`.
     const boxes = [...current.querySelectorAll('[data-dpad-box]')];
     const box = boxes[0] ?? current;
-    const r = boxes.length > 1 ? union(boxes.map((b) => b.getBoundingClientRect())) : box.getBoundingClientRect();
-    const rad = radius(box, r);
     const slider = isSlider(current) && !isVertical(current);
+    const r = inView(current, ringBox(current, boxes, slider));
+    const rad = radius(box, r);
     let x, y, w, h, rr;
     if (!slider && insetForm) {
-      x = r.left + INSET; y = r.top + INSET; w = r.width - 2 * INSET; h = r.height - 2 * INSET;
+      x = r.left + INSET; y = r.top + INSET; w = Math.max(0, r.width - 2 * INSET); h = Math.max(0, r.height - 2 * INSET);
       rr = Math.max(4, rad - INSET);
     } else {
       const round = rad >= Math.min(r.width, r.height) / 2 - 0.5;
       x = r.left - OUT; y = r.top - OUT; w = r.width + 2 * OUT; h = r.height + 2 * OUT;
       rr = round ? 9999 : rad + OUT;
     }
-    const key = `${x}|${y}|${w}|${h}|${rr}|${slider}|${nudge}`;
+    const key = `${x}|${y}|${w}|${h}|${rr}`;
     if (key === placed) return;
     placed = key;
     ring.hidden = false;
@@ -316,9 +446,6 @@ export function startDpad({ root, onkey = () => {}, wake = () => false, trayUp =
     ring.style.width = `${w}px`;
     ring.style.height = `${h}px`;
     ring.style.borderRadius = `${rr}px`;
-    ring.classList.toggle('dpad-ring--slider', slider);
-    ring.classList.toggle('dpad-ring--left', slider && nudge === -1);
-    ring.classList.toggle('dpad-ring--right', slider && nudge === 1);
   }
 
   // Follows the control for a moment after it moved (a list scrolling, a
@@ -340,7 +467,7 @@ export function startDpad({ root, onkey = () => {}, wake = () => false, trayUp =
     if (el) {
       last.set(layer, el);
       reveal(el, layer);
-      insetForm = inset(el, el.getBoundingClientRect(), list ?? candidates(layer));
+      insetForm = form(el, inView(el, el.getBoundingClientRect()), list ?? candidates(layer), layer);
     }
     draw();
     track();
@@ -348,9 +475,6 @@ export function startDpad({ root, onkey = () => {}, wake = () => false, trayUp =
 
   function step(el, dir) {
     stepSlider(el, dir);
-    nudge = dir;
-    clearTimeout(nudgeTimer);
-    nudgeTimer = setTimeout(() => { nudge = null; draw(); }, 300);
     draw();
   }
 
@@ -423,14 +547,31 @@ export function startDpad({ root, onkey = () => {}, wake = () => false, trayUp =
       step(current, key === 'up' ? 1 : -1);
       return;
     }
-    const from = current.getBoundingClientRect();
+    const scroll = (key === 'up' || key === 'down') && through(current, key);
+    if (scroll) {
+      scroll.box.scrollTop += scroll.by;
+      track();
+      return;
+    }
+    const from = taller(current) ? inView(current, current.getBoundingClientRect()) : current.getBoundingClientRect();
+    const sideways = key === 'left' || key === 'right';
     let best = null;
     let bestScore = Infinity;
+    let bestLevel = false;
     for (const el of list) {
-      if (el === current) continue;
-      const s = score(from, el.getBoundingClientRect(), key);
-      if (s < bestScore) {
+      if (el === current || (!sideways && el.matches('[data-dpad-aside]'))) continue;
+      const r = el.getBoundingClientRect();
+      const s = score(from, r, key);
+      if (s === Infinity) continue;
+      // Level with the focused control: across it by half the smaller of
+      // the two, and no more than three times its height (the equaliser's
+      // switch beside Back, over the bands below; not the bar's rail, which
+      // is level with everything).
+      const across = Math.min(from.bottom, r.bottom) - Math.max(from.top, r.top);
+      const level = sideways && across >= Math.min(r.height, from.height) / 2 && r.height <= 3 * from.height;
+      if (level > bestLevel || (level === bestLevel && s < bestScore)) {
         bestScore = s;
+        bestLevel = level;
         best = el;
       }
     }
@@ -516,6 +657,7 @@ export function startDpad({ root, onkey = () => {}, wake = () => false, trayUp =
   addEventListener('scroll', onScroll, true);
   addEventListener('resize', onScroll);
   return () => {
+    mark(null);
     removeEventListener('keydown', onKey, true);
     removeEventListener('pointerdown', onPointer, true);
     removeEventListener('panelpointer', hide);
@@ -524,7 +666,6 @@ export function startDpad({ root, onkey = () => {}, wake = () => false, trayUp =
     clearInterval(watch);
     observer.disconnect();
     cancelAnimationFrame(checking);
-    clearTimeout(nudgeTimer);
     clearTimeout(lostTimer);
     ring.remove();
   };

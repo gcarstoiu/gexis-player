@@ -1,0 +1,5 @@
+# ADR-0170: a plugin granted `usb` joins plugdev; raw USB devices and HID are
+# root's only otherwise. A plugin without the grant cannot reach them however
+# they are owned: its unit allows no such devices.
+SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", GROUP="plugdev", MODE="0660"
+SUBSYSTEM=="hidraw", GROUP="plugdev", MODE="0660"

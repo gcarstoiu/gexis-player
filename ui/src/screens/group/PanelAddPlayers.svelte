@@ -12,16 +12,17 @@
 <script>
   import mark from '../../assets/gexis-mark.svg';
   import GroupGlyph from '../../lib/GroupGlyph.svelte';
-  import { enterGroup, joinable, joinPlayer, memberStatus, othersByGroup, otherStatus } from '../../lib/group.svelte.js';
+  import { enterGroup, joinable, joinPlayer, memberStatus, othersByGroup, otherStatus, withoutMe } from '../../lib/group.svelte.js';
 
-  //: `others`: /players' others; `leader`: whose music they will play.
-  let { open, g = null, others = [], leader = '', onback, onflash, onjoined } = $props();
+  //: `others`: /players' others; `selfId`: this player's id; `leader`: whose
+  //: music they will play.
+  let { open, g = null, others = [], selfId = null, leader = '', onback, onflash, onjoined } = $props();
 
   //: Joins sent and not yet in the group: their rows catch up at once.
   let asked = $state({});
 
   const inGroup = $derived(new Set((g?.members ?? []).map((m) => m.id)));
-  const split = $derived(othersByGroup(others, inGroup));
+  const split = $derived(othersByGroup(withoutMe(others, selfId, inGroup), inGroup));
   //: Another group asked to take this player, until this player is grouped.
   let entering = $state(null);
   $effect(() => {

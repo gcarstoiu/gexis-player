@@ -25,14 +25,14 @@
   import GroupGlyph from '../../lib/GroupGlyph.svelte';
   import {
     enterGroup, group, groupHead, groupSub, joinPlayer, joinable, leaveGroup, memberStatus, othersByGroup, otherStatus,
-    removePlayer, silentNote,
+    removePlayer, silentNote, withoutMe,
   } from '../../lib/group.svelte.js';
 
   let { open = false, me = null, others = [], here = null, onclose = () => {}, onundo = () => {}, onsay = () => {} } = $props();
 
   const g = $derived($group);
   const inGroup = $derived(new Set((g?.members ?? []).map((m) => m.id)));
-  const split = $derived(othersByGroup(others, inGroup));
+  const split = $derived(othersByGroup(withoutMe(others, me?.id, inGroup), inGroup));
   const rest = $derived(split.loose);
   const otherGroups = $derived(split.groups);
   const leading = $derived(!!g?.members.find((m) => m.me)?.leads);

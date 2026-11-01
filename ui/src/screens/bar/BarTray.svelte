@@ -410,7 +410,7 @@
     >
       <div class="rail" bind:this={rail} data-dpad-box>
         <div class="fill" class:is-muted={muted} style:width={`${pct}%`}></div>
-        <div class="knob" class:is-muted={muted} style:left={`${pct}%`} data-dpad-box></div>
+        <div class="knob" class:is-muted={muted} style:left={`${pct}%`} data-dpad-knob></div>
       </div>
     </div>
     <span class="readout" class:is-muted={muted}>{muted ? 'Mute' : shown}</span>

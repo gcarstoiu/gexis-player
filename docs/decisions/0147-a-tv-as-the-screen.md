@@ -207,3 +207,18 @@ An HDMI port chosen under *Screen port* wins over a connected DSI panel as it
 does over a panel on the other HDMI port: the DSI panel is switched off and
 its I2C touch ignored by udev, by its driver ([ADR-0158](0158-dsi-screens.md)
 D3, George: *"User can still switch if he wants though"*).
+
+## Amended 2026-10-31: the visualiser's window after the mode came back
+
+George found the visualiser drawn off centre in a small window on sofapi's
+TV. Its log: the output was destroyed and found again (09:51:23), back at
+640 x 480, the kiosk put it at 1920 x 1080 two seconds later as above - but
+labwc had shrunk the visualiser's window with the output and nothing gave it
+the screen's size back, so the 1280 x 800 skin, centred for 1920 x 1080, was
+cut by a 640 x 480 window. Now the driver asks for the screen's size again
+each time it is shown, when the window has another (`fix-visualiser-size`).
+George's first press after the next drop (18:11) showed nothing: the
+window was being given its size as the core looked for it, wlrctl found none,
+and the core started the visualiser again; the second press worked. A show
+that finds no window now asks again three times, half a second apart, before
+starting it again. **Not yet seen:** a drop and a first press with both in.

@@ -94,7 +94,7 @@
         <span class="track"></span>
         <span class="tick"></span>
         <span class="fill" style:left={`${left}%`} style:width={`${width}%`} style:background={valueInk(g)}></span>
-        <span class="knob" class:is-dragging={dragging} style:left={`${50 + (g / 24) * 100}%`}></span>
+        <span class="knob" class:is-dragging={dragging} style:left={`${50 + (g / 24) * 100}%`} data-dpad-knob></span>
       </div>
       <span class="value" style:color={dragging ? '#f4f1ea' : valueInk(g)}>{fmt(g)}</span>
     </div>

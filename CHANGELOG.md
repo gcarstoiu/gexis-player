@@ -6,6 +6,26 @@
 Every release of Gexis Player and its notes, newest first. The player
 shows the last 10 under Settings → System → Change logs.
 
+## 1.10.0 — 31 October 2026
+
+### New
+
+- Add plugins, in Settings → Plugins: plugins by other authors from a signed catalogue, installed and updated there; the player's own plugins are in the same store.
+- A plugin that needs the TV's HDMI-CEC connection, the GPIO pins or a USB device asks for it first; no plugin gets them otherwise.
+- With a D-pad or a TV's remote, Right on a queue row shows Remove, a long biography scrolls through, and the A-Z letter lights up; the ring is thinner and keeps off text.
+
+### Fixed
+
+- Music started on a grouped player that does not lead plays again; after Undo group the player lists no longer show the old group.
+- On a phone, confirmations and the update dialog sit fully on the screen.
+- Long lyric lines on the Track tab no longer write over each other.
+- A long album title no longer hides Add to queue.
+- The visualiser fills the screen again after a TV's picture drops and comes back.
+
+### Good to know
+
+- Plugins under Add plugins come from other authors: each version is checked before it is listed, and runs in the player's sandbox at the user's own risk.
+
 ## 1.9.1 — 29 October 2026
 
 ### New

@@ -170,3 +170,60 @@ fixed:
     arrows into Tab was offered and not taken - Home Assistant's order, not
     the direction pressed, and its own thin outline.
 
+## Changed after George's test with a TV remote on sofapi (2026-10-31)
+
+The first use with the CEC plugin (ADR-0170) on a TV at 1280 x 720 found
+eight things; each was found again with mocked data and real key presses
+before it was changed (branches `fix-dpad-reach`, `fix-album-title`,
+`fix-visualiser-size`, in the 1.10.0 preview):
+
+18. **Left and Right go first to a control level with the focused one**:
+    across it by half the smaller of the two, and no more than three times
+    its height. On the equaliser Right from Back went to the first band below
+    rather than the switch on the same row, and the bands take Up and Down,
+    so the switch could not be reached (the bar's full-height rail is not
+    level with everything, hence the height limit).
+19. **A control 1 px or less across is never a stop.** Left on a queue row
+    reached its Remove, kept for a keyboard at 1 x 1; the inside form then
+    asked for a negative width, the ring kept the row's old size at an odd
+    place, and OK would have removed the track.
+20. **A control taller than the list it scrolls in** (an opened biography):
+    Up and Down scroll through it, three quarters of the list at a time,
+    before they leave it, and the ring goes round the part in view - it had
+    gone round the whole text, over the transport.
+21. **A slider's ring takes in its knob's travel** (`data-dpad-knob`), the
+    same width at every value; at either end the knob stuck out through the
+    ring into its arrow. With the wider ring the arrows sat on the mute icon
+    and against the level, and **the arrows go, on every slider** (George,
+    the same day, offered also a knob kept between the slider's ends): this
+    amends 7. His earlier answer that the arrows stop moving on a press is
+    folded into it.
+22. **On the A-Z rail the letter lights up, teal and larger, instead of the
+    ring** (George's suggestion, confirmed): the ring filled a letter 19 px
+    tall. `data-dpad-ring="none"` leaves a control's look to itself, and the
+    control the ring is on carries `data-dpad-focus` while it shows.
+23. **In the queue, Right on a row shows Remove** (George, the same day,
+    over OK opening a menu or leaving removal to touch): the row slides
+    aside as a swipe does, OK removes, Left goes back, and Up and Down pass
+    it by (`data-dpad-aside`). OK on the row still plays it, as a tap does.
+24. Found in the same test, outside this record: a long album title pushed
+    *Add to queue* under the mini player (`design/IMPLEMENTED-DIFFERENTLY.md`),
+    and the visualiser kept a window the TV's return at 640 x 480 had
+    shrunk ([ADR-0147](0147-a-tv-as-the-screen.md)).
+
+**After George's second test the same evening** (CEC worked; he asked for the
+ring to be checked everywhere it might cover something, and made thinner):
+
+25. **The band is 3 px, not 6** (George: too thick).
+26. **The ring lies over no letters where it can help it**: one the rule puts
+    inside goes outside when inside it would cover the control's own text and
+    outside none, with room on the screen. It lay over the artist page's
+    Popular rows' numbers and lengths, which reach the row's edges, and the
+    two lines of an album row with a guest artist. Text an ellipsis or a
+    clamp has cut off does not count. Checked with mocked data on every
+    screen and sheet reachable without a Lyrion server, at the TV's, the 10"
+    and 7" panels' and a bar's sizes: each control's ring placed as the
+    module places it (the copy checked against the real ring over 1,359 key
+    presses, one differing while a row still scrolled), and the text and
+    small icons under its band listed. Left: none but a queue row's Remove,
+    which the check sees without the row slid aside.

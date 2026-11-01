@@ -58,6 +58,7 @@ for unit in gexis-core.service gexis-meter.service gexis-park.service gexis-scre
 	install -D -m 644 "$F/$unit" "$U/$unit"
 done
 install -D -m 755 "$F/gexis-run-uploaded" "$STAGE/usr/lib/gexis/gexis-run-uploaded"
+install -D -m 644 "$F/60-gexis-plugins.rules" "$STAGE/usr/lib/udev/rules.d/60-gexis-plugins.rules"
 install -D -m 755 "$F/gexis-fetch-component" "$STAGE/usr/lib/gexis/gexis-fetch-component"
 for plugin in "$F"/plugins/*/; do
 	id=$(basename "$plugin")
@@ -74,6 +75,12 @@ done
 install -D -m 644 /src/packaging/keys/gexis-release.asc "$STAGE/usr/share/gexis/keys/gexis-release.asc"
 gpg --dearmor < /src/packaging/keys/gexis-release.asc > "$STAGE/usr/share/gexis/keys/gexis-release.gpg"
 chmod 644 "$STAGE/usr/share/gexis/keys/gexis-release.gpg"
+# ADR-0168: the plugin catalogue's key, for gpgv; without it the player shows
+# no catalogue. Until the key is made, a build carries none.
+if [ -s /src/packaging/keys/gexis-catalogue.asc ]; then
+	gpg --dearmor < /src/packaging/keys/gexis-catalogue.asc > "$STAGE/usr/share/gexis/keys/gexis-catalogue.gpg"
+	chmod 644 "$STAGE/usr/share/gexis/keys/gexis-catalogue.gpg"
+fi
 
 # A default, placed once: setup, a restore and first boot all write this file.
 install -D -m 644 "$F/core.toml" "$STAGE/usr/share/gexis/defaults/core.toml"
@@ -96,6 +103,14 @@ if getent passwd pi >/dev/null; then adduser pi gexis-plugins >/dev/null; fi
 
 # The pictures and backups shares (ADR-0049, ADR-0083), the stock user's.
 install -d -o 1000 -g 1000 -m 2775 /var/lib/gexis-core/pictures /var/lib/gexis-core/backups
+
+# ADR-0170: the USB and HID devices already plugged in, owned as our rule
+# says (a plugin granted `usb` reaches them through plugdev).
+if command -v udevadm >/dev/null; then
+	udevadm control --reload-rules 2>/dev/null || true
+	udevadm trigger --action=change --subsystem-match=usb --property-match=DEVTYPE=usb_device 2>/dev/null || true
+	udevadm trigger --action=change --subsystem-match=hidraw 2>/dev/null || true
+fi
 
 if [ -z "$2" ]; then
 	# First install: on at boot, as the image has always had them. An update

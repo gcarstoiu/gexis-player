@@ -512,9 +512,14 @@ for u in gexis-uploaded-renderer@.service gexis-uploaded-service@.service; do
 	# ADR-0142: no mDNS responder of a plugin's own.
 	if grep -q '^SocketBindDeny=ipv4:udp:5353' "$OUT/one" && grep -q '^SocketBindDeny=ipv6:udp:5353' "$OUT/one"; then ok "$u denies port 5353"
 	else bad "$u lets a plugin answer mDNS itself"; fi
+	# ADR-0170: the kiosk's command line, with the panel's token, out of sight.
+	if grep -q '^ProtectProc=invisible' "$OUT/one"; then ok "$u hides other users' processes"
+	else bad "$u lets a plugin read the kiosk's command line"; fi
 	rm -f "$OUT/one"
 done
 dfs "stat /usr/lib/gexis/gexis-run-uploaded" | grep -q 'Mode:  0755' && ok "gexis-run-uploaded executable" || bad "gexis-run-uploaded missing or not executable"
+# ADR-0170: a plugin granted `usb` reaches USB and HID through plugdev.
+dfs "stat /usr/lib/udev/rules.d/60-gexis-plugins.rules" | grep -q 'Inode:' && ok "60-gexis-plugins.rules installed" || bad "60-gexis-plugins.rules missing"
 
 echo "== ADR-0085: the ALSA default is our output"
 dfs "dump /etc/alsa/conf.d/zz-gexis-default.conf $OUT/one" >/dev/null

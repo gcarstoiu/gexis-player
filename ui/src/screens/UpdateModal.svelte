@@ -181,6 +181,11 @@
     padding: 16px;
     background: var(--bg-scrim);
   }
+  /* In the phone's remote, over Settings' own area: fixed, it was centred
+     on the remote's slid track, half off the screen (Settings.svelte). */
+  :global(.settings.is-flat) .ask {
+    position: absolute;
+  }
   .ask__card {
     width: min(560px, 100%);
     max-height: calc(100% - 32px);

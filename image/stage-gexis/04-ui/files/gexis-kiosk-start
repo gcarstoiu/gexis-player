@@ -286,6 +286,19 @@ if [ -n "${GEXIS_SCREEN_SCALE:-}" ]; then
 	echo "gexis-kiosk: ${GEXIS_SCREEN_ID:-screen} (${GEXIS_SCREEN_FAMILY:-standard}), scale ${GEXIS_SCREEN_SCALE}" >&2
 fi
 forget_window "${GEXIS_KIOSK_PROFILE}"
+# ADR-0170: the panel proves itself with this boot's token, which the core
+# makes at its start (the kiosk starts after it). The page sends it with its
+# requests; without it the core takes the page for a phone, so wait for it.
+panel_url="${GEXIS_KIOSK_URL}"
+for _ in $(seq 1 30); do
+	token=$(cat /run/gexis/panel-token 2>/dev/null) && [ -n "${token}" ] && break
+	sleep 1
+done
+if [ -n "${token:-}" ]; then
+	panel_url="${GEXIS_KIOSK_URL%%#*}#panel=${token}"
+else
+	echo "gexis-kiosk: no panel token in /run/gexis/panel-token" >&2
+fi
 echo "gexis-kiosk: exec chromium" >&2
 
 exec chromium \
@@ -303,4 +316,4 @@ exec chromium \
 	--disable-pinch \
 	--autoplay-policy=no-user-gesture-required \
 	--user-data-dir="${GEXIS_KIOSK_PROFILE}" \
-	"${GEXIS_KIOSK_URL}"
+	"${panel_url}"

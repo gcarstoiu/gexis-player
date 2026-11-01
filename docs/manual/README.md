@@ -85,8 +85,9 @@ letter to jump there.
 | Queue (bottom right) | Lyrion's queue, with the number of tracks still to come. |
 
 **Track** shows the title, artist, album and year, and, when the song has
-synchronised lyrics, the current line and the next one. Tap the artist's
-name to open their page in the library.
+synchronised lyrics, the current line with the one before and the one after.
+When a long line leaves no room, the line before gives way first, then the
+one after. Tap the artist's name to open their page in the library.
 
 ![Lyrics](images/panel-nowplaying-lyrics.webp)
 
@@ -491,6 +492,12 @@ The screen can be used without touching it: with Home Assistant's *D-pad*
   the screen's main control (Play/Pause on Now Playing). A touch and the
   idle screen hide it. The phone's remote moves it too (section 8).
 - On a slider, Left and Right change the value; Up and Down leave it.
+- A long text, such as an artist's biography opened with OK, scrolls with Up
+  and Down before the ring moves on.
+- In the queue, Right on a track shows **Remove**; OK removes the track and
+  Left goes back to it.
+- On the A-Z letters beside the artists, the letter itself lights up instead
+  of the ring.
 - On a bar, Up from the top row brings the tray down.
 - While the screen is dark, or the visualiser or the idle screen is up, the
   first press from Home Assistant only wakes the screen.
@@ -796,7 +803,7 @@ on for a new player, off on one updated from an earlier release; marked
 **Plexamp**, the **Lyrion Server** and the **Beszel** monitoring agent, among
 others. A plugin that needs software from its maker
 downloads it when switched on. Setup offers the same plugins, and the first
-start shows each download arriving. A plugin file can also be uploaded here.
+start shows each download arriving.
 Each plugin's switch says its version (for example *Version 0.4.7*); the
 software it downloads is named, with its own version, on the line below once
 it is installed.
@@ -804,6 +811,30 @@ While Beszel is on, its heading in **System**, above the hub address, token
 and key, says whether the agent has reached its hub: **Connected** in green,
 **Connecting** in orange for its first minute, **Not connected** in red after
 that. A Hub public key that is not one is refused when it is saved.
+
+**Add plugins**, the page's first row, lists every plugin that can be added:
+the player's own optional ones not added yet, and plugins by other authors
+from the Gexis Player plugin catalogue, grouped as their settings are, with
+the number of updates waiting. The page itself lists what is added to this
+player, each plugin tagged with where it came from: *Gexis Player*,
+*Catalogue* or *Uploaded*. One of the player's own is added with *Add* (and
+its software downloads, if it has some). One by another author shows what it
+does, who wrote it, its licence and its source; each version was checked and
+read before it was listed, but none is part of Gexis Player: *Add* first says
+so, and lists anything it asks for beyond what every plugin may do (the TV's
+HDMI-CEC connection, the GPIO pins, USB devices). It downloads in its tile,
+the player restarts once to finish, and it arrives switched off. A newer
+version shows *Update to …* on its row; nothing updates by itself, and a
+version that asks for more asks first. On a phone or computer, *Upload a
+plugin*, at the end, installs one from a file. If the catalogue withdraws a
+plugin, its row says why and it keeps running; if it blocks one, found to do
+harm, the plugin is switched off at once and its switch stays off. *Remove*,
+on the row of a plugin that is switched off, takes it off the player and back
+to *Add plugins*; its settings and sign-in stay, for when it is added again,
+unless *Keep its settings and sign-in* is turned off. After a restore, plugins
+from the catalogue are installed from it again, unless it has withdrawn them
+since; an uploaded one needs uploading again. The player reads the catalogue
+from GitHub once a day and when *Add plugins* opens.
 
 ### System — *The player, its network, updates and maintenance*
 
