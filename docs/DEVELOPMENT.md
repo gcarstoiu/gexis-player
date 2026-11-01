@@ -3632,8 +3632,10 @@ he confirmed on 2026-11-01). The log shows five sessions in eight minutes:
 Shairport Sync refused three whose sender asked for NTP timing (*can not
 handle NTP streams*; its author has no plans for it, upstream issue 1407),
 and all five were stopped by the group rule ADR-0166 fixed on 2026-10-31,
-sofapi being in a group. The two it accepted were stopped only by that
-rule, so whether Roon plays to a player outside a group is not yet known.
+sofapi being in a group. **It plays since 1.10.0** (George, 2026-11-01):
+refused AirPlay 2, Roon falls back to classic AirPlay at 44.1 kHz, 16 bits,
+and with Roon's *Compatibility mode* goes there at once (ADR-0167, *Roon*).
+This phase is Roon's own way in, bit-perfect and beyond 44.1 kHz.
 
 **A decision is owed before anything is built**: which way into Roon - its
 own endpoint software from Roon Labs, a certified device, or AirPlay - what
