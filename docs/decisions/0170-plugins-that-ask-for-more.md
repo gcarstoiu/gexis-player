@@ -149,6 +149,12 @@ not asked about `cec` again, and connected to the player at once.
 Open: Back, pressed again with 0.1.1, and whether the receiver passes its own
 remote's keys on over the bus (the plugin takes keys from any device on it).
 
+**Published and listed** (2026-10-31): George's second test that evening
+found CEC working with 0.1.1; the receiver's own remote was not reported on
+apart. George made `gcarstoiu/gexis-tv-remote` public; its release v0.1.1
+carries the archive, listed by `gexis-plugins` #12 (merged by George) in
+catalogue serial 5, for players on 1.10.0.
+
 ## Settings (ADR-0022)
 
 None: a permission is granted by adding the plugin, and taken back by
