@@ -172,3 +172,16 @@ Appended 2026-10-28 on George's confirmation:
 
 The adapter's code; the first-use page's words, which follow Spotify's; the
 release.
+
+## Roon, 2026-10-30 and 2026-11-01
+
+George played to sofapi from Roon (AirPlay since Roon 2.0.37). On 30 Oct
+nothing played: Shairport Sync refused Roon's AirPlay 2 sessions, which ask
+for NTP timing (*can not handle NTP streams*; upstream has no plans for it),
+and the group rule ADR-0166 fixed in 1.10.0 stopped every session. On 1 Nov,
+on 1.10.0's preview, with Shairport Sync's debug log for the try: Roon tries
+AirPlay 2 with NTP, is refused, and within a second falls back to classic
+AirPlay (AP1), which the AirPlay 2 build takes - clock steady at about 2.6 ms
+a round trip, ALAC at 44.1 kHz, 16 bits, heard by George on the DAC (an
+earlier silence was the output on HDMI 2). With Roon's *Compatibility mode*
+on for the device it goes to classic AirPlay at once. The FAQ says so.
