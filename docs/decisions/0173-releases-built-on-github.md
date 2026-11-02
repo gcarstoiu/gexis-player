@@ -1,7 +1,7 @@
 # ADR-0173 — Releases built on GitHub
 
-**Status:** **Proposed** 2026-11-02 (decision 1 answered by George the same
-day), Phase 27 (`ph-github-builds`). George
+**Status:** **Accepted** 2026-11-02 (George: decisions 1-3), Phase 27
+(`ph-github-builds`). George
 asked for it on 2026-11-02, before room correction, as building releases on
 R2D2 has become troublesome. It was a *Should* idea since 2026-10-18: the
 packages and the image built on GitHub's ARM machines from the release tag,
@@ -176,6 +176,17 @@ The traps are in `docs/BUILD-TRAPS.md`.
 - **Decision 1, previews too** (2026-11-02), as proposed: a branch's
   packages are built by the workflow on request, downloaded to R2D2 and
   installed on a test player over SSH, over previews built on R2D2.
+- **Decision 2, the mirror in public** (2026-11-02), as proposed: an
+  `inputs` pre-release on gexis-player holds each pinned download under its
+  sha256 and is read before the upstream. It is filled from R2D2's cache with
+  the current pins only, each file's licence checked and listed. Chosen over
+  GitHub's build cache and over the upstreams alone. ADR-0042's deferred
+  mirror is built here.
+- **Decision 3, R2D2's build machinery removed afterwards** (2026-11-02), as
+  proposed: once the first release built on GitHub is out and verified,
+  the warm pi-gen container, its work volume and the build images go. A
+  local build stays possible, from cold. Chosen over keeping them warm as a
+  fallback.
 
 ## If the trial fails
 

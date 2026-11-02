@@ -59,8 +59,9 @@ cause not established (0.2.1 logs the pause's answer and the loopback's
 states); not measured: bit-perfect, rates above 44.1 kHz, a group, the
 plugin off and on, Roon Bridge's own update. sofapi runs preview packages
 from `ph-roon` (in `~/gexis-pc`) and has the reboot marker set; the next
-update reboots it once. **Proposed:** Phase 27, releases built on GitHub
-(`ph-github-builds`, ADR-0173, added by George 2026-11-02); then 28, room
+update reboots it once. **Next:** Phase 27, releases built on GitHub
+(`ph-github-builds`, added by George 2026-11-02; ADR-0173 accepted, decisions
+1-3; the trial build of v1.12.0 first); then 28, room
 correction for the bass. **Open, small:** `gen_personalise.py` out of step since Phase 23;
 the mocked Settings → Display showed two *Screen port* rows
 (`screen_port`, `screen_port_info`), not yet looked at on a player.
@@ -126,7 +127,7 @@ HACS's maintainers - do not ask them for a review (their template).
 from Phase 20: the measurement through a card (to-do `eq-measure`, at a time
 George picks).
 
-Next, Phase 27 (releases built on GitHub, ADR-0173 proposed), then 28 (room
+Next, Phase 27 (releases built on GitHub, ADR-0173 accepted), then 28 (room
 correction for the bass) and 29-32 in order, each ADR first
 (`docs/DEVELOPMENT.md`, the IDs there); MPD parked (ADR-0151). **Raspberry
 Pi Imager** (ADR-0159, a task): Imager's own list stays open as it is
