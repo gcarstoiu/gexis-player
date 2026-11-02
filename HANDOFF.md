@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-11-01 (on R2D2).
+Last updated: 2026-11-02 (on R2D2).
 
 ## Start here
 
@@ -20,7 +20,18 @@ and the ideas as Must / Should / Could. It follows `docs/DEVELOPMENT.md`'s
 phases; change it when a phase opens, closes or moves, and show George first. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Current release: 1.10.0 on Testing and Stable** (2026-10-31: Testing
+**1.12.0 on Testing** (2026-11-02, serial 63, read back with a good
+signature): Phase 26, Roon, with three fixes (the visualiser's tap and the
+updater's stop sending the panel token, ADR-0170 *Two callers missed*; the
+row of sources under the library narrowed to fit), built on 1.11.0 (themes,
+Phase 25, serial 62). Notes approved by George. **PR #92 open** for George
+to merge (it carries 1.11.0's commits; PR #91 is 1.11.0 alone). Image
+`image/deploy/2026-11-02-gexis-player-v1.12.0.img` (160 checks passed);
+build output `~/projects/gexis-release-out/r1.12.0`; worktree
+`~/projects/gexis-player-r1.12.0` (and `-r1.11.0`, to remove after the
+merges). Stable still 1.10.0 until George promotes.
+
+**Stable: 1.10.0** (2026-10-31: Testing
 serial 61, Stable serial 12, each read back with a good signature; the image
 downloaded through the README's link, its checksum matching). PR #90 merged
 by George (2026-11-01). 1.10.0 carries Phase 24 (the plugin catalogue, one
@@ -53,9 +64,20 @@ phone test of the dialogs is still owed (to-do `fix-remote-dialogs-test`).
 The mocked-screen checks (`~/projects/scratch/dpad`, `~/projects/scratch/ph24`)
 build from `~/projects/gexis-player-next` unless `WT` names another worktree.
 
-**Next: Phase 25, themes** (`ph-themes`), its ADR first. George's mock-ups
-from Claude Design arrived on 2026-10-31 and wait outside the repository
-until the phase starts.
+**Phases 25 (themes) and 26 (Roon) closed 2026-11-02** (George: satisfied
+with Roon, nothing more measured; one release with everything). Roon's
+plugin is `gcarstoiu/gexis-roon` (local `~/projects/gexis-roon`), 0.2.1
+released with its asset and pinned in `packaging/roon/pins.sh`; Roon's
+extension through Debian's `python3-roonapi`. **Left open** (ADR-0172,
+*Built*): Roon took the output back eight seconds after Lyrion took it, the
+cause not established (0.2.1 logs the pause's answer and the loopback's
+states); not measured: bit-perfect, rates above 44.1 kHz, a group, the
+plugin off and on, Roon Bridge's own update. sofapi runs preview packages
+from `ph-roon` (in `~/gexis-pc`) and has the reboot marker set; the next
+update reboots it once. **Not started:** Phase 27, room correction for the
+bass. **Open, small:** `gen_personalise.py` out of step since Phase 23;
+the mocked Settings → Display showed two *Screen port* rows
+(`screen_port`, `screen_port_info`), not yet looked at on a player.
 
 **Phase 23, AirPlay 2** (`ph-airplay`), in every release since 1.9.0 and on
 Stable with 1.10.0, marked *Limited testing* (no Apple device yet).
@@ -80,13 +102,13 @@ archive (2026-10-28).
 `GEXIS_RELEASE_GNUPGHOME=~/projects/gexis-release-key`; the scripts default
 to `~/.gnupg-gexis-release`, which no longer exists.
 
-**The players** (2026-11-01): sofapi on the TV-remote preview of 2026-10-31
-(core, system and player `1.9.1+git68.87294a6`, UI `1.9.1+git66.1e0411e`)
-with `tv-remote` 0.1.1, DevTools off; the other three on 1.9.1 through their
-updaters (2026-10-29); all four on Testing, where 1.10.0 is now offered.
-sofapi and the bar grouped; AirPlay on at sofapi and guestpi. Each has its
-own Lyrion server. sofapi's `~/gexis-pc` still holds that day's preview
-packages.
+**The players** (2026-11-01): sofapi on the themes preview (core
+`1.10.0+git9.da56e56`, UI and player `1.10.0+git12.a36666b`, from
+`ph-themes`: the idle screen keeping today's look, George) with
+`tv-remote` 0.1.1, DevTools off, its preview packages in `~/gexis-pc`; the
+other three on 1.9.1 through their updaters (2026-10-29); all four on
+Testing, where 1.10.0 is offered. sofapi and the bar grouped; AirPlay on at
+sofapi and guestpi. Each has its own Lyrion server.
 
 **The test venv imports the core from `~/projects/gexis-player-next`** (an
 editable install): in another worktree run the suite with `PYTHONPATH=src`
@@ -128,9 +150,10 @@ them for a review (their template).
 from Phase 20: the measurement through a card (to-do `eq-measure`, at a time
 George picks).
 
-After themes, 26-30 in order, each ADR first (`docs/DEVELOPMENT.md`, the IDs
-there); MPD parked (ADR-0151). **Raspberry Pi Imager** (ADR-0159, a task):
-Imager's own list stays open as it is (George, 2026-10-24).
+After themes, Roon (26), then 27-31 in order, each ADR first
+(`docs/DEVELOPMENT.md`, the IDs there); MPD parked (ADR-0151). **Raspberry
+Pi Imager** (ADR-0159, a task): Imager's own list stays open as it is
+(George, 2026-10-24).
 
 The shared to-do list (an artifact with a `todos` collection; its address is
 in Claude's memory, not here) holds the open items with their detail.
@@ -145,8 +168,8 @@ Closed: 0-21 and 24 (13 with letters a-f). Phases are numbered
 consecutively without letters, each with a stable ID (George, 2026-10-13);
 20 (the equaliser) and 21 (the phone remote) closed 2026-10-27 with 1.7.0,
 24 (the plugin catalogue) 2026-10-31 with 1.10.0; 22 (multiroom) and 23
-(AirPlay 2, limited testing) on Stable with work open; next 25 (themes),
-then 26-27 (room correction), 28-30; MPD parked. `docs/DEVELOPMENT.md`
+(AirPlay 2, limited testing) on Stable with work open; 25 (themes) in
+progress, then 26 (Roon), 27-28 (room correction), 29-31; MPD parked. `docs/DEVELOPMENT.md`
 holds each phase's acceptance criteria.
 
 ## Machines

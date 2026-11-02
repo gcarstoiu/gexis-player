@@ -8402,3 +8402,40 @@ plugins installed, DevTools off; `~/gexis-pd` removed. sofapi and the bar groupe
 AirPlay on at sofapi and guestpi. Each has its own Lyrion server. The old
 preview folders are gone (of those named, only `gexis-lead` and `gexis-pj`
 were still there, on sofapi and the bar).
+
+
+## From HANDOFF, 2026-11-02 (1.11.0 on Testing; Phases 25 and 26 in progress)
+
+**1.11.0 on Testing** (2026-11-01, serial 62, read back with a good
+signature): Phase 25, themes, with the idle screen keeping today's look and
+the FAQ's Roon over AirPlay; notes approved by George. PR #91 open for George
+to merge; Stable still 1.10.0 until George promotes. Image
+`image/deploy/2026-11-01-gexis-player-v1.11.0.img` (152 checks passed); build
+output `~/projects/gexis-release-out/r1.11.0`; worktree
+`~/projects/gexis-player-r1.11.0`.
+
+**Now: Phase 25, themes** (`ph-themes`, worktree
+`~/projects/gexis-player-themes`, pushed up to the ADR; local since), started
+2026-11-01. [ADR-0171](docs/decisions/0171-themes.md) accepted (George: six
+themes built in, one per player, the row in Display with Deep Teal the
+default). **Built, not yet on a player**: the design's rule as
+`ui/src/lib/themeRule.js`, `ui/scripts/themes.mjs` writing `themes.css`
+(checked against the design by the build); today's colours and corners
+through tokens - Deep Teal pixel-identical on 101 mocked screens (panel at
+the 10", 7" and TV sizes, bar, phone); the monos from fontsource; a core test
+against new literals. The harness: `~/projects/scratch/ph25/` (`run.sh`,
+`capture.py`, `compare.py`; `THEME`, `COVER`, `EQ` for the mocked core; do
+not edit `run.sh` while a capture runs). The equaliser stays as the rule
+gives it on the light themes, and the idle screen keeps today's look
+(George, 2026-11-01). **Open**: a preview on
+sofapi, after George's OK; `gen_personalise.py` out of step since Phase 23
+(the first-use page's header says so).
+
+**Also now: Phase 26, Roon** (`ph-roon`, worktree
+`~/projects/gexis-player-roon`), started 2026-11-01 (George).
+[ADR-0172](docs/decisions/0172-roon.md) accepted: Roon Bridge as a plugin
+(fetched on switch-on, Roon's own updates, a user of its own), through a
+third `snd-aloop` card into `pcm.output`, Now Playing by Roon's extension API.
+Roon over AirPlay already plays since 1.10.0 (classic AirPlay; Roon's
+*Compatibility mode*; FAQ on `fix-roon-airplay`).
+
