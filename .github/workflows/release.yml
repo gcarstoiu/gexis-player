@@ -1,18 +1,17 @@
 # ADR-0173: a release built on GitHub's arm64 machines, natively, from its
-# tag, with the same make targets and scripts as a local build. Phase 27's
-# trial: v1.12.0 built as R2D2 built it, nothing published. What it measures
-# is the time and the disk, and what it built is compared with r1.12.0's.
+# tag, with the same make targets and scripts as a local build. Phase 27:
+# the branch built as a release would be, nothing published yet (the trial,
+# v1.12.0, is Finding 140).
 name: Release build
 
 on:
   push:
     branches: [ph-github-builds]
-    paths: [.github/workflows/release.yml]
+    paths: [.github/workflows/release.yml, packaging/**, image/**, Makefile]
   workflow_dispatch:
     inputs:
       ref:
-        description: Tag or commit to build
-        default: v1.12.0
+        description: Tag or commit to build (the pushed commit if empty)
 
 permissions:
   contents: read
@@ -20,7 +19,7 @@ permissions:
 # A release's run is never cancelled by a later push (BUILD-TRAPS: a
 # cancelled run counted as failed).
 concurrency:
-  group: release-build-${{ inputs.ref || 'v1.12.0' }}
+  group: release-build-${{ inputs.ref || github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -30,7 +29,7 @@ jobs:
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 330
     env:
-      REF: ${{ inputs.ref || 'v1.12.0' }}
+      REF: ${{ inputs.ref || github.sha }}
     steps:
       # The caches start empty: everything comes from upstream (ADR-0042, "a
       # build that has never seen the cache has to work").
@@ -66,6 +65,10 @@ jobs:
         with:
           node-version: "24"
 
+      # The mirror first, upstream only for what it lacks (ADR-0173).
+      - name: Downloads from the mirror
+        run: packaging/inputs.sh fill "$GEXIS_BUILD_CACHE"
+
       - name: Packages
         run: make packages
 
@@ -74,6 +77,10 @@ jobs:
 
       - name: Verify the image
         run: image/verify-image.sh image/deploy/*-gexis-player*.img | tee "$TRIAL/verify-image.txt"
+
+      # Everything the build downloaded is listed, with its licence.
+      - name: Every download listed
+        run: packaging/inputs.sh unlisted "$GEXIS_BUILD_CACHE"
 
       - name: Compress the image
         run: |
@@ -89,6 +96,8 @@ jobs:
           cp image/deploy/*.info image/deploy/build.log "$TRIAL/" 2>/dev/null || true
           (cd packaging/out && sha256sum *.deb) > "$TRIAL/debs.sha256" 2>/dev/null || true
           ls -l image/deploy packaging/out > "$TRIAL/outputs.txt" 2>&1 || true
+          mkdir -p "$TRIAL/debs"
+          cp packaging/out/gexis-{squeezelite,peppyalsa,nqptp,shairport-sync,skins-800x480}_*.deb "$TRIAL/debs/" 2>/dev/null || true
           git describe --tags --always --dirty > "$TRIAL/describe.txt"
           sort -k2 -n "$TRIAL/disk.log" | tail -1 | awk '{printf "peak used on /: %.1f GB\n", $2 / 1e9}' | tee "$TRIAL/disk-peak.txt"
           df -h / | tee -a "$TRIAL/disk-peak.txt"
