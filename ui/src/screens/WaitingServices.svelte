@@ -63,8 +63,11 @@
   const bar = $derived(full && screen.family === 'bar');
   //: Four or more renderers (plugins add them) shrink their columns to fit -
   //: on a bar (round 2), and on the panel's full-screen waiting home, where
-  //: four 310 px columns ran off both edges at 1280 (found 2026-10-01).
-  const many = $derived((bar || full || bare) && shown.length >= 4);
+  //: four 310 px columns ran off both edges at 1280 (found 2026-10-01). And
+  //: in the library's footer, where seven 172 px columns ran off both edges
+  //: (George's photo, sofapi, 2026-11-02): with room, a column keeps its
+  //: width, so fewer than fit look as they did.
+  const many = $derived(shown.length >= 4);
   const BAR_MARK = { spotify: 56, bluetooth: 62 };
 </script>
 
@@ -271,7 +274,9 @@
     width: 100%;
     min-width: 0;
   }
-  .is-many .name {
+  .is-many .name,
+  .is-many .status {
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }

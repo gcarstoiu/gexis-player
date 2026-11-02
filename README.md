@@ -86,8 +86,8 @@ look a little better, it has done its job, and I am glad to share it.
 ### 🎧 Plays from the apps you already use
 
 It appears as a speaker in the Spotify app, in the AirPlay list of an
-iPhone, iPad or Mac, as a player in Lyrion and Plexamp, and as a Bluetooth
-speaker on your phone. Start playing from any of
+iPhone, iPad or Mac, as a player in Lyrion and Plexamp, as a Roon device, and
+as a Bluetooth speaker on your phone. Start playing from any of
 them and Gexis hands over: the source that was playing is stopped politely,
 a short transition shows who is taking over, and the new one plays. Nothing
 to disconnect first, no juggling apps when two of them want the DAC: the
@@ -97,7 +97,7 @@ newest deliberate choice wins, and the others are told.
 
 Join Gexis players into a group, from the phone, the screen or a bar's tray,
 and they play the same music together, whatever the source: Lyrion, Spotify,
-AirPlay, Bluetooth, Plexamp or a plugin. Music started on any of them plays on all,
+AirPlay, Bluetooth, Plexamp, Roon or a plugin. Music started on any of them plays on all,
 each keeps its own volume and equaliser, and one slider moves them all. A
 Lyrion group stays Lyrion's own sync, gapless and bit-perfect, and syncing
 players in a Lyrion app groups them too.
@@ -201,7 +201,7 @@ or removed from Settings, with its progress shown in the switch itself.
 
 | | |
 |---|---|
-| 🔊 **Sources** | Spotify Connect · AirPlay 2 (Shairport Sync) · Lyrion (squeezelite) · Bluetooth (A2DP) · Plexamp · plugins, your own or from the catalogue |
+| 🔊 **Sources** | Spotify Connect · AirPlay 2 (Shairport Sync) · Lyrion (squeezelite) · Bluetooth (A2DP) · Plexamp · Roon (Roon Bridge) · plugins, your own or from the catalogue |
 | 🎚️ **Sound** | Bit-perfect, tested up to 24/192 on DAC boards and to 768 kHz on a USB DAC · native DSD on a DAC that takes it · hardware, software or fixed volume · a maximum level for every source · a starting volume Spotify never exceeds · a ten-band equaliser with presets and your own settings, for each output, off (and bit-perfect) until you switch it on |
 | 🔀 **Handover** | One source at a time, never mixed · takeover in any direction · the previous source released before the next one plays |
 | 📡 **Multiroom** | Players joined into a group play the same music in sync, for every source · music started on any of them plays on all · each keeps its own level and equaliser, and an *All* slider moves them together · Lyrion's own sync for Lyrion, and Lyrion's synced players grouped too · groups last until undone, restarts included |
@@ -277,9 +277,11 @@ Rough, and subject to change:
   a remote, with a touchpad or a D-pad for the screen. Multiroom for every
   source. AirPlay 2 from an iPhone, iPad or Mac. A plugin catalogue: other
   authors' plugins installed from Settings. Themes: six looks for the screen
-  and the phone.
-- 🔜 **Next:** Roon, with the player as a Roon device.
-- 🎨 **Later:** room correction with a USB microphone, for the bass and then the full range; internet radio without a Lyrion server. With Plex switched on, your own Plex server fills in
+  and the phone. Roon, with the player as a Roon device and Roon's Now
+  Playing on its screen.
+- 🔜 **Next:** room correction with a USB microphone, for the bass and then
+  the full range.
+- 🎨 **Later:** internet radio without a Lyrion server. With Plex switched on, your own Plex server fills in
   the artist and album information other sources leave out.
 - 💭 **Maybe:** the DAC's own filter and polarity options.
 
@@ -299,12 +301,13 @@ Legal and Credits.
 from its maker only when you switch it on. It is used under its maker's terms:
 
 - **Plexamp** is Plex, Inc.'s proprietary software.
+- **Roon Bridge** is Roon Labs' software, under Roon's terms.
 
 Spotify Connect is provided through go-librespot, an independent open-source
 client that ships in the image. It is not made or endorsed by Spotify.
 
 **Gexis Player is not affiliated with, endorsed or sponsored by** Spotify,
-Plex, Lyrion, the Bluetooth SIG, Raspberry Pi or HiFiBerry. Their names
+Plex, Roon Labs, Lyrion, the Bluetooth SIG, Raspberry Pi or HiFiBerry. Their names
 and logos are trademarks of their owners and are used only to name what works
 with what.
 

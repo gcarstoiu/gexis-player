@@ -435,7 +435,8 @@ drawn per kind:
   issued (`lib/menus.js`), never Lyrion commands. Each list's list/tiles
   choice is kept in `localStorage`.
 - **Footer**: `MiniStrip` while something is active. At Home with nothing
-  active, `WaitingServices` shows the waiting renderers' marks instead.
+  active, `WaitingServices` shows the waiting renderers' marks instead; from
+  four on, in every form, their columns narrow until they fit the width.
 
 ### Text size (ADR-0148)
 

@@ -52,6 +52,10 @@ BACKUPS = Path("/var/lib/gexis-core/backups")
 #: `backups.FAILED_MARK`: the core's word that an update's backup failed.
 BACKUP_FAILED = ".before-update-failed"
 CORE = "http://127.0.0.1:8090"
+#: ADR-0170: the core parks only for the panel, which proves itself with this
+#: boot's token, as the shutdown's park does.
+PANEL_TOKEN = Path("/run/gexis/panel-token")
+PANEL_HEADER = "X-Gexis-Panel"
 REBOOT_MARKER = Path("/var/lib/gexis/reboot-required")
 #: Units an update must not restart: the updater's own (restarting the unit
 #: it runs as would end it mid-update), and the shutdown pause, whose stop
@@ -984,7 +988,13 @@ def stop_playback() -> None:
     # `stop=all` (2026-10-05): every source, not LMS alone - Spotify played on
     # through 0.9.0's install. A core older than this ignores the query and
     # pauses LMS, as before.
-    req = urllib.request.Request(f"{CORE}/renderers/park?stop=all", method="POST", data=b"")
+    headers = {}
+    try:
+        headers[PANEL_HEADER] = PANEL_TOKEN.read_text().strip()
+    except OSError:
+        pass  # a core older than ADR-0170 goes by loopback alone
+    req = urllib.request.Request(f"{CORE}/renderers/park?stop=all", method="POST", data=b"",
+                                 headers=headers)
     try:
         urllib.request.urlopen(req, timeout=30).read()
     except OSError as exc:

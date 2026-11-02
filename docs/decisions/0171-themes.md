@@ -1,6 +1,7 @@
 # ADR-0171 — Themes
 
-**Status:** **Accepted** 2026-11-01 (George: decisions 1-3), Phase 25
+**Status:** **Built** 2026-11-01, in 1.11.0 (George closed Phase 25 on
+2026-11-02). **Accepted** 2026-11-01 (George: decisions 1-3), Phase 25
 (`ph-themes`). The five themes are George's choice from Claude Design
 (2026-10-28); the rest is Claude's proposal.
 Amends [ADR-0016](0016-plugins-as-separate-processes.md): themes are not

@@ -852,12 +852,25 @@ it plays - title, artist, album, cover and progress - and its volume.
 No. AirPlay sends 44.1 or 48 kHz, and the player plays it as it arrives.
 
 **Can Roon play to the player?**
-Yes, over AirPlay: the player is in Roon's list of AirPlay devices under its
-device name. Switch on *Compatibility mode* in Roon's settings for it
-(*Device Setup → Advanced Settings*): Roon then sends classic AirPlay at once.
-Without it, Roon first tries AirPlay 2 in a form the player cannot take, and
-falls back to classic AirPlay after a moment. Either way it plays at 44.1 kHz,
-16 bits.
+Yes. Switch on **Roon** in *Settings → Plugins*: the player becomes a Roon
+device, playing at the rate Roon sends (manual, section 5). It downloads Roon
+Bridge from Roon Labs, so it needs the internet once.
+
+Without the plugin, Roon plays to it over AirPlay: the player is in Roon's
+list of AirPlay devices under its device name. Switch on *Compatibility mode*
+in Roon's settings for it (*Device Setup → Advanced Settings*): Roon then
+sends classic AirPlay at once. Without it, Roon first tries AirPlay 2 in a
+form the player cannot take, and falls back to classic AirPlay after a
+moment. Either way it plays at 44.1 kHz, 16 bits.
+
+**Roon plays, but the player shows only "Roon". Why?**
+Now Playing and the controls come from Roon's extension: in Roon, under
+*Settings → Extensions*, enable *Gexis Player* with the player's name. The
+player finds its zone the first time Roon plays to it after that, and remembers
+it.
+
+**Roon lists two "Loopback PCM" outputs for the player. Which one?**
+The top one. The other belongs to the same sound card but leads nowhere.
 
 **Another group already plays. How do I join it?**
 From a player in no group, open *Gexis players* (or *Add players* on the

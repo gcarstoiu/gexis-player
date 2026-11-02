@@ -9,13 +9,13 @@ Schiller's *Ode to Joy* (1785). The addresses shown are examples.
 Gexis Player is a music player for the Raspberry Pi with a high-quality
 DAC; it needs a Raspberry Pi 4 or newer, and the Pi 4 is the model it is
 built and tested on. It plays your Lyrion (Logitech Media Server) library,
-Spotify Connect, AirPlay, Bluetooth and Plexamp, one at a time, and switches to
+Spotify Connect, AirPlay, Bluetooth, Plexamp and Roon, one at a time, and switches to
 whichever one you start. Several players can play the same music together,
 in sync, in several rooms (section 6). You control it
 from its own touch screen (the *panel*), from any phone or computer on the
 same network (the *phone page*), or from the apps you already use: a
-Lyrion app, Spotify, AirPlay from an iPhone, iPad or Mac, or your phone's
-Bluetooth.
+Lyrion app, Spotify, AirPlay from an iPhone, iPad or Mac, Roon, or your
+phone's Bluetooth.
 
 ## Contents
 
@@ -249,8 +249,8 @@ available*.
 
 ## 5. When another source takes over
 
-Only one source plays at a time. When you start Spotify, AirPlay, Bluetooth
-or Plexamp from your phone, that source **takes over**: Lyrion pauses, a short
+Only one source plays at a time. When you start Spotify, AirPlay, Bluetooth,
+Plexamp or Roon from your phone, that source **takes over**: Lyrion pauses, a short
 transition screen shows who took the player, and Now Playing shows the new
 source. When that session ends, the player can give itself back to Lyrion
 (*Settings → Handoff → Reclaim Lyrion when a session ends*, off by default), or
@@ -283,6 +283,30 @@ choose it as the sound output.
   above is as designed rather than as seen. Problem reports help.
 
 AirPlay is a trademark of Apple Inc., registered in the U.S. and other countries and regions.
+
+### Roon
+
+With **Roon** switched on in *Settings → Plugins*, the player is a Roon
+device. Switching it on downloads Roon Bridge, Roon Labs' own software, from
+Roon Labs; it keeps itself up to date, under Roon's terms. It plays from a
+Roon Core on the same network.
+
+- **In Roon**, under *Settings → Audio*, the player appears under its name
+  with two outputs called *Loopback PCM*: enable the top one, and name the
+  zone as you like.
+- **Now Playing and the controls**: in Roon, under *Settings → Extensions*,
+  enable *Gexis Player* with the player's name. Once Roon has played to the
+  player, Now Playing shows the title, artist, album, cover and progress, and
+  play, pause, skip and the position work from the player's screen and the
+  phone. Without the extension, Roon still plays, and the player shows only
+  that Roon is playing.
+- **The sound** goes through the player's own output at the rate Roon sends,
+  so the equaliser and groups work as for every source.
+- **The volume** is the player's own: Roon sends at full level.
+- **When another source takes over**, the player asks Roon to pause, and
+  Roon takes the player again when play is pressed in Roon.
+- **Without the plugin**, Roon can still play to the player over AirPlay
+  (see the FAQ).
 
 ## 6. Several rooms together
 
@@ -743,7 +767,7 @@ which output it is setting.
 - **DSD** plays untouched: while a DSD track plays natively, the equaliser
   stands aside, and it is back for the next PCM track.
 
-Every source plays through it - Lyrion, Spotify, AirPlay, Bluetooth and Plexamp -
+Every source plays through it - Lyrion, Spotify, AirPlay, Bluetooth, Plexamp and Roon -
 and the visualiser shows the music as it arrives, before the equaliser.
 
 ### Display — *Screen and idle*
@@ -801,7 +825,7 @@ Optional parts, each with its own switch: the **visualiser skins** for this
 screen's size, **AirPlay** (in the player already, nothing to download;
 on for a new player, off on one updated from an earlier release; marked
 *Limited testing*),
-**Plexamp**, the **Lyrion Server** and the **Beszel** monitoring agent, among
+**Plexamp**, **Roon** (Roon Bridge, downloaded from Roon Labs), the **Lyrion Server** and the **Beszel** monitoring agent, among
 others. A plugin that needs software from its maker
 downloads it when switched on. Setup offers the same plugins, and the first
 start shows each download arriving.

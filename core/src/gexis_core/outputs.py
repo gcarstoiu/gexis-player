@@ -63,7 +63,9 @@ LOOPBACK = "Loopback"
 #: which a grouped player's renderers play into; snapserver's feeder reads
 #: its capture (`snapcast.py`).
 GROUP_CARD = "Multiroom"
-OURS = frozenset({"gexislmsvol", "gexisbtvol", LOOPBACK, GROUP_CARD})
+#: ADR-0172: the card Roon Bridge plays into, copied by the Roon plugin.
+ROON_CARD = "Roon"
+OURS = frozenset({"gexislmsvol", "gexisbtvol", LOOPBACK, GROUP_CARD, ROON_CARD})
 #: What the group's music plays into on each player of a group: this
 #: player's own chain, as `output` is when it plays alone.
 GROUP_IN = "gexis_group_in"
