@@ -7,6 +7,15 @@
 #   packaging/release/publish.sh <tag> --channel testing   upload, then point testing at it
 #   packaging/release/publish.sh --promote <tag>           point stable at it, with its image
 #
+# **Built on GitHub** (ADR-0173), in two halves:
+#
+#   packaging/release/publish.sh --upload <tag>            on GitHub: the release as built, unsigned
+#   packaging/release/publish.sh --sign <tag> [--channel testing]
+#                                                          on R2D2: sign what GitHub uploaded
+#
+# Nothing unsigned is installed: a device trusts a part by its InRelease and
+# a release by its signed `parts`, and only R2D2 holds the key.
+#
 # **A release is parts, named by content**: a part already on GitHub is not
 # uploaded again. A typical release uploads its `ours` part and its page.
 #
@@ -118,6 +127,75 @@ EOF
 	rm -rf "$work"
 }
 
+# GitHub's attestation that the workflow built this file from this tag
+# (ADR-0173): the file R2D2 signs is the one GitHub's run produced.
+attested() {  # file tag
+	gh attestation verify "$1" --repo "$REPO" --signer-workflow "$REPO/.github/workflows/release.yml" \
+		--source-ref "refs/tags/v${2#r}" >/dev/null 2>&1 \
+		|| { echo "ERROR: $(basename "$1") has no attestation from release.yml at v${2#r}" >&2; exit 1; }
+}
+
+# **Its notes** (2026-10-01, George): what is new and what is fixed, drafted
+# from the commits and approved by George before this runs. **From the
+# tagged commit's release_notes.json** (ADR-0116): the player that release
+# installs shows them under Change logs, so they are in it or the release is
+# not published - one text on the device, on the release page and signed.
+notes_for() {  # dest version -> notes.txt, notes.md, history.json
+	local DEST="$1" version="$2"
+	git show "v$version:core/src/gexis_core/release_notes.json" 2>/dev/null \
+		| python3 -c 'import json, sys; print(json.load(sys.stdin)["releases"][sys.argv[1]]["notes"])' "$version" \
+		> "$DEST/notes.txt" 2>/dev/null && [ -s "$DEST/notes.txt" ] \
+		|| { echo "ERROR: v$version's core/src/gexis_core/release_notes.json has no notes for $version: add them, approved, before tagging" >&2; exit 1; }
+	# **Sections and bullets** (George, 2026-10-01: not "one big blob of text"):
+	# a heading on its own line - New, Fixed, Good to know - then lines starting
+	# "• ". The device parses them; the release page gets them as Markdown.
+	grep -qxE 'New|Fixed|Good to know' "$DEST/notes.txt" && grep -q '^• ' "$DEST/notes.txt" \
+		|| { echo "ERROR: notes.txt needs sections (New / Fixed / Good to know) with lines starting '• '" >&2; exit 1; }
+	# **Notes do not promise a restart or its absence** (ADR-0110, George,
+	# 2026-10-01): 0.3.2's said "No reboot" and the device rebooted. Whether it
+	# does depends on the device; the modal says so before an update starts.
+	! grep -qiE 'no (reboot|restart)|installing (restarts|reboots)|(will|won.t|does not|doesn.t) (restart|reboot)' "$DEST/notes.txt" \
+		|| { echo "ERROR: notes.txt says whether the update restarts; leave that to the update modal (ADR-0110)" >&2; exit 1; }
+	sed -E 's/^(New|Fixed|Good to know)$/### \1/; s/^• /- /' "$DEST/notes.txt" > "$DEST/notes.md"
+	# The run that built it, below the notes on the page (ADR-0173).
+	[ ! -s "$DEST/build.txt" ] || printf '\n---\nBuilt by %s\n' "$(sed -n 's/^Run: //p' "$DEST/build.txt")" >> "$DEST/notes.md"
+	# **Its history** (ADR-0110 amended 2026-10-07, George: "the update screen
+	# should show all until the current one"): every release's notes from the
+	# same tagged file, signed, so a device several releases behind shows what
+	# each one it skips changed.
+	git show "v$version:core/src/gexis_core/release_notes.json" \
+		| python3 -c 'import json, sys; r = json.load(sys.stdin)["releases"]; json.dump({"releases": {v: {"date": e.get("date"), "notes": e["notes"]} for v, e in r.items()}}, sys.stdout, ensure_ascii=False, indent=1)' \
+		> "$DEST/history.json" && [ -s "$DEST/history.json" ] \
+		|| { echo "ERROR: could not build the release history from v$version's release_notes.json" >&2; exit 1; }
+}
+
+release_number() {  # version
+	# **A release has a number** (ADR-0110 §1): built from a commit tagged
+	# v<x.y.z>, so gexis-player is exactly x.y.z. A build between tags is not
+	# published.
+	[[ "$1" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "ERROR: $1 is not a release number: tag the commit v<x.y.z> (approved with the notes) and build from it" >&2; exit 1; }
+}
+
+parts_up() {  # dest: each part a pre-release of its own, never GitHub's "latest"
+	local part name
+	for part in "$1"/repos/*/; do
+		name=$(basename "$part")
+		exists "$name" \
+			|| gh_retry gh release create "$name" --repo "$REPO" --target main --prerelease --latest=false \
+				--title "Part $name" \
+				--notes "A part of Gexis Player releases: a signed apt repository, named by its content (ADR-0108). Shared by every release whose part is the same."
+		upload_all "$name" "$part"
+	done
+}
+
+page() {  # dest tag version: the release's page and its notes
+	exists "$2" \
+		|| gh_retry gh release create "$2" --repo "$REPO" --target main --prerelease --latest=false \
+			--title "gexis-player $3" \
+			--notes-file "$1/notes.md"
+	gh_retry gh release edit "$2" --repo "$REPO" --notes-file "$1/notes.md" >/dev/null
+}
+
 if [ "${1:-}" = --promote ]; then
 	tag="${2:?usage: publish.sh --promote <tag>}"
 	gh_retry gh release view "$tag" --repo "$REPO" >/dev/null
@@ -126,17 +204,84 @@ if [ "${1:-}" = --promote ]; then
 	# compressed, with its checksum and a signature by the release key. Fixed
 	# names, and the release page marked GitHub's latest (parts never are), so
 	# .../releases/latest/download/gexis-player.img.xz is always stable's image.
-	DEST=packaging/release/out/$tag
-	[ -f "$DEST/image.txt" ] || { echo "ERROR: $DEST/image.txt does not name the release's image" >&2; exit 1; }
-	img=$(cat "$DEST/image.txt"); [ -f "$img" ] || { echo "ERROR: $img is not here" >&2; exit 1; }
 	work=$(mktemp -d)
-	xz -T0 -6 -c "$img" > "$work/gexis-player.img.xz"
-	(cd "$work" && sha256sum gexis-player.img.xz > gexis-player.img.xz.sha256)
-	gpg --batch --yes -u "$SIGNER" -abs -o "$work/gexis-player.img.xz.asc" "$work/gexis-player.img.xz"
-	gh_retry gh release upload "$tag" --repo "$REPO" --clobber "$work"/gexis-player.img.xz "$work"/gexis-player.img.xz.sha256 "$work"/gexis-player.img.xz.asc
+	if gh_retry gh release view "$tag" --repo "$REPO" --json assets --jq '.assets[].name' | grep -qx gexis-player.img.xz; then
+		# **Built on GitHub** (ADR-0173): the image is on the page already,
+		# with its checksum; only its signature is made here.
+		curl -fsSL -o "$work/gexis-player.img.xz" "$BASE/$tag/gexis-player.img.xz"
+		curl -fsSL -o "$work/gexis-player.img.xz.sha256" "$BASE/$tag/gexis-player.img.xz.sha256"
+		(cd "$work" && sha256sum -c --quiet gexis-player.img.xz.sha256) || { echo "ERROR: $tag's image does not match its checksum" >&2; exit 1; }
+		attested "$work/gexis-player.img.xz" "$tag"
+		gpg --batch --yes -u "$SIGNER" -abs -o "$work/gexis-player.img.xz.asc" "$work/gexis-player.img.xz"
+		gh_retry gh release upload "$tag" --repo "$REPO" --clobber "$work"/gexis-player.img.xz.asc
+	else
+		DEST=packaging/release/out/$tag
+		[ -f "$DEST/image.txt" ] || { echo "ERROR: $DEST/image.txt does not name the release's image" >&2; exit 1; }
+		img=$(cat "$DEST/image.txt"); [ -f "$img" ] || { echo "ERROR: $img is not here" >&2; exit 1; }
+		xz -T0 -6 -c "$img" > "$work/gexis-player.img.xz"
+		(cd "$work" && sha256sum gexis-player.img.xz > gexis-player.img.xz.sha256)
+		gpg --batch --yes -u "$SIGNER" -abs -o "$work/gexis-player.img.xz.asc" "$work/gexis-player.img.xz"
+		gh_retry gh release upload "$tag" --repo "$REPO" --clobber "$work"/gexis-player.img.xz "$work"/gexis-player.img.xz.sha256 "$work"/gexis-player.img.xz.asc
+	fi
 	rm -rf "$work"
 	channel_file stable "$tag"
 	gh_retry gh release edit "$tag" --repo "$REPO" --prerelease=false --latest
+	exit 0
+fi
+
+if [ "${1:-}" = --upload ]; then
+	# **On GitHub, without the key** (ADR-0173): the parts unsigned, the
+	# release's page with its notes, the image and the run that built it.
+	tag="${2:?usage: publish.sh --upload <tag>}"
+	DEST=packaging/release/out/$tag
+	[ -f "$DEST/parts.plain" ] || { echo "ERROR: $DEST has no parts.plain; build it with packaging/release/build.sh --unsigned" >&2; exit 1; }
+	version=$(sed -n 's/^Release: //p' "$DEST/parts.plain")
+	release_number "$version"
+	notes_for "$DEST" "$version"
+	parts_up "$DEST"
+	page "$DEST" "$tag" "$version"
+	gh_retry gh release upload "$tag" --repo "$REPO" --clobber "$DEST/parts.plain" "$DEST/build.txt" "$DEST"/image/*
+	echo "$tag uploaded, unsigned: sign it on R2D2 with publish.sh --sign $tag"
+	exit 0
+fi
+
+if [ "${1:-}" = --sign ]; then
+	# **On R2D2** (ADR-0173): only what is signed comes here - each part's
+	# Release and Packages, and the list of parts - each attested as built by
+	# the workflow at this tag. A part signed before keeps its signature.
+	tag="${2:?usage: publish.sh --sign <tag> [--channel testing]}"
+	DEST=packaging/release/out/$tag
+	rm -rf "$DEST"; mkdir -p "$DEST/repos"
+	for f in parts.plain build.txt; do
+		curl -fsSL -o "$DEST/$f" "$BASE/$tag/$f" || { echo "ERROR: $tag has no $f; is it uploaded?" >&2; exit 1; }
+		attested "$DEST/$f" "$tag"
+	done
+	version=$(sed -n 's/^Release: //p' "$DEST/parts.plain")
+	release_number "$version"
+	[ "$tag" = "r$version" ] || { echo "ERROR: $tag's parts.plain names $version" >&2; exit 1; }
+	for name in $(sed -n 's/^Parts: //p' "$DEST/parts.plain"); do
+		if curl -fsSL -o "$DEST/signed" "$BASE/$name/InRelease" 2>/dev/null && gpg --batch --verify "$DEST/signed" 2>/dev/null; then
+			echo "  $name: signed before"; continue
+		fi
+		mkdir -p "$DEST/repos/$name"
+		for f in Release Packages; do
+			curl -fsSL -o "$DEST/repos/$name/$f" "$BASE/$name/$f" || { echo "ERROR: $name has no $f" >&2; exit 1; }
+			attested "$DEST/repos/$name/$f" "$tag"
+		done
+	done
+	rm -f "$DEST/signed"
+	packaging/release/sign.sh "$DEST"
+	for part in "$DEST"/repos/*/; do
+		gh_retry gh release upload "$(basename "$part")" --repo "$REPO" --clobber "$part/InRelease" "$part/Release.gpg"
+	done
+	notes_for "$DEST" "$version"
+	gpg --batch --yes -u "$SIGNER" --clearsign -o "$DEST/notes" "$DEST/notes.txt"
+	gpg --batch --yes -u "$SIGNER" --clearsign -o "$DEST/history" "$DEST/history.json"
+	page "$DEST" "$tag" "$version"
+	gh_retry gh release upload "$tag" --repo "$REPO" --clobber "$DEST/parts" "$DEST/notes" "$DEST/history"
+	if [ "${3:-}" = --channel ]; then
+		channel_file "${4:?--channel needs testing or stable}" "$tag"
+	fi
 	exit 0
 fi
 
@@ -144,58 +289,18 @@ tag="${1:?usage: publish.sh <tag> [--channel testing]}"
 DEST=packaging/release/out/$tag
 [ -f "$DEST/parts" ] || { echo "ERROR: $DEST has no parts file; build it with packaging/release/build.sh" >&2; exit 1; }
 version=$(gpg --batch --decrypt "$DEST/parts" 2>/dev/null | sed -n 's/^Release: //p')
-# **A release has a number** (ADR-0110 §1): built from a commit tagged
-# v<x.y.z>, so gexis-player is exactly x.y.z. A build between tags is not
-# published.
-[[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "ERROR: $version is not a release number: tag the commit v<x.y.z> (approved with the notes) and build from it" >&2; exit 1; }
-# **Its notes** (2026-10-01, George): what is new and what is fixed, drafted
-# from the commits and approved by George before this runs. **From the
-# tagged commit's release_notes.json** (ADR-0116): the player that release
-# installs shows them under Change logs, so they are in it or the release is
-# not published - one text on the device, on the release page and signed.
-git show "v$version:core/src/gexis_core/release_notes.json" 2>/dev/null \
-	| python3 -c 'import json, sys; print(json.load(sys.stdin)["releases"][sys.argv[1]]["notes"])' "$version" \
-	> "$DEST/notes.txt" 2>/dev/null && [ -s "$DEST/notes.txt" ] \
-	|| { echo "ERROR: v$version's core/src/gexis_core/release_notes.json has no notes for $version: add them, approved, before tagging" >&2; exit 1; }
-# **Sections and bullets** (George, 2026-10-01: not "one big blob of text"):
-# a heading on its own line - New, Fixed, Good to know - then lines starting
-# "• ". The device parses them; the release page gets them as Markdown.
-grep -qxE 'New|Fixed|Good to know' "$DEST/notes.txt" && grep -q '^• ' "$DEST/notes.txt" \
-	|| { echo "ERROR: notes.txt needs sections (New / Fixed / Good to know) with lines starting '• '" >&2; exit 1; }
-# **Notes do not promise a restart or its absence** (ADR-0110, George,
-# 2026-10-01): 0.3.2's said "No reboot" and the device rebooted. Whether it
-# does depends on the device; the modal says so before an update starts.
-! grep -qiE 'no (reboot|restart)|installing (restarts|reboots)|(will|won.t|does not|doesn.t) (restart|reboot)' "$DEST/notes.txt" \
-	|| { echo "ERROR: notes.txt says whether the update restarts; leave that to the update modal (ADR-0110)" >&2; exit 1; }
-sed -E 's/^(New|Fixed|Good to know)$/### \1/; s/^• /- /' "$DEST/notes.txt" > "$DEST/notes.md"
+release_number "$version"
+notes_for "$DEST" "$version"
 gpg --batch --yes -u "$SIGNER" --clearsign -o "$DEST/notes" "$DEST/notes.txt"
-# **Its history** (ADR-0110 amended 2026-10-07, George: "the update screen
-# should show all until the current one"): every release's notes from the
-# same tagged file, signed, so a device several releases behind shows what
-# each one it skips changed.
-git show "v$version:core/src/gexis_core/release_notes.json" \
-	| python3 -c 'import json, sys; r = json.load(sys.stdin)["releases"]; json.dump({"releases": {v: {"date": e.get("date"), "notes": e["notes"]} for v, e in r.items()}}, sys.stdout, ensure_ascii=False, indent=1)' \
-	> "$DEST/history.json" && [ -s "$DEST/history.json" ] \
-	|| { echo "ERROR: could not build the release history from v$version's release_notes.json" >&2; exit 1; }
 gpg --batch --yes -u "$SIGNER" --clearsign -o "$DEST/history" "$DEST/history.json"
 gpg --batch --verify "$DEST/parts" 2>/dev/null || { echo "ERROR: $DEST/parts does not verify" >&2; exit 1; }
-# The parts: each a pre-release of its own, never GitHub's "latest".
 for part in "$DEST"/repos/*/; do
-	name=$(basename "$part")
-	gpg --batch --verify "$part/InRelease" 2>/dev/null || { echo "ERROR: $name's InRelease does not verify" >&2; exit 1; }
-	exists "$name" \
-		|| gh_retry gh release create "$name" --repo "$REPO" --target main --prerelease --latest=false \
-			--title "Part $name" \
-			--notes "A part of Gexis Player releases: a signed apt repository, named by its content (ADR-0108). Shared by every release whose part is the same."
-	upload_all "$name" "$part"
+	gpg --batch --verify "$part/InRelease" 2>/dev/null || { echo "ERROR: $(basename "$part")'s InRelease does not verify" >&2; exit 1; }
 done
+parts_up "$DEST"
 
 # The release's page: its notes and its signed list of parts.
-exists "$tag" \
-	|| gh_retry gh release create "$tag" --repo "$REPO" --target main --prerelease --latest=false \
-		--title "gexis-player $version" \
-		--notes-file "$DEST/notes.md"
-gh_retry gh release edit "$tag" --repo "$REPO" --notes-file "$DEST/notes.md" >/dev/null
+page "$DEST" "$tag" "$version"
 gh_retry gh release upload "$tag" --repo "$REPO" --clobber "$DEST/parts" "$DEST/notes" "$DEST/history"
 if [ "${2:-}" = --channel ]; then
 	channel_file "${3:?--channel needs testing or stable}" "$tag"

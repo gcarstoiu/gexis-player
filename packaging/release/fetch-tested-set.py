@@ -7,7 +7,7 @@ Runs inside gexis-deb-builder, with:
   /in/keyrings/       the image's archive keyrings (Debian, Raspberry Pi)
   /cache              a cache of .deb files kept between releases
   /out/rpi, /out/debian    where each part's files go (ADR-0108 as amended)
-  /prev               earlier releases built here (packaging/release/out)
+  /prev               the published parts' indexes, proven (published.py)
 
 `apt-get update` fetches the archives' indexes and checks their signatures;
 everything after reads those indexes directly. (The first version asked apt
@@ -22,7 +22,8 @@ only the latest version of a package, and replaced libgtk-3 `+rpt8` with
 `+rpt9` hours after two images had been built with `+rpt8` - exactly the
 risk ADR-0105 §3 named. A version no archive lists any more is taken from an
 earlier release of ours that carries it, checked against the SHA256 our own
-index recorded for it when it was fetched and verified from the archive.
+index recorded for it when it was fetched and verified from the archive. That
+release is read from GitHub (ADR-0173), its index proven by the release key.
 """
 from __future__ import annotations
 
@@ -41,6 +42,7 @@ deb [signed-by=/in/keyrings/debian-archive-keyring.pgp] http://deb.debian.org/de
 deb [signed-by=/in/keyrings/raspberrypi-archive-keyring.pgp] http://archive.raspberrypi.com/debian trixie main
 """
 LISTS = Path("/var/lib/apt/lists")
+PUBLISHED = "https://github.com/gcarstoiu/gexis-player/releases/download"
 
 
 def sha256(path: Path) -> str:
@@ -79,20 +81,20 @@ def read_indexes() -> dict[tuple[str, str, str], tuple[str, str, str]]:
 
 
 def read_ours(prev: Path) -> dict[tuple[str, str, str], tuple[str, str, str, str]]:
-    """(name, version, arch) -> (file:// path, filename, sha256, half), from
-    the parts of releases already built here."""
+    """(name, version, arch) -> (url, filename, sha256, half), from the
+    published parts holding each file (`./<file>` in their index)."""
     ours: dict[tuple[str, str, str], tuple[str, str, str, str]] = {}
-    for packages in sorted(prev.glob("*/repos/*/Packages")):
+    for packages in sorted(prev.glob("*/Packages")):
         half = packages.parent.name.split("-", 1)[0]
         if half not in ("rpi", "debian"):
             continue
         for record in packages.read_text().split("\n\n"):
             fields = dict(l.split(": ", 1) for l in record.splitlines() if l and not l[0].isspace() and ": " in l)
-            if {"Package", "Version", "Architecture", "Filename", "SHA256"} <= set(fields):
-                path = packages.parent / fields["Filename"]
-                if path.exists():
-                    ours.setdefault((fields["Package"], fields["Version"], fields["Architecture"]),
-                                    ("file://" + str(path), path.name, fields["SHA256"], half))
+            if {"Package", "Version", "Architecture", "Filename", "SHA256"} <= set(fields) \
+                    and fields["Filename"].startswith("./"):
+                name = fields["Filename"][2:]
+                ours.setdefault((fields["Package"], fields["Version"], fields["Architecture"]),
+                                (f"{PUBLISHED}/{packages.parent.name}/{name}", name, fields["SHA256"], half))
     return ours
 
 
