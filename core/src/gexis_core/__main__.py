@@ -788,6 +788,13 @@ async def main() -> None:
     except OSError as exc:
         regranted = []
         logger.warning("permissions: not written: %s", exc)
+    # ADR-0172: Roon Bridge, where the Roon plugin is installed, sees its
+    # loopback card alone.
+    if Path("/usr/lib/systemd/system/gexis-roonbridge.service").exists():
+        try:
+            regranted += plugin_permissions.apply_card("gexis-roonbridge.service", outputs.ROON_CARD)
+        except OSError as exc:
+            logger.warning("permissions: Roon Bridge's card not written: %s", exc)
     if regranted:
         subprocess.run(["systemctl", "daemon-reload"], check=False, capture_output=True)
         subprocess.run(["systemctl", "try-restart", *regranted], check=False, capture_output=True)

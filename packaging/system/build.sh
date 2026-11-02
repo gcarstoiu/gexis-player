@@ -185,6 +185,14 @@ if [ -f "$CONFIG" ] && ! grep -q '^disable_splash=1' "$CONFIG"; then
 	printf '\n# ADR-0043: no rainbow square before the boot animation.\ndisable_splash=1\n' >> "$CONFIG"
 	changed=1
 fi
+# ADR-0172: the loopback module's cards are its options, read when it is
+# loaded; a card the options name that the loaded module lacks (Roon, added in
+# Phase 26) comes with the next boot.
+if [ -r /proc/asound/cards ] && grep -q '^snd_aloop ' /proc/modules 2>/dev/null; then
+	for card in $(sed -n 's/.* id=\([^ ]*\).*/\1/p' /etc/modprobe.d/gexis-loopback.conf | tr ',' ' '); do
+		grep -q "\[$card *\]" /proc/asound/cards || changed=1
+	done
+fi
 if [ -n "$changed" ] && [ -n "$2" ]; then
 	install -d /var/lib/gexis && touch "$REBOOT"
 fi

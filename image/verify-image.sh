@@ -332,6 +332,25 @@ else
 	ok "only our Shairport Sync"
 fi
 
+echo "== Roon (ADR-0172): the plugin, never Roon Bridge"
+for f in /usr/lib/systemd/system/gexis-roon.service \
+         /usr/lib/systemd/system/gexis-roonbridge.service \
+         /usr/lib/sysusers.d/gexis-roonbridge.conf \
+         /usr/share/gexis/components/roonbridge.env \
+         /usr/share/gexis/plugins/roon/plugin.json \
+         /opt/gexis-roon/src/gexis_roon/main.py; do
+	dfs "stat $f" | grep -q 'Inode:' && ok "$f" || bad "$f missing"
+done
+# Roon Labs' software is fetched on the device when Roon is switched on; a
+# copy here would be a redistribution its terms forbid.
+if dfs "stat /opt/RoonBridge" | grep -q 'Inode:'; then
+	bad "/opt/RoonBridge is in the image - Roon Bridge must not be shipped"
+else
+	ok "Roon Bridge not in the image"
+fi
+dfs "cat /etc/modprobe.d/gexis-loopback.conf" | grep -q 'id=Loopback,Multiroom,Roon' \
+	&& ok "the Roon loopback card in snd-aloop's options" || bad "no Roon card in snd-aloop's options"
+
 echo "== Plexamp (ADR-0090), a renderer from another repository"
 for f in /usr/lib/systemd/system/plexamp.service \
          /usr/lib/systemd/system/gexis-plexamp.service \

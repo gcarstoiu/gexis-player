@@ -73,3 +73,42 @@ def test_a_grant_needs_both_the_manifest_and_the_consent(tmp_path):
 def test_an_upload_asking_for_a_permission_this_player_lacks_is_refused():
     with pytest.raises(uploads.Refused, match="does not grant"):
         uploads.check(_archive(permissions=["root"]), ours=set(), installed={})
+
+
+# ADR-0172: Roon Bridge's one card, by its name.
+
+def _asound(tmp_path, cards):
+    asound = tmp_path / "asound"
+    asound.mkdir()
+    for name, index in cards.items():
+        (asound / f"card{index}").mkdir()
+        (asound / name).symlink_to(f"card{index}")
+    return asound
+
+
+def test_the_roon_card_is_found_by_its_name(tmp_path):
+    asound = _asound(tmp_path, {"Loopback": 2, "Multiroom": 3, "Roon": 5})
+    assert pp.card_nodes("Roon", asound) == (
+        "/dev/snd/controlC5", "/dev/snd/pcmC5D0p", "/dev/snd/timer")
+
+
+def test_a_card_not_loaded_grants_nothing(tmp_path):
+    asound = _asound(tmp_path, {"Loopback": 2})
+    assert pp.card_nodes("Roon", asound) == ()
+    text = pp.card_dropin(())
+    assert "DevicePolicy=closed" in text and "rw" not in text
+
+
+def test_the_card_dropin_is_written_once_and_again_when_the_card_moves(tmp_path):
+    asound = _asound(tmp_path, {"Roon": 5})
+    root = tmp_path / "run"
+    unit = "gexis-roonbridge.service"
+    assert pp.apply_card(unit, "Roon", root, asound) == [unit]
+    text = (root / f"{unit}.d" / pp.CARD_DROPIN).read_text()
+    assert "DeviceAllow=/dev/snd/pcmC5D0p rw" in text and "DeviceAllow=\n" in text
+    assert pp.apply_card(unit, "Roon", root, asound) == []
+    (asound / "Roon").unlink()
+    (asound / "card6").mkdir()
+    (asound / "Roon").symlink_to("card6")
+    assert pp.apply_card(unit, "Roon", root, asound) == [unit]
+    assert "pcmC6D0p" in (root / f"{unit}.d" / pp.CARD_DROPIN).read_text()
