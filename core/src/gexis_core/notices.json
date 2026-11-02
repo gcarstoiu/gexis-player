@@ -384,6 +384,18 @@
       ]
     },
     {
+      "name": "roonapi (pyroon)",
+      "group": "renderer",
+      "role": "Speaks Roon's extension API for gexis-roon: what plays in the player's Roon zone, and its controls.",
+      "author": "Greg Dowling and contributors",
+      "licence": "Apache-2.0",
+      "url": "https://github.com/pavoni/pyroon",
+      "arrives": "Debian package",
+      "packages": [
+        "python3-roonapi"
+      ]
+    },
+    {
       "name": "Beszel agent and hub",
       "group": "system",
       "role": "Optional system monitoring: the agent reports, the hub keeps the history. Both off unless you switch them on.",

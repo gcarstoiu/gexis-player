@@ -70,7 +70,7 @@ Package: $PKG
 Version: $VERSION
 Architecture: all
 Maintainer: Gexis Player <noreply@github.com>
-Depends: python3, alsa-utils, curl, bzip2, libicu76
+Depends: python3, python3-roonapi, alsa-utils, curl, bzip2, libicu76
 Section: sound
 Priority: optional
 Description: Roon as a Gexis Player plugin
