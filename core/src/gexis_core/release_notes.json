@@ -1,6 +1,10 @@
 {
  "_about": "Every release's notes, newest first, exactly as published and signed (ADR-0116). publish.sh reads a release's notes from here; Settings -> Change logs shows the last 10.",
  "releases": {
+  "1.12.0": {
+   "date": "2026-11-02",
+   "notes": "New\n• Roon, in Settings → Plugins: the player becomes a Roon device and plays what Roon sends through its own output. With the Gexis Player extension enabled in Roon (Settings → Extensions), Now Playing shows what Roon plays, with its controls.\n\nFixed\n• A tap on the visualiser closes it again.\n• Playback stops before an update installs.\n• The row of sources under the library fits the screen, however many sources there are.\n\nGood to know\n• Roon Bridge is Roon Labs' software: it is downloaded from Roon Labs when Roon is switched on, and keeps itself up to date."
+  },
   "1.11.0": {
    "date": "2026-11-01",
    "notes": "New\n• Themes, in Settings → Display → Theme: Deep Teal as before, Bauhaus and Sage (light), Velvet, Ink and Gauge (dark). A theme changes the colours, the corners and the typeface of figures and labels, on the player's screen and on every phone showing it.\n\nGood to know\n• The idle screen keeps its own look in every theme, so that it reads over any picture; so do the visualiser's skins and the boot screen.\n• Roon plays to the player over AirPlay; with Compatibility mode switched on for the player in Roon, it starts at once."
