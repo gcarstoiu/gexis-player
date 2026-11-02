@@ -124,7 +124,8 @@ jobs:
 
       - name: The disk at its peak
         if: always()
-        run: sort -k2 -n "$RUN/disk.log" | tail -1 | awk '{printf "peak used on /: %.1f GB\n", $2 / 1e9}'
+        run: |
+          sort -k2 -n "$RUN/disk.log" | tail -1 | awk '{printf "peak used on /: %.1f GB\n", $2 / 1e9}'
 
       - name: Keep the release
         if: env.KIND == 'release'
