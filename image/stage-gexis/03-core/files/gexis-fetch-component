@@ -8,6 +8,11 @@
 # Reads /usr/share/gexis/components/<name>.env:
 #   URL      where the maker publishes it
 #   SHA256   the pinned checksum; nothing that fails it is unpacked
+#   UNPINNED instead of SHA256, why there is no pin (ADR-0172 decision 5:
+#            Roon Labs serves only its latest build at one address). Then
+#            the URL must be https, and stays https through any redirect; the
+#            checksum of what was fetched is recorded, and once installed the
+#            software is not fetched again (it updates itself)
 #   FORMAT   tar.bz2 | tar.gz
 #   DEST     the directory it lives in once unpacked
 #   TOP      the archive's top folder, when it is not DEST's own name
@@ -37,7 +42,13 @@ ATTEMPTS=3
 
 # shellcheck source=/dev/null
 . "${pin}"
-: "${URL:?} ${SHA256:?} ${FORMAT:?} ${DEST:?} ${OWNER:?}"
+: "${URL:?} ${FORMAT:?} ${DEST:?} ${OWNER:?}"
+SHA256="${SHA256:-}"
+UNPINNED="${UNPINNED:-}"
+if [ -z "${SHA256}" ] && { [ -z "${UNPINNED}" ] || [[ "${URL}" != https://* ]]; }; then
+	echo "gexis-fetch: ${name}: no pin, and no https address with a reason for none" >&2
+	exit 1
+fi
 LABEL="${LABEL:-${name}}"
 FROM="${FROM:-its maker}"
 
@@ -55,7 +66,7 @@ say() {  # state received total attempt error
 	mv "${tmp}" "${status}"
 }
 
-if [ -d "${DEST}" ] && [ "$(cat "${stamp}" 2>/dev/null)" = "${SHA256}" ]; then
+if [ -d "${DEST}" ] && { if [ -n "${SHA256}" ]; then [ "$(cat "${stamp}" 2>/dev/null)" = "${SHA256}" ]; else [ -s "${stamp}" ]; fi; }; then
 	say installed
 	exit 0
 fi
@@ -74,7 +85,7 @@ error=""
 for attempt in $(seq 1 "${ATTEMPTS}"); do
 	rm -f "${work}/archive"
 	say downloading 0 "${total:-null}" "${attempt}"
-	curl -fsSL --connect-timeout 15 --speed-limit 1024 --speed-time 30 \
+	curl -fsSL ${UNPINNED:+--proto =https --proto-redir =https} --connect-timeout 15 --speed-limit 1024 --speed-time 30 \
 		-o "${work}/archive" "${URL}" 2> "${work}/curl.err" &
 	pid=$!
 	while kill -0 "${pid}" 2>/dev/null; do
@@ -101,7 +112,10 @@ fi
 
 size="$(stat -c %s "${work}/archive")"
 say verifying "${size}" "${total:-${size}}" "${attempt}"
-if ! echo "${SHA256}  ${work}/archive" | sha256sum -c --quiet - 2>/dev/null; then
+got="$(sha256sum "${work}/archive" | cut -d' ' -f1)"
+if [ -z "${SHA256}" ]; then
+	echo "gexis-fetch: ${name}: fetched ${got} from ${URL} (no pin: ${UNPINNED})"
+elif ! echo "${SHA256}  ${work}/archive" | sha256sum -c --quiet - 2>/dev/null; then
 	say failed "${size}" "${total:-${size}}" "${attempt}" "What ${FROM} sent does not match the expected checksum, so it was not installed"
 	echo "gexis-fetch: ${name}: checksum mismatch, not installed" >&2
 	exit 1
@@ -127,6 +141,6 @@ rm -rf "${DEST}.old"
 [ -d "${DEST}" ] && mv "${DEST}" "${DEST}.old"
 mv "${top}" "${DEST}"
 rm -rf "${DEST}.old"
-echo "${SHA256}" > "${stamp}"
+echo "${SHA256:-${got}}" > "${stamp}"
 say installed "${size}" "${total:-${size}}" "${attempt}"
 echo "gexis-fetch: ${name}: installed at ${DEST}"

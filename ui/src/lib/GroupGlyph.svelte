@@ -5,7 +5,7 @@
   let { size = 20, ink = 'currentColor' } = $props();
 </script>
 
-<svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke={ink} stroke-width="2"
+<svg viewBox="0 0 24 24" width={size} height={size} fill="none" style:stroke={ink} stroke-width="2"
      stroke-linejoin="round" aria-hidden="true">
   <rect x="2.5" y="4" width="8" height="16" rx="2" />
   <rect x="13.5" y="4" width="8" height="16" rx="2" />

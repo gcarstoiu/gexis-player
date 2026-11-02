@@ -5,7 +5,9 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import re
 import stat
+from pathlib import Path
 
 from aiohttp.test_utils import TestClient, TestServer
 
@@ -68,3 +70,38 @@ async def test_the_phone_s_typing_reaches_only_the_panel_that_proves_itself():
         assert heard is None
     finally:
         await client.close()
+
+
+REPO = Path(__file__).resolve().parents[2]
+
+
+def _panel_routes() -> set[str]:
+    """Every route whose handler asks `_from_panel`, to the first `{`."""
+    source = (REPO / "core/src/gexis_core/wsserver.py").read_text()
+    asks = {name for name, body in re.findall(
+        r"\n    async def (_handle_\w+)\(self[^\n]*\n(.*?)(?=\n    (?:async )?def |\Z)", source, re.S)
+        if "self._from_panel(request)" in body}
+    return {path.split("{")[0] for path, name in re.findall(r'add_\w+\("([^"]+)", self\.(\w+)\)', source)
+            if name in asks}
+
+
+def test_every_script_on_the_device_that_calls_the_panel_s_routes_sends_the_token():
+    """The visualiser's touch report and the update's stop were missed when
+    the token came in (found on sofapi, 2026-11-02): each was refused."""
+    routes = _panel_routes()
+    assert {"/touch", "/renderers/park", "/touchpad"} <= routes
+    missing = []
+    for path in [*(REPO / "image").rglob("*"), *(REPO / "core/updater").rglob("*")]:
+        # Scripts and units only: `image/` may hold a built card.
+        if not path.is_file() or path.stat().st_size > 1 << 20:
+            continue
+        try:
+            text = path.read_text()
+        except UnicodeDecodeError:
+            continue
+        if "127.0.0.1:8090" not in text:
+            continue
+        calls = [r for r in routes if re.search(re.escape(r) + r"(?![\w-])", text)]
+        if calls and "/run/gexis/panel-token" not in text:
+            missing.append((str(path.relative_to(REPO)), sorted(calls)))
+    assert missing == []

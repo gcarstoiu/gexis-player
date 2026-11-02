@@ -86,8 +86,8 @@ look a little better, it has done its job, and I am glad to share it.
 ### 🎧 Plays from the apps you already use
 
 It appears as a speaker in the Spotify app, in the AirPlay list of an
-iPhone, iPad or Mac, as a player in Lyrion and Plexamp, and as a Bluetooth
-speaker on your phone. Start playing from any of
+iPhone, iPad or Mac, as a player in Lyrion and Plexamp, as a Roon device, and
+as a Bluetooth speaker on your phone. Start playing from any of
 them and Gexis hands over: the source that was playing is stopped politely,
 a short transition shows who is taking over, and the new one plays. Nothing
 to disconnect first, no juggling apps when two of them want the DAC: the
@@ -97,7 +97,7 @@ newest deliberate choice wins, and the others are told.
 
 Join Gexis players into a group, from the phone, the screen or a bar's tray,
 and they play the same music together, whatever the source: Lyrion, Spotify,
-AirPlay, Bluetooth, Plexamp or a plugin. Music started on any of them plays on all,
+AirPlay, Bluetooth, Plexamp, Roon or a plugin. Music started on any of them plays on all,
 each keeps its own volume and equaliser, and one slider moves them all. A
 Lyrion group stays Lyrion's own sync, gapless and bit-perfect, and syncing
 players in a Lyrion app groups them too.
@@ -201,13 +201,14 @@ or removed from Settings, with its progress shown in the switch itself.
 
 | | |
 |---|---|
-| 🔊 **Sources** | Spotify Connect · AirPlay 2 (Shairport Sync) · Lyrion (squeezelite) · Bluetooth (A2DP) · Plexamp · plugins, your own or from the catalogue |
+| 🔊 **Sources** | Spotify Connect · AirPlay 2 (Shairport Sync) · Lyrion (squeezelite) · Bluetooth (A2DP) · Plexamp · Roon (Roon Bridge) · plugins, your own or from the catalogue |
 | 🎚️ **Sound** | Bit-perfect, tested up to 24/192 on DAC boards and to 768 kHz on a USB DAC · native DSD on a DAC that takes it · hardware, software or fixed volume · a maximum level for every source · a starting volume Spotify never exceeds · a ten-band equaliser with presets and your own settings, for each output, off (and bit-perfect) until you switch it on |
 | 🔀 **Handover** | One source at a time, never mixed · takeover in any direction · the previous source released before the next one plays |
 | 📡 **Multiroom** | Players joined into a group play the same music in sync, for every source · music started on any of them plays on all · each keeps its own level and equaliser, and an *All* slider moves them together · Lyrion's own sync for Lyrion, and Lyrion's synced players grouped too · groups last until undone, restarts included |
 | 🖼️ **Now playing** | Artwork · synced or plain lyrics · artist information and photos · the Lyrion queue |
 | 📈 **Visualiser** | Up to 287 skins, depending on the screen · VU meters, spectrum, turntables and tape decks · progress, time, volume and play-state in each skin's own style · skins that rotate per track |
 | 🖥️ **Screens** | HDMI touchscreens from 7" to 13.3", including 7.9" and 11.9" bar displays, and DSI screens on the Pi's own display connector, leaving HDMI free for sound · recognised and laid out for their shape · or Headless, with no screen at all |
+| 🎨 **Themes** | Deep Teal, Bauhaus, Sage, Velvet, Ink and Gauge, one per player, on its screen and on every phone showing it · the colours, the corners and the typeface of figures and labels; nothing moves or changes size |
 | 🧭 **Setup** | Over the player's own Wi-Fi (WPA2, password on the panel) or your network on a cable · only what the player needs to run, then *make it yours* from your home Wi-Fi · a wrong password brings setup back with the reason · a player that starts without its Wi-Fi offers setup again after 90 seconds |
 | 💾 **Backup & restore** | Settings, pairings and source logins in one archive, on a network share or downloaded to your phone · restored during setup, which asks for this player's output and screen and lets you change the rest · one player's backup can start a second one, leaving the first one's sign-ins behind · a factory reset starts the player over without re-flashing |
 | ⬆️ **Updates** | Over the network, with release notes · *Testing* gets each release first, *Stable* once it has been tried |
@@ -275,9 +276,12 @@ Rough, and subject to change:
   card. A ten-band equaliser with presets and your own settings. The phone as
   a remote, with a touchpad or a D-pad for the screen. Multiroom for every
   source. AirPlay 2 from an iPhone, iPad or Mac. A plugin catalogue: other
-  authors' plugins installed from Settings.
-- 🔜 **Next:** themes.
-- 🎨 **Later:** room correction with a USB microphone, for the bass and then the full range; internet radio without a Lyrion server. With Plex switched on, your own Plex server fills in
+  authors' plugins installed from Settings. Themes: six looks for the screen
+  and the phone. Roon, with the player as a Roon device and Roon's Now
+  Playing on its screen.
+- 🔜 **Next:** room correction with a USB microphone, for the bass and then
+  the full range.
+- 🎨 **Later:** internet radio without a Lyrion server. With Plex switched on, your own Plex server fills in
   the artist and album information other sources leave out.
 - 💭 **Maybe:** the DAC's own filter and polarity options.
 
@@ -297,12 +301,13 @@ Legal and Credits.
 from its maker only when you switch it on. It is used under its maker's terms:
 
 - **Plexamp** is Plex, Inc.'s proprietary software.
+- **Roon Bridge** is Roon Labs' software, under Roon's terms.
 
 Spotify Connect is provided through go-librespot, an independent open-source
 client that ships in the image. It is not made or endorsed by Spotify.
 
 **Gexis Player is not affiliated with, endorsed or sponsored by** Spotify,
-Plex, Lyrion, the Bluetooth SIG, Raspberry Pi or HiFiBerry. Their names
+Plex, Roon Labs, Lyrion, the Bluetooth SIG, Raspberry Pi or HiFiBerry. Their names
 and logos are trademarks of their owners and are used only to name what works
 with what.
 

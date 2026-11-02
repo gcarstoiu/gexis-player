@@ -37,7 +37,7 @@
     align-items: center;
     justify-content: center;
     padding: 22px;
-    background: rgba(8, 12, 16, 0.92);
+    background: var(--c-dark-080c10-92);
   }
   .card {
     width: 100%;
@@ -48,16 +48,16 @@
     flex-direction: column;
     gap: 16px;
     padding: 28px;
-    border-radius: 22px;
+    border-radius: var(--r-xl);
     background: var(--bg-panel);
-    border: 1px solid rgba(224, 167, 88, 0.35);
-    box-shadow: 0 30px 70px rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--c-warn-35);
+    box-shadow: 0 30px 70px var(--c-black-50);
     color: var(--ink);
   }
   .title {
     font-size: 26px;
     font-weight: 600;
-    color: #e0a758;
+    color: var(--accent-warn);
   }
   .note {
     font-size: 17px;
@@ -72,7 +72,7 @@
   .bar {
     height: 6px;
     border-radius: 3px;
-    background: rgba(233, 238, 242, 0.1);
+    background: var(--ink-line);
     overflow: hidden;
   }
   .bar span {
@@ -80,7 +80,7 @@
     width: 30%;
     height: 100%;
     border-radius: 3px;
-    background: rgba(224, 167, 88, 0.7);
+    background: var(--c-warn-70);
     animation: resetWait 1600ms ease-in-out infinite;
   }
   @keyframes resetWait {

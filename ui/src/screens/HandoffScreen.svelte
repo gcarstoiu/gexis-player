@@ -7,7 +7,9 @@
 <script>
   import { fade } from 'svelte/transition';
   import spotifyMark from '../assets/icon-spotify.png';
-  import bluetoothMark from '../assets/icon-bluetooth.png';
+  import { theme } from '../lib/theme.js';
+  import { tone } from '../lib/themeRule.js';
+  import BluetoothMark from '../lib/BluetoothMark.svelte';
   import lyrionMark from '../assets/icon-lyrion.svg';
   import { sources } from '../lib/state.js';
   import { screen } from '../lib/family.svelte.js';
@@ -15,12 +17,13 @@
 
   let { from, to } = $props();
 
-  const IMAGES = { spotify: spotifyMark, bluetooth: bluetoothMark };
+  const IMAGES = { spotify: spotifyMark };
   //: ADR-0086: the name and the colour are the source's own, so a takeover
   //: to a renderer this file has never heard of is still announced by name.
   //: The id is the fallback, which is what it always was for an unknown one.
   const label = (id) => $sources[id]?.name ?? id;
-  const accent = $derived($sources[to]?.accent ?? `var(--accent-${to}, var(--accent-lms))`);
+  //: ADR-0171: a manifest's accent, as the theme has it.
+  const accent = $derived(tone($sources[to]?.accent, $theme) ?? `var(--accent-${to}, var(--accent-lms))`);
 
   //: ADR-0109, Bar family (design `Bar Panels` t2, round 2 `Bar States`
   //: t-long): one strip - the old source small at the left, a line that
@@ -49,6 +52,8 @@
       style:opacity
       style:--mark={`url(${lyrionMark})`}
     ></span>
+  {:else if source === 'bluetooth'}
+    <BluetoothMark {size} {opacity} />
   {:else if IMAGES[source]}
     <img
       class="mark"
@@ -139,7 +144,7 @@
     position: absolute;
     inset: 0;
     z-index: 30;
-    background: rgba(13, 21, 27, 0.95);
+    background: var(--c-ground27-95);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -152,7 +157,7 @@
     font-size: var(--t-meta);
     letter-spacing: 0.34em;
     text-transform: uppercase;
-    color: rgba(233, 238, 242, 0.5);
+    color: var(--ink-tab-off);
     animation: rise 320ms ease both;
   }
 
@@ -180,7 +185,7 @@
     justify-content: center;
   }
   .ring--from {
-    border: 2px solid rgba(233, 238, 242, 0.18);
+    border: 2px solid var(--ink-fill-press);
   }
   .ring--to {
     border: 2px solid var(--to-accent);
@@ -205,7 +210,7 @@
     font-size: 24px;
     font-weight: 600;
     letter-spacing: 0.02em;
-    color: rgba(233, 238, 242, 0.45);
+    color: var(--c-ink-45);
   }
   .label--to {
     font-size: 30px;
@@ -229,7 +234,7 @@
     right: 0;
     top: 50%;
     height: 2px;
-    background: linear-gradient(90deg, rgba(233, 238, 242, 0.12), var(--to-accent));
+    background: linear-gradient(90deg, var(--c-ink-12), var(--to-accent));
   }
   .note {
     position: absolute;
@@ -275,7 +280,7 @@
   .hb__fromname {
     font-size: 26px;
     font-weight: 600;
-    color: rgba(233, 238, 242, 0.7);
+    color: var(--c-ink-70);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -286,7 +291,7 @@
     flex: 1;
     min-width: 120px;
     height: 2px;
-    background: linear-gradient(90deg, rgba(233, 238, 242, 0.12), var(--to-accent));
+    background: linear-gradient(90deg, var(--c-ink-12), var(--to-accent));
   }
   /* Across the line's whole length - it takes the bar's width, so the
      standard screen's 68px march would barely move. */
@@ -351,7 +356,7 @@
     width: 44px;
     height: 44px;
     border-radius: 50%;
-    border: 2px solid rgba(233, 238, 242, 0.7);
+    border: 2px solid var(--c-ink-70);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -371,7 +376,7 @@
     font-size: 15px;
     letter-spacing: 0.34em;
     text-transform: uppercase;
-    color: rgba(233, 238, 242, 0.55);
+    color: var(--c-ink-55);
     white-space: nowrap;
   }
   .hb__name {

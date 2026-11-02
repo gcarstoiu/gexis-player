@@ -77,7 +77,7 @@
     width: 26px;
     height: 26px;
     border-radius: 50%;
-    border: 2px solid rgba(233, 238, 242, 0.22);
+    border: 2px solid var(--c-ink-22);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -90,11 +90,11 @@
   }
   .step[data-state='done'] .step__mark {
     border-color: var(--accent-lms);
-    background: rgba(126, 214, 188, 0.16);
+    background: var(--c-lms-16);
   }
   .step[data-state='failed'] .step__mark {
     border-color: var(--accent-warn);
-    background: rgba(224, 167, 88, 0.16);
+    background: var(--c-warn-16);
   }
   .step__mark svg {
     width: 16px;
@@ -123,7 +123,7 @@
     flex: 1;
     height: 6px;
     border-radius: 3px;
-    background: rgba(233, 238, 242, 0.12);
+    background: var(--c-ink-12);
     overflow: hidden;
   }
   .step__bar span {
@@ -146,7 +146,7 @@
   .steps--large .step__mark { width: 40px; height: 40px; border-width: 3px; }
   .steps--large .step__mark svg { width: 24px; height: 24px; }
   .steps--large .step__label { font-size: 30px; }
-  .steps--large .step__bar { height: 10px; border-radius: 5px; }
+  .steps--large .step__bar { height: 10px; border-radius: var(--r-5); }
   .steps--large .step__pct { font-size: 24px; min-width: 76px; }
 
   @keyframes step-turn {

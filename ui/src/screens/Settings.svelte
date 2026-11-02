@@ -18,6 +18,8 @@
   import NoteText from '../lib/NoteText.svelte';
   import Equaliser from './eq/Equaliser.svelte';
   import { screen } from '../lib/family.svelte.js';
+  import { theme } from '../lib/theme.js';
+  import { tone } from '../lib/themeRule.js';
   import {
     settingsGroups,
     settingsDevice,
@@ -2146,7 +2148,7 @@
                 type="button"
                 onclick={() => (cat = g.id)}
               >
-                <span class="bar" style:background={g.accent}></span>
+                <span class="bar" style:background={tone(g.accent, $theme)}></span>
                 <span class="cat__name">{g.label}</span>
                 {#if g.rows.some(pending)}<span class="dot"></span>{/if}
               </button>
@@ -2158,7 +2160,7 @@
           <div class="list" class:list--wide={wide} data-noscrollbar>
             {#each categories as g (g.id)}
               <button class="card" type="button" onclick={() => (drilled = g.id)}>
-                <span class="bar bar--tall" style:background={g.accent}></span>
+                <span class="bar bar--tall" style:background={tone(g.accent, $theme)}></span>
                 <span class="card__text">
                   <span class="card__title">
                     <span class="card__name">{g.label}</span>
@@ -2199,8 +2201,8 @@
             {#each rows as r, i (r.key ?? `group-${i}`)}
               {#if r.type === 'group'}
                 <div class="subhead">
-                  <span class="subhead__dot" style:background={r.accent}></span>
-                  <span class="subhead__label" style:color={r.accent}>{r.label}</span>
+                  <span class="subhead__dot" style:background={tone(r.accent, $theme)}></span>
+                  <span class="subhead__label" style:color={tone(r.accent, $theme)}>{r.label}</span>
                   <span class="subhead__rule"></span>
                   {#if r.indicator}
                     <!-- ADR-0129 as amended: what the service is doing, the
@@ -3606,14 +3608,14 @@
   .weave {
     position: absolute;
     inset: -90px;
-    background: repeating-linear-gradient(38deg, var(--bg-weave-a) 0 48px, var(--bg-weave-b) 48px 96px);
+    background: repeating-linear-gradient(var(--weave-angle), var(--bg-weave-a) 0 48px, var(--bg-weave-b) 48px 96px);
     filter: blur(70px);
     transform: scale(1.14);
   }
   .veil {
     position: absolute;
     inset: 0;
-    background: radial-gradient(130% 105% at 20% 42%, rgba(20, 33, 42, 0.72), rgba(13, 21, 28, 0.96));
+    background: var(--cover-veil-deep);
   }
   .frame {
     position: relative;
@@ -3641,7 +3643,7 @@
     display: flex;
     align-items: center;
     gap: 16px;
-    border-bottom: 1px solid rgba(233, 238, 242, 0.09);
+    border-bottom: 1px solid var(--c-ink-09);
     padding: 14px 18px;
     min-height: 78px;
   }
@@ -3653,7 +3655,7 @@
     width: 56px;
     height: 56px;
     border-radius: 50%;
-    background: rgba(233, 238, 242, 0.07);
+    background: var(--ink-fill);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -3664,7 +3666,7 @@
   .back:active,
   .back.is-pressed {
     transform: scale(0.95);
-    background: rgba(233, 238, 242, 0.16);
+    background: var(--c-ink-16);
   }
   /* The ink is what wants centring, not the box - see `.i-back` in
      Library.svelte. 13px here rather than 14, so the offset is smaller. */
@@ -3703,7 +3705,7 @@
     font-family: var(--font-mono);
     font-size: 13px;
     letter-spacing: 0.06em;
-    color: rgba(233, 238, 242, 0.5);
+    color: var(--ink-tab-off);
     margin-top: 4px;
     white-space: nowrap;
     overflow: hidden;
@@ -3744,7 +3746,7 @@
   .rail {
     width: 290px;
     flex-shrink: 0;
-    border-right: 1px solid rgba(233, 238, 242, 0.09);
+    border-right: 1px solid var(--c-ink-09);
     padding: 18px 16px;
     overflow-y: auto;
     display: flex;
@@ -3758,13 +3760,13 @@
     gap: 15px;
     height: 72px;
     padding: 0 16px;
-    border-radius: 14px;
+    border-radius: var(--r-14);
   }
   .cat:active {
-    background: rgba(233, 238, 242, 0.13);
+    background: var(--c-ink-13);
   }
   .cat.is-active {
-    background: rgba(233, 238, 242, 0.1);
+    background: var(--ink-line);
   }
   .bar {
     width: 4px;
@@ -3782,7 +3784,7 @@
     min-width: 0;
     font-size: 19px;
     font-weight: 600;
-    color: rgba(233, 238, 242, 0.76);
+    color: var(--c-ink-76);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -3823,12 +3825,12 @@
     gap: 16px;
     min-height: 78px;
     padding: 16px 18px;
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(233, 238, 242, 0.1);
+    border-radius: var(--r-lg);
+    background: var(--c-white-05);
+    border: 1px solid var(--ink-line);
   }
   .card:active {
-    background: rgba(233, 238, 242, 0.13);
+    background: var(--c-ink-13);
   }
   .card__text {
     flex: 1;
@@ -3849,7 +3851,7 @@
     font-family: var(--font-mono);
     font-size: 13px;
     letter-spacing: 0.05em;
-    color: rgba(233, 238, 242, 0.55);
+    color: var(--c-ink-55);
     margin-top: 6px;
   }
   /* Not dimmed: the value is the point of the row and stays fully legible.
@@ -3879,19 +3881,19 @@
     flex-shrink: 0;
     height: 44px;
     padding: 0 18px;
-    border-radius: 13px;
-    background: rgba(233, 238, 242, 0.07);
-    border: 1px solid rgba(233, 238, 242, 0.14);
+    border-radius: var(--r-13);
+    background: var(--ink-fill);
+    border: 1px solid var(--c-ink-14);
     color: var(--ink);
     font-size: 15px;
     font-weight: 600;
     white-space: nowrap;
   }
-  .tile__btn:active { background: rgba(233, 238, 242, 0.2); }
+  .tile__btn:active { background: var(--c-ink-20); }
   .tile__btn--go {
     font-weight: 700;
-    background: rgba(126, 214, 188, 0.16);
-    border-color: rgba(126, 214, 188, 0.4);
+    background: var(--c-lms-16);
+    border-color: var(--c-lms-40);
     color: var(--accent-lms);
   }
   .tile__btn:disabled { opacity: 0.6; }
@@ -3936,8 +3938,8 @@
   .chev {
     width: 11px;
     height: 11px;
-    border-right: 2.5px solid rgba(233, 238, 242, 0.42);
-    border-top: 2.5px solid rgba(233, 238, 242, 0.42);
+    border-right: 2.5px solid var(--c-ink-42);
+    border-top: 2.5px solid var(--c-ink-42);
     transform: rotate(45deg);
     flex-shrink: 0;
     display: block;
@@ -3969,7 +3971,7 @@
   .subhead__rule {
     flex: 1;
     height: 1px;
-    background: rgba(233, 238, 242, 0.1);
+    background: var(--ink-line);
   }
 
   .row {
@@ -3978,21 +3980,21 @@
     width: 100%;
     container-type: inline-size;
     container-name: srow;
-    border-radius: 15px;
+    border-radius: var(--r-15);
     padding: 14px 20px;
     display: block;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(233, 238, 242, 0.1);
+    background: var(--c-white-05);
+    border: 1px solid var(--ink-line);
   }
   /* Not a tile: a tile is not pressed, only its button is - `:active`
      holds on every ancestor of what the finger is on, so a tile lit up as a
      whole when its button was tapped (George, 2026-10-07, Find portraits
      and covers). */
   .row:not(.row--tile):active {
-    background: rgba(233, 238, 242, 0.12);
+    background: var(--c-ink-12);
   }
   .row--danger {
-    border-color: rgba(224, 167, 88, 0.3);
+    border-color: var(--c-warn-30);
   }
   .row__body {
     display: flex;
@@ -4024,22 +4026,22 @@
     text-transform: uppercase;
     color: var(--ink-quiet);
     padding: 4px 8px;
-    border-radius: 6px;
-    border: 1px solid rgba(233, 238, 242, 0.14);
+    border-radius: var(--r-6);
+    border: 1px solid var(--c-ink-14);
     white-space: nowrap;
   }
   /* ADR-0169: where a plugin came from, each its own colour (the mock-ups'). */
   .row__tag--ours {
     color: var(--accent-lms);
-    border-color: rgba(126, 214, 188, 0.4);
+    border-color: var(--c-lms-40);
   }
   .row__tag--catalogue {
     color: var(--accent-bluetooth);
-    border-color: rgba(159, 180, 232, 0.4);
+    border-color: var(--c-bluetooth-40);
   }
   .row__tag--file {
     color: var(--accent-warn);
-    border-color: rgba(224, 167, 88, 0.45);
+    border-color: var(--c-warn-45);
   }
   .row__value--go {
     color: var(--accent-lms);
@@ -4047,8 +4049,8 @@
   }
   /* Add plugins: the Plugins page's first row, with a plus. */
   .row--store {
-    background: rgba(126, 214, 188, 0.08);
-    border-color: rgba(126, 214, 188, 0.35);
+    background: var(--c-lms-08);
+    border-color: var(--c-lms-35);
   }
   .store__plus {
     position: relative;
@@ -4056,7 +4058,7 @@
     height: 30px;
     border-radius: 50%;
     flex-shrink: 0;
-    background: rgba(126, 214, 188, 0.2);
+    background: var(--c-lms-20);
   }
   .store__plus::before,
   .store__plus::after {
@@ -4098,16 +4100,16 @@
     min-height: 44px;
     padding: 0 16px;
     border-radius: var(--r-pill);
-    border: 1px solid rgba(233, 238, 242, 0.16);
+    border: 1px solid var(--c-ink-16);
     background: none;
-    color: rgba(233, 238, 242, 0.78);
+    color: var(--c-ink-78);
     font: inherit;
     font-size: 15px;
     font-weight: 600;
   }
   .store__chip.is-on {
-    background: rgba(126, 214, 188, 0.16);
-    border-color: rgba(126, 214, 188, 0.45);
+    background: var(--c-lms-16);
+    border-color: var(--c-lms-45);
     color: var(--accent-lms);
   }
   .row--danger .row__name {
@@ -4128,7 +4130,7 @@
     display: block;
     font-size: 14px;
     line-height: 1.36;
-    color: rgba(233, 238, 242, 0.55);
+    color: var(--c-ink-55);
     margin-top: 5px;
     text-wrap: pretty;
   }
@@ -4140,7 +4142,7 @@
     max-width: 100%;
     text-align: right;
     word-break: break-all;
-    color: rgba(233, 238, 242, 0.72);
+    color: var(--ink-muted);
   }
   .row__value.is-pending {
     color: var(--accent-warn);
@@ -4224,12 +4226,12 @@
   .toggle {
     width: 60px;
     height: 34px;
-    border-radius: 17px;
+    border-radius: var(--r-17);
     flex-shrink: 0;
     position: relative;
     transition: background 140ms ease;
-    background: rgba(233, 238, 242, 0.08);
-    border: 1px solid rgba(233, 238, 242, 0.16);
+    background: var(--c-ink-08);
+    border: 1px solid var(--c-ink-16);
   }
   .toggle span {
     position: absolute;
@@ -4239,11 +4241,11 @@
     height: 26px;
     border-radius: 50%;
     transition: left 140ms ease;
-    background: rgba(233, 238, 242, 0.6);
+    background: var(--ink-quiet);
   }
   .toggle.is-on {
-    background: rgba(126, 214, 188, 0.32);
-    border-color: rgba(126, 214, 188, 0.5);
+    background: var(--c-lms-32);
+    border-color: var(--c-lms-50);
   }
   .toggle.is-on span {
     left: 29px;
@@ -4259,7 +4261,7 @@
     position: absolute;
     inset: 0;
     z-index: 24;
-    background: rgba(8, 12, 16, 0.62);
+    background: var(--bg-scrim);
     /* No `backdrop-filter`: ADR-0041. A live blur of the screen behind a
        sheet costs this panel two thirds of its frames, whatever its radius
        and however small the sheet (Finding 037). The dimming is free. */
@@ -4282,9 +4284,9 @@
     max-width: 560px;
     max-height: 82%;
     background: var(--bg-panel);
-    border: 1px solid rgba(233, 238, 242, 0.14);
-    border-radius: 22px;
-    box-shadow: 0 30px 70px rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--c-ink-14);
+    border-radius: var(--r-xl);
+    box-shadow: 0 30px 70px var(--c-black-50);
     padding: 26px;
     display: flex;
     flex-direction: column;
@@ -4326,7 +4328,7 @@
     width: min(760px, 100% - 48px);
     max-width: none;
     max-height: none;
-    border-radius: 20px;
+    border-radius: var(--r-20);
     padding: 18px 20px 14px;
     gap: 12px;
   }
@@ -4360,7 +4362,7 @@
   .sheet__note {
     font-size: 15px;
     line-height: 1.4;
-    color: rgba(233, 238, 242, 0.6);
+    color: var(--ink-quiet);
     margin-top: 8px;
     text-wrap: pretty;
   }
@@ -4380,17 +4382,17 @@
     gap: 16px;
     min-height: 62px;
     padding: 12px 18px;
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(233, 238, 242, 0.1);
+    border-radius: var(--r-14);
+    background: var(--c-white-04);
+    border: 1px solid var(--ink-line);
   }
   /* No press colour (George, 2026-10-16): a phone holds :active for about
      150 ms after the finger lifts, so with a tap drawn at once, unticking
      put out the box while the row stayed lit - "the teal background is
      slower than the selection dot". The selection is the feedback. */
   .option.is-selected {
-    background: rgba(126, 214, 188, 0.14);
-    border-color: rgba(126, 214, 188, 0.4);
+    background: var(--c-lms-14);
+    border-color: var(--c-lms-40);
   }
   .radio {
     width: 22px;
@@ -4400,7 +4402,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 2px solid rgba(233, 238, 242, 0.3);
+    border: 2px solid var(--c-ink-30);
   }
   .option.is-selected .radio {
     border-color: var(--accent-lms);
@@ -4419,7 +4421,7 @@
      accent, so a sheet that takes several answers is recognisably the one
      that takes one. */
   .radio--box {
-    border-radius: 7px;
+    border-radius: var(--r-7);
   }
   .radio--box span {
     border-radius: 2px;
@@ -4445,7 +4447,7 @@
     gap: 12px;
     padding: 14px 16px;
     border-radius: var(--r-lg);
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--c-white-04);
     border: 1px solid var(--ink-line);
   }
   .iv__remove {
@@ -4536,7 +4538,7 @@
   }
   .iv__cell.on {
     border-color: var(--accent-lms);
-    background: rgba(126, 214, 188, 0.16);
+    background: var(--c-lms-16);
     color: var(--accent-lms);
     font-weight: 700;
   }
@@ -4550,7 +4552,7 @@
     text-align: center;
     min-height: 44px;
     padding: 0 10px;
-    border-radius: 22px;
+    border-radius: var(--r-xl);
     border: 1px solid var(--ink-line);
     background: var(--ink-fill);
     color: var(--ink-muted);
@@ -4560,7 +4562,7 @@
   }
   .iv__day.on {
     border-color: var(--accent-lms);
-    background: rgba(126, 214, 188, 0.16);
+    background: var(--c-lms-16);
     color: var(--accent-lms);
   }
   .iv__add {
@@ -4632,12 +4634,12 @@
     text-transform: uppercase;
     color: var(--ink-quiet);
     padding: 4px 8px;
-    border-radius: 6px;
-    border: 1px solid rgba(233, 238, 242, 0.14);
+    border-radius: var(--r-6);
+    border: 1px solid var(--c-ink-14);
   }
   .option__tag--tested {
     color: var(--accent-lms);
-    border-color: rgba(126, 214, 188, 0.4);
+    border-color: var(--c-lms-40);
   }
   .option__label {
     flex: 1;
@@ -4646,7 +4648,7 @@
     min-width: min-content;
     font-size: 17px;
     font-weight: 600;
-    color: rgba(233, 238, 242, 0.82);
+    color: var(--ink-body);
     text-wrap: pretty;
   }
   .option.is-selected .option__label {
@@ -4654,14 +4656,14 @@
   }
   .sheet__value {
     flex-shrink: 0;
-    border-radius: 14px;
-    background: rgba(8, 12, 16, 0.5);
-    border: 1px solid rgba(233, 238, 242, 0.12);
+    border-radius: var(--r-14);
+    background: var(--c-dark-080c10-50);
+    border: 1px solid var(--c-ink-12);
     padding: 16px 18px;
     font-family: var(--font-mono);
     font-size: 15px;
     line-height: 1.5;
-    color: rgba(233, 238, 242, 0.9);
+    color: var(--c-ink-90);
     word-break: break-all;
   }
   /* The 2026-09-20 drop draws both, where the one before it only described
@@ -4689,7 +4691,7 @@
   .editor__unit {
     font-family: var(--font-mono);
     font-size: 17px;
-    color: rgba(233, 238, 242, 0.6);
+    color: var(--ink-quiet);
   }
   .range {
     width: 100%;
@@ -4706,7 +4708,7 @@
     background: linear-gradient(
       to right,
       var(--accent-lms) 0 var(--pct),
-      rgba(233, 238, 242, 0.13) var(--pct) 100%
+      var(--c-ink-13) var(--pct) 100%
     );
   }
   .range::-webkit-slider-thumb {
@@ -4717,7 +4719,7 @@
     margin-top: -10px;
     border-radius: 50%;
     background: var(--ink);
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+    box-shadow: 0 2px 10px var(--c-black-45);
   }
   .editor__ends {
     display: flex;
@@ -4725,7 +4727,7 @@
     font-family: var(--font-mono);
     font-size: 13px;
     letter-spacing: 0.1em;
-    color: rgba(233, 238, 242, 0.6);
+    color: var(--ink-quiet);
   }
   /* On a bar the value stands beside its slider, not above it: the line it
      took was what pushed Close off a 376 px sheet under a long note. A fixed
@@ -4751,9 +4753,9 @@
     align-items: flex-start;
     gap: 14px;
     padding: 16px 18px;
-    border-radius: 14px;
-    background: rgba(224, 167, 88, 0.12);
-    border: 1px solid rgba(224, 167, 88, 0.42);
+    border-radius: var(--r-14);
+    background: var(--c-warn-12);
+    border: 1px solid var(--c-warn-42);
   }
   .warn__mark {
     width: 26px;
@@ -4781,7 +4783,7 @@
     font-family: var(--font-mono);
     font-size: 14px;
     letter-spacing: 0.06em;
-    color: rgba(233, 238, 242, 0.5);
+    color: var(--ink-tab-off);
   }
 
   /* ADR-0044 §1 - a list's items. */
@@ -4800,9 +4802,9 @@
     gap: 16px;
     min-height: 66px;
     padding: 12px 18px;
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.045);
-    border: 1px solid rgba(233, 238, 242, 0.1);
+    border-radius: var(--r-14);
+    background: var(--c-white-4_5);
+    border: 1px solid var(--ink-line);
   }
   /* Only the row's own tap: a press on Download or Forget inside it is
      that button's, and the whole tile shrinking with it read as the row
@@ -4814,8 +4816,8 @@
     transform: scale(0.92);
   }
   .item.is-joined {
-    background: rgba(126, 214, 188, 0.12);
-    border-color: rgba(126, 214, 188, 0.34);
+    background: var(--c-lms-12);
+    border-color: var(--c-lms-34);
   }
   /* A list whose items have no command behind them yet reads and does not
      act, so it takes no tap and gives no press feedback either. */
@@ -4834,10 +4836,10 @@
     width: 4px;
     height: calc(2px + var(--i) * 4px);
     border-radius: 1px;
-    background: rgba(233, 238, 242, 0.2);
+    background: var(--c-ink-20);
   }
   .bars__b.is-on {
-    background: rgba(233, 238, 242, 0.82);
+    background: var(--ink-body);
   }
   .bars.is-joined .bars__b.is-on {
     background: var(--accent-lms);
@@ -4887,7 +4889,7 @@
     width: 13px;
     height: 9px;
     border-radius: 2px;
-    background: rgba(233, 238, 242, 0.6);
+    background: var(--ink-quiet);
   }
   /* Open: the shackle lifted and free on one side. */
   /* The closed lock's own shackle, in its own place: only its left leg
@@ -4905,9 +4907,9 @@
     /* Down to the body's top edge, not into it: the two translucent layers
        overlapping drew a brighter square at each leg. */
     height: 6px;
-    border: 2px solid rgba(233, 238, 242, 0.6);
+    border: 2px solid var(--ink-quiet);
     border-bottom: none;
-    border-radius: 4px 4px 0 0;
+    border-radius: var(--r-4) var(--r-4) 0 0;
   }
   .item__meta {
     display: block;
@@ -4915,7 +4917,7 @@
     font-size: 13px;
     letter-spacing: 0.04em;
     margin-top: 4px;
-    color: rgba(233, 238, 242, 0.6);
+    color: var(--ink-quiet);
   }
   .item__meta.is-joined {
     color: var(--accent-lms);
@@ -4926,7 +4928,7 @@
     font-size: 13px;
     line-height: 1.5;
     letter-spacing: 0.02em;
-    color: rgba(233, 238, 242, 0.6);
+    color: var(--ink-quiet);
     padding: 14px 4px 2px;
     text-wrap: pretty;
   }
@@ -4986,9 +4988,9 @@
   }
   .links__one {
     padding: 8px 12px;
-    border-radius: 10px;
-    border: 1px solid rgba(233, 238, 242, 0.16);
-    background: rgba(233, 238, 242, 0.05);
+    border-radius: var(--r-10);
+    border: 1px solid var(--c-ink-16);
+    background: var(--c-ink-05);
     color: inherit;
     font-size: 14px;
     text-decoration: none;
@@ -5006,7 +5008,7 @@
     place-items: center;
     cursor: pointer;
     background-clip: content-box;
-    border-radius: 7px;
+    border-radius: var(--r-7);
     outline: none;
   }
   .pick::before {
@@ -5015,22 +5017,22 @@
     width: 24px;
     height: 24px;
     box-sizing: border-box;
-    border-radius: 7px;
-    border: 2px solid rgba(233, 238, 242, 0.42);
+    border-radius: var(--r-7);
+    border: 2px solid var(--c-ink-42);
   }
   .pick > span {
     grid-area: 1 / 1;
     width: 11px;
     height: 6px;
     margin-top: -3px;
-    border-left: 2.5px solid #0d151c;
-    border-bottom: 2.5px solid #0d151c;
+    border-left: 2.5px solid var(--ink-on-accent);
+    border-bottom: 2.5px solid var(--ink-on-accent);
     transform: rotate(-45deg);
     display: none;
   }
   .pick.is-on::before {
-    background: var(--accent, #7ed6bc);
-    border-color: var(--accent, #7ed6bc);
+    background: var(--accent, var(--accent-lms));
+    border-color: var(--accent, var(--accent-lms));
   }
   .pick.is-on > span {
     display: block;
@@ -5048,16 +5050,16 @@
   .crumb {
     padding: 8px 14px;
     border-radius: 999px;
-    border: 1px solid rgba(233, 238, 242, 0.14);
-    background: rgba(233, 238, 242, 0.05);
+    border: 1px solid var(--c-ink-14);
+    background: var(--c-ink-05);
     color: inherit;
     font: inherit;
     font-size: 15px;
     cursor: pointer;
   }
   .crumb.is-here {
-    background: rgba(233, 238, 242, 0.14);
-    border-color: rgba(233, 238, 242, 0.3);
+    background: var(--c-ink-14);
+    border-color: var(--c-ink-30);
     font-weight: 700;
   }
   .pick-add {
@@ -5072,9 +5074,9 @@
     align-items: center;
     height: 44px;
     padding: 0 18px;
-    border-radius: 12px;
-    background: rgba(224, 167, 88, 0.14);
-    border: 1px solid rgba(224, 167, 88, 0.4);
+    border-radius: var(--r-md);
+    background: var(--c-warn-14);
+    border: 1px solid var(--c-warn-40);
     font-family: var(--font-mono);
     font-size: 13px;
     font-weight: 600;
@@ -5100,7 +5102,7 @@
     height: 30px;
     border-radius: 50%;
     box-sizing: border-box;
-    border: 3px solid rgba(233, 238, 242, 0.14);
+    border: 3px solid var(--c-ink-14);
     border-top-color: var(--accent-lms);
     animation: setSpin 900ms linear infinite;
     flex-shrink: 0;
@@ -5116,7 +5118,7 @@
   }
   .scan__note {
     font-size: 14px;
-    color: rgba(233, 238, 242, 0.6);
+    color: var(--ink-quiet);
     margin-top: 4px;
     text-wrap: pretty;
   }
@@ -5141,12 +5143,12 @@
     flex-shrink: 0;
   }
   .joining__mark[data-state='ok'] {
-    background: rgba(126, 214, 188, 0.16);
-    border: 1px solid rgba(126, 214, 188, 0.45);
+    background: var(--c-lms-16);
+    border: 1px solid var(--c-lms-45);
   }
   .joining__mark[data-state='error'] {
-    background: rgba(224, 167, 88, 0.16);
-    border: 1px solid rgba(224, 167, 88, 0.45);
+    background: var(--c-warn-16);
+    border: 1px solid var(--c-warn-45);
   }
   .joining__spin {
     width: 64px;
@@ -5182,7 +5184,7 @@
   .joining__note {
     font-size: 15px;
     line-height: 1.4;
-    color: rgba(233, 238, 242, 0.6);
+    color: var(--ink-quiet);
     margin-top: 7px;
     text-wrap: pretty;
   }
@@ -5199,12 +5201,12 @@
     width: 58px;
     height: 58px;
     border-radius: 50%;
-    border: 2px dashed rgba(233, 238, 242, 0.28);
+    border: 2px dashed var(--c-ink-28);
   }
   .empty__text {
     font-size: 16px;
     line-height: 1.45;
-    color: rgba(233, 238, 242, 0.62);
+    color: var(--c-ink-62);
     text-align: center;
     text-wrap: pretty;
     max-width: 36ch;
@@ -5254,7 +5256,7 @@
     bottom: 6px;
     height: 3px;
     border-radius: 2px;
-    background: rgba(233, 238, 242, 0.12);
+    background: var(--c-ink-12);
     overflow: hidden;
   }
   .dl__bar span {
@@ -5295,7 +5297,7 @@
   .doc__list { list-style: none; margin: 0; padding: 0; }
   .doc__entry {
     padding: 10px 0;
-    border-bottom: 1px solid rgba(233, 238, 242, 0.07);
+    border-bottom: 1px solid var(--ink-fill);
   }
   .doc__name { font-size: 15px; font-weight: 600; color: var(--ink); }
   .doc__licence {
@@ -5315,7 +5317,7 @@
     gap: 18px;
     padding: 14px 18px;
     min-height: 78px;
-    border-bottom: 1px solid rgba(233, 238, 242, 0.09);
+    border-bottom: 1px solid var(--c-ink-09);
   }
   .picker__head.head--wide {
     padding: 0 36px;
@@ -5339,7 +5341,7 @@
   }
   .skins--wide {
     width: 380px;
-    border-right: 1px solid rgba(233, 238, 242, 0.09);
+    border-right: 1px solid var(--c-ink-09);
   }
   .skin {
     display: flex;
@@ -5358,12 +5360,12 @@
     color: var(--ink);
   }
   .skin:active {
-    background: rgba(233, 238, 242, 0.1);
+    background: var(--ink-line);
   }
   /* Being previewed is the Display group's own accent; being in use is the
      affirm accent, which is what the check is too. One row can be both. */
   .skin.is-viewing {
-    background: rgba(200, 162, 216, 0.14);
+    background: var(--c-display-14);
     border-left-color: var(--accent-display);
   }
   .skin.is-inuse .skin__label {
@@ -5375,7 +5377,7 @@
     font-family: var(--font-mono);
     font-size: var(--t-label);
     letter-spacing: 0.08em;
-    color: rgba(233, 238, 242, 0.45);
+    color: var(--c-ink-45);
   }
   .skin__label {
     flex: 1;
@@ -5480,7 +5482,7 @@
     object-fit: contain;
     border-radius: var(--r-lg);
     background: var(--bg-well);
-    border: 1px solid rgba(233, 238, 242, 0.14);
+    border: 1px solid var(--c-ink-14);
     box-sizing: border-box;
   }
   .pane__text {
@@ -5497,14 +5499,14 @@
     font-family: var(--font-mono);
     font-size: var(--t-label);
     letter-spacing: 0.06em;
-    color: rgba(233, 238, 242, 0.55);
+    color: var(--c-ink-55);
     margin-top: 8px;
     word-break: break-word;
   }
   .pane__use {
     flex-shrink: 0;
     min-height: 60px;
-    border-radius: 14px;
+    border-radius: var(--r-14);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -5521,17 +5523,17 @@
      a button that would write what is already there. */
   .pane__use.is-inert {
     background: transparent;
-    color: rgba(233, 238, 242, 0.5);
-    border-color: rgba(233, 238, 242, 0.18);
+    color: var(--ink-tab-off);
+    border-color: var(--ink-fill-press);
   }
 
   .field {
     flex-shrink: 0;
     width: 100%;
     height: 62px;
-    border-radius: 14px;
-    background: rgba(8, 12, 16, 0.6);
-    border: 1px solid rgba(126, 214, 188, 0.45);
+    border-radius: var(--r-14);
+    background: var(--c-dark-080c10-60);
+    border: 1px solid var(--c-lms-45);
     padding: 0 18px;
     font-family: var(--font-mono);
     font-size: 17px;
@@ -5559,7 +5561,7 @@
     width: 46px;
     height: 46px;
     border: 0;
-    border-radius: 12px;
+    border-radius: var(--r-md);
     background: transparent;
     color: var(--ink-quiet);
     display: grid;
@@ -5584,9 +5586,9 @@
   .btn {
     flex: 1;
     height: 58px;
-    border-radius: 15px;
-    background: rgba(233, 238, 242, 0.07);
-    border: 1px solid rgba(233, 238, 242, 0.14);
+    border-radius: var(--r-15);
+    background: var(--ink-fill);
+    border: 1px solid var(--c-ink-14);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -5599,7 +5601,7 @@
     font-weight: 600;
   }
   .btn:active {
-    background: rgba(233, 238, 242, 0.2);
+    background: var(--c-ink-20);
   }
   .btn:disabled {
     opacity: 0.7;
@@ -5610,15 +5612,15 @@
     margin-right: 10px;
     border-radius: 50%;
     box-sizing: border-box;
-    border: 2px solid rgba(233, 238, 242, 0.2);
+    border: 2px solid var(--c-ink-20);
     border-top-color: currentColor;
     animation: setSpin 900ms linear infinite;
     flex-shrink: 0;
   }
   .btn--confirm {
     font-weight: 700;
-    background: rgba(126, 214, 188, 0.16);
-    border-color: rgba(126, 214, 188, 0.4);
+    background: var(--c-lms-16);
+    border-color: var(--c-lms-40);
     color: var(--accent-lms);
   }
   /* ADR-0132: held, not tapped - the fill shows how long is left. */
@@ -5633,12 +5635,12 @@
   .btn__hold {
     position: absolute;
     inset: 0 auto 0 0;
-    background: rgba(224, 167, 88, 0.35);
+    background: var(--c-warn-35);
     pointer-events: none;
   }
   .btn--danger {
-    background: rgba(224, 167, 88, 0.2);
-    border-color: rgba(224, 167, 88, 0.5);
+    background: var(--c-warn-20);
+    border-color: var(--c-warn-50);
     color: var(--accent-warn);
   }
 
@@ -5659,7 +5661,7 @@
     margin: 0 4px 6px;
     font-size: 14px;
     line-height: 1.4;
-    color: rgba(233, 238, 242, 0.55);
+    color: var(--c-ink-55);
     text-wrap: pretty;
   }
   .listed__actions {
@@ -5702,14 +5704,14 @@
   .row--upload {
     margin-bottom: 18px;
     border-style: dashed;
-    border-color: rgba(233, 238, 242, 0.28);
+    border-color: var(--c-ink-28);
   }
   .upload__icon {
     width: 28px;
     height: 28px;
     flex-shrink: 0;
     fill: none;
-    stroke: rgba(233, 238, 242, 0.7);
+    stroke: var(--c-ink-70);
     stroke-width: 1.8;
     stroke-linecap: round;
     stroke-linejoin: round;
@@ -5752,7 +5754,7 @@
     display: block;
     height: 6px;
     border-radius: 3px;
-    background: rgba(233, 238, 242, 0.12);
+    background: var(--c-ink-12);
     overflow: hidden;
   }
   .task__bar span {
@@ -5794,9 +5796,9 @@
     gap: 14px;
     width: 100%;
     padding: 12px 14px;
-    border-radius: 13px;
-    border: 1px solid rgba(233, 238, 242, 0.1);
-    background: rgba(255, 255, 255, 0.04);
+    border-radius: var(--r-13);
+    border: 1px solid var(--ink-line);
+    background: var(--c-white-04);
     color: inherit;
     font: inherit;
     text-align: left;
@@ -5814,7 +5816,7 @@
   .ask__keep-note {
     font-size: 13px;
     line-height: 1.4;
-    color: rgba(233, 238, 242, 0.6);
+    color: var(--ink-quiet);
   }
 
   .toast {
@@ -5825,8 +5827,8 @@
     max-width: calc(100% - 48px);
     padding: 14px 22px;
     border-radius: var(--r-pill);
-    background: rgba(8, 12, 16, 0.9);
-    border: 1px solid rgba(233, 238, 242, 0.16);
+    background: var(--c-dark-080c10-90);
+    border: 1px solid var(--c-ink-16);
     font-family: var(--font-mono);
     font-size: 13px;
     letter-spacing: 0.1em;
@@ -5901,7 +5903,7 @@
     font-weight: 700;
   }
   .check__item.is-done .check__mark {
-    background: rgba(126, 214, 188, 0.16);
+    background: var(--c-lms-16);
     color: var(--accent-lms);
   }
   .check__item.is-now .check__mark {
@@ -5955,7 +5957,7 @@
     display: flex;
     align-items: stretch;
     gap: 8px;
-    border-radius: 14px;
+    border-radius: var(--r-14);
     border: 1px solid rgba(124, 208, 176, 0.35);
     background: rgba(124, 208, 176, 0.08);
   }
@@ -5990,16 +5992,16 @@
   }
   .hwq__option {
     padding: 8px 14px;
-    border-radius: 10px;
-    border: 1px solid rgba(233, 238, 242, 0.18);
-    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--r-10);
+    border: 1px solid var(--ink-fill-press);
+    background: var(--c-white-05);
     color: var(--ink);
     font: inherit;
     font-size: 15px;
   }
   .hwq__option.is-on {
     border-color: var(--accent-lms);
-    background: rgba(126, 214, 188, 0.16);
+    background: var(--c-lms-16);
   }
   .hwq__tones {
     margin: 0;
@@ -6022,9 +6024,9 @@
   .report__copy {
     margin-left: 8px;
     padding: 2px 10px;
-    border-radius: 8px;
-    border: 1px solid rgba(233, 238, 242, 0.2);
-    background: rgba(255, 255, 255, 0.06);
+    border-radius: var(--r-sm);
+    border: 1px solid var(--c-ink-20);
+    background: var(--c-white-06);
     color: var(--ink);
     font: inherit;
     font-size: 13px;
@@ -6047,9 +6049,9 @@
     width: 100%;
     box-sizing: border-box;
     padding: 12px 14px;
-    border-radius: 12px;
-    border: 1px solid rgba(233, 238, 242, 0.16);
-    background: rgba(255, 255, 255, 0.045);
+    border-radius: var(--r-md);
+    border: 1px solid var(--c-ink-16);
+    background: var(--c-white-4_5);
     color: var(--ink);
     font: inherit;
     font-size: 16px;

@@ -479,7 +479,7 @@
   }
   .sw-scrim {
     z-index: 38;
-    background: rgba(8, 12, 16, 0.66);
+    background: var(--c-dark-080c10-66);
   }
   .scrim.is-open,
   .sw-scrim.is-open {
@@ -497,10 +497,10 @@
     right: 0;
     width: 470px;
     background: var(--bg-panel);
-    border-left: 1px solid rgba(159, 180, 232, 0.22);
+    border-left: 1px solid var(--c-bluetooth-22);
     padding: 26px 26px 28px;
     box-sizing: border-box;
-    box-shadow: -30px 0 80px rgba(0, 0, 0, 0.5);
+    box-shadow: -30px 0 80px var(--c-black-50);
     display: flex;
     flex-direction: column;
     transform: translateX(100%);
@@ -542,9 +542,9 @@
     align-items: center;
     height: 44px;
     padding: 0 18px;
-    border-radius: 11px;
+    border-radius: var(--r-11);
     background: var(--ink-fill);
-    border: 1px solid rgba(233, 238, 242, 0.16);
+    border: 1px solid var(--c-ink-16);
     font-family: var(--font-mono);
     font-size: var(--t-label);
     letter-spacing: 0.14em;
@@ -559,9 +559,9 @@
   .source {
     flex-shrink: 0;
     height: 66px;
-    border-radius: 15px;
-    background: rgba(159, 180, 232, 0.1);
-    border: 1px solid rgba(159, 180, 232, 0.28);
+    border-radius: var(--r-15);
+    background: var(--c-bluetooth-10);
+    border: 1px solid var(--c-bluetooth-28);
     display: flex;
     align-items: center;
     gap: 16px;
@@ -569,15 +569,15 @@
     margin-bottom: 16px;
   }
   .source:active {
-    background: rgba(159, 180, 232, 0.24);
+    background: var(--c-bluetooth-24);
   }
   .source__glyph,
   .sw__glyph {
     width: 40px;
     height: 40px;
-    border-radius: 9px;
-    background: rgba(242, 164, 143, 0.14);
-    border: 1px solid rgba(242, 164, 143, 0.3);
+    border-radius: var(--r-9);
+    background: var(--c-artist-14);
+    border: 1px solid var(--c-artist-30);
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -594,12 +594,12 @@
   }
   .source__glyph i:nth-child(2),
   .sw__glyph i:nth-child(2) {
-    background: rgba(242, 164, 143, 0.7);
+    background: var(--c-artist-70);
     width: 70%;
   }
   .source__glyph i:nth-child(3),
   .sw__glyph i:nth-child(3) {
-    background: rgba(242, 164, 143, 0.45);
+    background: var(--c-artist-45);
     width: 85%;
   }
   .source__text {
@@ -689,7 +689,7 @@
     transition: none;
     display: flex;
     align-items: center;
-    border-radius: 12px;
+    border-radius: var(--r-md);
     padding-right: 8px;
     /* The row swipes; the list scrolls. `pan-y` gives the browser the
        vertical gesture and leaves the horizontal one to this component,
@@ -699,7 +699,7 @@
     overflow: hidden;
   }
   .qrow.is-now {
-    --now-tint: rgba(126, 214, 188, 0.14);
+    --now-tint: var(--c-lms-14);
   }
   .qrow__hit {
     flex: 1;
@@ -713,7 +713,7 @@
        rail's own plate, which is also what keeps the background's blur out
        of this scroller's raster (Finding 059). */
     background: var(--bg-panel);
-    border-radius: 12px;
+    border-radius: var(--r-md);
     position: relative;
     z-index: 1;
     transform: translateX(var(--dx, 0px));
@@ -753,7 +753,7 @@
   .qrow__num {
     font-family: var(--font-mono);
     font-size: 14px;
-    color: rgba(233, 238, 242, 0.55);
+    color: var(--c-ink-55);
     width: 24px;
     flex-shrink: 0;
   }
@@ -763,7 +763,7 @@
   .qrow__art {
     width: 42px;
     height: 42px;
-    border-radius: 8px;
+    border-radius: var(--r-sm);
     overflow: hidden;
     position: relative;
     flex-shrink: 0;
@@ -798,7 +798,7 @@
   }
   .qrow__artist {
     font-size: 14px;
-    color: rgba(233, 238, 242, 0.55);
+    color: var(--c-ink-55);
     margin-top: 2px;
   }
   .qrow__now {
@@ -812,7 +812,7 @@
   .qrow__dur {
     font-family: var(--font-mono);
     font-size: 14px;
-    color: rgba(233, 238, 242, 0.5);
+    color: var(--ink-tab-off);
     flex-shrink: 0;
   }
   /* **Behind the row, not gone** (ADR-0062). A swipe has no accessible
@@ -827,7 +827,7 @@
     width: 96px;
     padding: 0;
     border: 0;
-    border-radius: 12px;
+    border-radius: var(--r-md);
     background: none;
     pointer-events: none;
   }
@@ -851,13 +851,13 @@
     align-items: center;
     justify-content: flex-end;
     padding-right: 22px;
-    border-radius: 12px;
-    background: rgba(242, 164, 143, 0.16);
+    border-radius: var(--r-md);
+    background: var(--c-artist-16);
     font-family: var(--font-mono);
     font-size: var(--t-label);
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: var(--accent-warm, #f2a48f);
+    color: var(--accent-warm, var(--accent-artist));
     /* Uncovered rather than faded in: it is already there, the row is
        simply on top of it. Shown only once the gesture has committed to
        being a swipe, so a scroll never flashes it. */
@@ -887,7 +887,7 @@
   .empty__glyph i {
     height: 5px;
     border-radius: 3px;
-    background: rgba(233, 238, 242, 0.7);
+    background: var(--c-ink-70);
   }
   .empty__glyph i:last-child {
     width: 26px;
@@ -899,7 +899,7 @@
   }
   .empty__text {
     font-size: 16px;
-    color: rgba(233, 238, 242, 0.55);
+    color: var(--c-ink-55);
     text-align: center;
     max-width: 360px;
     text-wrap: pretty;
@@ -913,11 +913,11 @@
     width: 660px;
     max-height: 80%;
     background: var(--bg-panel);
-    border: 1px solid rgba(126, 214, 188, 0.22);
-    border-radius: 26px;
+    border: 1px solid var(--c-lms-22);
+    border-radius: var(--r-26);
     padding: 28px 30px 30px;
     box-sizing: border-box;
-    box-shadow: 0 34px 90px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 34px 90px var(--c-black-60);
     display: flex;
     flex-direction: column;
     transform: translate(-50%, -50%) scale(0.94);
@@ -964,20 +964,20 @@
   .sw__row {
     height: 72px;
     flex-shrink: 0;
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.045);
-    border: 1px solid rgba(233, 238, 242, 0.09);
+    border-radius: var(--r-lg);
+    background: var(--c-white-4_5);
+    border: 1px solid var(--c-ink-09);
     display: flex;
     align-items: center;
     gap: 17px;
     padding: 0 20px;
   }
   .sw__row:active {
-    background: rgba(233, 238, 242, 0.16);
+    background: var(--c-ink-16);
   }
   .sw__row.is-current {
-    background: rgba(126, 214, 188, 0.12);
-    border-color: rgba(126, 214, 188, 0.34);
+    background: var(--c-lms-12);
+    border-color: var(--c-lms-34);
   }
   .sw__text {
     flex: 1;

@@ -433,7 +433,7 @@
     padding: 30px 56px 36px;
     color: var(--ink);
     background:
-      radial-gradient(130% 105% at 20% 42%, rgba(20, 33, 42, 0.72), rgba(13, 21, 28, 0.96)),
+      var(--cover-veil-deep),
       var(--bg-base);
   }
   header {
@@ -488,7 +488,7 @@
     padding: 24px 34px;
     text-align: left;
     border-radius: var(--r-card);
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--c-white-05);
     border: 1px solid var(--ink-line);
   }
   .lib img { flex-shrink: 0; }
@@ -510,8 +510,8 @@
     min-height: 56px;
     padding: 0 30px;
     border-radius: 999px;
-    border: 1px solid rgba(233, 238, 242, 0.22);
-    background: rgba(233, 238, 242, 0.06);
+    border: 1px solid var(--c-ink-22);
+    background: var(--c-ink-06);
     color: var(--ink);
     font: inherit;
     font-size: 20px;
@@ -694,7 +694,7 @@
     align-items: center;
     gap: 14px;
     padding: 12px 18px;
-    border-radius: 14px;
+    border-radius: var(--r-14);
     font-size: 20px;
     color: var(--accent-warn);
     background: color-mix(in srgb, var(--accent-warn) 12%, transparent);
@@ -746,7 +746,7 @@
     gap: 22px;
     padding: 22px 28px;
     border-radius: var(--r-card);
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--c-white-05);
     border: 1px solid var(--ink-line);
     flex-shrink: 0;
     max-width: 440px;

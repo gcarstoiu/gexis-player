@@ -63,8 +63,11 @@
   const bar = $derived(full && screen.family === 'bar');
   //: Four or more renderers (plugins add them) shrink their columns to fit -
   //: on a bar (round 2), and on the panel's full-screen waiting home, where
-  //: four 310 px columns ran off both edges at 1280 (found 2026-10-01).
-  const many = $derived((bar || full || bare) && shown.length >= 4);
+  //: four 310 px columns ran off both edges at 1280 (found 2026-10-01). And
+  //: in the library's footer, where seven 172 px columns ran off both edges
+  //: (George's photo, sofapi, 2026-11-02): with room, a column keeps its
+  //: width, so fewer than fit look as they did.
+  const many = $derived(shown.length >= 4);
   const BAR_MARK = { spotify: 56, bluetooth: 62 };
 </script>
 
@@ -108,8 +111,8 @@
     position: relative;
     height: 186px;
     flex-shrink: 0;
-    border-top: 1px solid rgba(159, 180, 232, 0.24);
-    background: rgba(20, 31, 40, 0.78);
+    border-top: 1px solid var(--c-bluetooth-24);
+    background: var(--c-dark-141f28-78);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -143,7 +146,7 @@
   }
   .is-bare .name,
   .is-bare .status {
-    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.6);
+    text-shadow: 0 1px 10px var(--c-black-60);
   }
   .row {
     display: flex;
@@ -175,7 +178,7 @@
     width: var(--wait-ring);
     height: var(--wait-ring);
     border-radius: 50%;
-    border: 2px solid rgba(233, 238, 242, 0.6);
+    border: 2px solid var(--ink-quiet);
     animation: ring 2800ms ease-out infinite;
     box-sizing: border-box;
   }
@@ -191,15 +194,15 @@
     height: var(--wait-disc);
     border-radius: 50%;
     background: var(--ink-fill);
-    border: 1px solid rgba(233, 238, 242, 0.16);
+    border: 1px solid var(--c-ink-16);
     display: flex;
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
   }
   .is-lead .disc {
-    background: rgba(126, 214, 188, 0.14);
-    border-color: rgba(126, 214, 188, 0.4);
+    background: var(--c-lms-14);
+    border-color: var(--c-lms-40);
   }
   .label {
     text-align: center;
@@ -271,7 +274,9 @@
     width: 100%;
     min-width: 0;
   }
-  .is-many .name {
+  .is-many .name,
+  .is-many .status {
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }

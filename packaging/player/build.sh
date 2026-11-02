@@ -28,7 +28,7 @@ ours=""
 # package alone when nothing depends on it any more.
 for pkg in gexis-core gexis-ui gexis-system gexis-wallpapers gexis-peppyalsa gexis-peppy-engines \
 	gexis-go-librespot gexis-squeezelite gexis-camilladsp gexis-beszel-agent gexis-beszel-hub gexis-lyrion-server gexis-plexamp \
-	gexis-nqptp gexis-shairport-sync gexis-airplay; do
+	gexis-nqptp gexis-shairport-sync gexis-airplay gexis-roon; do
 	v=$(version_of "$pkg")
 	ours="$ours, $pkg (= $v)"
 done

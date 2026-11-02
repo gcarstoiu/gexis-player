@@ -117,3 +117,48 @@ def _drop(path: Path) -> None:
         path.parent.rmdir()
     except OSError:
         pass
+
+
+#: ADR-0172: Roon Bridge sees one sound card, the loopback the Roon plugin
+#: copies into the player's output - never the DAC, which it would open past
+#: the takeover, the equaliser and a group.
+CARD_DROPIN = "gexis-card.conf"
+ASOUND = Path("/proc/asound")
+
+
+def card_nodes(card_id: str, asound: Path = ASOUND) -> tuple[str, ...]:
+    """The device nodes of the card named `card_id` (its control and its
+    first playback device), found by its name, never by an index fixed
+    anywhere; none while the card is not there (a module loaded before the
+    update that named it: the next boot brings it)."""
+    try:
+        target = (asound / card_id).readlink().name  # "card4"
+        index = int(target.removeprefix("card"))
+    except (OSError, ValueError):
+        return ()
+    return (f"/dev/snd/controlC{index}", f"/dev/snd/pcmC{index}D0p", "/dev/snd/timer")
+
+
+def card_dropin(nodes: tuple[str, ...]) -> str:
+    lines = ["# Written by gexis-core at its start (ADR-0172): the one sound card this",
+             "# unit may open. Not kept: /run goes at the next boot.",
+             "[Service]", "DevicePolicy=closed", "DeviceAllow="]
+    lines += [f"DeviceAllow={node} rw" for node in nodes]
+    return "\n".join(lines) + "\n"
+
+
+def apply_card(unit: str, card_id: str, root: Path = DROPINS, asound: Path = ASOUND) -> list[str]:
+    """`unit` granted the card `card_id` alone: `[unit]` when the drop-in
+    changed (for a reload and a restart), `[]` when it was already so."""
+    path = root / f"{unit}.d" / CARD_DROPIN
+    text = card_dropin(card_nodes(card_id, asound))
+    try:
+        if path.read_text() == text:
+            return []
+    except OSError:
+        pass
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text)
+    logger.info("permissions: %s granted the %s card (%s)", unit, card_id,
+                ", ".join(card_nodes(card_id, asound)) or "not loaded yet")
+    return [unit]

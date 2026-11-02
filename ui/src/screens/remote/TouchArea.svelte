@@ -326,8 +326,8 @@
     width: 216px;
     height: 216px;
     border-radius: 50%;
-    background: rgba(233, 238, 242, 0.06);
-    border: 1px solid rgba(233, 238, 242, 0.12);
+    background: var(--c-ink-06);
+    border: 1px solid var(--remote-touch-line);
     box-sizing: border-box;
     flex-shrink: 0;
   }
@@ -336,14 +336,14 @@
     border: 0;
     padding: 0;
     background: none;
-    border-radius: 14px;
+    border-radius: var(--r-14);
     display: grid;
     place-items: center;
     cursor: pointer;
-    color: #e9eef2;
+    color: var(--ink);
   }
   .arrow:active {
-    background: rgba(126, 214, 188, 0.18);
+    background: var(--c-lms-18);
   }
   .arrow svg {
     width: 32px;
@@ -367,7 +367,7 @@
     display: grid;
     place-items: center;
     cursor: pointer;
-    color: #e9eef2;
+    color: var(--ink);
     font: inherit;
     font-size: 16px;
     font-weight: 700;
@@ -391,13 +391,13 @@
     place-items: center;
     cursor: pointer;
     padding: 0;
-    color: #e9eef2;
+    color: var(--ink);
   }
   .corner:active {
     transform: scale(0.94);
   }
   .corner.is-on {
-    color: #7ed6bc;
+    color: var(--accent-lms);
   }
   .corner:disabled {
     opacity: 0.38;
@@ -464,7 +464,7 @@
     transform: translateX(-50%);
     display: flex;
     padding: 3px;
-    border-radius: 14px;
+    border-radius: var(--r-14);
     background: var(--remote-button-ground);
     border: 1px solid var(--remote-button-line);
   }
@@ -474,7 +474,7 @@
     top: 3px;
     width: 44px;
     height: 36px;
-    border-radius: 11px;
+    border-radius: var(--r-11);
     background: var(--remote-select);
     transition: transform var(--remote-slide);
     pointer-events: none;
@@ -483,18 +483,18 @@
     position: relative;
     width: 44px;
     height: 36px;
-    border-radius: 11px;
+    border-radius: var(--r-11);
     border: 0;
     padding: 0;
     background: none;
     display: grid;
     place-items: center;
     cursor: pointer;
-    color: rgba(233, 238, 242, 0.72);
+    color: var(--ink-muted);
     transition: color 200ms ease;
   }
   .seg.is-on {
-    color: #7ed6bc;
+    color: var(--accent-lms);
   }
   .seg svg {
     width: 19px;

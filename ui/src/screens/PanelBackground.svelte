@@ -60,7 +60,7 @@
   .weave {
     position: absolute;
     inset: -90px;
-    background: repeating-linear-gradient(38deg, var(--bg-weave-a) 0 48px, var(--bg-weave-b) 48px 96px);
+    background: repeating-linear-gradient(var(--weave-angle), var(--bg-weave-a) 0 48px, var(--bg-weave-b) 48px 96px);
     filter: blur(70px);
     transform: scale(1.14);
   }

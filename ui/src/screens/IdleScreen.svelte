@@ -74,8 +74,8 @@
   // The contour's colour; its *width* is per element, below. Transparent
   // rather than zero so the widths stay harmless when there is no picture.
 
-  const stroke = $derived(black ? 'transparent' : 'rgba(46, 57, 66, 0.92)');
-  const scrim = $derived(black ? 'rgba(11, 18, 24, 0.93)' : 'rgba(7, 11, 15, 0.06)');
+  const stroke = $derived(black ? 'transparent' : 'var(--c-dark-2e3942-92)');
+  const scrim = $derived(black ? 'var(--c-dark-0b1218-93)' : 'var(--c-dark-070b0f-06)');
 
   //: The design's own two drift boxes. With the band below, the clock group
   //: is about 640x226 and roams widely; with the weather riding along it is
@@ -303,7 +303,9 @@
 
 <svelte:window bind:innerHeight={panelHeight} bind:innerWidth={panelWidth} />
 
-<div class="idle" class:idle--bar={bar} transition:fade={{ duration: 520 }} style:--stroke={stroke} data-dpad-cover>
+<!-- ADR-0171 (George, 2026-11-01): today's look in every theme - white type
+     and a slate contour are what read on any photograph. -->
+<div class="idle theme-keep" class:idle--bar={bar} transition:fade={{ duration: 520 }} style:--stroke={stroke} data-dpad-cover>
   <!-- The picture, shared with the waiting screen (ADR-0133). -->
   <Backdrop {settings} active={!external} bind:picture bind:shown />
   {#if !external}
@@ -484,7 +486,7 @@
     height: 100vh;
     z-index: 20;
     overflow: hidden;
-    background: #0b1218;
+    background: var(--c-dark-0b1218);
   }
 
   .scrim {
@@ -505,7 +507,7 @@
     color: var(--ink);
     paint-order: stroke fill;
     -webkit-text-stroke: var(--stroke-w, 4px) var(--stroke);
-    text-shadow: 0 2px 10px rgba(7, 11, 15, 0.55);
+    text-shadow: 0 2px 10px var(--c-dark-070b0f-55);
   }
   .date,
   .day__name {
@@ -661,21 +663,21 @@
   .rule {
     width: 100%;
     height: 1px;
-    background: rgba(233, 238, 242, 0.32);
+    background: var(--c-ink-32);
     margin-top: 24px;
   }
   .rule--stretch {
     width: 1px;
     height: auto;
     align-self: stretch;
-    background: rgba(233, 238, 242, 0.26);
+    background: var(--c-ink-26);
     margin-top: 0;
     flex-shrink: 0;
   }
   .rule--tall {
     width: 1px;
     height: 150px;
-    background: rgba(233, 238, 242, 0.3);
+    background: var(--c-ink-30);
     margin-top: 0;
     flex-shrink: 0;
   }
@@ -902,7 +904,7 @@
   .bi__divider {
     width: 1px;
     height: 220px;
-    background: rgba(233, 238, 242, 0.3);
+    background: var(--c-ink-30);
     flex-shrink: 0;
   }
   .bi__today {

@@ -9,13 +9,13 @@ Schiller's *Ode to Joy* (1785). The addresses shown are examples.
 Gexis Player is a music player for the Raspberry Pi with a high-quality
 DAC; it needs a Raspberry Pi 4 or newer, and the Pi 4 is the model it is
 built and tested on. It plays your Lyrion (Logitech Media Server) library,
-Spotify Connect, AirPlay, Bluetooth and Plexamp, one at a time, and switches to
+Spotify Connect, AirPlay, Bluetooth, Plexamp and Roon, one at a time, and switches to
 whichever one you start. Several players can play the same music together,
 in sync, in several rooms (section 6). You control it
 from its own touch screen (the *panel*), from any phone or computer on the
 same network (the *phone page*), or from the apps you already use: a
-Lyrion app, Spotify, AirPlay from an iPhone, iPad or Mac, or your phone's
-Bluetooth.
+Lyrion app, Spotify, AirPlay from an iPhone, iPad or Mac, Roon, or your
+phone's Bluetooth.
 
 ## Contents
 
@@ -249,8 +249,8 @@ available*.
 
 ## 5. When another source takes over
 
-Only one source plays at a time. When you start Spotify, AirPlay, Bluetooth
-or Plexamp from your phone, that source **takes over**: Lyrion pauses, a short
+Only one source plays at a time. When you start Spotify, AirPlay, Bluetooth,
+Plexamp or Roon from your phone, that source **takes over**: Lyrion pauses, a short
 transition screen shows who took the player, and Now Playing shows the new
 source. When that session ends, the player can give itself back to Lyrion
 (*Settings → Handoff → Reclaim Lyrion when a session ends*, off by default), or
@@ -283,6 +283,30 @@ choose it as the sound output.
   above is as designed rather than as seen. Problem reports help.
 
 AirPlay is a trademark of Apple Inc., registered in the U.S. and other countries and regions.
+
+### Roon
+
+With **Roon** switched on in *Settings → Plugins*, the player is a Roon
+device. Switching it on downloads Roon Bridge, Roon Labs' own software, from
+Roon Labs; it keeps itself up to date, under Roon's terms. It plays from a
+Roon Core on the same network.
+
+- **In Roon**, under *Settings → Audio*, the player appears under its name
+  with two outputs called *Loopback PCM*: enable the top one, and name the
+  zone as you like.
+- **Now Playing and the controls**: in Roon, under *Settings → Extensions*,
+  enable *Gexis Player* with the player's name. Once Roon has played to the
+  player, Now Playing shows the title, artist, album, cover and progress, and
+  play, pause, skip and the position work from the player's screen and the
+  phone. Without the extension, Roon still plays, and the player shows only
+  that Roon is playing.
+- **The sound** goes through the player's own output at the rate Roon sends,
+  so the equaliser and groups work as for every source.
+- **The volume** is the player's own: Roon sends at full level.
+- **When another source takes over**, the player asks Roon to pause, and
+  Roon takes the player again when play is pressed in Roon.
+- **Without the plugin**, Roon can still play to the player over AirPlay
+  (see the FAQ).
 
 ## 6. Several rooms together
 
@@ -743,7 +767,7 @@ which output it is setting.
 - **DSD** plays untouched: while a DSD track plays natively, the equaliser
   stands aside, and it is back for the next PCM track.
 
-Every source plays through it - Lyrion, Spotify, AirPlay, Bluetooth and Plexamp -
+Every source plays through it - Lyrion, Spotify, AirPlay, Bluetooth, Plexamp and Roon -
 and the visualiser shows the music as it arrives, before the equaliser.
 
 ### Display — *Screen and idle*
@@ -754,6 +778,7 @@ and the visualiser shows the music as it arrives, before the equaliser.
 | Attached screen | The display in use, by its name (a TV by the name it gives). **Change** picks the screen's model from the list, by maker; it sets the layout, Standard or Bar, and which visualiser skins are offered. A screen not in the list is shown as *Other screen* with its size. A DSI screen the Pi finds by itself - the Raspberry Pi Touch Display and those built to answer as one - is shown as *Raspberry Pi Touch Display or compatible* until its model is picked. Another DSI model needs a line in the Pi's boot settings, which choosing it writes: the player restarts and asks *Keep this screen?*, and goes back by itself if the screen stays dark. A four-lane DSI model is listed only on a Pi 5 or a Compute Module: a Pi 4's display connector carries two lanes. |
 | Screen port | Which port the screen is on: *DSI*, the Pi's own display connector, when a DSI screen is connected, and the HDMI ports. A DSI screen is the screen unless an HDMI port is chosen here, which leaves the DSI screen black. The tile and its list show what is plugged into each port - the screen, another device by its name (a sound bar or receiver), *sound* when the sound goes to that port; a port with nothing connected is greyed. A change that alters the picture restarts the player and asks *Keep this screen?*. The port chosen stays the screen, even with a touch panel on the other port. **A TV can be the screen**: it runs at 1920 x 1080 (or the largest 16:9 size below it that it offers), and since it has no touch, *Keep this screen?* is answered on the phone page, as for any screen not in the list. A listed touch screen is answered on itself, and on the phone page too when the player cannot tell that its touch works. A touch panel left on the other port is switched off. A port that is not the screen shows black. If the TV crops the edges of the picture, set its picture size to *Just Scan* or *Original*. When the TV's port also carries the sound, display standby only blacks the picture, so the music goes on. On a board with one HDMI port, the row only says what is on it. |
 | Text size | How large the writing on the player's screen is: 90 % to 130 %, 100 % as it comes. The screen changes at once; Home's tiles grow with larger text. Pictures, buttons and the layout keep their size, so long titles are cut short sooner at large sizes. A phone keeps its own size. |
+| Theme | How the player looks: Deep Teal, as it comes, or one of five others - Bauhaus and Sage (light), Velvet, Ink and Gauge (dark). A theme changes the colours, the corners and the typeface of figures and labels; nothing moves or changes size. It applies at once, on the player's screen and on every phone showing this player; each player has its own. The idle screen keeps its own look, white over its picture, as do the visualiser's skins and the boot screen. |
 | Screen rotation | For a screen mounted the other way up. |
 | Screen brightness | How bright the screen's backlight is, 10 % to 100 % (100 % unless changed); applies at once. Only on a screen whose backlight the player can set: a DSI screen. |
 | Headless | Turns the player's screen off; settings that only affect the screen are hidden while it is on, the screen in use, its ports and its rotation included. |
@@ -800,7 +825,7 @@ Optional parts, each with its own switch: the **visualiser skins** for this
 screen's size, **AirPlay** (in the player already, nothing to download;
 on for a new player, off on one updated from an earlier release; marked
 *Limited testing*),
-**Plexamp**, the **Lyrion Server** and the **Beszel** monitoring agent, among
+**Plexamp**, **Roon** (Roon Bridge, downloaded from Roon Labs), the **Lyrion Server** and the **Beszel** monitoring agent, among
 others. A plugin that needs software from its maker
 downloads it when switched on. Setup offers the same plugins, and the first
 start shows each download arriving.

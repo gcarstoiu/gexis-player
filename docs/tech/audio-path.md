@@ -18,6 +18,7 @@ flowchart LR
         BA["bluealsa-aplay<br/>(Bluetooth A2DP sink)"]
         PX["Plexamp<br/>(plugin renderer)"]
         AP["Shairport Sync<br/>(AirPlay 2, plugin renderer)"]
+        RN["Roon Bridge → hw:Roon,0<br/>(plugin renderer)"]
     end
 
     subgraph ALSA["ALSA (/etc/alsa/conf.d)"]
@@ -33,6 +34,7 @@ flowchart LR
     BA -- "--pcm=output" --> OUT
     PX -- "ALSA default" --> DEF --> OUT
     AP -- "output_device output" --> OUT
+    RN -- "gexis-roon copies hw:Roon,1" --> OUT
     OW --> HW
     OUT --> HW
     OW -.-> SCOPE
@@ -95,6 +97,7 @@ each through that renderer's own control API, via an **adapter**
 | Spotify Connect | `go-librespot.service` | go-librespot local HTTP API + `/events` WebSocket on port 3678 (`adapters/spotify.py`) | `will_play`, `active` or `playing` events | `POST /player/pause`, short settle, `POST /player/stop` |
 | Bluetooth | `bluealsa-aplay.service` (with `bluealsa` and BlueZ) | BlueZ over D-Bus (`adapters/bluetooth.py`) | `MediaTransport1` or `MediaPlayer1` appearing | `Device1.Disconnect()` |
 | AirPlay (plugin, ADR-0167) | `gexis-shairport-sync.service`, with `gexis-nqptp` and the `gexis-airplay` plugin | the plugin over the socket; it reads Shairport Sync's metadata pipe and calls its D-Bus | the active-state hook asks the plugin, which sends `acquire` and lets Shairport Sync open the device on `device_freed` | `release`: D-Bus `DropSession`, then the ladder |
+| Roon (plugin, ADR-0172) | `gexis-roonbridge.service` (Roon Bridge, user `roonbridge`), with the `gexis-roon` plugin | the plugin over the socket; it reads the `Roon` loopback's state in `/proc/asound` and Roon's extension API (`python3-roonapi`) | the loopback's device 0 running: the plugin sends `acquire` and copies on `device_freed` | `release`: the copy stops, and Roon's zone is paused through the extension |
 | Plugin renderer (Plexamp) | the unit named in the plugin's manifest | JSON lines over a Unix socket (`adapters/plugin.py`, ADR-0084/0089) | the plugin sends `acquire` | the plugin is sent `release`, then the core kills the unit (ADR-0091) |
 
 Notes per renderer:
@@ -165,6 +168,20 @@ Notes per renderer:
   itself through avahi, which AirPlay 2 needs (its TXT records change while
   it runs). Covers arrive as pictures and reach the core in the contract's
   `artwork` event. No transport controls are declared yet.
+- **Roon** (ADR-0172): Roon Bridge, downloaded from Roon Labs when the
+  plugin is switched on (`gexis-fetch-component`, unpinned and over HTTPS
+  from Roon Labs' host only, the checksum of what was installed recorded;
+  ADR-0172 decision 5) and updating itself in `/opt/RoonBridge`, runs as its
+  own user with the system read-only and sees one sound card: `Roon`, a third
+  `snd-aloop` card (`enable=1,1,1 id=Loopback,Multiroom,Roon`), granted by a
+  drop-in the core writes (`plugin_permissions.apply_card`). Roon plays into
+  its device 0; the `gexis-roon` plugin copies device 1's capture side into
+  `output` with `arecord | aplay`, raw, at the format and rate Roon plays, and
+  holds the output for 10 s after Roon lets the loopback go. Roon's extension
+  gives Now Playing and play, pause, next, previous and seek; the plugin finds
+  its zone by the loopback (the zone that plays while it plays) and remembers
+  it (ADR-0172 decision 6). A player whose loaded `snd-aloop` lacks the card
+  is marked for a reboot by `gexis-system`'s install.
 - **Any renderer plugin** declares its capabilities in its `hello`
   (`docs/PLUGIN-CONTRACT.md`): acquisition events, release action, an
   optional release ladder, controls, and how its volume is handled.
@@ -645,7 +662,7 @@ leader's snapserver → network (FLAC, 32 bits) → each member's snapclient →
 ```
 
 - **The loopback** is a second card of `snd-aloop`, by its id `Multiroom`
-  (`enable=1,1 id=Loopback,Multiroom`). A player updated since its last boot
+  (`enable=1,1,1 id=Loopback,Multiroom,Roon`; the third is Roon's). A player updated since its last boot
   has the options and not the card: the core loads the module, or loads it
   again with the renderers and CamillaDSP stopped
   (`Snapcast.ensure_card`). It is never an output (`outputs.OURS`); in a

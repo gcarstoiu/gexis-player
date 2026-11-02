@@ -6,6 +6,33 @@
 Every release of Gexis Player and its notes, newest first. The player
 shows the last 10 under Settings → System → Change logs.
 
+## 1.12.0 — 2 November 2026
+
+### New
+
+- Roon, in Settings → Plugins: the player becomes a Roon device and plays what Roon sends through its own output. With the Gexis Player extension enabled in Roon (Settings → Extensions), Now Playing shows what Roon plays, with its controls.
+
+### Fixed
+
+- A tap on the visualiser closes it again.
+- Playback stops before an update installs.
+- The row of sources under the library fits the screen, however many sources there are.
+
+### Good to know
+
+- Roon Bridge is Roon Labs' software: it is downloaded from Roon Labs when Roon is switched on, and keeps itself up to date.
+
+## 1.11.0 — 1 November 2026
+
+### New
+
+- Themes, in Settings → Display → Theme: Deep Teal as before, Bauhaus and Sage (light), Velvet, Ink and Gauge (dark). A theme changes the colours, the corners and the typeface of figures and labels, on the player's screen and on every phone showing it.
+
+### Good to know
+
+- The idle screen keeps its own look in every theme, so that it reads over any picture; so do the visualiser's skins and the boot screen.
+- Roon plays to the player over AirPlay; with Compatibility mode switched on for the player in Roon, it starts at once.
+
 ## 1.10.0 — 31 October 2026
 
 ### New

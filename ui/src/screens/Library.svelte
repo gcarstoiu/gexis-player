@@ -81,10 +81,10 @@
   // The design's own: initials from the first two words, and one of four
   // tints chosen by a hash of the name, so an artist keeps the same colour.
   const TINTS = [
-    'rgba(126, 214, 188, 0.16)',
-    'rgba(159, 180, 232, 0.18)',
-    'rgba(242, 164, 143, 0.16)',
-    'rgba(233, 238, 242, 0.08)',
+    'var(--c-lms-16)',
+    'var(--c-bluetooth-18)',
+    'var(--c-artist-16)',
+    'var(--c-ink-08)',
   ];
   function initialsOf(name) {
     return (name ?? '')
@@ -674,15 +674,15 @@
   //: Anything LMS reports that is not here - and every station row - falls
   //: back to arcs in #8fc4d8.
   const RADIO_LOOK = {
-    'Radio Now Playing': ['arcs', '#7ed6bc'],
-    'My Presets': ['star', '#e0a758'],
-    'Local Radio': ['pin', '#9fb4e8'],
-    Music: ['note', '#f2a48f'],
-    Sports: ['ball', '#7ed6bc'],
+    'Radio Now Playing': ['arcs', 'var(--accent-lms)'],
+    'My Presets': ['star', 'var(--accent-warn)'],
+    'Local Radio': ['pin', 'var(--accent-bluetooth)'],
+    Music: ['note', 'var(--accent-artist)'],
+    Sports: ['ball', 'var(--accent-lms)'],
     News: ['lines', '#b0bcc4'],
-    Talk: ['mic', '#c8a2d8'],
+    Talk: ['mic', 'var(--accent-display)'],
     'By Location': ['globe', '#8fc4d8'],
-    'By Language': ['speech', '#9fb4e8'],
+    'By Language': ['speech', 'var(--accent-bluetooth)'],
     // The design lists Rss among its shapes and assigns it no tint, so it
     // takes the fallback's - inventing one would be a colour nothing chose.
     Rss: ['rss', '#8fc4d8'],
@@ -1362,9 +1362,9 @@
         <!-- ADR-0118 E: the field replaces the title; the phone types into
              it (ADR-0121). -->
         <label class="msearchhead">
-          <Glyph name="Search" ink="#e9eef2" />
+          <Glyph name="Search" ink="var(--ink)" />
           <input class="msearchhead__field" use:focusOnOpen type="search" placeholder="Type on your phone" bind:value={searchText} autocomplete="off" />
-          <span class="msearchhead__phone"><Glyph name="Phone" ink="#7ed6bc" /><span>Typing on phone</span></span>
+          <span class="msearchhead__phone"><Glyph name="Phone" ink="var(--accent-lms)" /><span>Typing on phone</span></span>
         </label>
       {:else}
         <div class="heading">
@@ -1417,7 +1417,7 @@
             {:else if look === 'favorites'}
               <span class="glyph"><Glyph name="Heart" ink="#e8a0b4" size={40} /></span>
             {:else if look === 'apps'}
-              <span class="glyph"><Glyph name="Dots" ink="#c8a2d8" size={40} /></span>
+              <span class="glyph"><Glyph name="Dots" ink="var(--accent-display)" size={40} /></span>
             {:else}
               <span class="glyph"><Glyph name="Folder" ink="#b0bcc4" size={40} /></span>
             {/if}
@@ -2207,7 +2207,7 @@
   .veil {
     position: absolute;
     inset: 0;
-    background: radial-gradient(130% 105% at 20% 42%, rgba(20, 33, 42, 0.62), rgba(13, 21, 28, 0.93));
+    background: var(--cover-veil-strong);
   }
 
   button {
@@ -2230,7 +2230,7 @@
     align-items: center;
     gap: 20px;
     padding: 0 40px;
-    border-bottom: 1px solid rgba(233, 238, 242, 0.09);
+    border-bottom: 1px solid var(--c-ink-09);
   }
   .round {
     width: 60px;
@@ -2248,7 +2248,7 @@
   .round:active,
   .round.is-pressed {
     transform: scale(0.95);
-    background: var(--ink-fill-press, rgba(233, 238, 242, 0.14));
+    background: var(--ink-fill-press, var(--c-ink-14));
   }
   .i-tiles {
     width: 22px;
@@ -2306,7 +2306,7 @@
     align-self: center;
     width: 36px;
     height: 36px;
-    border-radius: 9px;
+    border-radius: var(--r-9);
     object-fit: cover;
     flex-shrink: 0;
   }
@@ -2320,8 +2320,8 @@
     align-items: center;
     gap: 16px;
     padding: 0 20px;
-    border-radius: 18px;
-    background: rgba(233, 238, 242, 0.07);
+    border-radius: var(--r-18);
+    background: var(--ink-fill);
     border: 1.5px solid var(--accent-lms);
   }
   .msearchhead__field {
@@ -2339,7 +2339,7 @@
     caret-color: var(--accent-lms);
   }
   .msearchhead__field::placeholder {
-    color: rgba(233, 238, 242, 0.4);
+    color: var(--c-ink-40);
   }
   .msearchhead__field::-webkit-search-cancel-button {
     display: none;
@@ -2353,7 +2353,7 @@
     font-size: 13px;
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: rgba(126, 214, 188, 0.9);
+    color: var(--c-lms-90);
   }
 
   .content {
@@ -2389,7 +2389,7 @@
     grid-template-columns: repeat(5, minmax(0, 1fr));
   }
   .card {
-    --card: 233, 238, 242;
+    --card: var(--c-ink-rgb);
     border-radius: var(--r-card);
     background: rgba(var(--card), 0.1);
     border: 1px solid rgba(var(--card), 0.3);
@@ -2415,19 +2415,19 @@
     border-color: rgba(var(--card), 0.55);
     transform: scale(0.975);
   }
-  .card--browse { --card: 126, 214, 188; }
-  .card--artists { --card: 159, 180, 232; }
-  .card--playlists { --card: 242, 164, 143; }
+  .card--browse { --card: var(--c-lms-rgb); }
+  .card--artists { --card: var(--c-bluetooth-rgb); }
+  .card--playlists { --card: var(--c-artist-rgb); }
   .card--radio {
-    background: rgba(233, 238, 242, 0.055);
-    border-color: rgba(233, 238, 242, 0.16);
+    background: var(--c-ink-5_5);
+    border-color: var(--c-ink-16);
   }
   .card--settings {
-    background: rgba(233, 238, 242, 0.04);
-    border-color: rgba(233, 238, 242, 0.12);
+    background: var(--c-ink-04);
+    border-color: var(--c-ink-12);
   }
   .card--settings:active {
-    background: rgba(233, 238, 242, 0.16);
+    background: var(--c-ink-16);
   }
   .card__name {
     display: block;
@@ -2451,9 +2451,9 @@
     margin-top: 8px;
     white-space: nowrap;
   }
-  .card--browse .card__count { color: rgba(126, 214, 188, 0.85); }
-  .card--artists .card__count { color: rgba(159, 180, 232, 0.9); }
-  .card--playlists .card__count { color: rgba(242, 164, 143, 0.9); }
+  .card--browse .card__count { color: var(--c-lms-85); }
+  .card--artists .card__count { color: var(--c-bluetooth-90); }
+  .card--playlists .card__count { color: var(--c-artist-90); }
   .card--radio .card__count { color: var(--ink-muted); }
   .card--settings .card__count { color: var(--ink-quiet); }
 
@@ -2483,11 +2483,11 @@
   .cards--more::-webkit-scrollbar { display: none; }
   .card--mymusic { --card: 143, 196, 216; }
   .card--favorites { --card: 232, 160, 180; }
-  .card--apps { --card: 200, 162, 216; }
+  .card--apps { --card: var(--c-display-rgb); }
   .card--other { --card: 176, 188, 196; border-style: dashed; border-color: rgba(176, 188, 196, 0.4); background: rgba(176, 188, 196, 0.08); }
   .card--mymusic .card__count { color: rgba(143, 196, 216, 0.9); }
   .card--favorites .card__count { color: rgba(232, 160, 180, 0.9); }
-  .card--apps .card__count { color: rgba(200, 162, 216, 0.9); }
+  .card--apps .card__count { color: var(--c-display-90); }
   .card--other .card__count { color: rgba(176, 188, 196, 0.95); }
   .card.is-busy { opacity: 0.6; }
 
@@ -2512,14 +2512,14 @@
     height: 34px;
     border-radius: 50%;
     flex-shrink: 0;
-    background: rgba(159, 180, 232, 0.95);
+    background: var(--c-bluetooth-95);
   }
   .glyph--dots i:nth-child(2) {
-    background: rgba(159, 180, 232, 0.6);
+    background: var(--c-bluetooth-60);
     margin-left: -11px;
   }
   .glyph--dots i:nth-child(3) {
-    background: rgba(159, 180, 232, 0.32);
+    background: var(--c-bluetooth-32);
     margin-left: -11px;
   }
   .glyph--list {
@@ -2545,11 +2545,11 @@
   }
   .glyph--list > span:nth-child(2) i,
   .glyph--list > span:nth-child(2) b {
-    background: rgba(242, 164, 143, 0.7);
+    background: var(--c-artist-70);
   }
   .glyph--list > span:nth-child(3) i,
   .glyph--list > span:nth-child(3) b {
-    background: rgba(242, 164, 143, 0.45);
+    background: var(--c-artist-45);
   }
   .glyph--waves {
     align-items: center;
@@ -2559,21 +2559,21 @@
     width: 14px;
     height: 14px;
     border-radius: 50%;
-    background: rgba(233, 238, 242, 0.85);
+    background: var(--c-ink-85);
     flex-shrink: 0;
   }
   .glyph--waves b {
     width: 14px;
     height: 26px;
-    border-right: 3px solid rgba(233, 238, 242, 0.6);
-    border-radius: 0 26px 26px 0;
+    border-right: 3px solid var(--ink-quiet);
+    border-radius: 0 var(--r-26) var(--r-26) 0;
     flex-shrink: 0;
     box-sizing: content-box;
   }
   .glyph--waves b:last-child {
     height: 38px;
-    border-right-color: rgba(233, 238, 242, 0.34);
-    border-radius: 0 38px 38px 0;
+    border-right-color: var(--ink-lyric-off);
+    border-radius: 0 var(--r-38) var(--r-38) 0;
     margin-left: -2px;
   }
   /* The design centres a 30px square in the 44px glyph row: 7px down. */
@@ -2588,7 +2588,7 @@
     right: 0;
     height: 3px;
     border-radius: 2px;
-    background: rgba(233, 238, 242, 0.38);
+    background: var(--c-ink-38);
   }
   .glyph--sliders b:nth-of-type(1) { top: 14px; }
   .glyph--sliders b:nth-of-type(2) { top: 27px; }
@@ -2597,7 +2597,7 @@
     width: 9px;
     height: 9px;
     border-radius: 50%;
-    background: rgba(233, 238, 242, 0.92);
+    background: var(--c-ink-92);
     z-index: 1;
   }
   .glyph--sliders i:nth-of-type(1) { left: 17px; top: 11px; }
@@ -2618,12 +2618,12 @@
     font-size: var(--t-label);
     letter-spacing: 0.22em;
     text-transform: uppercase;
-    color: rgba(233, 238, 242, 0.62);
+    color: var(--c-ink-62);
   }
   .new__rule {
     flex: 1;
     height: 1px;
-    background: rgba(233, 238, 242, 0.12);
+    background: var(--c-ink-12);
   }
   .new__mask {
     /* Its own layer, so the mask is rasterised once rather than with every
@@ -2685,7 +2685,7 @@
     display: block;
     width: var(--tile);
     height: var(--tile);
-    border-radius: 14px;
+    border-radius: var(--r-14);
     overflow: hidden;
     position: relative;
     background: var(--bg-well);
@@ -2746,7 +2746,7 @@
     align-items: center;
     gap: 10px;
     flex-shrink: 0;
-    border-radius: 14px;
+    border-radius: var(--r-14);
     padding-right: 12px;
   }
   .plrow.is-busy {
@@ -2764,9 +2764,9 @@
   .plrow__glyph {
     width: 54px;
     height: 54px;
-    border-radius: 11px;
-    background: rgba(242, 164, 143, 0.14);
-    border: 1px solid rgba(242, 164, 143, 0.3);
+    border-radius: var(--r-11);
+    background: var(--c-artist-14);
+    border: 1px solid var(--c-artist-30);
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -2776,14 +2776,14 @@
     flex-shrink: 0;
   }
   .plrow__glyph--radio {
-    background: rgba(233, 238, 242, 0.055);
-    border-color: rgba(233, 238, 242, 0.16);
+    background: var(--c-ink-5_5);
+    border-color: var(--c-ink-16);
     align-items: center;
     padding: 0;
   }
   .plrow__glyph--radio.is-station {
-    background: rgba(126, 214, 188, 0.12);
-    border-color: rgba(126, 214, 188, 0.3);
+    background: var(--c-lms-12);
+    border-color: var(--c-lms-30);
   }
   .i-waves {
     display: flex;
@@ -2794,7 +2794,7 @@
     width: 9px;
     height: 9px;
     border-radius: 50%;
-    background: rgba(233, 238, 242, 0.85);
+    background: var(--c-ink-85);
     flex-shrink: 0;
   }
   /* A mast with two arcs over it - the design's tower. */
@@ -2833,11 +2833,11 @@
     background: var(--accent-artist);
   }
   .plrow__glyph i:nth-child(2) {
-    background: rgba(242, 164, 143, 0.7);
+    background: var(--c-artist-70);
     width: 70%;
   }
   .plrow__glyph i:nth-child(3) {
-    background: rgba(242, 164, 143, 0.45);
+    background: var(--c-artist-45);
     width: 85%;
   }
   .plrow__text {
@@ -2872,7 +2872,7 @@
   .playall--wide {
     height: 56px;
     padding: 0 26px;
-    border-radius: 15px;
+    border-radius: var(--r-15);
     flex-shrink: 0;
   }
   .row--wide {
@@ -2891,9 +2891,9 @@
   .shuffle {
     width: 62px;
     height: 56px;
-    border-radius: 15px;
-    background: rgba(233, 238, 242, 0.06);
-    border: 1px solid rgba(233, 238, 242, 0.14);
+    border-radius: var(--r-15);
+    background: var(--c-ink-06);
+    border: 1px solid var(--c-ink-14);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2914,7 +2914,7 @@
     width: 24px;
     height: 2.5px;
     border-radius: 2px;
-    background: rgba(233, 238, 242, 0.9);
+    background: var(--c-ink-90);
   }
   .i-shuffle i:nth-child(1) {
     top: 3px;
@@ -2929,16 +2929,16 @@
     right: 0;
     width: 7px;
     height: 7px;
-    border-right: 2.5px solid rgba(233, 238, 242, 0.9);
+    border-right: 2.5px solid var(--c-ink-90);
   }
   .i-shuffle b:nth-of-type(1) {
     top: 0;
-    border-top: 2.5px solid rgba(233, 238, 242, 0.9);
+    border-top: 2.5px solid var(--c-ink-90);
     transform: rotate(45deg);
   }
   .i-shuffle b:nth-of-type(2) {
     bottom: 0;
-    border-bottom: 2.5px solid rgba(233, 238, 242, 0.9);
+    border-bottom: 2.5px solid var(--c-ink-90);
     transform: rotate(-45deg);
   }
   .artistpage__buttons {
@@ -2977,9 +2977,9 @@
     min-height: 0;
   }
   .pane {
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.045);
-    border: 1px solid rgba(233, 238, 242, 0.09);
+    border-radius: var(--r-18);
+    background: var(--c-white-4_5);
+    border: 1px solid var(--c-ink-09);
     display: flex;
     flex-direction: column;
     min-width: 0;
@@ -2993,7 +2993,7 @@
     align-items: center;
     gap: 10px;
     padding: 0 16px;
-    border-bottom: 1px solid rgba(233, 238, 242, 0.08);
+    border-bottom: 1px solid var(--c-ink-08);
   }
   .pane__label,
   .pane__count {
@@ -3003,7 +3003,7 @@
   .pane__label {
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: rgba(233, 238, 242, 0.5);
+    color: var(--ink-tab-off);
   }
   .pane__count {
     color: var(--ink-quiet);
@@ -3044,11 +3044,11 @@
     align-items: center;
     height: 46px;
     flex-shrink: 0;
-    border-radius: 10px;
+    border-radius: var(--r-10);
     padding-right: 10px;
   }
   .row.is-on {
-    background: rgba(159, 180, 232, 0.14);
+    background: var(--c-bluetooth-14);
   }
   /* **The row whose actions are revealed is the selection** (George,
      2026-10-14: "everywhere we have a reveal, the first tap that shows it
@@ -3056,7 +3056,7 @@
   .row.is-revealed,
   .track.is-revealed,
   .poprow.is-revealed {
-    background: rgba(126, 214, 188, 0.16);
+    background: var(--c-lms-16);
   }
   /* A track's own artist under its title, when it is not the album's. */
   .row__two,
@@ -3082,7 +3082,7 @@
   .row.is-revealed .row__label,
   .track.is-revealed .track__title,
   .poprow.is-revealed .poprow__title {
-    color: #7ed6bc;
+    color: var(--accent-lms);
   }
   .row__hit {
     flex: 1;
@@ -3129,9 +3129,9 @@
   .act {
     width: 40px;
     height: 40px;
-    border-radius: 12px;
-    background: rgba(233, 238, 242, 0.06);
-    border: 1px solid rgba(233, 238, 242, 0.14);
+    border-radius: var(--r-md);
+    background: var(--c-ink-06);
+    border: 1px solid var(--c-ink-14);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -3142,8 +3142,8 @@
     transform: scale(0.95);
   }
   .act--play {
-    background: rgba(126, 214, 188, 0.13);
-    border-color: rgba(126, 214, 188, 0.32);
+    background: var(--c-lms-13);
+    border-color: var(--c-lms-32);
   }
   .act__play {
     width: 0;
@@ -3163,7 +3163,7 @@
   .act__queue i {
     height: 2.5px;
     border-radius: 2px;
-    background: rgba(233, 238, 242, 0.9);
+    background: var(--c-ink-90);
   }
   .act__queue i:last-child {
     width: 9px;
@@ -3178,7 +3178,7 @@
     content: '';
     position: absolute;
     border-radius: 2px;
-    background: rgba(233, 238, 242, 0.9);
+    background: var(--c-ink-90);
   }
   .act__plus::before {
     left: 0;
@@ -3208,11 +3208,11 @@
     transform: translate(-50%, -50%);
     width: 640px;
     background: var(--bg-panel);
-    border: 1px solid rgba(126, 214, 188, 0.22);
-    border-radius: 26px;
+    border: 1px solid var(--c-lms-22);
+    border-radius: var(--r-26);
     padding: 28px 32px 30px;
     box-sizing: border-box;
-    box-shadow: 0 34px 90px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 34px 90px var(--c-black-60);
   }
   .sheet__head {
     margin-bottom: 22px;
@@ -3248,15 +3248,15 @@
   .sheet__row {
     height: 62px;
     flex-shrink: 0;
-    border-radius: 14px;
-    background: rgba(233, 238, 242, 0.06);
+    border-radius: var(--r-14);
+    background: var(--c-ink-06);
     display: flex;
     align-items: center;
     gap: 16px;
     padding: 0 22px;
   }
   .sheet__row:active {
-    background: rgba(233, 238, 242, 0.16);
+    background: var(--c-ink-16);
   }
   .sheet__name {
     flex: 1;
@@ -3285,7 +3285,7 @@
     max-width: 700px;
     padding: 12px 22px;
     border-radius: var(--r-pill);
-    background: rgba(8, 12, 16, 0.86);
+    background: var(--c-dark-080c10-86);
     border: 1px solid var(--ink-line);
     font-size: var(--t-body-sm);
     color: var(--ink);
@@ -3380,7 +3380,7 @@
     border-radius: 50%;
     overflow: hidden;
     position: relative;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+    box-shadow: inset 0 0 0 1px var(--c-white-14);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -3422,7 +3422,7 @@
     padding: 10px 0;
     box-sizing: border-box;
     overflow: hidden;
-    border-left: 1px solid rgba(233, 238, 242, 0.07);
+    border-left: 1px solid var(--ink-fill);
   }
   .rail__key {
     width: 44px;
@@ -3432,16 +3432,16 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 7px;
+    border-radius: var(--r-7);
     background: none;
     font-family: var(--font-mono);
     font-size: 13px;
     font-weight: 700;
     letter-spacing: 0.04em;
-    color: rgba(233, 238, 242, 0.9);
+    color: var(--c-ink-90);
   }
   .rail__key:active {
-    background: rgba(159, 180, 232, 0.24);
+    background: var(--c-bluetooth-24);
   }
   /* The D-pad's ring would cover a letter this small: the letter itself
      lights up instead (George, 2026-10-31). */
@@ -3452,7 +3452,7 @@
   }
   /* A letter with no artists stays visible but inert (design/screens.md). */
   .rail__key.is-empty {
-    color: rgba(233, 238, 242, 0.22);
+    color: var(--c-ink-22);
   }
 
   /* The artist page: name and discography only until Phase 8. */
@@ -3500,7 +3500,7 @@
     align-items: center;
     gap: 14px;
     padding: 0 12px;
-    border-radius: 10px;
+    border-radius: var(--r-10);
     flex-shrink: 0;
   }
   .poprow__hit {
@@ -3560,8 +3560,8 @@
   .skel span {
     display: block;
     height: 13px;
-    border-radius: 4px;
-    background: rgba(233, 238, 242, 0.09);
+    border-radius: var(--r-4);
+    background: var(--c-ink-09);
     animation: libSkel 1500ms ease-in-out infinite;
   }
   .skel span:nth-child(1) { width: 100%; }
@@ -3637,9 +3637,9 @@
     align-items: center;
     height: 28px;
     padding: 0 11px;
-    border-radius: 8px;
-    background: rgba(159, 180, 232, 0.14);
-    border: 1px solid rgba(159, 180, 232, 0.3);
+    border-radius: var(--r-sm);
+    background: var(--c-bluetooth-14);
+    border: 1px solid var(--c-bluetooth-30);
     font-size: 14px;
     color: var(--accent-bluetooth);
     white-space: nowrap;
@@ -3721,7 +3721,7 @@
   .release__count {
     font-size: var(--t-micro);
     letter-spacing: 0.14em;
-    color: rgba(126, 214, 188, 0.78);
+    color: var(--c-lms-78);
   }
   /* A wrapping grid, not a sideways scroller. The design is
      `repeat(auto-fill, minmax(132px, 1fr))` with an 18px/16px gap: every
@@ -3749,7 +3749,7 @@
     display: block;
     width: 100%;
     aspect-ratio: 1;
-    border-radius: 11px;
+    border-radius: var(--r-11);
     overflow: hidden;
     position: relative;
     background: var(--bg-well);
@@ -3842,14 +3842,14 @@
   .albumpage__meta {
     font-family: var(--font-mono);
     font-size: var(--t-meta);
-    color: rgba(233, 238, 242, 0.62);
+    color: var(--c-ink-62);
     margin-top: 8px;
   }
   .playall {
     height: 58px;
     border-radius: var(--r-lg);
-    background: rgba(126, 214, 188, 0.14);
-    border: 1px solid rgba(126, 214, 188, 0.36);
+    background: var(--c-lms-14);
+    border: 1px solid var(--c-lms-36);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -3898,9 +3898,9 @@
     align-items: center;
     gap: 14px;
     height: 52px;
-    border-radius: 14px;
-    background: rgba(233, 238, 242, 0.05);
-    border: 1px solid rgba(233, 238, 242, 0.12);
+    border-radius: var(--r-14);
+    background: var(--c-ink-05);
+    border: 1px solid var(--c-ink-12);
     padding: 0 18px;
     flex-shrink: 0;
   }
@@ -3915,9 +3915,9 @@
     align-items: center;
     height: 36px;
     padding: 0 15px;
-    border: 1px solid rgba(159, 180, 232, 0.35);
-    border-radius: 9px;
-    background: rgba(159, 180, 232, 0.16);
+    border: 1px solid var(--c-bluetooth-35);
+    border-radius: var(--r-9);
+    background: var(--c-bluetooth-16);
     font-family: var(--font-mono);
     font-size: var(--t-label-sm);
     letter-spacing: 0.1em;
@@ -3948,8 +3948,8 @@
     text-transform: uppercase;
     padding: 6px 13px;
     border-radius: var(--r-pill);
-    background: rgba(126, 214, 188, 0.14);
-    border: 1px solid rgba(126, 214, 188, 0.3);
+    background: var(--c-lms-14);
+    border: 1px solid var(--c-lms-30);
     color: var(--accent-lms);
   }
 
@@ -3986,8 +3986,8 @@
   .skelrow {
     flex-shrink: 0;
     height: 60px;
-    border-radius: 14px;
-    background: rgba(233, 238, 242, 0.05);
+    border-radius: var(--r-14);
+    background: var(--c-ink-05);
     animation: libSkel 1500ms ease-in-out infinite;
   }
   .skelrow:nth-child(2) { animation-delay: 90ms; }
@@ -4013,8 +4013,8 @@
     box-sizing: border-box;
     height: 96px;
     padding: 0 26px;
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--r-18);
+    background: var(--c-white-05);
     border: 1px solid var(--ink-line);
     text-align: left;
     min-width: 0;
@@ -4034,7 +4034,7 @@
   .rcard__meta {
     font-family: var(--font-mono);
     font-size: 16px;
-    color: rgba(233, 238, 242, 0.62);
+    color: var(--c-ink-62);
     flex-shrink: 0;
   }
 
@@ -4045,7 +4045,7 @@
     box-sizing: border-box;
     width: 46px;
     height: 46px;
-    border-radius: 13px;
+    border-radius: var(--r-13);
     background: color-mix(in srgb, var(--tint) 14%, transparent);
     border: 1px solid color-mix(in srgb, var(--tint) 30%, transparent);
     display: flex;
@@ -4114,11 +4114,11 @@
 
   /* mic */
   .rglyph--mic { width: 16px; height: 21px; }
-  .rglyph--mic i:nth-child(1) { left: 4px; top: 0; width: 8px; height: 12px; border-radius: 4px; }
+  .rglyph--mic i:nth-child(1) { left: 4px; top: 0; width: 8px; height: 12px; border-radius: var(--r-4); }
   .rglyph--mic i:nth-child(2) {
     left: 1px; top: 9px; width: 14px; height: 7px; background: none;
     border: 2px solid currentColor; border-top-color: transparent;
-    border-radius: 0 0 8px 8px;
+    border-radius: 0 0 var(--r-sm) var(--r-sm);
   }
   .rglyph--mic i:nth-child(3) { left: 50%; bottom: 0; width: 2px; height: 4px; transform: translateX(-50%); }
 
@@ -4135,7 +4135,7 @@
   .rglyph--speech { width: 20px; height: 18px; }
   .rglyph--speech i:nth-child(1) {
     left: 0; top: 0; width: 20px; height: 14px; background: none;
-    border: 2px solid currentColor; border-radius: 6px;
+    border: 2px solid currentColor; border-radius: var(--r-6);
   }
   .rglyph--speech i:nth-child(2) {
     left: 4px; bottom: 0; width: 6px; height: 6px;
@@ -4178,7 +4178,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    border-bottom: 1px solid rgba(233, 238, 242, 0.08);
+    border-bottom: 1px solid var(--c-ink-08);
     margin-bottom: 8px;
   }
   .tracks__label,
@@ -4189,10 +4189,10 @@
   .tracks__label {
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: rgba(233, 238, 242, 0.5);
+    color: var(--ink-tab-off);
   }
   .tracks__count {
-    color: rgba(233, 238, 242, 0.62);
+    color: var(--c-ink-62);
     margin-left: auto;
   }
   .tracks__list {
@@ -4217,7 +4217,7 @@
     display: flex;
     align-items: center;
     padding-right: 10px;
-    border-radius: 10px;
+    border-radius: var(--r-10);
   }
   /* The row is the hit target; the actions sit beside it when revealed, as
      on every other track list. */
@@ -4234,7 +4234,7 @@
   .track__num {
     font-family: var(--font-mono);
     font-size: var(--t-meta);
-    color: rgba(233, 238, 242, 0.62);
+    color: var(--c-ink-62);
     width: 26px;
     flex-shrink: 0;
     text-align: left;
@@ -4253,7 +4253,7 @@
   .track__time {
     font-family: var(--font-mono);
     font-size: 16px;
-    color: rgba(233, 238, 242, 0.62);
+    color: var(--c-ink-62);
     flex-shrink: 0;
   }
 

@@ -101,7 +101,7 @@
     align-items: center;
     justify-content: center;
     padding: 22px;
-    background: rgba(8, 12, 16, 0.86);
+    background: var(--c-dark-080c10-86);
   }
   .card {
     width: 100%;
@@ -112,10 +112,10 @@
     flex-direction: column;
     gap: 20px;
     padding: 28px;
-    border-radius: 22px;
+    border-radius: var(--r-xl);
     background: var(--bg-panel);
-    border: 1px solid rgba(233, 238, 242, 0.14);
-    box-shadow: 0 30px 70px rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--c-ink-14);
+    box-shadow: 0 30px 70px var(--c-black-50);
     color: var(--ink);
   }
   .title {
@@ -159,28 +159,28 @@
     font-variant-numeric: tabular-nums;
   }
   .item.is-done .item__state {
-    color: #7ed6bc;
+    color: var(--accent-lms);
   }
   .item.is-failed .item__state {
-    color: #e0a758;
+    color: var(--accent-warn);
   }
   .bar {
     height: 6px;
     border-radius: 3px;
-    background: rgba(233, 238, 242, 0.1);
+    background: var(--ink-line);
     overflow: hidden;
   }
   .bar span {
     display: block;
     height: 100%;
     border-radius: 3px;
-    background: #7ed6bc;
+    background: var(--accent-lms);
     transition: width 400ms ease;
   }
   .bar--waiting span {
     width: 30% !important;
     animation: settleWait 1600ms ease-in-out infinite;
-    background: rgba(126, 214, 188, 0.5);
+    background: var(--c-lms-50);
   }
   @media (max-height: 480px) {
     .settle { padding: 10px; }
@@ -203,11 +203,11 @@
     min-width: 140px;
     padding: 0 22px;
     height: 54px;
-    border-radius: 15px;
+    border-radius: var(--r-15);
     font-size: 17px;
     font-weight: 600;
-    color: #7ed6bc;
-    background: rgba(126, 214, 188, 0.14);
-    border: 1px solid rgba(126, 214, 188, 0.45);
+    color: var(--accent-lms);
+    background: var(--c-lms-14);
+    border: 1px solid var(--c-lms-45);
   }
 </style>

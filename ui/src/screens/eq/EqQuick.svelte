@@ -143,7 +143,7 @@
 <style>
   .divider {
     height: 1px;
-    background: rgba(233, 238, 242, 0.1);
+    background: var(--ink-line);
     margin: 26px 0 22px;
   }
   .top {
@@ -167,18 +167,18 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: rgba(233, 238, 242, 0.72);
+    color: var(--ink-muted);
   }
   .is-amber {
-    color: #e0a758 !important;
+    color: var(--accent-warn) !important;
   }
   .edit {
     height: 58px;
     padding: 0 18px 0 22px;
-    border-radius: 15px;
+    border-radius: var(--r-15);
     box-sizing: border-box;
-    background: rgba(233, 238, 242, 0.07);
-    border: 1px solid rgba(233, 238, 242, 0.14);
+    background: var(--ink-fill);
+    border: 1px solid var(--c-ink-14);
     display: flex;
     align-items: center;
     gap: 12px;
@@ -191,18 +191,18 @@
   .edit__chev {
     width: 9px;
     height: 9px;
-    border-right: 2.5px solid rgba(233, 238, 242, 0.6);
-    border-top: 2.5px solid rgba(233, 238, 242, 0.6);
+    border-right: 2.5px solid var(--ink-quiet);
+    border-top: 2.5px solid var(--ink-quiet);
     transform: rotate(45deg);
     margin-left: -2px;
   }
   .power {
     height: 58px;
     padding: 0 12px;
-    border-radius: 15px;
+    border-radius: var(--r-15);
     box-sizing: border-box;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(233, 238, 242, 0.1);
+    background: var(--c-white-05);
+    border: 1px solid var(--ink-line);
     display: flex;
     align-items: center;
     gap: 14px;
@@ -224,12 +224,12 @@
   .switch {
     width: 60px;
     height: 34px;
-    border-radius: 17px;
+    border-radius: var(--r-17);
     position: relative;
     box-sizing: border-box;
     display: block;
-    background: rgba(233, 238, 242, 0.08);
-    border: 1px solid rgba(233, 238, 242, 0.16);
+    background: var(--c-ink-08);
+    border: 1px solid var(--c-ink-16);
   }
   .switch span {
     position: absolute;
@@ -239,16 +239,16 @@
     height: 26px;
     border-radius: 50%;
     display: block;
-    background: rgba(233, 238, 242, 0.6);
+    background: var(--ink-quiet);
     transition: left 140ms ease;
   }
   .switch.is-on {
-    background: rgba(126, 214, 188, 0.32);
-    border-color: rgba(126, 214, 188, 0.5);
+    background: var(--c-lms-32);
+    border-color: var(--c-lms-50);
   }
   .switch.is-on span {
     left: 29px;
-    background: #7ed6bc;
+    background: var(--accent-lms);
   }
 
   .chips {
@@ -272,14 +272,14 @@
     width: 1px;
     align-self: stretch;
     margin: 10px 4px;
-    background: rgba(233, 238, 242, 0.16);
+    background: var(--c-ink-16);
     flex-shrink: 0;
   }
   .chip {
     flex-shrink: 0;
     height: 56px;
     padding: 0 22px;
-    border-radius: 14px;
+    border-radius: var(--r-14);
     box-sizing: border-box;
     display: flex;
     align-items: center;
@@ -288,20 +288,20 @@
     font-size: 17px;
     font-weight: 600;
     white-space: nowrap;
-    background: rgba(233, 238, 242, 0.07);
-    border: 1px solid rgba(233, 238, 242, 0.14);
+    background: var(--ink-fill);
+    border: 1px solid var(--c-ink-14);
     color: var(--ink);
   }
   .chip.is-sel {
-    background: rgba(126, 214, 188, 0.16);
-    border-color: rgba(126, 214, 188, 0.55);
-    color: #7ed6bc;
+    background: var(--c-lms-16);
+    border-color: var(--c-lms-55);
+    color: var(--accent-lms);
   }
   .chip__dot {
     width: 7px;
     height: 7px;
     border-radius: 50%;
-    background: #e0a758;
+    background: var(--accent-warn);
     flex-shrink: 0;
   }
   .note {
@@ -309,7 +309,7 @@
     line-height: 1.4;
     margin-top: 16px;
     text-wrap: pretty;
-    color: rgba(233, 238, 242, 0.6);
+    color: var(--ink-quiet);
   }
 
   /* -- the bar's tray: its second band -- */
@@ -330,10 +330,10 @@
     text-transform: uppercase;
     width: 40px;
     text-align: left;
-    color: rgba(233, 238, 242, 0.72);
+    color: var(--ink-muted);
   }
   .power__state.is-on {
-    color: #7ed6bc;
+    color: var(--accent-lms);
   }
   .bartray__mid {
     flex: 1;
@@ -350,7 +350,7 @@
   .bartray .chip {
     height: 60px;
     padding: 0 24px;
-    border-radius: 15px;
+    border-radius: var(--r-15);
     font-size: 18px;
   }
   .bartray .rule {

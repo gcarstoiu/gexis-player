@@ -65,7 +65,7 @@
     position: fixed;
     inset: 0;
     z-index: 11;
-    background: var(--bg-panel, #0b1014);
+    background: var(--bg-panel, var(--c-dark-0b1014));
   }
   .dash__page {
     position: absolute;
@@ -87,17 +87,17 @@
     gap: 14px;
     padding: 0 96px;
     text-align: center;
-    color: var(--ink, #e9eef2);
+    color: var(--ink, var(--ink));
   }
   .dash__title { font-size: 24px; font-weight: 700; }
-  .dash__why { max-width: 760px; font-size: 18px; line-height: 1.4; color: rgba(233, 238, 242, 0.72); }
+  .dash__why { max-width: 760px; font-size: 18px; line-height: 1.4; color: var(--ink-muted); }
   .dash__close {
     margin-top: 6px;
     height: 48px;
     padding: 0 28px;
-    border: 1px solid rgba(233, 238, 242, 0.24);
+    border: 1px solid var(--c-ink-24);
     border-radius: 999px;
-    background: rgba(233, 238, 242, 0.06);
+    background: var(--c-ink-06);
     color: inherit;
     font: inherit;
     font-size: 17px;
@@ -122,9 +122,9 @@
   .tab__face {
     width: 30px;
     height: 84px;
-    border-radius: 14px 0 0 14px;
-    background: rgba(11, 16, 20, 0.78);
-    border: 1px solid rgba(233, 238, 242, 0.22);
+    border-radius: var(--r-14) 0 0 var(--r-14);
+    background: var(--c-dark-0b1014-78);
+    border: 1px solid var(--c-ink-22);
     border-right: 0;
     display: grid;
     place-items: center;
@@ -133,7 +133,7 @@
     width: 18px;
     height: 18px;
     fill: none;
-    stroke: rgba(233, 238, 242, 0.9);
+    stroke: var(--c-ink-90);
     stroke-width: 2.2;
     stroke-linecap: round;
   }

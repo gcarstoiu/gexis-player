@@ -788,6 +788,13 @@ async def main() -> None:
     except OSError as exc:
         regranted = []
         logger.warning("permissions: not written: %s", exc)
+    # ADR-0172: Roon Bridge, where the Roon plugin is installed, sees its
+    # loopback card alone.
+    if Path("/usr/lib/systemd/system/gexis-roonbridge.service").exists():
+        try:
+            regranted += plugin_permissions.apply_card("gexis-roonbridge.service", outputs.ROON_CARD)
+        except OSError as exc:
+            logger.warning("permissions: Roon Bridge's card not written: %s", exc)
     if regranted:
         subprocess.run(["systemctl", "daemon-reload"], check=False, capture_output=True)
         subprocess.run(["systemctl", "try-restart", *regranted], check=False, capture_output=True)
@@ -2837,6 +2844,8 @@ async def main() -> None:
                "pointer_style": None, "listenbrainz_token": None,
                # Text size: read by the panel as it draws (George, 2026-10-14).
                "text_size": None,
+               # ADR-0171: the theme, read by the panel and phones as they draw.
+               "theme": None,
                # ADR-0158 D5: the DSI panel's backlight, at once.
                "brightness": lambda value: standby_module.set_brightness(value),
                # ADR-0156: read where they are used - the address by the

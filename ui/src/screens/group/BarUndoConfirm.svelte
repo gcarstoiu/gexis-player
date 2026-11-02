@@ -39,7 +39,7 @@
     position: absolute;
     inset: 0;
     z-index: 40;
-    background: rgba(8, 12, 16, 0.62);
+    background: var(--bg-scrim);
   }
   .confirm {
     position: absolute;
@@ -49,11 +49,11 @@
     z-index: 41;
     width: 640px;
     background: var(--bg-panel);
-    border: 1px solid rgba(233, 238, 242, 0.14);
-    border-radius: 22px;
+    border: 1px solid var(--mark-line);
+    border-radius: var(--r-xl);
     padding: 26px;
     box-sizing: border-box;
-    box-shadow: 0 34px 90px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 34px 90px var(--c-black-60);
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -65,7 +65,7 @@
   .body {
     font-size: 18px;
     line-height: 1.45;
-    color: rgba(233, 238, 242, 0.72);
+    color: var(--ink-muted);
     text-wrap: pretty;
   }
   .buttons {
@@ -77,10 +77,10 @@
   .btn {
     height: 60px;
     padding: 0 22px;
-    border-radius: 15px;
+    border-radius: var(--r-15);
     box-sizing: border-box;
     background: var(--ink-fill);
-    border: 1px solid rgba(233, 238, 242, 0.14);
+    border: 1px solid var(--mark-line);
     color: var(--ink);
     display: flex;
     align-items: center;
