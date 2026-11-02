@@ -1,0 +1,101 @@
+# ADR-0173: a release built on GitHub's arm64 machines, natively, from its
+# tag, with the same make targets and scripts as a local build. Phase 27's
+# trial: v1.12.0 built as R2D2 built it, nothing published. What it measures
+# is the time and the disk, and what it built is compared with r1.12.0's.
+name: Release build
+
+on:
+  push:
+    branches: [ph-github-builds]
+    paths: [.github/workflows/release.yml]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Tag or commit to build
+        default: v1.12.0
+
+permissions:
+  contents: read
+
+# A release's run is never cancelled by a later push (BUILD-TRAPS: a
+# cancelled run counted as failed).
+concurrency:
+  group: release-build-${{ inputs.ref || 'v1.12.0' }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Packages and image
+    # Pinned, not -latest: ubuntu-latest moves to 26.04 in November 2026.
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 330
+    env:
+      REF: ${{ inputs.ref || 'v1.12.0' }}
+    steps:
+      # The caches start empty: everything comes from upstream (ADR-0042, "a
+      # build that has never seen the cache has to work").
+      - name: The machine
+        run: |
+          for v in GEXIS_BUILD_CACHE=cache/downloads GEXIS_DEB_CACHE=cache/debs TRIAL=trial; do
+            mkdir -p "$RUNNER_TEMP/${v#*=}"; echo "${v%%=*}=$RUNNER_TEMP/${v#*=}" >> "$GITHUB_ENV"
+          done
+          { uname -m; nproc; free -h; df -h; docker version --format '{{.Server.Version}}'; } | tee "$RUNNER_TEMP/trial/machine.txt"
+
+      # The image (5.2 GB), pi-gen's work (8.9 GB) and the copies out need
+      # more than the 14 GB the runner promises.
+      - name: Free disk
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup \
+            /usr/local/share/boost /usr/local/share/swift /usr/local/julia* /opt/hostedtoolcache \
+            /usr/local/share/powershell /usr/local/share/chromium /usr/lib/jvm /opt/microsoft /opt/google
+          docker image prune -af >/dev/null
+          df -h / | tee "$TRIAL/disk-after-freeing.txt"
+
+      # Used space on / every 10 s, for the peak.
+      - name: Watch the disk
+        run: nohup sh -c 'while :; do echo "$(date +%s) $(df -B1 --output=used / | tail -1)"; sleep 10; done' > "$TRIAL/disk.log" 2>&1 &
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.REF }}
+          fetch-depth: 0 # package versions come from each package's last commit
+          submodules: true
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+
+      - name: Packages
+        run: make packages
+
+      - name: Image
+        run: make -o packages -o ui image
+
+      - name: Verify the image
+        run: image/verify-image.sh image/deploy/*-gexis-player*.img | tee "$TRIAL/verify-image.txt"
+
+      - name: Compress the image
+        run: |
+          img=$(ls image/deploy/*-gexis-player*.img)
+          start=$(date +%s)
+          xz -T0 -6 -c "$img" > "$TRIAL/gexis-player.img.xz"
+          echo "xz: $(( $(date +%s) - start ))s, $(stat -c %s "$TRIAL/gexis-player.img.xz") bytes" | tee "$TRIAL/xz.txt"
+          rm -f "$TRIAL/gexis-player.img.xz"
+
+      - name: Gather what is compared
+        if: always()
+        run: |
+          cp image/deploy/*.info image/deploy/build.log "$TRIAL/" 2>/dev/null || true
+          (cd packaging/out && sha256sum *.deb) > "$TRIAL/debs.sha256" 2>/dev/null || true
+          ls -l image/deploy packaging/out > "$TRIAL/outputs.txt" 2>&1 || true
+          git describe --tags --always --dirty > "$TRIAL/describe.txt"
+          sort -k2 -n "$TRIAL/disk.log" | tail -1 | awk '{printf "peak used on /: %.1f GB\n", $2 / 1e9}' | tee "$TRIAL/disk-peak.txt"
+          df -h / | tee -a "$TRIAL/disk-peak.txt"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: trial-${{ github.run_id }}
+          path: ${{ env.TRIAL }}
+          retention-days: 30
