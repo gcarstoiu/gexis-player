@@ -1711,3 +1711,26 @@ asked again with these numbers, and George chose three.
 **Rule:** lay a screen out at the page the kiosk gives it - its size divided
 by `GEXIS_SCREEN_SCALE`, at that device scale - and measure before any number
 goes into a question for George.
+
+**89. A guard checked from the callers it knew** (2026-11-02, Phase 26).
+ADR-0170 (2026-10-30) closed a hole: a plugin calling the core from
+127.0.0.1 passed for the panel, so the panel was made to prove itself with a
+token kept per boot in `/run/gexis/panel-token`. It was checked as built:
+the kiosk's page sent the token with every request and every panel request
+was answered; a loopback call without it was refused; `gexis-park.service`,
+the one script outside the page that the ADR named, was given the token. It
+shipped in 1.10.0 and 1.11.0. On 2026-11-02 George reported that a tap on
+the visualiser no longer closed it; sofapi's log showed eight `POST /touch`
+answered `403`. The visualiser's driver reports touches itself, from its
+own window, and had never been given the token. Reading the code for other
+callers found a second: the updater's stop before an install (`POST
+/renderers/park?stop=all`), refused too and caught as an error, so updates
+went on with playback running (not seen on a device). Both read the token
+now, and `test_every_script_on_the_device_that_calls_the_panel_s_routes_sends_the_token`
+derives the panel-only routes from `wsserver.py` and fails for any script
+under `image/` or `core/updater/` that calls one without reading the token;
+it failed on the old code.
+**Rule:** when a route gains a guard, find its callers by searching for the
+route across the repository - scripts, units, the updater - not only the
+page that prompted it, and keep the list in a test.
+

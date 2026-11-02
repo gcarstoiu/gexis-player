@@ -11,10 +11,12 @@ block) and `docs/LESSONS.md`. The steps themselves are in
   and the notes are core's last change - a documents fix committed after them
   and tagged built core as `1.3.1+git67`. A fix found after the notes goes in
   *before* them (reorder the unpushed commits), then the tag.
-- **A cancelled run blocks the release PR** (1.5.0, 2026-10-24): pushing
-  `next` again cancels the run on the release commit, and `main`'s ruleset
-  counts a cancelled *Core tests* as failed, though the PR's own run passed.
-  Re-run it (`gh run rerun <id>`), or push `next` once.
+- **A cancelled run blocks the release PR** (1.5.0, 2026-10-24; again 1.12.0,
+  2026-11-02, from the HANDOFF commit merged into `next`): pushing `next`
+  again cancels the run on the release commit, and `main`'s ruleset counts a
+  cancelled *Core tests* as failed, though the PR's own run passed. **Push
+  `next` again only once the release PR's checks have finished**; if a run
+  was cancelled, re-run it (`gh run rerun <id>`).
 
 **Building**
 - **Clear space with `make prune`, never `make clean`**: `clean` destroys the

@@ -24,45 +24,31 @@ phases; change it when a phase opens, closes or moves, and show George first. Hi
 signature): Phase 26, Roon, with three fixes (the visualiser's tap and the
 updater's stop sending the panel token, ADR-0170 *Two callers missed*; the
 row of sources under the library narrowed to fit), built on 1.11.0 (themes,
-Phase 25, serial 62). Notes approved by George. **PR #92 open** for George
-to merge (it carries 1.11.0's commits; PR #91 is 1.11.0 alone). Image
+Phase 25, serial 62). Notes approved by George; PRs #91 and #92 merged
+by George (2026-11-02). Image
 `image/deploy/2026-11-02-gexis-player-v1.12.0.img` (160 checks passed);
-build output `~/projects/gexis-release-out/r1.12.0`; worktree
-`~/projects/gexis-player-r1.12.0` (and `-r1.11.0`, to remove after the
-merges). Stable still 1.10.0 until George promotes.
+build output `~/projects/gexis-release-out/r1.12.0`. Stable still 1.10.0
+until George promotes.
 
-**Stable: 1.10.0** (2026-10-31: Testing
-serial 61, Stable serial 12, each read back with a good signature; the image
-downloaded through the README's link, its checksum matching). PR #90 merged
-by George (2026-11-01). 1.10.0 carries Phase 24 (the plugin catalogue, one
-store for every plugin, plugins that ask for more), the fixes from George's
-two tests on 2026-10-31, the phone dialogs' fix and Vite 8.3.3. Image
-`image/deploy/2026-10-31-gexis-player-v1.10.0.img` (152 checks passed);
-build output `~/projects/gexis-release-out/r1.10.0`. Stable was promoted
-without the two measurements (George; to-dos `ph22-measure`, `eq-measure`).
-**R2D2's `/` fills up**: Docker's containerd store keeps images on `/`, not
-in `/home/docker`, and pi-gen rebuilds its 1.16 GB build image on every
-image build, about 1.7 GB at a build's peak; check `df -h /` before one
-(4.7 GB free on 2026-11-01, after the clean-up).
+**Stable: 1.10.0** (2026-10-31, Stable serial 12; promoted without the
+two measurements, to-dos `ph22-measure`, `eq-measure`); build output
+`~/projects/gexis-release-out/r1.10.0`. **R2D2's `/` fills up**: Docker's
+containerd store keeps images on `/`, not in `/home/docker`, and pi-gen
+rebuilds its 1.16 GB build image on every image build, about 1.7 GB at a
+build's peak; check `df -h /` before one (4.6 GB free on 2026-11-02, after
+the clean-up).
 
-**Phase 24, the plugin catalogue, closed 2026-10-31** with 1.10.0
-(`docs/DEVELOPMENT.md`; its story is in the archive). The catalogue is
-`gcarstoiu/gexis-plugins` (local copy `~/projects/gexis-plugins`; published
-with `tools/publish.sh` and
-`GEXIS_CATALOGUE_GNUPGHOME=~/projects/gexis-catalogue-key`), at serial 5:
-TV remote (HDMI-CEC) 0.1.1 listed (#12), its source public at
-`gcarstoiu/gexis-tv-remote` (local copy `~/projects/gexis-tv-remote`;
-ADR-0170, *Published and listed*); the samples
-(`gcarstoiu/gexis-sample-plugins`) withdrawn. The catalogue key's master
-and revocation certificate still wait in
-`~/projects/gexis-catalogue-key-for-george` until George has them, then
-that folder is deleted. **Not yet seen on a player:** the visualiser's
-window put back after a real drop of the TV's output (ADR-0147, *Amended
-2026-10-31*); the store on a bar; a new player's setup writing its plugin
-record, and Remove with *Keep* off for one of ours (ADR-0169). George's
-phone test of the dialogs is still owed (to-do `fix-remote-dialogs-test`).
-The mocked-screen checks (`~/projects/scratch/dpad`, `~/projects/scratch/ph24`)
-build from `~/projects/gexis-player-next` unless `WT` names another worktree.
+**The plugin catalogue** (Phase 24, closed 2026-10-31):
+`gcarstoiu/gexis-plugins` (local `~/projects/gexis-plugins`; `tools/publish.sh`
+with `GEXIS_CATALOGUE_GNUPGHOME=~/projects/gexis-catalogue-key`), serial 5,
+TV remote 0.1.1 listed. The catalogue key's master and revocation
+certificate wait in `~/projects/gexis-catalogue-key-for-george` until George
+has them. Not yet seen on a player: the visualiser back after a real drop of
+the TV's output; the store on a bar; setup writing a plugin record; Remove
+with *Keep* off (ADR-0147, ADR-0169); George's phone test of the dialogs
+(to-do `fix-remote-dialogs-test`). The mocked-screen checks
+(`~/projects/scratch/dpad`, `ph24`, `ph26/sources`, `ph26/blog`) build from
+`~/projects/gexis-player-next` unless `WT` names another worktree.
 
 **Phases 25 (themes) and 26 (Roon) closed 2026-11-02** (George: satisfied
 with Roon, nothing more measured; one release with everything). Roon's
@@ -86,29 +72,24 @@ adapter is `gcarstoiu/gexis-airplay` (local copy `~/projects/gexis-airplay`).
 **Open:** the test with an Apple device (to-do `ph23-test`), then T1-T9 to
 George and the tag removed.
 
-**Phase 22, multiroom for every source**, in every release since 1.8.0 and
-on Stable with 1.10.0;
-[ADR-0166](docs/decisions/0166-multiroom-for-every-source.md) all confirmed
-by George; he found the group in sync before the promotion (2026-10-31).
-**Open:** the measurement session (at 192 kHz the bar lost sync over Wi-Fi;
-a card's own delay, USB or optical, is measured there too); the Home
-Assistant integration's join and unjoin (its `multiroom` branch,
-`9744bb3`), released after the player's; back and forth between Lyrion-app
-grouping and the player's. The tests and the build's story are in the
-archive (2026-10-28).
+**Phase 22, multiroom for every source**, on Stable with 1.10.0
+([ADR-0166](docs/decisions/0166-multiroom-for-every-source.md)). **Open:**
+the measurement session (at 192 kHz the bar lost sync over Wi-Fi); the Home
+Assistant integration's join and unjoin (its `multiroom` branch, `9744bb3`),
+released after the player's; Lyrion-app grouping back and forth with the
+player's.
 
 **The release key** moved to `~/projects/gexis-release-key` (George,
 2026-10-24): every release command sets
 `GEXIS_RELEASE_GNUPGHOME=~/projects/gexis-release-key`; the scripts default
 to `~/.gnupg-gexis-release`, which no longer exists.
 
-**The players** (2026-11-01): sofapi on the themes preview (core
-`1.10.0+git9.da56e56`, UI and player `1.10.0+git12.a36666b`, from
-`ph-themes`: the idle screen keeping today's look, George) with
-`tv-remote` 0.1.1, DevTools off, its preview packages in `~/gexis-pc`; the
-other three on 1.9.1 through their updaters (2026-10-29); all four on
-Testing, where 1.10.0 is offered. sofapi and the bar grouped; AirPlay on at
-sofapi and guestpi. Each has its own Lyrion server.
+**The players** (2026-11-02): sofapi on preview packages from `ph-roon`
+(core and system `1.11.0+git13.f93d3d2`, UI `1.11.0+git1.f946515`, Roon
+0.2.1, in `~/gexis-pc`), its reboot marker set, Roon's extension enabled in
+George's Roon; the other three last seen on 1.9.1 through their updaters
+(2026-10-29). All four on Testing, which offers 1.12.0. sofapi and the bar
+grouped; AirPlay on at sofapi and guestpi. Each has its own Lyrion server.
 
 **The test venv imports the core from `~/projects/gexis-player-next`** (an
 editable install): in another worktree run the suite with `PYTHONPATH=src`
@@ -136,21 +117,16 @@ against a local copy, so losing that folder means re-uploading every OS file.
   *"Glass is too young now"* - **remind him at the beginning of 2027** and
   measure it again (to-do `glass-revisit-2027`).
 
-**The Home Assistant integration** (Phase 19, closed 2026-10-25):
-`gcarstoiu/gexis-player-homeassistant` at 0.5.0 (2026-10-27: the card as the
-phone remote, the equaliser's switch and setting, seeking, Fixed mute, the
-app's registration fix; local copy
-`~/projects/gexis-player-homeassistant`, tests on `~/projects/ha-venv`; a
-Home Assistant 2026.10.3 in Docker, `~/projects/scratch/ha-test`). **HACS's
-default list**: hacs/default#12691 (from George's fork `gcarstoiu/default`),
-every automated check passed; it waits for HACS's maintainers - do not ask
-them for a review (their template).
+**The Home Assistant integration**: `gcarstoiu/gexis-player-homeassistant`
+0.5.0 (local `~/projects/gexis-player-homeassistant`, tests on
+`~/projects/ha-venv`). **HACS's default list**: hacs/default#12691 waits for
+HACS's maintainers - do not ask them for a review (their template).
 
 **Phases 20 and 21 closed 2026-10-27** (the archive has their state). Left
 from Phase 20: the measurement through a card (to-do `eq-measure`, at a time
 George picks).
 
-After themes, Roon (26), then 27-31 in order, each ADR first
+Next, Phase 27 (room correction for the bass), then 28-31 in order, each ADR first
 (`docs/DEVELOPMENT.md`, the IDs there); MPD parked (ADR-0151). **Raspberry
 Pi Imager** (ADR-0159, a task): Imager's own list stays open as it is
 (George, 2026-10-24).
@@ -160,16 +136,17 @@ in Claude's memory, not here) holds the open items with their detail.
 
 **Routine clean-up** (`docs/ROUTINE-CLEANUP.md`, George 2026-10-12): after
 every merged release PR, otherwise weekly on Sunday evening. **Last run:
-2026-11-01, after 1.10.0** (/home 218 -> 233 GB free, / 3.7 -> 4.7 GB).
+2026-11-02, after 1.12.0** (/home 214 -> 232 GB free, / 3.6 -> 4.6 GB).
 
 ## Phases
 
-Closed: 0-21 and 24 (13 with letters a-f). Phases are numbered
+Closed: 0-21 and 24-26 (13 with letters a-f). Phases are numbered
 consecutively without letters, each with a stable ID (George, 2026-10-13);
 20 (the equaliser) and 21 (the phone remote) closed 2026-10-27 with 1.7.0,
-24 (the plugin catalogue) 2026-10-31 with 1.10.0; 22 (multiroom) and 23
-(AirPlay 2, limited testing) on Stable with work open; 25 (themes) in
-progress, then 26 (Roon), 27-28 (room correction), 29-31; MPD parked. `docs/DEVELOPMENT.md`
+24 (the plugin catalogue) 2026-10-31 with 1.10.0, 25 (themes) and 26
+(Roon) 2026-11-02 with 1.11.0 and 1.12.0; 22 (multiroom) and 23 (AirPlay 2,
+limited testing) on Stable with work open; next 27-28 (room correction),
+29-31; MPD parked. `docs/DEVELOPMENT.md`
 holds each phase's acceptance criteria.
 
 ## Machines
