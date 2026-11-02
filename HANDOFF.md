@@ -61,7 +61,10 @@ plugin off and on, Roon Bridge's own update. sofapi runs preview packages
 from `ph-roon` (in `~/gexis-pc`) and has the reboot marker set; the next
 update reboots it once. **Next:** Phase 27, releases built on GitHub
 (`ph-github-builds`, added by George 2026-11-02; ADR-0173 accepted, decisions
-1-3; the trial build of v1.12.0 first); then 28, room
+1-3), on its branch and worktree `~/projects/gexis-player-github-builds`. The
+trial passed (Finding 140: v1.12.0 built on GitHub in 27 minutes, its OS
+packages identical to r1.12.0's); next, the `inputs` mirror, then the release
+workflow; then 28, room
 correction for the bass. **Open, small:** `gen_personalise.py` out of step since Phase 23;
 the mocked Settings → Display showed two *Screen port* rows
 (`screen_port`, `screen_port_info`), not yet looked at on a player.
