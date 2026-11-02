@@ -183,6 +183,21 @@ The traps are in `docs/BUILD-TRAPS.md`.
   the current pins only, each file's licence checked and listed. Chosen over
   GitHub's build cache and over the upstreams alone. ADR-0042's deferred
   mirror is built here.
+
+  Then, with the list of 146 files seen first (2026-11-02):
+  - the source archives of the two GPL binaries we redistribute
+    (go-librespot, CamillaDSP) join it, as GPL-3.0 asks of whoever passes a
+    binary on;
+  - the four packages built from a git clone by commit (squeezelite,
+    peppyalsa, nqptp, shairport-sync) build from GitHub's archive of that
+    commit, through the cache and so the mirror. Their Debian revisions rise,
+    so the next release carries new versions of the four.
+
+  `packaging/inputs.tsv` lists every file with its licence; a release build
+  fails on a download it does not list. The workflow fills its empty cache
+  from the mirror before it builds, so `fetch-cached.sh` is unchanged: it is
+  an input of the skin packs, and editing it would give each pack a new
+  version for every player to download again.
 - **Decision 3, R2D2's build machinery removed afterwards** (2026-11-02), as
   proposed: once the first release built on GitHub is out and verified,
   the warm pi-gen container, its work volume and the build images go. A

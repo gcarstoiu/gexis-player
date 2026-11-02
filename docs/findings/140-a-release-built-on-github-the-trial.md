@@ -72,3 +72,43 @@ after removing preinstalled toolchains. The build's peak was 56.2 GB used,
   runner. It stays, since only 14 GB is promised.
 - **`verify-image.sh` always has the download cache on GitHub**, so the
   Plexamp check always runs there.
+
+## The whole chain, unsigned (2026-11-02, later)
+
+**Scope:** run 41525285578 on `ph-github-builds` (commit 52b77c0): the
+branch built as a release, with the `inputs` mirror, the published parts
+read from GitHub, the four packages built from source archives, and the
+release's parts built unsigned (`build.sh --unsigned`). Nothing uploaded;
+the parts compared with r1.12.0's.
+
+| Step | Time |
+|---|---|
+| The mirror into the empty cache (152 files, 2.12 GB) | 59 s |
+| The 123 published parts' indexes, each proven by the release key, and the published skin packs and wallpapers | 79 s |
+| Packages | 179 s |
+| Image | 420 s |
+| The parts, unsigned, and the image's `xz` | 376 s |
+| The whole job | about 19 min |
+
+- **Every download came from the mirror**: nothing from upstream, and none
+  the list lacks.
+- **The skin packs and wallpapers were the published files**, not rebuilt:
+  the packages took 179 s against 644 s in the trial.
+- **The tested set**: 1,020 packages (136 Raspberry Pi, 884 Debian), all
+  already on GitHub, none to upload.
+- **The parts**:
+  - **skins** came out as r1.12.0's own part, `skins-67e037cab00f`;
+  - **ours** has 18 packages, 13 already published. The 5 new ones are the
+    four from source archives and the branch's `gexis-player`;
+  - **rpi and Debian** got new names with no new package. Their indexes
+    are r1.12.0's apart from `Filename` lines:
+    - Debian, 3 lines: a file r1.12.0's part held itself is now referred
+      to in that part;
+    - Raspberry Pi, 31 lines: the same for 4 files, and 27 now taken from
+      another published part holding the same file, which R2D2's method,
+      limited to parts built there, could not use.
+- **nqptp and shairport-sync from archives** still report 1.2.9 and 5.6.2.
+  Without `.git` they take the version from `configure.ac` instead of `git
+  describe`, which gave the same at their tags. The bytes differ from the
+  `-1` builds.
+- **`verify-image.sh`** passed every check; the disk's peak was 58.1 GB.

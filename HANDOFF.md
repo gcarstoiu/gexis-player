@@ -59,13 +59,21 @@ cause not established (0.2.1 logs the pause's answer and the loopback's
 states); not measured: bit-perfect, rates above 44.1 kHz, a group, the
 plugin off and on, Roon Bridge's own update. sofapi runs preview packages
 from `ph-roon` (in `~/gexis-pc`) and has the reboot marker set; the next
-update reboots it once. **Next:** Phase 27, releases built on GitHub
+update reboots it once. **In progress:** Phase 27, releases built on GitHub
 (`ph-github-builds`, added by George 2026-11-02; ADR-0173 accepted, decisions
-1-3), on its branch and worktree `~/projects/gexis-player-github-builds`. The
-trial passed (Finding 140: v1.12.0 built on GitHub in 27 minutes, its OS
-packages identical to r1.12.0's); next, the `inputs` mirror, then the release
-workflow; then 28, room
-correction for the bass. **Open, small:** `gen_personalise.py` out of step since Phase 23;
+1-3), on its branch and worktree `~/projects/gexis-player-github-builds`, not
+yet merged into `next`. Done there (Finding 140): the trial; the `inputs`
+mirror (a pre-release, 152 files listed in `packaging/inputs.tsv`, uploaded
+from R2D2 with `packaging/inputs.sh publish`); the four cloned sources from
+pinned archives (new revisions); earlier releases read from GitHub
+(`packaging/release/published.py`); `sign.sh`, `publish.sh --upload` and
+`--sign`; `.github/workflows/release.yml`, whose whole chain ran unsigned on
+the branch in 19 minutes. **Not yet tried:** the upload job, `--sign` and
+attestations (they run on a release tag), previews by `workflow_dispatch`
+(needs the workflow on `main`), the four rebuilt packages on a player. Check a
+workflow parses before pushing it (`~/projects/ha-venv/bin/python` has PyYAML):
+a `: ` in a one-line `run:` failed one push. Then 28, room correction for the
+bass. **Open, small:** `gen_personalise.py` out of step since Phase 23;
 the mocked Settings → Display showed two *Screen port* rows
 (`screen_port`, `screen_port_info`), not yet looked at on a player.
 
