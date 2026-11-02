@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-11-01 (on R2D2).
+Last updated: 2026-11-02 (on R2D2).
 
 ## Start here
 
@@ -20,13 +20,16 @@ and the ideas as Must / Should / Could. It follows `docs/DEVELOPMENT.md`'s
 phases; change it when a phase opens, closes or moves, and show George first. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**1.11.0 on Testing** (2026-11-01, serial 62, read back with a good
-signature): Phase 25, themes, with the idle screen keeping today's look and
-the FAQ's Roon over AirPlay; notes approved by George. PR #91 open for George
-to merge; Stable still 1.10.0 until George promotes. Image
-`image/deploy/2026-11-01-gexis-player-v1.11.0.img` (152 checks passed); build
-output `~/projects/gexis-release-out/r1.11.0`; worktree
-`~/projects/gexis-player-r1.11.0`.
+**1.12.0 on Testing** (2026-11-02, serial 63, read back with a good
+signature): Phase 26, Roon, with three fixes (the visualiser's tap and the
+updater's stop sending the panel token, ADR-0170 *Two callers missed*; the
+row of sources under the library narrowed to fit), built on 1.11.0 (themes,
+Phase 25, serial 62). Notes approved by George. **PR #92 open** for George
+to merge (it carries 1.11.0's commits; PR #91 is 1.11.0 alone). Image
+`image/deploy/2026-11-02-gexis-player-v1.12.0.img` (160 checks passed);
+build output `~/projects/gexis-release-out/r1.12.0`; worktree
+`~/projects/gexis-player-r1.12.0` (and `-r1.11.0`, to remove after the
+merges). Stable still 1.10.0 until George promotes.
 
 **Stable: 1.10.0** (2026-10-31: Testing
 serial 61, Stable serial 12, each read back with a good signature; the image
@@ -61,30 +64,20 @@ phone test of the dialogs is still owed (to-do `fix-remote-dialogs-test`).
 The mocked-screen checks (`~/projects/scratch/dpad`, `~/projects/scratch/ph24`)
 build from `~/projects/gexis-player-next` unless `WT` names another worktree.
 
-**Now: Phase 25, themes** (`ph-themes`, worktree
-`~/projects/gexis-player-themes`, pushed up to the ADR; local since), started
-2026-11-01. [ADR-0171](docs/decisions/0171-themes.md) accepted (George: six
-themes built in, one per player, the row in Display with Deep Teal the
-default). **Built, not yet on a player**: the design's rule as
-`ui/src/lib/themeRule.js`, `ui/scripts/themes.mjs` writing `themes.css`
-(checked against the design by the build); today's colours and corners
-through tokens - Deep Teal pixel-identical on 101 mocked screens (panel at
-the 10", 7" and TV sizes, bar, phone); the monos from fontsource; a core test
-against new literals. The harness: `~/projects/scratch/ph25/` (`run.sh`,
-`capture.py`, `compare.py`; `THEME`, `COVER`, `EQ` for the mocked core; do
-not edit `run.sh` while a capture runs). The equaliser stays as the rule
-gives it on the light themes, and the idle screen keeps today's look
-(George, 2026-11-01). **Open**: a preview on
-sofapi, after George's OK; `gen_personalise.py` out of step since Phase 23
-(the first-use page's header says so).
-
-**Also now: Phase 26, Roon** (`ph-roon`, worktree
-`~/projects/gexis-player-roon`), started 2026-11-01 (George).
-[ADR-0172](docs/decisions/0172-roon.md) accepted: Roon Bridge as a plugin
-(fetched on switch-on, Roon's own updates, a user of its own), through a
-third `snd-aloop` card into `pcm.output`, Now Playing by Roon's extension API.
-Roon over AirPlay already plays since 1.10.0 (classic AirPlay; Roon's
-*Compatibility mode*; FAQ on `fix-roon-airplay`).
+**Phases 25 (themes) and 26 (Roon) closed 2026-11-02** (George: satisfied
+with Roon, nothing more measured; one release with everything). Roon's
+plugin is `gcarstoiu/gexis-roon` (local `~/projects/gexis-roon`), 0.2.1
+released with its asset and pinned in `packaging/roon/pins.sh`; Roon's
+extension through Debian's `python3-roonapi`. **Left open** (ADR-0172,
+*Built*): Roon took the output back eight seconds after Lyrion took it, the
+cause not established (0.2.1 logs the pause's answer and the loopback's
+states); not measured: bit-perfect, rates above 44.1 kHz, a group, the
+plugin off and on, Roon Bridge's own update. sofapi runs preview packages
+from `ph-roon` (in `~/gexis-pc`) and has the reboot marker set; the next
+update reboots it once. **Not started:** Phase 27, room correction for the
+bass. **Open, small:** `gen_personalise.py` out of step since Phase 23;
+the mocked Settings → Display showed two *Screen port* rows
+(`screen_port`, `screen_port_info`), not yet looked at on a player.
 
 **Phase 23, AirPlay 2** (`ph-airplay`), in every release since 1.9.0 and on
 Stable with 1.10.0, marked *Limited testing* (no Apple device yet).

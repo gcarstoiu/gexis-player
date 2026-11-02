@@ -3588,6 +3588,10 @@ installs through the upload's checks and sandbox and offers listed updates.
 
 **ID:** `ph-themes` · numbered 25 on 2026-10-29, brought forward before room correction with the plugin catalogue (George); 28 from 2026-10-26 (27 from 2026-10-25, 23 earlier that day, 22 from 2026-10-21, 21 from 2026-10-20, 20 from 2026-10-19, 18 from 2026-10-15, 17 from 2026-10-14, 16 from 2026-10-13; was 14).
 
+**Closed 2026-11-02** (George, with Phase 26), in 1.11.0, with the idle
+screen kept as it was in every theme (his look on sofapi); criteria 1-4 met
+(ADR-0171, *Built*).
+
 **Started 2026-11-01** (George), on `ph-themes` from `next`, with Claude
 Design's handover of 2026-10-29 unpacked over `design/`;
 [ADR-0171](decisions/0171-themes.md) accepted the same day (George: six
@@ -3624,6 +3628,11 @@ that is settled.
 ### Phase 26 — Roon
 
 **ID:** `ph-roon` · added 2026-11-01 as 26, right after themes (George).
+
+**Closed 2026-11-02** (George: satisfied with Roon, released and closed
+with nothing more measured), in 1.12.0. Criteria 1-3 and 5 met, 4 on sofapi
+with a Roon Core; what was not measured, and one takeover left open, are in
+ADR-0172, *Built*.
 
 **Started 2026-11-01** (George), on `ph-roon` from `next`, while Phase 25's
 preview waits for his look; [ADR-0172](decisions/0172-roon.md) accepted the
