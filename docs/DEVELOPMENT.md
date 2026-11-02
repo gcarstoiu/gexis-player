@@ -2369,7 +2369,7 @@ the ALSA default.
 
 ### Phase 11a — The library answers for itself (moved)
 
-Now **Phase 30** (`ph-library`), with the open phases after the release.
+Now **Phase 31** (`ph-library`), with the open phases after the release.
 
 ### Phase 12 — Plugins that fetch their software on the device
 
@@ -2859,7 +2859,7 @@ per file on Pis other than 4 GB, and temperatures with a case (HARDWARE.md).
 
 ### Phase 13f — Lyrion's own menus, plugins included
 
-**Closed 2026-10-12 for the release; George's look moved to Phase 31** (`ph-lyrion-menus`)
+**Closed 2026-10-12 for the release; George's look moved to Phase 32** (`ph-lyrion-menus`)
 (George: *"create a separate phase for this at the end of the current phase
 list"*). It ships as built, behind *Extended navigation* (ADR-0118); the hidden
 library's hour was measured (Finding 118).
@@ -3668,9 +3668,39 @@ player can show of what Roon plays.
 4. **Tried with a Roon Core** on a test player before it is released.
 5. The public documents are current.
 
-### Phase 27 — Room correction for the bass, with a USB microphone
+### Phase 27 — Releases built on GitHub
 
-**ID:** `ph-room-correction` · numbered 27 on 2026-11-01, after the Roon plugin (George); numbered 26 on 2026-10-29, after the plugin catalogue and themes (George: it still cannot be auditioned); numbered 24 on 2026-10-27, after multiroom and AirPlay 2 (George: no room correction can be tried yet); numbered 22 on 2026-10-26; 21 from 2026-10-25, 20 from 2026-10-24, 19 from 2026-10-21 (18 from 2026-10-19, 16 from 2026-10-15, 15 from 2026-10-14).
+**ID:** `ph-github-builds` · added 2026-11-02 as 27, before room correction
+(George: building on the local machine has become troublesome); a *Should*
+idea since 2026-10-18.
+
+**Added 2026-11-02.** The packages, the UI, the image and the release's
+parts are built on GitHub's arm64 machines from the release tag, not on
+R2D2. Signing stays on R2D2 (ADR-0105 decision 1). The proposal is
+[ADR-0173](decisions/0173-releases-built-on-github.md): a trial build of
+v1.12.0 first, then the release workflow; `publish.sh` downloads only what
+it signs; what only R2D2 had (the downloads, earlier releases, the skin
+packs) is read from GitHub.
+
+**Acceptance**
+
+1. **ADR-0173 accepted**, decisions 1-3 answered by George.
+2. **The trial**: v1.12.0 built on GitHub by hand, its OS packages and
+   versions matching r1.12.0's or each difference explained,
+   `verify-image.sh` passing, time and disk recorded in a Finding.
+3. **A release built on GitHub from its tag**, signed and published to
+   Testing from R2D2 with nothing built there; the key never leaves R2D2.
+4. **A test player updates to it** from Testing, and a card flashed from its
+   image sets up.
+5. **With decision 1**, a preview built by the workflow installed on a test
+   player.
+6. **The documents**: `docs/tech/updates-and-releases.md` §4 and
+   `docs/BUILD-TRAPS.md` describe the new way, the traps that no longer
+   apply marked so.
+
+### Phase 28 — Room correction for the bass, with a USB microphone
+
+**ID:** `ph-room-correction` · numbered 28 on 2026-11-02, after releases built on GitHub (George); numbered 27 on 2026-11-01, after the Roon plugin (George); numbered 26 on 2026-10-29, after the plugin catalogue and themes (George: it still cannot be auditioned); numbered 24 on 2026-10-27, after multiroom and AirPlay 2 (George: no room correction can be tried yet); numbered 22 on 2026-10-26; 21 from 2026-10-25, 20 from 2026-10-24, 19 from 2026-10-21 (18 from 2026-10-19, 16 from 2026-10-15, 15 from 2026-10-14).
 **Since 2026-10-25** it builds on Phase 20's filter stage (`ph-equaliser`):
 where the filter runs and what it changes are settled there, and this ADR
 starts from them.
@@ -3682,7 +3712,7 @@ around the listening seat, averaged** (3-5 within about half a metre of the
 head): below that frequency the response changes most from place to place,
 so one position would fit the microphone's spot and miss the listener's head.
 Mostly cuts, no deep boosts into nulls. The full range, with more positions
-and a target curve, is Phase 28 (`ph-room-correction-full`). Finding 124's
+and a target curve, is Phase 29 (`ph-room-correction-full`). Finding 124's
 first tier.
 
 **Added 2026-10-14** (George: *"let's add another phase about room
@@ -3731,12 +3761,12 @@ Pi, and the microphones (miniDSP UMIK-1 first).
 4. Every source plays through the correction with no audible gap or
    dropout, and the visualiser keeps working.
 
-### Phase 28 — Room correction for the full range
+### Phase 29 — Room correction for the full range
 
-**ID:** `ph-room-correction-full` · numbered 28 on 2026-11-01, after the Roon plugin (George); numbered 27 on 2026-10-29, with Phase 26; numbered 25 on 2026-10-27, after multiroom and AirPlay 2 (George: no room correction can be tried yet); added 2026-10-20 as 19, split from `ph-room-correction`; numbered 20 on 2026-10-21, 21 on 2026-10-24, 22 on 2026-10-25, 23 on 2026-10-26.
+**ID:** `ph-room-correction-full` · numbered 29 on 2026-11-02, after releases built on GitHub (George); numbered 28 on 2026-11-01, after the Roon plugin (George); numbered 27 on 2026-10-29, with Phase 26; numbered 25 on 2026-10-27, after multiroom and AirPlay 2 (George: no room correction can be tried yet); added 2026-10-20 as 19, split from `ph-room-correction`; numbered 20 on 2026-10-21, 21 on 2026-10-24, 22 on 2026-10-25, 23 on 2026-10-26.
 
 **Added 2026-10-20** (George, splitting room correction in two). After the
-bass (Phase 27, `ph-room-correction`): correction above the Schroeder
+bass (Phase 28, `ph-room-correction`): correction above the Schroeder
 frequency, from **more positions across the listening area**, towards a
 target curve, and gentle - above the bass what is heard is mostly the
 speakers and their reflections, which the ear blends, and a correction of
@@ -3747,7 +3777,7 @@ tier: DRC-FIR first, then our own design after the Dirac paper and Carini).
 **An ADR before anything is built.** It must settle: how many positions and
 where; the target curve and how it is chosen; how much correction above the
 bass, smoothed how; whether the time-domain part comes in this phase or a
-later one; what it costs a Pi 4 beside Phase 27's filter.
+later one; what it costs a Pi 4 beside Phase 28's filter.
 
 **Acceptance (draft):**
 
@@ -3755,11 +3785,11 @@ later one; what it costs a Pi 4 beside Phase 27's filter.
    the response before and after, per position and averaged.
 2. The averaged response is measurably closer to the target than without,
    and no position is measurably worse - recorded as a finding.
-3. It builds on Phase 27's correction: on and off, A/B, one per output.
+3. It builds on Phase 28's correction: on and off, A/B, one per output.
 
-### Phase 29 — Internet radio without Lyrion
+### Phase 30 — Internet radio without Lyrion
 
-**ID:** `ph-radio` · numbered 29 on 2026-11-01, after the Roon plugin (George); numbered 28 on 2026-10-29 (the plugin catalogue and themes brought forward); added 2026-10-25 as 26; numbered 27 on 2026-10-26.
+**ID:** `ph-radio` · numbered 30 on 2026-11-02, after releases built on GitHub (George); numbered 29 on 2026-11-01, after the Roon plugin (George); numbered 28 on 2026-10-29 (the plugin catalogue and themes brought forward); added 2026-10-25 as 26; numbered 27 on 2026-10-26.
 
 **Added 2026-10-25** (George, with AirPlay 2; it was a Should idea). A radio
 directory for players that only stream, with no Lyrion server: today the
@@ -3771,9 +3801,9 @@ Lyrion's Radio on a player that has both.
 
 **Acceptance:** drafted with its ADR.
 
-### Phase 30 — The library answers for itself
+### Phase 31 — The library answers for itself
 
-**ID:** `ph-library` · numbered 30 on 2026-11-01, after the Roon plugin (George); numbered 29 on 2026-10-26 (28 from 2026-10-25, 24 earlier that day, 23 from 2026-10-21, 22 from 2026-10-20, 21 from 2026-10-19, 20 from 2026-10-15, 19 from 2026-10-14, 18 from 2026-10-13; was 11a).
+**ID:** `ph-library` · numbered 31 on 2026-11-02, after releases built on GitHub (George); numbered 30 on 2026-11-01, after the Roon plugin (George); numbered 29 on 2026-10-26 (28 from 2026-10-25, 24 earlier that day, 23 from 2026-10-21, 22 from 2026-10-20, 21 from 2026-10-19, 20 from 2026-10-15, 19 from 2026-10-14, 18 from 2026-10-13; was 11a).
 
 **Added 2026-09-25 (George):** *"Let's introduce another phase … which should tackle the question of how we can we leverage the plexamp/Plex
 server metadata that is available. Anything that can reduce the dependency on
@@ -3852,9 +3882,9 @@ consumes. **Popular tracks do remain ListenBrainz's**, 404 on that server.
 its own catalogue groupings (*Singles & EPs*, *Live Albums*, *Compilations*).
 All are there; none is asked for by anything today.
 
-### Phase 31 — Lyrion's own menus: the look
+### Phase 32 — Lyrion's own menus: the look
 
-**ID:** `ph-lyrion-menus` · numbered 31 on 2026-11-01, after the Roon plugin (George); numbered 30 on 2026-10-26 (29 from 2026-10-25, 25 earlier that day, 24 from 2026-10-21, 23 from 2026-10-20, 22 from 2026-10-19, 21 from 2026-10-15, 20 from 2026-10-14, 19 from 2026-10-13; was 16).
+**ID:** `ph-lyrion-menus` · numbered 32 on 2026-11-02, after releases built on GitHub (George); numbered 31 on 2026-11-01, after the Roon plugin (George); numbered 30 on 2026-10-26 (29 from 2026-10-25, 25 earlier that day, 24 from 2026-10-21, 23 from 2026-10-20, 22 from 2026-10-19, 21 from 2026-10-15, 20 from 2026-10-14, 19 from 2026-10-13; was 16).
 
 **Added 2026-10-12** (George, taking it out of the first public release:
 *"create a separate phase for this at the end of the current phase list"*).
