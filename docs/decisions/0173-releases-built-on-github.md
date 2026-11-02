@@ -1,6 +1,7 @@
 # ADR-0173 — Releases built on GitHub
 
-**Status:** **Proposed** 2026-11-02, Phase 27 (`ph-github-builds`). George
+**Status:** **Proposed** 2026-11-02 (decision 1 answered by George the same
+day), Phase 27 (`ph-github-builds`). George
 asked for it on 2026-11-02, before room correction, as building releases on
 R2D2 has become troublesome. It was a *Should* idea since 2026-10-18: the
 packages and the image built on GitHub's ARM machines from the release tag,
@@ -169,6 +170,12 @@ The traps are in `docs/BUILD-TRAPS.md`.
   The images sit on `/`, which had 4.6 GB free. The scripts keep working for
   a local build from cold. *Recommended.* The alternative is to keep them
   warm as a fallback.
+
+## Decided (George)
+
+- **Decision 1, previews too** (2026-11-02), as proposed: a branch's
+  packages are built by the workflow on request, downloaded to R2D2 and
+  installed on a test player over SSH, over previews built on R2D2.
 
 ## If the trial fails
 
