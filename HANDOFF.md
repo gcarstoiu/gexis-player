@@ -20,19 +20,18 @@ and the ideas as Must / Should / Could. It follows `docs/DEVELOPMENT.md`'s
 phases; change it when a phase opens, closes or moves, and show George first. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**1.12.0 on Testing** (2026-11-02, serial 63, read back with a good
+**Stable and Testing: 1.12.0** (2026-11-02; Testing serial 63, Stable
+serial 13, promoted by George the same day; each read back with a good
 signature): Phase 26, Roon, with three fixes (the visualiser's tap and the
 updater's stop sending the panel token, ADR-0170 *Two callers missed*; the
 row of sources under the library narrowed to fit), built on 1.11.0 (themes,
-Phase 25, serial 62). Notes approved by George; PRs #91 and #92 merged
-by George (2026-11-02). Image
+Phase 25, Testing serial 62; left a pre-release, as 1.9.1 was). Notes
+approved by George; PRs #91 and #92 merged by George (2026-11-02). Image
 `image/deploy/2026-11-02-gexis-player-v1.12.0.img` (160 checks passed);
-build output `~/projects/gexis-release-out/r1.12.0`. Stable still 1.10.0
-until George promotes.
+build output `~/projects/gexis-release-out/r1.12.0`. The two measurements
+are still owed (to-dos `ph22-measure`, `eq-measure`).
 
-**Stable: 1.10.0** (2026-10-31, Stable serial 12; promoted without the
-two measurements, to-dos `ph22-measure`, `eq-measure`); build output
-`~/projects/gexis-release-out/r1.10.0`. **R2D2's `/` fills up**: Docker's
+**R2D2's `/` fills up**: Docker's
 containerd store keeps images on `/`, not in `/home/docker`, and pi-gen
 rebuilds its 1.16 GB build image on every image build, about 1.7 GB at a
 build's peak; check `df -h /` before one (4.6 GB free on 2026-11-02, after
