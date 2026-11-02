@@ -3684,7 +3684,9 @@ packs) is read from GitHub.
 
 **Acceptance**
 
-1. **ADR-0173 accepted**, decisions 1-3 answered by George.
+1. **ADR-0173 accepted**, decisions 1-3 answered by George. *Met 2026-11-02:*
+   previews too, the downloads mirrored in public, R2D2's build machinery
+   removed after the first release built on GitHub.
 2. **The trial**: v1.12.0 built on GitHub by hand, its OS packages and
    versions matching r1.12.0's or each difference explained,
    `verify-image.sh` passing, time and disk recorded in a Finding.
