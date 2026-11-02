@@ -60,6 +60,8 @@ flowchart TB
         lib["go-librespot<br/>(Spotify Connect)"]
         bt["bluealsa + bluealsa-aplay<br/>(Bluetooth A2DP sink)"]
         px["Plexamp<br/>(plugin)"]
+        ap["Shairport Sync<br/>(AirPlay, plugin)"]
+        rn["Roon Bridge<br/>(Roon, plugin)"]
     end
     subgraph Audio["ALSA (pcm.output)"]
         out["type meter + peppyalsa scope"]
