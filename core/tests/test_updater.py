@@ -1507,3 +1507,16 @@ def test_a_pack_install_that_dies_says_failed(up, monkeypatch):
         up.main()
     doc = json.loads((up.STATE / "pack.json").read_text())
     assert doc["state"] == "failed" and "unexpectedly" in doc["message"]
+
+
+def test_the_update_s_stop_proves_it_is_the_panel_s(up, monkeypatch, tmp_path):
+    """ADR-0170 made `park` the panel's; the update's stop went without the
+    token, was refused, and the update went on with playback running."""
+    monkeypatch.setattr(up, "PANEL_TOKEN", tmp_path / "panel-token")
+    (tmp_path / "panel-token").write_text("this-boot\n")
+    asked = []
+    monkeypatch.setattr(up.urllib.request, "urlopen",
+                        lambda req, timeout=0: asked.append(req) or io.BytesIO(b"{}"))
+    up.stop_playback()
+    assert [(r.full_url, r.get_header("X-gexis-panel")) for r in asked] == [
+        (f"{up.CORE}/renderers/park?stop=all", "this-boot")]

@@ -588,6 +588,24 @@ def install_screensaver_shim(name: str, width: int, height: int) -> None:
 
 DAEMON_TOUCH_URL = os.environ.get("GEXIS_TOUCH_URL", "http://127.0.0.1:8090/touch")
 TOUCH_EVENTS = {pygame.MOUSEBUTTONUP, getattr(pygame, "FINGERUP", pygame.MOUSEBUTTONUP)}
+#: ADR-0170: the core takes a touch only from the panel, which proves itself
+#: with this boot's token. This unit runs as the kiosk's user, who may read it.
+PANEL_TOKEN = Path("/run/gexis/panel-token")
+PANEL_HEADER = "X-Gexis-Panel"
+
+
+def touch_request(token: Path = PANEL_TOKEN):
+    """One touch report, with the token read afresh each time: the core makes
+    it on its first start after boot, which may come after ours. Without one,
+    the report goes as before, which a core without a token still takes."""
+    import urllib.request
+
+    headers = {}
+    try:
+        headers[PANEL_HEADER] = token.read_text().strip()
+    except OSError:
+        pass
+    return urllib.request.Request(DAEMON_TOUCH_URL, method="POST", headers=headers)
 
 
 def report_touches_to_the_daemon() -> None:
@@ -609,9 +627,7 @@ def report_touches_to_the_daemon() -> None:
 
     def post() -> None:
         try:
-            urllib.request.urlopen(
-                urllib.request.Request(DAEMON_TOUCH_URL, method="POST"), timeout=2
-            ).close()
+            urllib.request.urlopen(touch_request(), timeout=2).close()
         except Exception as exc:  # never fatal: the screen keeps drawing
             print(f"peppy: touch report failed: {exc}", file=sys.stderr)
 
