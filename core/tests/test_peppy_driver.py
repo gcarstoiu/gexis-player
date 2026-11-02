@@ -801,3 +801,20 @@ def test_a_size_event_takes_the_window_as_it_is_before_anything_draws(monkeypatc
     monkeypatch.setattr(pg.event, "get", lambda *a, **k: sizes)
     driver.watch_window_events(driver.Repaints())
     assert pg.event.get() == sizes and taken == [True], "once per batch of events"
+
+
+# ── the touch report proves it is the panel's (ADR-0170; sofapi, 2026-11-02) ──
+
+
+def test_a_touch_is_reported_with_this_boot_s_token(tmp_path):
+    """Since ADR-0170 the core refused every touch on the visualiser: the
+    report came from loopback without the token, as a plugin's would."""
+    token = tmp_path / "panel-token"
+    token.write_text("this-boot\n")
+    request = driver.touch_request(token)
+    assert request.get_method() == "POST"
+    assert request.get_header("X-gexis-panel") == "this-boot"
+
+
+def test_without_a_token_the_touch_is_reported_as_before(tmp_path):
+    assert driver.touch_request(tmp_path / "none").get_header("X-gexis-panel") is None

@@ -184,7 +184,8 @@ also proves itself (ADR-0170): the core makes a token per boot in
 `/run/gexis/panel-token` (`panel_token.py`; `root:pi`, 0640, kept across core
 restarts), the kiosk opens its page with it (`#panel=…`), and the page sends it
 as `X-Gexis-Panel` with every request and as `?panel=` on `/touchpad`;
-`gexis-park.service` sends it too. Plugins' units have `ProtectProc=invisible`,
+`gexis-park.service`, the visualiser's touch report and the updater's stop
+before an install send it too. Plugins' units have `ProtectProc=invisible`,
 so the kiosk's command line is out of their sight. `_from_panel` checks both;
 a server built without a token (the tests) goes by loopback alone. A few
 routes are the panel's only or behave differently by origin: `/surface`,

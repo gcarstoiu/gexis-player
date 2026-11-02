@@ -105,6 +105,17 @@ it four seconds after the core; removed, nothing of it was left. The kiosk
 proves itself (its panel requests all answered), and a call on loopback
 without the token is refused. Not yet: CEC with a TV; the plugin.
 
+## Two callers missed (2026-11-02)
+
+Two scripts on the device call panel-only routes outside the page and were
+not given the token: the visualiser's touch report (`POST /touch`) and the
+updater's stop before an install (`POST /renderers/park?stop=all`). From
+1.10.0 both were refused: a tap on the visualiser no longer closed it (seen
+on sofapi, eight taps answered `403`), and an update's stop is refused and
+the update goes on with playback running (read from the code, not seen on a
+device). Both read the token now, and a test fails for any script under
+`image/` or `core/updater/` that calls such a route without reading it.
+
 ## CEC on a test player (2026-10-30)
 
 George connected sofapi's second HDMI port to a receiver (input 6) that
