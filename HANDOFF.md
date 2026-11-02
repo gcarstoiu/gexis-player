@@ -20,19 +20,18 @@ and the ideas as Must / Should / Could. It follows `docs/DEVELOPMENT.md`'s
 phases; change it when a phase opens, closes or moves, and show George first. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**1.12.0 on Testing** (2026-11-02, serial 63, read back with a good
+**Stable and Testing: 1.12.0** (2026-11-02; Testing serial 63, Stable
+serial 13, promoted by George the same day; each read back with a good
 signature): Phase 26, Roon, with three fixes (the visualiser's tap and the
 updater's stop sending the panel token, ADR-0170 *Two callers missed*; the
 row of sources under the library narrowed to fit), built on 1.11.0 (themes,
-Phase 25, serial 62). Notes approved by George; PRs #91 and #92 merged
-by George (2026-11-02). Image
+Phase 25, Testing serial 62; left a pre-release, as 1.9.1 was). Notes
+approved by George; PRs #91 and #92 merged by George (2026-11-02). Image
 `image/deploy/2026-11-02-gexis-player-v1.12.0.img` (160 checks passed);
-build output `~/projects/gexis-release-out/r1.12.0`. Stable still 1.10.0
-until George promotes.
+build output `~/projects/gexis-release-out/r1.12.0`. The two measurements
+are still owed (to-dos `ph22-measure`, `eq-measure`).
 
-**Stable: 1.10.0** (2026-10-31, Stable serial 12; promoted without the
-two measurements, to-dos `ph22-measure`, `eq-measure`); build output
-`~/projects/gexis-release-out/r1.10.0`. **R2D2's `/` fills up**: Docker's
+**R2D2's `/` fills up**: Docker's
 containerd store keeps images on `/`, not in `/home/docker`, and pi-gen
 rebuilds its 1.16 GB build image on every image build, about 1.7 GB at a
 build's peak; check `df -h /` before one (4.6 GB free on 2026-11-02, after
@@ -60,8 +59,9 @@ cause not established (0.2.1 logs the pause's answer and the loopback's
 states); not measured: bit-perfect, rates above 44.1 kHz, a group, the
 plugin off and on, Roon Bridge's own update. sofapi runs preview packages
 from `ph-roon` (in `~/gexis-pc`) and has the reboot marker set; the next
-update reboots it once. **Not started:** Phase 27, room correction for the
-bass. **Open, small:** `gen_personalise.py` out of step since Phase 23;
+update reboots it once. **Proposed:** Phase 27, releases built on GitHub
+(`ph-github-builds`, ADR-0173, added by George 2026-11-02); then 28, room
+correction for the bass. **Open, small:** `gen_personalise.py` out of step since Phase 23;
 the mocked Settings → Display showed two *Screen port* rows
 (`screen_port`, `screen_port_info`), not yet looked at on a player.
 
@@ -126,7 +126,8 @@ HACS's maintainers - do not ask them for a review (their template).
 from Phase 20: the measurement through a card (to-do `eq-measure`, at a time
 George picks).
 
-Next, Phase 27 (room correction for the bass), then 28-31 in order, each ADR first
+Next, Phase 27 (releases built on GitHub, ADR-0173 proposed), then 28 (room
+correction for the bass) and 29-32 in order, each ADR first
 (`docs/DEVELOPMENT.md`, the IDs there); MPD parked (ADR-0151). **Raspberry
 Pi Imager** (ADR-0159, a task): Imager's own list stays open as it is
 (George, 2026-10-24).
@@ -145,8 +146,8 @@ consecutively without letters, each with a stable ID (George, 2026-10-13);
 20 (the equaliser) and 21 (the phone remote) closed 2026-10-27 with 1.7.0,
 24 (the plugin catalogue) 2026-10-31 with 1.10.0, 25 (themes) and 26
 (Roon) 2026-11-02 with 1.11.0 and 1.12.0; 22 (multiroom) and 23 (AirPlay 2,
-limited testing) on Stable with work open; next 27-28 (room correction),
-29-31; MPD parked. `docs/DEVELOPMENT.md`
+limited testing) on Stable with work open; next 27 (releases built on
+GitHub), 28-29 (room correction), 30-32; MPD parked. `docs/DEVELOPMENT.md`
 holds each phase's acceptance criteria.
 
 ## Machines

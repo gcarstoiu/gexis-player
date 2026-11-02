@@ -8505,3 +8505,19 @@ default list**: hacs/default#12691 (from George's fork `gcarstoiu/default`),
 every automated check passed; it waits for HACS's maintainers - do not ask
 them for a review (their template).
 
+
+## From HANDOFF, 2026-11-02 (1.12.0 promoted to Stable)
+
+**1.12.0 on Testing** (2026-11-02, serial 63, read back with a good
+signature): Phase 26, Roon, with three fixes (the visualiser's tap and the
+updater's stop sending the panel token, ADR-0170 *Two callers missed*; the
+row of sources under the library narrowed to fit), built on 1.11.0 (themes,
+Phase 25, serial 62). Notes approved by George; PRs #91 and #92 merged
+by George (2026-11-02). Image
+`image/deploy/2026-11-02-gexis-player-v1.12.0.img` (160 checks passed);
+build output `~/projects/gexis-release-out/r1.12.0`. Stable still 1.10.0
+until George promotes.
+
+**Stable: 1.10.0** (2026-10-31, Stable serial 12; promoted without the
+two measurements, to-dos `ph22-measure`, `eq-measure`); build output
+`~/projects/gexis-release-out/r1.10.0`.
