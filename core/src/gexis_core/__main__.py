@@ -2837,6 +2837,8 @@ async def main() -> None:
                "pointer_style": None, "listenbrainz_token": None,
                # Text size: read by the panel as it draws (George, 2026-10-14).
                "text_size": None,
+               # ADR-0171: the theme, read by the panel and phones as they draw.
+               "theme": None,
                # ADR-0158 D5: the DSI panel's backlight, at once.
                "brightness": lambda value: standby_module.set_brightness(value),
                # ADR-0156: read where they are used - the address by the

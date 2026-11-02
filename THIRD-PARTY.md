@@ -38,6 +38,11 @@ list is on the player, under Settings → System → Legal and Credits.
 | [DSEG7](https://github.com/keshikan/DSEG) | The seven-segment digits of the visualiser's clocks. | OFL-1.1 | keshikan | Fetched from its release when the image is built |
 | [Nunito Sans](https://fonts.google.com/specimen/Nunito+Sans) | The panel's text. | OFL-1.1 | The Nunito Sans Project Authors | Bundled into the panel's screens |
 | [IBM Plex Mono](https://github.com/IBM/plex) | The panel's figures and labels. | OFL-1.1 | IBM Corp. | Bundled into the panel's screens |
+| [Space Mono](https://github.com/googlefonts/spacemono) | The Bauhaus theme's figures and labels. | OFL-1.1 | The Space Mono Project Authors | Bundled into the panel's screens |
+| [Martian Mono](https://github.com/evilmartians/mono) | The Sage theme's figures and labels. | OFL-1.1 | The Martian Mono Project Authors | Bundled into the panel's screens |
+| [Red Hat Mono](https://github.com/RedHatOfficial/RedHatFont) | The Velvet theme's figures and labels. | OFL-1.1 | The Red Hat Project Authors | Bundled into the panel's screens |
+| [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono) | The Ink theme's figures and labels. | OFL-1.1 | The JetBrains Mono Project Authors | Bundled into the panel's screens |
+| [Chivo Mono](https://github.com/Omnibus-Type/Chivo) | The Gauge theme's figures and labels. | OFL-1.1 | The Chivo Project Authors | Bundled into the panel's screens |
 | [DejaVu fonts](https://dejavu-fonts.github.io) | The visualiser's titles. | See /usr/share/doc/fonts-dejavu-core/copyright on the device | The DejaVu fonts team | Debian package |
 | [Bricolage Grotesque and DM Mono](https://fonts.google.com) | Drawn into the boot screen. | OFL-1.1 | The Bricolage Grotesque Project Authors; Colophon Foundry | Rendered into a picture when the boot screen was made |
 | [Spotify icon](https://developer.spotify.com/documentation/design) | Shows that Spotify is playing. | Trademark of Spotify AB; the official icon, used to name Spotify | Spotify AB | Included in the player |

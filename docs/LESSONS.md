@@ -430,14 +430,11 @@ Let a fake fail the way the real thing does, and follow every path that stops
 something to where it starts again.
 
 **84. A belief a lesson had already disproved** (2026-10-28, Phase 22). ADR-0166
-B2 restarted only the renderers that played, reasoning that an idle one reads
-a rewritten chain at its next open - the belief case 81 had disproved with
-Squeezelite, and `volume.py` works around in the core itself. Out of a group,
-sofapi's bluealsa-aplay wrote every Bluetooth stream into the group's
-loopback for the rest of the afternoon, and the silence was first put down
-to the phone app. Before a design leans on how another program behaves,
-search the lessons and the code for it; and before blaming the other end,
-look at where our own process writes.
+B2 restarted only the renderers that played, on the belief case 81 had
+disproved; an idle bluealsa-aplay then wrote into the group's loopback all
+afternoon, first put down to the phone app. Before a design leans on how
+another program behaves, search the lessons and the code; before blaming the
+other end, look at where our own process writes.
 
 **85. A group tested with every member alike** (2026-10-28, Phase 22).
 "The equaliser in a group is fine" was tried with the equaliser set the same
@@ -461,14 +458,11 @@ play, so no member led again after 1.9.1; George found it as music that would
 not play in a group. Build what a test drives the way the program starts it,
 and see the test fail without the fix.
 
-**88. A screen measured at its pixels** (2026-10-31, Phase 24). Asking
-George how the album page should take a long title, I said *Add to queue* went
-under the mini player on the 7" panel even with one line, and on the 10" from
-about two. The 7" had been laid out at 1024 x 600 CSS pixels; the kiosk
-scales its page by 0.8 to 1280 x 750, where it takes three lines, and the
-10" four. He chose on those numbers and was asked again. A layout is
-measured at the page the kiosk gives the screen - its size divided by
-`GEXIS_SCREEN_SCALE` - and no number goes into a question before it is.
+**88. A screen measured at its pixels** (2026-10-31, Phase 24). The 7"
+panel was laid out at 1024 x 600 CSS pixels, not the 1280 x 750 the kiosk's
+0.8 scale gives it, and George chose on those numbers and was asked again. A
+layout is measured at the page the kiosk gives the screen - its size divided
+by `GEXIS_SCREEN_SCALE` - before any number goes into a question.
 
 ## Common shape
 

@@ -42,7 +42,7 @@
     position: absolute;
     inset: 0;
     z-index: 60;
-    background: rgba(4, 8, 10, 0.6);
+    background: var(--c-dark-04080a-60);
   }
   .confirm {
     position: absolute;
@@ -51,10 +51,10 @@
     right: 16px;
     top: 50%;
     transform: translateY(-50%);
-    background: #16232c;
-    border: 1px solid rgba(233, 238, 242, 0.14);
-    border-radius: 20px;
-    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+    background: var(--bg-panel);
+    border: 1px solid var(--c-ink-14);
+    border-radius: var(--r-20);
+    box-shadow: 0 18px 48px var(--c-black-55);
     padding: 22px 18px 16px;
     display: flex;
     flex-direction: column;
@@ -67,7 +67,7 @@
   .body {
     font-size: 15px;
     line-height: 1.45;
-    color: rgba(233, 238, 242, 0.72);
+    color: var(--ink-muted);
     text-wrap: pretty;
   }
   .buttons {
@@ -78,7 +78,7 @@
   button {
     flex: 1;
     height: 48px;
-    border-radius: 14px;
+    border-radius: var(--r-14);
     box-sizing: border-box;
     display: flex;
     align-items: center;
@@ -89,9 +89,9 @@
     cursor: pointer;
   }
   .cancel {
-    background: rgba(233, 238, 242, 0.07);
-    border: 1px solid rgba(233, 238, 242, 0.14);
-    color: #e9eef2;
+    background: var(--ink-fill);
+    border: 1px solid var(--c-ink-14);
+    color: var(--ink);
     font-weight: 600;
   }
   .undo {

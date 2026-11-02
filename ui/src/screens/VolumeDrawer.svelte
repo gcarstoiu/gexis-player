@@ -138,7 +138,7 @@
     <!-- ADR-0166 (2a-1): other players to join to this one. -->
     <div class="rule"></div>
     <div class="players">
-      <GroupGlyph size={26} ink="rgba(233,238,242,0.82)" />
+      <GroupGlyph size={26} ink="var(--ink-body)" />
       <div class="players__text">
         <div class="players__title">Other players</div>
         <div class="players__sub">Join players to this one to play the same music in sync.</div>
@@ -172,7 +172,7 @@
     position: absolute;
     inset: 0;
     z-index: 12;
-    background: rgba(8, 12, 16, 0.6);
+    background: var(--c-dark-080c10-60);
     /* No `backdrop-filter`: with it, this drawer drops 71 % of the
        panel's frames while nothing is even happening, against 9 % without
        (Finding 037). It is also the sheet this device opens most - every
@@ -193,10 +193,10 @@
     z-index: 13;
     width: 820px;
     background: var(--bg-panel);
-    border: 1px solid rgba(126, 214, 188, 0.22);
-    border-radius: 28px;
+    border: 1px solid var(--group-line);
+    border-radius: var(--r-28);
     padding: 34px 40px 36px;
-    box-shadow: 0 34px 90px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 34px 90px var(--c-black-60);
     transition:
       transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1),
       opacity 200ms ease;
@@ -228,7 +228,7 @@
 
   .rule {
     height: 1px;
-    background: rgba(233, 238, 242, 0.1);
+    background: var(--ink-line);
     margin: 22px 0 20px;
   }
   .players {
@@ -238,15 +238,15 @@
   }
   .players__text { flex: 1; min-width: 0; }
   .players__title { font-size: 19px; font-weight: 600; }
-  .players__sub { font-size: 15px; margin-top: 4px; color: rgba(233, 238, 242, 0.6); }
+  .players__sub { font-size: 15px; margin-top: 4px; color: var(--ink-quiet); }
   .add {
     font: inherit;
     height: 58px;
     padding: 0 22px;
-    border-radius: 15px;
+    border-radius: var(--r-15);
     box-sizing: border-box;
-    background: rgba(233, 238, 242, 0.07);
-    border: 1px solid rgba(233, 238, 242, 0.14);
+    background: var(--ink-fill);
+    border: 1px solid var(--mark-line);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -265,7 +265,7 @@
     font-size: var(--t-label-sm);
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: rgba(233, 238, 242, 0.6);
+    color: var(--ink-quiet);
     margin-bottom: 22px;
   }
 
@@ -278,7 +278,7 @@
   .mute {
     width: 58px;
     height: 58px;
-    border-radius: 15px;
+    border-radius: var(--r-15);
     flex-shrink: 0;
     display: flex;
     align-items: center;
@@ -289,11 +289,11 @@
     color: inherit;
   }
   .mute:active {
-    background: rgba(233, 238, 242, 0.2);
+    background: var(--c-ink-20);
   }
   .mute.is-muted {
-    background: rgba(224, 167, 88, 0.16);
-    border-color: rgba(224, 167, 88, 0.42);
+    background: var(--c-warn-16);
+    border-color: var(--c-warn-42);
   }
 
   .track {
@@ -308,7 +308,7 @@
     width: 100%;
     height: 14px;
     border-radius: var(--r-pill);
-    background: rgba(233, 238, 242, 0.14);
+    background: var(--mark-line);
     position: relative;
   }
   .fill {
@@ -321,7 +321,7 @@
     background: var(--accent-lms);
   }
   .fill.is-muted {
-    background: rgba(224, 167, 88, 0.5);
+    background: var(--c-warn-50);
   }
   .knob {
     position: absolute;
@@ -330,11 +330,11 @@
     height: 40px;
     border-radius: 50%;
     transform: translate(-50%, -50%);
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+    box-shadow: 0 4px 14px var(--c-black-45);
     background: var(--ink);
   }
   .knob.is-muted {
-    background: rgba(233, 238, 242, 0.55);
+    background: var(--c-ink-55);
   }
 
   .readout {
@@ -366,11 +366,11 @@
     left: 50%;
     bottom: 132px;
     transform: translateX(-50%) translateY(12px);
-    background: rgba(22, 35, 44, 0.97);
-    border: 1px solid rgba(126, 214, 188, 0.3);
-    border-radius: 14px;
+    background: var(--c-dark-16232c-97);
+    border: 1px solid var(--c-lms-30);
+    border-radius: var(--r-14);
     padding: 16px 26px;
-    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 18px 50px var(--c-black-50);
     transition:
       opacity 220ms ease,
       transform 220ms ease;

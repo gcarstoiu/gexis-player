@@ -41,7 +41,7 @@
     font-family: var(--font-ui);
     font-size: 13px;
     font-weight: 600;
-    color: rgba(233, 238, 242, 0.86);
+    color: var(--c-ink-86);
     white-space: nowrap;
     overflow: hidden;
     cursor: pointer;

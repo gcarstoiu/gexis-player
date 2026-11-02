@@ -55,7 +55,7 @@
   {/if}
   {#if canremove}
     <button class="remove" type="button" aria-label={`Remove ${m.name}`} onclick={onremove}>
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="rgba(233,238,242,0.82)"
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" style="stroke: var(--ink-body)"
            stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
     </button>
   {:else}
@@ -93,7 +93,7 @@
     letter-spacing: var(--group-leads-tracking);
     text-transform: uppercase;
     white-space: nowrap;
-    color: rgba(233, 238, 242, 0.6);
+    color: var(--ink-quiet);
   }
   .tag:empty { display: none; }
   .tag.is-lead { color: var(--group-ink); }
@@ -102,7 +102,7 @@
     position: relative;
     width: 48px;
     height: 48px;
-    border-radius: 13px;
+    border-radius: var(--r-13);
     flex-shrink: 0;
     display: grid;
     place-items: center;
@@ -126,7 +126,7 @@
     width: 100%;
     height: 10px;
     border-radius: var(--r-pill);
-    background: rgba(233, 238, 242, 0.14);
+    background: var(--mark-line);
     position: relative;
   }
   .fill {
@@ -137,7 +137,7 @@
     border-radius: var(--r-pill);
     background: var(--group-ink);
   }
-  .fill.is-muted { background: rgba(126, 214, 188, 0.35); }
+  .fill.is-muted { background: var(--c-lms-35); }
   .knob {
     position: absolute;
     top: 50%;
@@ -145,7 +145,7 @@
     height: 32px;
     border-radius: 50%;
     transform: translate(-50%, -50%);
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.45);
+    box-shadow: 0 3px 10px var(--c-black-45);
     background: var(--ink);
   }
   .value {
@@ -161,9 +161,9 @@
     flex: 1;
     min-width: 0;
     height: 52px;
-    border-radius: 14px;
-    background: rgba(233, 238, 242, 0.05);
-    border: 1px solid rgba(233, 238, 242, 0.12);
+    border-radius: var(--r-14);
+    background: var(--c-ink-05);
+    border: 1px solid var(--c-ink-12);
     box-sizing: border-box;
     display: flex;
     align-items: center;
@@ -174,12 +174,12 @@
   .padlock { position: relative; width: 22px; height: 26px; flex-shrink: 0; display: block; }
   .padlock i {
     position: absolute; left: 4px; top: 0; width: 14px; height: 12px;
-    border: 2.5px solid rgba(233, 238, 242, 0.7); border-bottom: none;
-    border-radius: 7px 7px 0 0; box-sizing: border-box; display: block;
+    border: 2.5px solid var(--c-ink-70); border-bottom: none;
+    border-radius: var(--r-7) var(--r-7) 0 0; box-sizing: border-box; display: block;
   }
   .padlock b {
     position: absolute; left: 0; bottom: 0; width: 22px; height: 15px;
-    border-radius: 4px; background: rgba(233, 238, 242, 0.7); display: block;
+    border-radius: var(--r-4); background: var(--c-ink-70); display: block;
   }
   .locked__text {
     flex: 1;
@@ -195,7 +195,7 @@
     font-size: 14px;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: rgba(233, 238, 242, 0.6);
+    color: var(--ink-quiet);
     flex-shrink: 0;
   }
 
@@ -203,14 +203,14 @@
     flex: 1;
     min-width: 0;
     height: 52px;
-    border-radius: 14px;
-    border: 1px dashed rgba(233, 238, 242, 0.18);
+    border-radius: var(--r-14);
+    border: 1px dashed var(--ink-fill-press);
     box-sizing: border-box;
     display: flex;
     align-items: center;
     padding: 0 18px;
     font-size: 16px;
-    color: rgba(233, 238, 242, 0.6);
+    color: var(--ink-quiet);
   }
 
   .remove {
@@ -221,8 +221,8 @@
     display: grid;
     place-items: center;
     padding: 0;
-    background: rgba(233, 238, 242, 0.07);
-    border: 1px solid rgba(233, 238, 242, 0.12);
+    background: var(--ink-fill);
+    border: 1px solid var(--c-ink-12);
     box-sizing: border-box;
   }
   .remove:active { transform: scale(0.95); }

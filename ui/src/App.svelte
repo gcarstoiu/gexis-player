@@ -32,6 +32,7 @@
   import PhoneKeepScreen from './screens/PhoneKeepScreen.svelte';
   import NewScreen from './screens/NewScreen.svelte';
   import { loadSettings, settingValues, settingsDevice } from './lib/settings.js';
+  import { theme } from './lib/theme.js';
   import { loadLibraryRoot } from './lib/library.js';
   import { reportTouch, showPeppy, reportPainted, reportShown, requestDashboard } from './lib/state.js';
   import { components } from './lib/state.js';
@@ -652,6 +653,18 @@
   // touch. The phone's pointer is our own (lib/PanelPointer.svelte).
   $effect(() => {
     document.documentElement.classList.toggle('on-panel', surface === 'panel');
+  });
+
+  //: **The theme** (ADR-0171; George, 2026-11-01): one per player, on its
+  //: screen and every phone on it, applied at once. Deep Teal is no
+  //: attribute at all, so today's tokens stand as they are.
+  $effect(() => {
+    if ($theme) document.documentElement.dataset.theme = $theme.id;
+    else delete document.documentElement.dataset.theme;
+    //: A phone's browser colours its own bar from this (index.html sets
+    //: today's ground); the theme's ground, once the theme is on.
+    const ground = getComputedStyle(document.documentElement).getPropertyValue('--bg-base').trim();
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', ground || '#101a21');
   });
 
   //: **Text size** (ADR-0148; George, 2026-10-14): every font size in

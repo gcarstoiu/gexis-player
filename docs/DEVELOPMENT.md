@@ -3496,6 +3496,15 @@ NQPTP built by us, the adapter in `gcarstoiu/gexis-airplay`.
 
 **ID:** `ph-plugin-catalogue` · numbered 24 on 2026-10-29, brought forward before room correction with themes (George: room correction still cannot be auditioned); added 2026-10-25 as 25; numbered 26 on 2026-10-26.
 
+**Closed 2026-10-31** (George, promoting 1.10.0 to Stable), in 1.10.0, with
+the fixes from his two tests that day. Criteria 1-6 checked from mocked data
+and on a test player with the samples (ADR-0168, *The first listing on a
+test player*), 7 in step 5 and with the store and the permissions; the CEC
+plugin tried with a TV by George, then public and listed in catalogue serial
+5 (ADR-0170, *Published and listed*). Not seen on a device: the store on a
+bar (mocked only); a new player's setup writing its record, and Remove with
+*Keep* off for one of ours (ADR-0169, *Built*).
+
 **Added 2026-10-25** (George, with AirPlay 2). An index on GitHub that the
 player lists, so a developer's plugin reaches users without waiting for a
 release (ADR-0106: plugins installed and updated today come with the release

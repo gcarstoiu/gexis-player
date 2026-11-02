@@ -30,23 +30,23 @@
     transform: translateY(-50%);
     width: 15px;
     height: 26px;
-    background: rgba(233, 238, 242, 0.85);
+    background: var(--c-ink-85);
     clip-path: polygon(0 27%, 42% 27%, 100% 0, 100% 100%, 42% 73%, 0 73%);
     display: block;
   }
   .cone.is-dim {
-    background: rgba(233, 238, 242, 0.45);
+    background: var(--c-ink-45);
   }
   .arc {
     position: absolute;
     top: 50%;
     border-radius: 50%;
-    border: 2.5px solid rgba(233, 238, 242, 0.18);
+    border: 2.5px solid var(--ink-fill-press);
     clip-path: polygon(50% 10%, 100% 0, 100% 100%, 50% 90%);
     display: block;
   }
   .arc.is-lit {
-    border-color: rgba(233, 238, 242, 0.85);
+    border-color: var(--c-ink-85);
   }
   .arc--1 { left: 5px; width: 16px; height: 16px; margin-top: -8px; }
   .arc--2 { left: 1px; width: 24px; height: 24px; margin-top: -12px; }

@@ -58,7 +58,7 @@
   }
   .history__release + .history__release {
     padding-top: 16px;
-    border-top: 1px solid rgba(233, 238, 242, 0.1);
+    border-top: 1px solid var(--ink-line);
   }
   .history__head {
     display: flex;

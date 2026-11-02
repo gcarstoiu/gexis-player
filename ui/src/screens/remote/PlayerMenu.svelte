@@ -176,7 +176,7 @@
     position: absolute;
     inset: 0;
     z-index: 30;
-    background: rgba(4, 8, 10, 0.45);
+    background: var(--c-dark-04080a-45);
   }
   .menu {
     position: absolute;
@@ -184,10 +184,10 @@
     left: 16px;
     right: 16px;
     top: calc(72px + env(safe-area-inset-top, 0px));
-    background: #16232c;
-    border: 1px solid rgba(233, 238, 242, 0.14);
-    border-radius: 18px;
-    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+    background: var(--bg-panel);
+    border: 1px solid var(--c-ink-14);
+    border-radius: var(--r-18);
+    box-shadow: 0 18px 48px var(--c-black-55);
     padding: 8px 0;
     max-height: calc(100% - 96px);
     overflow-y: auto;
@@ -202,7 +202,7 @@
     font-size: 11px;
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: rgba(233, 238, 242, 0.6);
+    color: var(--ink-quiet);
   }
   .head--others {
     padding: 6px 18px 4px;
@@ -213,7 +213,7 @@
     gap: 12px;
     min-height: 64px;
     padding: 0 18px;
-    color: #e9eef2;
+    color: var(--ink);
     text-decoration: none;
     cursor: pointer;
   }
@@ -226,7 +226,7 @@
     padding: 0 10px 0 12px;
   }
   .row.is-current {
-    background: rgba(233, 238, 242, 0.05);
+    background: var(--remote-fixed-ground);
     cursor: default;
   }
   .row.is-off {
@@ -269,13 +269,13 @@
     letter-spacing: var(--group-leads-tracking);
     text-transform: uppercase;
     padding: 4px 6px;
-    border-radius: 6px;
+    border-radius: var(--r-6);
     background: var(--group-leads-ground);
     color: var(--group-ink);
   }
   .state {
     font-size: 13px;
-    color: rgba(233, 238, 242, 0.72);
+    color: var(--ink-muted);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -284,19 +284,19 @@
     color: var(--group-ink);
   }
   .state.is-off {
-    color: rgba(233, 238, 242, 0.6);
+    color: var(--ink-quiet);
   }
   .check {
     width: 22px;
     height: 22px;
     flex-shrink: 0;
-    fill: #7ed6bc;
+    fill: var(--accent-lms);
   }
   .act {
     flex-shrink: 0;
     height: 44px;
     padding: 0 14px;
-    border-radius: 12px;
+    border-radius: var(--r-md);
     box-sizing: border-box;
     display: flex;
     align-items: center;
@@ -304,9 +304,9 @@
     font-size: 14px;
     font-weight: 700;
     cursor: pointer;
-    background: rgba(233, 238, 242, 0.07);
-    border: 1px solid rgba(233, 238, 242, 0.14);
-    color: #e9eef2;
+    background: var(--ink-fill);
+    border: 1px solid var(--c-ink-14);
+    color: var(--ink);
   }
   .act.is-join {
     background: var(--group-join-ground);
@@ -318,7 +318,7 @@
   }
   .group {
     margin: 4px 8px 8px;
-    border-radius: 14px;
+    border-radius: var(--r-14);
     background: var(--group-ground);
     border: 1px solid var(--group-line);
     padding: 12px 0 10px;
@@ -350,10 +350,10 @@
   .wide {
     flex: 1;
     height: 44px;
-    border-radius: 12px;
+    border-radius: var(--r-md);
     box-sizing: border-box;
-    background: rgba(233, 238, 242, 0.07);
-    border: 1px solid rgba(233, 238, 242, 0.14);
+    background: var(--ink-fill);
+    border: 1px solid var(--c-ink-14);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -362,15 +362,15 @@
     font-weight: 700;
     white-space: nowrap;
     cursor: pointer;
-    color: #e9eef2;
+    color: var(--ink);
   }
   .wide--undo {
     color: var(--group-undo-ink);
   }
   /* Another group (decision 11): the block's shape, neutral, not ours. */
   .group--other {
-    background: rgba(233, 238, 242, 0.04);
-    border-color: rgba(233, 238, 242, 0.12);
+    background: var(--remote-touch-ground);
+    border-color: var(--remote-touch-line);
   }
   .group--other .group__title {
     color: var(--ink);
@@ -380,7 +380,7 @@
     min-height: 48px;
   }
   .leads--other {
-    background: rgba(233, 238, 242, 0.08);
+    background: var(--remote-vol-ground);
     color: var(--ink-muted);
   }
   .wide--join {

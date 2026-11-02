@@ -317,7 +317,7 @@
     position: absolute;
     pointer-events: none;
     inset: 0;
-    background: radial-gradient(130% 105% at 20% 42%, rgba(22, 36, 46, 0.3), rgba(14, 23, 30, 0.86));
+    background: var(--cover-veil);
   }
   /* A solid rule in the source's accent on a bar (Bar Frame, Bar States). */
   .strip__accent {
@@ -364,7 +364,7 @@
     align-items: center;
     justify-content: center;
     gap: 18px;
-    background: linear-gradient(160deg, rgba(126, 214, 188, 0.07), rgba(242, 164, 143, 0.06));
+    background: linear-gradient(160deg, var(--c-lms-07), var(--c-artist-06));
   }
   .art__glyph {
     width: 96px;
@@ -450,10 +450,10 @@
     margin: -6px 0;
     text-align: left;
   }
-  .artist--link:active:not(:disabled) { color: #f8c4b4; }
+  .artist--link:active:not(:disabled) { color: var(--c-artist-hi); }
   .album {
     font-size: 32px;
-    color: rgba(233, 238, 242, 0.6);
+    color: var(--ink-quiet);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -494,7 +494,7 @@
     line-height: 1.3;
     min-height: 1.3em;
     font-weight: 500;
-    color: rgba(233, 238, 242, 0.85);
+    color: var(--c-ink-85);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -525,7 +525,7 @@
     font-size: 30px;
     line-height: 38px;
     min-height: 38px;
-    color: rgba(233, 238, 242, 0.85);
+    color: var(--c-ink-85);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -547,8 +547,8 @@
   .skel span {
     display: block;
     height: 18px;
-    border-radius: 5px;
-    background: rgba(233, 238, 242, 0.1);
+    border-radius: var(--r-5);
+    background: var(--ink-line);
     animation: barSkel 1500ms ease-in-out infinite;
   }
   .skel span:nth-child(1) { width: 62%; }
@@ -570,9 +570,9 @@
     align-items: center;
     gap: 14px;
     min-height: 60px;
-    border-radius: 14px;
-    background: rgba(233, 238, 242, 0.05);
-    border: 1px solid rgba(233, 238, 242, 0.12);
+    border-radius: var(--r-14);
+    background: var(--c-ink-05);
+    border: 1px solid var(--c-ink-12);
     padding: 0 8px 0 18px;
   }
   .offline span {
@@ -586,9 +586,9 @@
     align-items: center;
     height: 44px;
     padding: 0 18px;
-    border-radius: 10px;
-    background: rgba(159, 180, 232, 0.16);
-    border: 1px solid rgba(159, 180, 232, 0.35);
+    border-radius: var(--r-10);
+    background: var(--c-bluetooth-16);
+    border: 1px solid var(--c-bluetooth-35);
     font-family: var(--font-mono);
     font-size: var(--t-label);
     letter-spacing: 0.14em;
@@ -596,7 +596,7 @@
     color: var(--accent-bluetooth);
     flex-shrink: 0;
   }
-  .offline__retry:active { background: rgba(159, 180, 232, 0.3); }
+  .offline__retry:active { background: var(--c-bluetooth-30); }
 
   .mark {
     height: 30px;
@@ -620,13 +620,13 @@
     align-items: center;
     justify-content: center;
     gap: 5px;
-    background: rgba(233, 238, 242, 0.07);
-    border: 1px solid rgba(233, 238, 242, 0.12);
-    --lyr-ink: rgba(233, 238, 242, 0.66);
+    background: var(--ink-fill);
+    border: 1px solid var(--c-ink-12);
+    --lyr-ink: var(--c-ink-66);
   }
   .lyrswitch.is-on {
-    background: rgba(242, 164, 143, 0.16);
-    border-color: rgba(242, 164, 143, 0.45);
+    background: var(--c-artist-16);
+    border-color: var(--c-artist-45);
     --lyr-ink: var(--accent-artist);
   }
   .lyrswitch:active { transform: scale(0.95); }
@@ -650,7 +650,7 @@
     font-family: var(--font-mono);
     font-size: 16px;
     letter-spacing: 0.04em;
-    color: rgba(233, 238, 242, 0.62);
+    color: var(--c-ink-62);
     flex-shrink: 0;
   }
   .progress__track {
@@ -658,7 +658,7 @@
     position: relative;
     height: 10px;
     border-radius: var(--r-pill);
-    background: rgba(233, 238, 242, 0.13);
+    background: var(--c-ink-13);
     overflow: hidden;
   }
   /* Translated, not resized (Finding 057), as on the panel. */
@@ -677,10 +677,10 @@
   .strip[data-position='none'] .progress__track {
     background: linear-gradient(
       90deg,
-      rgba(233, 238, 242, 0),
-      rgba(233, 238, 242, 0.15) 16%,
-      rgba(233, 238, 242, 0.15) 84%,
-      rgba(233, 238, 242, 0)
+      var(--c-ink-00),
+      var(--c-ink-15) 16%,
+      var(--c-ink-15) 84%,
+      var(--c-ink-00)
     );
   }
   .strip[data-position='none'] .progress__time { visibility: hidden; }
@@ -724,14 +724,14 @@
   .btn--lg {
     width: var(--ctl-lg);
     height: var(--ctl-lg);
-    background: rgba(233, 238, 242, 0.09);
+    background: var(--c-ink-09);
   }
   .btn--play {
     width: var(--ctl-play);
     height: var(--ctl-play);
     background: var(--play-fill);
     color: var(--ink-on-accent);
-    box-shadow: 0 0 22px rgba(242, 164, 143, 0.22), 0 12px 30px rgba(242, 164, 143, 0.35);
+    box-shadow: 0 0 22px var(--c-artist-22), 0 12px 30px var(--c-artist-35);
   }
   .i-play {
     width: 0;
@@ -773,14 +773,14 @@
   .i-next::after { content: ''; width: 3px; height: 19px; background: currentColor; border-radius: 2px; }
 
   .btn--toggle {
-    background: rgba(233, 238, 242, 0.07);
-    border: 1px solid rgba(233, 238, 242, 0.12);
-    --toggle-ink: rgba(233, 238, 242, 0.66);
+    background: var(--ink-fill);
+    border: 1px solid var(--c-ink-12);
+    --toggle-ink: var(--c-ink-66);
   }
   .btn--toggle.is-on {
-    background: rgba(126, 214, 188, 0.16);
-    border-color: rgba(126, 214, 188, 0.42);
-    --toggle-ink: #7ed6bc;
+    background: var(--c-lms-16);
+    border-color: var(--c-lms-42);
+    --toggle-ink: var(--accent-lms);
   }
   .i-shuffle { position: relative; width: 32px; height: 28px; display: block; }
   .i-shuffle i,
@@ -824,8 +824,8 @@
   }
 
   .btn--queue {
-    background: rgba(159, 180, 232, 0.12);
-    border: 1px solid rgba(159, 180, 232, 0.3);
+    background: var(--c-bluetooth-12);
+    border: 1px solid var(--c-bluetooth-30);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -873,7 +873,7 @@
     height: 6px;
     margin-left: -44px;
     border-radius: 3px;
-    background: rgba(233, 238, 242, 0.42);
+    background: var(--c-ink-42);
     z-index: 4;
     pointer-events: none;
   }
@@ -896,7 +896,7 @@
     height: var(--ctl);
     border-radius: 50%;
     border: 0;
-    background: rgba(13, 21, 28, 0.55);
+    background: var(--c-ground-55);
     display: grid;
     place-items: center;
     padding: 0;

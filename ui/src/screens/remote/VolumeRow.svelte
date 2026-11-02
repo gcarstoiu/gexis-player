@@ -206,7 +206,7 @@
     <button class="eqbtn" class:is-on={eqOn} type="button" aria-label="Equaliser" onclick={oneq}>
       <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
         <path d="M6 4v16M12 4v16M18 4v16" />
-        <circle cx="6" cy="14" r="2.6" fill="#16232c" /><circle cx="12" cy="8" r="2.6" fill="#16232c" /><circle cx="18" cy="12" r="2.6" fill="#16232c" />
+        <circle cx="6" cy="14" r="2.6" style="fill: var(--bg-panel)" /><circle cx="12" cy="8" r="2.6" style="fill: var(--bg-panel)" /><circle cx="18" cy="12" r="2.6" style="fill: var(--bg-panel)" />
       </svg>
     </button>
   {/if}
@@ -236,7 +236,7 @@
     left: 0;
     top: 0;
     bottom: 0;
-    background: #7ed6bc;
+    background: var(--accent-lms);
   }
   .fill.is-muted {
     opacity: 0.35;
@@ -253,13 +253,13 @@
     white-space: nowrap;
     overflow: hidden;
     pointer-events: none;
-    color: rgba(233, 238, 242, 0.72);
+    color: var(--ink-muted);
   }
   .eq.is-lit {
-    color: #7ed6bc;
+    color: var(--accent-lms);
   }
   .eq.is-group {
-    color: #e9eef2;
+    color: var(--ink);
   }
   .clip {
     position: absolute;
@@ -288,14 +288,14 @@
     top: 2px;
     width: 32px;
     height: 32px;
-    border-radius: 10px;
+    border-radius: var(--r-10);
     border: 0;
     padding: 0;
     background: none;
     display: grid;
     place-items: center;
     cursor: pointer;
-    color: #e9eef2;
+    color: var(--ink);
   }
   .mute.is-dark {
     color: var(--remote-vol-ink-on-fill);
@@ -316,7 +316,7 @@
     font-size: 16px;
     font-weight: 600;
     pointer-events: none;
-    color: #e9eef2;
+    color: var(--ink);
   }
   .level.is-dark {
     color: var(--remote-vol-ink-on-fill);
@@ -356,9 +356,9 @@
     top: 0;
     width: 10px;
     height: 8px;
-    border: 2px solid rgba(233, 238, 242, 0.7);
+    border: 2px solid var(--c-ink-70);
     border-bottom: none;
-    border-radius: 5px 5px 0 0;
+    border-radius: var(--r-5) var(--r-5) 0 0;
     box-sizing: border-box;
     display: block;
   }
@@ -369,7 +369,7 @@
     width: 14px;
     height: 9px;
     border-radius: 2.5px;
-    background: rgba(233, 238, 242, 0.7);
+    background: var(--c-ink-70);
     display: block;
   }
   .fixed__text {
@@ -387,10 +387,10 @@
     gap: 6px;
     flex-shrink: 0;
     white-space: nowrap;
-    color: rgba(233, 238, 242, 0.72);
+    color: var(--ink-muted);
   }
   .eq-fixed.is-lit {
-    color: #7ed6bc;
+    color: var(--accent-lms);
   }
   .eq-fixed__name {
     font-size: 13px;
@@ -406,14 +406,14 @@
     flex-shrink: 0;
     cursor: pointer;
     padding: 0;
-    background: rgba(233, 238, 242, 0.07);
-    border: 1px solid rgba(233, 238, 242, 0.14);
-    color: rgba(233, 238, 242, 0.82);
+    background: var(--ink-fill);
+    border: 1px solid var(--c-ink-14);
+    color: var(--ink-body);
   }
   .eqbtn.is-on {
-    background: rgba(126, 214, 188, 0.12);
-    border-color: rgba(126, 214, 188, 0.45);
-    color: #7ed6bc;
+    background: var(--c-lms-12);
+    border-color: var(--c-lms-45);
+    color: var(--accent-lms);
   }
   .eqbtn svg {
     width: 22px;

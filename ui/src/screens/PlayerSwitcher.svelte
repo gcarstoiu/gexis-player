@@ -122,7 +122,7 @@
     height: 34px;
     display: grid;
     place-items: center;
-    border-radius: var(--r-sm, 8px);
+    border-radius: var(--r-sm, var(--r-sm));
     border: 1px solid var(--ink-line);
     background: var(--ink-fill);
   }
@@ -157,7 +157,7 @@
     border-radius: var(--r-xl);
     background: var(--bg-panel);
     border: 1px solid var(--ink-line);
-    box-shadow: 0 30px 70px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 30px 70px var(--c-black-50);
   }
   .sheet__title {
     font-size: 22px;
@@ -183,7 +183,7 @@
   }
   .player.is-current {
     border-color: var(--accent-lms);
-    background: rgba(126, 214, 188, 0.1);
+    background: var(--c-lms-10);
   }
   .player__text {
     flex: 1;

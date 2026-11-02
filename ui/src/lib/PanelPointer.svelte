@@ -639,7 +639,7 @@
     transition-duration: 0ms;
   }
   .ring--small {
-    background: rgba(233, 238, 242, 0.14);
+    background: var(--c-ink-14);
   }
 
   /* The Arrow set (Claude Design, Cursors, mouse 2c). */
@@ -648,8 +648,8 @@
     left: -6px;
     top: -4px;
     display: block;
-    fill: #7ed6bc;
-    stroke: #0c1014;
+    fill: var(--accent-lms);
+    stroke: var(--bg-desk);
     stroke-width: 1.6;
     stroke-linejoin: round;
   }
@@ -658,8 +658,8 @@
     top: -16px;
   }
   .arrow__press {
-    fill: rgba(233, 238, 242, 0.2);
-    stroke: #e9eef2;
+    fill: var(--c-ink-20);
+    stroke: var(--ink);
     stroke-width: 1.8;
   }
 
@@ -674,8 +674,8 @@
     height: 28px;
     transform: translate(-50%, -50%);
     border-radius: 999px;
-    background: #7ed6bc;
-    border: 2.4px solid #0c1014;
+    background: var(--accent-lms);
+    border: 2.4px solid var(--bg-desk);
     box-sizing: border-box;
     transition:
       width 140ms ease-out,
@@ -708,7 +708,7 @@
     height: 64px;
     transform: translate(-50%, -50%);
     fill: none;
-    stroke: #0c1014;
+    stroke: var(--bg-desk);
     stroke-width: 3;
     stroke-linecap: round;
     stroke-linejoin: round;
@@ -722,7 +722,7 @@
     width: var(--w);
     height: var(--h);
     border-radius: var(--radius);
-    border: 4px solid #7ed6bc;
+    border: 4px solid var(--accent-lms);
     background: transparent;
     box-sizing: border-box;
   }
