@@ -3689,7 +3689,9 @@ packs) is read from GitHub.
    removed after the first release built on GitHub.
 2. **The trial**: v1.12.0 built on GitHub by hand, its OS packages and
    versions matching r1.12.0's or each difference explained,
-   `verify-image.sh` passing, time and disk recorded in a Finding.
+   `verify-image.sh` passing, time and disk recorded in a Finding. *Met
+   2026-11-02* ([Finding 140](findings/140-a-release-built-on-github-the-trial.md)):
+   27 minutes, 33 GB at the peak, the OS packages identical.
 3. **A release built on GitHub from its tag**, signed and published to
    Testing from R2D2 with nothing built there; the key never leaves R2D2.
 4. **A test player updates to it** from Testing, and a card flashed from its

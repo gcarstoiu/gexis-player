@@ -1,7 +1,8 @@
 # ADR-0173 — Releases built on GitHub
 
 **Status:** **Accepted** 2026-11-02 (George: decisions 1-3), Phase 27
-(`ph-github-builds`). George
+(`ph-github-builds`); the trial passed the same day
+([Finding 140](../findings/140-a-release-built-on-github-the-trial.md)). George
 asked for it on 2026-11-02, before room correction, as building releases on
 R2D2 has become troublesome. It was a *Should* idea since 2026-10-18: the
 packages and the image built on GitHub's ARM machines from the release tag,
@@ -188,6 +189,20 @@ The traps are in `docs/BUILD-TRAPS.md`.
   local build stays possible, from cold. Chosen over keeping them warm as a
   fallback.
 
+## The trial (2026-11-02)
+
+v1.12.0, built on `ubuntu-24.04-arm` by its own `make packages` and `make
+image`, with nothing cached ([Finding 140](../findings/140-a-release-built-on-github-the-trial.md)):
+- the job took 27 minutes: packages 644 s, image 427 s (pi-gen 311 s, against
+  940 s warm on R2D2), `xz` 333 s;
+- the build's peak was 33 GB above the start, on a runner with 107 GB free;
+- the image's 1,037 OS packages and versions are r1.12.0's;
+- 18 of our packages are byte-identical to the published ones; the five
+  skin packs differ in bytes at the same version, as on R2D2 since 1.4.0;
+- `verify-image.sh` passed all 161 checks.
+
+None of the fallbacks below is needed.
+
 ## If the trial fails
 
 - **The disk** (14 GB guaranteed; pi-gen's work area was 8.8 GB, the image
@@ -218,7 +233,8 @@ None: nothing on a device changes.
 ## Measured before it is called done
 
 - The trial: v1.12.0 on GitHub, its OS packages and versions against
-  r1.12.0's, `verify-image.sh` passing, time and disk recorded.
+  r1.12.0's, `verify-image.sh` passing, time and disk recorded. *Done
+  2026-11-02, Finding 140.*
 - A release built on GitHub from its tag, signed and published to Testing
   from R2D2 with nothing built there; the channel file read back with a good
   signature.
