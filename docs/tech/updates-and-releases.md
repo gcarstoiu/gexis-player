@@ -78,9 +78,9 @@ builds the UI first (`npm ci && npm run build`) and then all packages.
 | `gexis-wallpapers` | the player's own pictures (`wallpapers/` in the repository) at `/usr/share/gexis/wallpapers/<set>/`, with `credits.json` - every picture's author, licence and source, which the screens draw from (ADR-0133). The build refuses a picture without a credit |
 | `gexis-system` | our units, ALSA files, kiosk, splash, Samba/Avahi files, the Peppy driver - built from `image/stage-gexis/*/files`. Files the player rewrites are placed once. PeppyMeter's config comes with each version, but its preinst keeps the device's copy and postinst puts back the five keys the core writes (the pack, the screen size, the needle's smoothing), so an upgrade never resets the visualiser (ADR-0107 amended 2026-10-18) |
 | `gexis-peppyalsa`, `gexis-peppy-engines` | the meter tap library; PeppyMeter/PeppySpectrum |
-| `gexis-go-librespot`, `gexis-beszel-agent`, `gexis-camilladsp` | upstream binaries, as built upstream (ADR-0093; CamillaDSP for the equaliser, ADR-0162) |
+| `gexis-go-librespot`, `gexis-camilladsp` | upstream binaries, as built upstream (ADR-0093; CamillaDSP for the equaliser, ADR-0162) |
 | `gexis-squeezelite` | Lyrion's player: the commit Debian trixie packages, built with Debian's options and our patch that folds multichannel files down to stereo (ADR-0145); `Provides`/`Conflicts`/`Replaces: squeezelite`, Debian's package, which a device updated from an earlier release has removed |
-| `gexis-beszel-hub`, `gexis-lyrion-server`, `gexis-plexamp` | plugins; Lyrion and Plexamp themselves are *not* inside (see §7) |
+| `gexis-lyrion-server`, `gexis-plexamp` | plugins; Lyrion and Plexamp themselves are *not* inside (see §7) |
 | `gexis-skins-<W>x<H>` | one visualiser skin pack per screen size (ADR-0111); never in the image. Until one is installed, `gexis-peppy` exits cleanly saying so, and the core restarts it once the pack is in (2026-10-09). `gexis-update pack-install` fetches it at 3 MB/s (apt's `Dl-Limit`) while the player is in use - a card playing, or go-librespot, BlueALSA or BlueZ active in the last 10 min - and restarts apt at the other speed when that changes, resuming the partial file (ADR-0111 amended 2026-10-07) |
 | `gexis-player` | **the release**: exact `Depends` on all of the above (skins excepted), on `libasound2t64`, and the OS packages the device runs |
 
@@ -280,10 +280,10 @@ Three things that have each cost a build:
 
 - **A local release worktree needs `git submodule update --init`** before
   `make image`: pi-gen is a submodule, and a fresh worktree has it empty.
-- **Raising a Beszel pin raises the image check's checksums too**:
-  `image/verify-image.sh` holds the tested agent binary's SHA-256 beside the
-  pin in `packaging/beszel-agent/pins.sh` (0.9.5's first image check failed on
-  exactly that, with the right binaries in the image).
+- **Raising a pinned binary raises the image check's checksums too**:
+  `image/verify-image.sh` holds the tested binary's SHA-256 beside its pin
+  (CamillaDSP's; Beszel's until ADR-0174 - 0.9.5's first image check failed
+  on exactly that, with the right binaries in the image).
 - **`python -m gexis_core.changelog` writes `CHANGELOG.md` in the current
   directory**: run it from the repository root, or pass the path.
 
@@ -669,8 +669,13 @@ maker's own "latest" feed and reports which pins are behind (exit 1) or
 unreadable (exit 2). It changes nothing; a new version is tried on a device
 before its pin moves.
 
-**Our plugins** (Plexamp adapter, Beszel agent and hub, Lyrion server) update
-**with the release** - one catalogue, one Updates screen (ADR-0106).
+**Our plugins** (Plexamp adapter, Lyrion server) update **with the
+release** - one catalogue, one Updates screen (ADR-0106). Beszel's agent and
+hub are catalogue plugins since ADR-0174 (`gcarstoiu/gexis-beszel`): the
+release that dropped their packages (`gexis-player` *conflicts* with them)
+carries a player that used them over at its next start (`carry_over.py`) -
+their data moved into the plugins' own folders, recorded for the catalogue's
+install, switched on again.
 
 **Uploaded plugins** (ADR-0106, `core/src/gexis_core/uploads.py`) bypass the
 release entirely: a `.tar.gz` with `plugin.json` (plus `version` and `run`),

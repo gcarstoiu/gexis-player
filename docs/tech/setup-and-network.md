@@ -375,15 +375,16 @@ sequenceDiagram
    - `backups.restore_file()` (the same as a restore from Settings, below),
      with every file written beside itself and renamed into place, so the
      core's open connection to its databases is never overwritten
-     underneath it. A backup that brings `var/lib/beszel-hub` stops
-     `beszel-hub.service` first, and one that brings an uploaded plugin's
-     data stops every running `gexis-uploaded-*@*.service`
+     underneath it. A backup that brings an uploaded or catalogue
+     plugin's data (the Beszel hub's among them, ADR-0174) stops every
+     running `gexis-uploaded-*@*.service`
      (`STOPPED_FOR_RESTORE`; the reboot starts them again), and a `-wal` or
      `-shm` file the archive does not bring is removed from beside each file
      it restores.
    - with a name that differs from the backup's and `second_player` not
      false, `backups.IDENTITIES` are left out of `restore_file()` (the
-     Beszel agent's data, Plexamp's store, go-librespot's `state.json` and
+     Beszel agent's data, in its old place or its plugin folder, Plexamp's
+     store, go-librespot's `state.json` and
      `/var/lib/bluetooth`), and `backups.forget_settings()` removes
      `IDENTITY_SETTINGS` from the restored settings: every `beszel.` key
      and `plexamp.claim_token`;
@@ -441,9 +442,12 @@ nothing there is followed through a link:
   the one above with `O_NOFOLLOW`, each file written beside its place under
   a random name and renamed over it; Python's `tar` filter still decides
   owners and modes (owners kept, setuid bits dropped). The services whose
-  files it brings are stopped first (`STOPPED_FOR_RESTORE`): the Beszel hub,
-  and every uploaded plugin, whose own SQLite would otherwise checkpoint
-  over the restored file.
+  files it brings are stopped first (`STOPPED_FOR_RESTORE`): every uploaded
+  and catalogue plugin (the Beszel hub among them), whose own SQLite would
+  otherwise checkpoint over the restored file. An older backup's
+  `var/lib/beszel-agent` and `var/lib/beszel-hub` are put back where they
+  were (`RESTORED_ONLY`) and moved into the plugins' folders by the
+  carry-over (ADR-0174).
 
 **Setup's own screens are laid out for the attached screen** (ADR-0109
 amended 2026-10-07): `gexis-screen-check` runs before the kiosk during setup

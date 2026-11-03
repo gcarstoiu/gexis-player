@@ -1098,6 +1098,12 @@ skins and plugins setup chooses.
 to 100 MB) to help track down a problem. It is on by default on the Testing
 channel; switching it off deletes the logs kept.
 
+**Where did Beszel go?**
+Since 1.13.0 its agent and hub come from the plugin catalogue, under *Add
+plugins*, and update on their own instead of with each release. A player
+that had one switched on gets it back by itself after the update, with its
+connection and history; it needs the network once for that.
+
 **Is Beszel reaching its hub?**
 Its heading in *Settings → System*, above the hub address, token and key,
 says so while it is on: **Connected** in
