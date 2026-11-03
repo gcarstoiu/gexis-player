@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-11-02 (on R2D2).
+Last updated: 2026-11-03 (on R2D2).
 
 ## Start here
 
@@ -74,7 +74,29 @@ way; sofapi updated itself to it. **Left:** a card flashed from 1.12.1's image
 workflow parses before pushing it (`~/projects/ha-venv/bin/python` has PyYAML):
 a `: ` in a one-line `run:` failed one push. **Started 2026-11-03:** Phase
 28, Plexamp and Beszel as catalogue plugins (`ph-catalogue-plugins`,
-ADR-0174, George); then 29, room correction for the bass. **Open, small:** `gen_personalise.py` out of step since Phase 23;
+ADR-0174 accepted: the plugin downloads Plexamp; players using them carried
+over; setup keeps offering Plexamp), on its branch and worktree
+`~/projects/gexis-player-catalogue-plugins`. Done: the sandbox gives catalogue
+plugins `HOME`, the device name, a renderer's restart allowance, the connected
+status and the page link; Beszel out of the release (`gexis-player`
+conflicts with its packages) and carried over (`carry_over.py`);
+`gcarstoiu/gexis-beszel` v0.21.1-1 public, listed (gexis-plugins #13, #14,
+George, admin merge for the tools change), catalogue serial 6. Previewed on
+sofapi 2026-11-03 (in `~/preview-ph28`): its agent came back from the catalogue
+and reached its hub, the hub's data moved, the `beszel` user deleted - after a
+fix: the old agent kept running, as our packages never stopped it on removal;
+the carry-over now stops the old unit first. **Plexamp, on the branch**
+(2026-11-03): `gexis-plexamp` out of the release, its store, claim record and
+fetched software carried into the plugin's folder; setup's part 2 installs it
+from the catalogue (`POST /personalise/install`); core suite 2,962 passed.
+`gcarstoiu/gexis-plexamp` v0.5.0 released (the plugin downloads Plexamp from
+its pin and runs it as its child; archive sha256 `c7001f64…`); gexis-plugins
+#15 (the id freed, tools) and #16 (the listing) wait for George's admin
+merges, then the catalogue is published (serial 7) and the preview (run
+41672576622) goes onto sofapi, where Plexamp is on and claimed. Then: the
+claim and play, takeovers, memory and tasks under the sandbox's limits;
+George's look at the Plugins page. Then 29, room correction
+for the bass. **Open, small:** `gen_personalise.py` out of step since Phase 23;
 the mocked Settings → Display showed two *Screen port* rows
 (`screen_port`, `screen_port_info`), not yet looked at on a player.
 

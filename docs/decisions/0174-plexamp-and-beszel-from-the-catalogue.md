@@ -155,6 +155,39 @@ environment, as ours have. It cannot install Debian packages, use
   catalogue there, then asks for the Plex claim as now. Over setup no longer
   offering it.
 
+## While building (2026-11-03)
+
+- **No test ties the catalogue's reserved ids to the player's manifests**
+  (proposed in 2): both sides already refuse on their own - the player any
+  id it ships a manifest for, at upload and at a catalogue install - so a
+  list out of step hides or refuses a listing, never installs over ours. The
+  catalogue's list loses `beszel` and `beszel-hub` (gexis-plugins #13).
+- **Beszel is listed for 1.12.1 and later**, not the release that drops its
+  packages: a 1.12.1 player still ships Beszel, so the id is its own and the
+  listing is neither shown nor installable there, while a preview of the
+  next release (1.12.1 plus the branch) can be offered it to try the
+  carry-over before that release (gexis-plugins #14).
+- **Older backups** hold Beszel's data in its old places: restored there
+  (`backups.RESTORED_ONLY`), then moved by the carry-over like an update's.
+  The same for Plexamp's store in pi's home.
+- **Plexamp's carry-over moves pi's copy of its software, with its stamp**,
+  instead of deleting it (6): it is the plugin's installed copy at the same
+  pin, so a carried player does not download Plexamp again. Pi's home keeps
+  none of it either way. Both old units are stopped first
+  (`plexamp.service`, `gexis-plexamp.service`).
+- **Plexamp is listed for 1.12.1 and later**, as Beszel is, after the
+  catalogue's list loses `plexamp` (gexis-plugins #15, #16).
+- **Setup (decision 3)** offers Plexamp from the catalogue while it is not
+  installed: *Download* posts `POST /personalise/install`, which installs it
+  as *Add plugins* does and records it as the carry-over records one -
+  switched on once in, installed at the next start if it did not get in. A
+  catalogue not read yet (a new player reads it a minute after its start) is
+  read first. Only a listing that asks for nothing beyond the sandbox is
+  offered there, since setup has no page to agree on.
+- **One unit for the adapter and Plexamp**: a takeover's kill (ADR-0091) now
+  ends the adapter too, which comes back with Plexamp a second later. To be
+  measured with the takeovers before the release.
+
 ## Not in this phase
 
 - Roon, AirPlay 2 and the Lyrion server: each needs a permission the
