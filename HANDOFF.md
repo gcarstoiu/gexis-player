@@ -72,8 +72,9 @@ way; sofapi updated itself to it. **Left:** a card flashed from 1.12.1's image
 (criterion 4, George); then R2D2's pi-gen container and build images removed
 (decision 3). Check a
 workflow parses before pushing it (`~/projects/ha-venv/bin/python` has PyYAML):
-a `: ` in a one-line `run:` failed one push. Then 28, room correction for the
-bass. **Open, small:** `gen_personalise.py` out of step since Phase 23;
+a `: ` in a one-line `run:` failed one push. **Started 2026-11-03:** Phase
+28, Plexamp and Beszel as catalogue plugins (`ph-catalogue-plugins`,
+ADR-0174, George); then 29, room correction for the bass. **Open, small:** `gen_personalise.py` out of step since Phase 23;
 the mocked Settings → Display showed two *Screen port* rows
 (`screen_port`, `screen_port_info`), not yet looked at on a player.
 
@@ -135,7 +136,7 @@ indexes, not these copies; whether to keep the folder is George's (4.8 GB).
 `~/projects/ha-venv`). **HACS's default list**: hacs/default#12691 waits for
 HACS's maintainers - do not ask them for a review (their template).
 
-After Phase 27: 28 (room correction for the bass) and 29-32 in order, each
+After Phase 28: 29 (room correction for the bass) and 30-33 in order, each
 ADR first
 (`docs/DEVELOPMENT.md`, the IDs there); MPD parked (ADR-0151). **Raspberry
 Pi Imager** (ADR-0159, a task): Imager's own list stays open as it is
@@ -156,8 +157,8 @@ consecutively without letters, each with a stable ID (George, 2026-10-13);
 24 (the plugin catalogue) 2026-10-31 with 1.10.0, 25 (themes) and 26
 (Roon) 2026-11-02 with 1.11.0 and 1.12.0; 22 (multiroom) and 23 (AirPlay 2,
 limited testing) on Stable with work open; 27 (releases built on GitHub)
-in 1.12.1, a card still to flash; next 28-29 (room correction), 30-32; MPD
-parked. `docs/DEVELOPMENT.md`
+in 1.12.1, a card still to flash; 28 (Plexamp and Beszel to the catalogue)
+started; next 29-30 (room correction), 31-33; MPD parked. `docs/DEVELOPMENT.md`
 holds each phase's acceptance criteria.
 
 ## Machines
