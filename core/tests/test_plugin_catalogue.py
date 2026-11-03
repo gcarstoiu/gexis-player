@@ -447,6 +447,19 @@ def test_a_catalogue_plugins_row_says_where_it_came_from_and_why_it_is_off():
     assert "Withdrawn" in row["note"] and not row.get("blocked")
 
 
+def test_a_catalogue_plugin_with_a_page_says_where_it_is(monkeypatch):
+    """ADR-0174: the Beszel hub from the catalogue still says where its page
+    is, as it did shipped with the player - unless the catalogue pulled it."""
+    from dataclasses import replace
+    from gexis_core import device_name
+    monkeypatch.setattr(device_name, "hostname", lambda: "living")
+    hub = replace(plugins.parse({"id": "beszel-hub", "name": "Beszel hub", "kind": "service", "port": 8095,
+                                 "unit": "gexis-uploaded-service@beszel-hub.service"}),
+                  uploaded=True, catalogue=True, summary="A hub.")
+    assert _switch(hub)["note"] == "Open http://living.local:8095"
+    assert "Withdrawn" in _switch(replace(hub, pulled=("withdrawn", "gone")))["note"]
+
+
 # The routes
 
 async def test_the_routes_show_the_catalogue_and_start_an_install(key, tmp_path):

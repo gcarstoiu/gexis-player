@@ -6,6 +6,10 @@
 Description=Uploaded plugin %i (renderer; not part of Gexis Player)
 After=gexis-core.service network-online.target sound.target
 Wants=network-online.target
+# ADR-0174: a renderer taken over is killed (ADR-0091) and must come back at
+# once and often, as Plexamp's own unit allowed: 20 starts in 60 s, 1 s apart.
+StartLimitIntervalSec=60
+StartLimitBurst=20
 
 [Service]
 Type=simple
@@ -15,8 +19,13 @@ ExecStart=/usr/lib/gexis/gexis-run-uploaded %i
 EnvironmentFile=-/run/gexis/plugins/%i.env
 Environment=GEXIS_PLUGIN_SOCKET=/run/gexis/plugins.sock
 Environment=GEXIS_PLUGIN_DATA=/var/lib/gexis-uploaded/%i
+# ADR-0174: what our own plugins' units gave them - a home of its own (the
+# state directory: a program that keeps its files under ~ keeps them there)
+# and the device's name (ADR-0048), as GEXIS_DEVICE_NAME.
+Environment=HOME=/var/lib/gexis-uploaded/%i
+EnvironmentFile=-/etc/gexis/device-name.env
 Restart=on-failure
-RestartSec=3
+RestartSec=1
 # gexis-run-uploaded's "no package": not retried (2026-10-12).
 RestartPreventExitStatus=78
 

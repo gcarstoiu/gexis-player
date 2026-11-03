@@ -35,3 +35,18 @@ def test_the_reading_goes_from_connecting_to_not_connected_after_the_grace():
     assert connections.reading("activating", False, 0) == ("wait", "Connecting")
     assert connections.reading("active", False, connections.GRACE_S + 1) == ("bad", "Not connected")
     assert connections.reading("failed", False, 0) == ("bad", "Not connected")
+
+
+def test_a_sandboxed_plugin_s_uid_is_its_running_process_s(tmp_path, monkeypatch):
+    """ADR-0174: a catalogue plugin runs as a temporary user, so `User=` is
+    empty; its uid is read from its main process. Root and a stopped unit
+    give none."""
+    shown = {"User": "", "MainPID": "4242"}
+    monkeypatch.setattr(connections, "_show", lambda unit, prop: shown[prop])
+    (tmp_path / "4242").mkdir()
+    (tmp_path / "4242" / "status").write_text("Name:\trun\nUid:\t61523\t61523\t61523\t61523\n")
+    assert connections.unit_uid("gexis-uploaded-service@beszel.service", tmp_path) == 61523
+    (tmp_path / "4242" / "status").write_text("Uid:\t0\t0\t0\t0\n")
+    assert connections.unit_uid("gexis-uploaded-service@beszel.service", tmp_path) is None
+    shown["MainPID"] = "0"
+    assert connections.unit_uid("gexis-uploaded-service@beszel.service", tmp_path) is None

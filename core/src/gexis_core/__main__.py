@@ -4199,8 +4199,7 @@ async def main() -> None:
                     said.discard(row)
                 else:
                     changed = False
-                # Not an uploaded one: its user is made afresh for every run.
-                if plugin.connection and not plugin.uploaded:
+                if plugin.connection:
                     changed = _indicate_connection(plugin, row, state, quiet_since, uids) or changed
                 if changed:
                     state_store.bump_settings_revision()
@@ -4213,7 +4212,9 @@ async def main() -> None:
         if state is None:
             quiet_since.pop(row, None)
             return settings.indicate(row, None)
-        if plugin.unit not in uids or uids[plugin.unit] is None:
+        # A catalogue plugin's user is made afresh for every run (ADR-0174):
+        # looked up each time, never kept.
+        if plugin.uploaded or plugin.unit not in uids or uids[plugin.unit] is None:
             uids[plugin.unit] = connections.unit_uid(plugin.unit)
         uid = uids[plugin.unit]
         connected = state == "active" and uid is not None and connections.established(uid)
