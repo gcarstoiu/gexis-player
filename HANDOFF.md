@@ -95,10 +95,17 @@ Previewed on sofapi (`~/preview-ph28c`, branch at `f76baf31`): carried over
 claimed, installed from the catalogue, switched on, no second download -
 after a fix: systemd mounts the plugin's state folder `noexec`, so Plexamp's
 native module failed to load; both sandbox units now set `ExecPaths=` for
-it. Idle: 108 MB of 1 GB, 20 of 128 tasks. **Owed:** George's play and
-takeovers on sofapi (memory again while playing), his look at the Plugins
-page; first use on a fresh card offering Plexamp. Then 29, room correction
-for the bass. **Open, small:** `gen_personalise.py` out of step since Phase 23;
+it. George played and took it over on sofapi (2026-11-03): back 2.2 s after
+the kill, idle, still claimed; at most 165 MB and 40 tasks (ADR-0174).
+**Found then:** a backup takes the plugin's whole folder, so Plexamp's
+software and its engine's cache (`~/Library/Caches`, 158 MB within the hour)
+would go into every backup. Fixed: backups leave a plugin's `.cache` out
+(branch `0dfcb857`, local), gexis-plexamp 0.5.1 keeps both there (local,
+`35b2a35`); the carry-over moves pi's caches too, and a reset clears what
+1.12.x left in pi's home. **Owed:** pushing both, 0.5.1 released and listed,
+a preview of it on sofapi; George's look at the Plugins page; a player with
+none of them on updated, and first use offering Plexamp from the catalogue.
+Then 29, room correction for the bass. **Open, small:** `gen_personalise.py` out of step since Phase 23;
 the mocked Settings → Display showed two *Screen port* rows
 (`screen_port`, `screen_port_info`), not yet looked at on a player.
 
@@ -218,7 +225,8 @@ The full list, with how each was found, is in the archive (2026-10-12 block).
 - **Only Squeezelite may use `output_wait`** (ADR-0095): two waiters
   deadlocked the core.
 - **Plexamp restores its queue on every start** - anything that starts it
-  outside `plexamp.service` bypasses `plexamp-start-idle`.
+  outside `plexamp.service` bypasses `plexamp-start-idle` (from ADR-0174:
+  outside its plugin, which clears it first).
 - **BlueZ's `discoverable on` lapses after 180 s** unless the timeout is set;
   read `bluetoothctl show` back.
 - **amixer's value line differs by control** (`Playback` word or not; mono

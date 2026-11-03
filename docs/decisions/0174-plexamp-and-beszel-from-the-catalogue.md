@@ -190,8 +190,24 @@ environment, as ours have. It cannot install Debian packages, use
   sandbox units give the folder exec back (`ExecPaths=`). Nothing was kept
   out by it: the units' own `/tmp` and `/var/tmp` were never `noexec`.
 - **One unit for the adapter and Plexamp**: a takeover's kill (ADR-0091) now
-  ends the adapter too, which comes back with Plexamp a second later. To be
-  measured with the takeovers before the release.
+  ends the adapter too, which comes back with Plexamp. Measured on sofapi
+  (2026-11-03; George played from the app, Lyrion took over, Plexamp took
+  back): the card free 0.7 s after the kill, the plugin connected again
+  2.2 s after it, Plexamp starting idle and taking the card back when asked,
+  still claimed. Of the 1 GB, the unit's peaks were 131 and 165 MB in the
+  two runs that played; idle later it counted 269 MB, of which 141 MB page
+  cache from the engine writing its cache, 125 MB the processes' own. At
+  most 40 of 128 tasks (the second run).
+- **Plexamp's software and caches are kept out of backups**: a backup takes
+  the plugin's whole folder (ADR-0106), and Plexamp's audio engine writes its
+  cache to `~/Library/Caches` whatever the platform - 158 MB within the hour
+  on sofapi, beside its 41 MB of software, where a backup had been 1 MB, and
+  three automatic ones are kept. Following ADR-0106's rule (data, not
+  packages): a backup leaves out a plugin's `~/.cache`; the plugin (0.5.1)
+  keeps Plexamp's software there and links `~/Library` into it, and the
+  carry-over moves pi's copies there. 1.12.x also left Plexamp's caches in
+  pi's home on a factory reset (266 MB on sofapi, 17 MB on guestpi): moved
+  by the carry-over, and on the reset's list.
 
 ## Not in this phase
 
