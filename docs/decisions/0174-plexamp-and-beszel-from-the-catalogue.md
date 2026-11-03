@@ -155,6 +155,21 @@ environment, as ours have. It cannot install Debian packages, use
   catalogue there, then asks for the Plex claim as now. Over setup no longer
   offering it.
 
+## While building (2026-11-03)
+
+- **No test ties the catalogue's reserved ids to the player's manifests**
+  (proposed in 2): both sides already refuse on their own - the player any
+  id it ships a manifest for, at upload and at a catalogue install - so a
+  list out of step hides or refuses a listing, never installs over ours. The
+  catalogue's list loses `beszel` and `beszel-hub` (gexis-plugins #13).
+- **Beszel is listed for 1.12.1 and later**, not the release that drops its
+  packages: a 1.12.1 player still ships Beszel, so the id is its own and the
+  listing is neither shown nor installable there, while a preview of the
+  next release (1.12.1 plus the branch) can be offered it to try the
+  carry-over before that release (gexis-plugins #14).
+- **Older backups** hold Beszel's data in its old places: restored there
+  (`backups.RESTORED_ONLY`), then moved by the carry-over like an update's.
+
 ## Not in this phase
 
 - Roon, AirPlay 2 and the Lyrion server: each needs a permission the
