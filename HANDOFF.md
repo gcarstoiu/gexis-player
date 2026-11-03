@@ -74,7 +74,16 @@ way; sofapi updated itself to it. **Left:** a card flashed from 1.12.1's image
 workflow parses before pushing it (`~/projects/ha-venv/bin/python` has PyYAML):
 a `: ` in a one-line `run:` failed one push. **Started 2026-11-03:** Phase
 28, Plexamp and Beszel as catalogue plugins (`ph-catalogue-plugins`,
-ADR-0174, George); then 29, room correction for the bass. **Open, small:** `gen_personalise.py` out of step since Phase 23;
+ADR-0174 accepted: the plugin downloads Plexamp; players using them carried
+over; setup keeps offering Plexamp), on its branch and worktree
+`~/projects/gexis-player-catalogue-plugins`. Done: the sandbox gives catalogue
+plugins `HOME`, the device name, a renderer's restart allowance, the connected
+status and the page link; `~/projects/gexis-beszel` (local, not yet on
+GitHub) builds both Beszel archives reproducibly, accepted by `uploads.check`
+once the ids are free. Next: the carry-over and the Beszel packages out of the
+release, then the repository, its release and the catalogue listing (George
+merges), a preview on a test player; Plexamp after. Then 29, room correction
+for the bass. **Open, small:** `gen_personalise.py` out of step since Phase 23;
 the mocked Settings → Display showed two *Screen port* rows
 (`screen_port`, `screen_port_info`), not yet looked at on a player.
 
