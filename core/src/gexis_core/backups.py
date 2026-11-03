@@ -77,6 +77,11 @@ MEMBERS = (
     "var/lib/gexis/plugins-known.json",
 )
 
+#: **A plugin's `~/.cache` stays out** (ADR-0174): what it downloads and what
+#: it can build again. Plexamp's software and its engine's cache are 200 MB
+#: and more in its folder (sofapi, 2026-11-03), where a backup was 1 MB.
+NOT_BACKED_UP = re.compile(r"^var/lib/private/gexis-uploaded/[^/]+/\.cache$")
+
 #: **Paths older archives hold and this one no longer writes.** Skipped on
 #: restore rather than refused: every backup made before 2026-09-26 holds all of
 #: `/var/lib/go-librespot`, and refusing them would make them unrestorable for
@@ -322,6 +327,8 @@ def _add(archive: tarfile.TarFile, path: Path, arcname: str, filter) -> None:
     then deleted by its program before it was read; `tarfile.add`'s own walk
     failed the whole backup with "No such file or directory", and the update
     waiting for it stopped). A file gone has nothing in it to bring back."""
+    if NOT_BACKED_UP.match(arcname):
+        return
     try:
         archive.add(path, arcname=arcname, recursive=False, filter=filter)
     except FileNotFoundError:

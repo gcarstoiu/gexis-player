@@ -80,7 +80,7 @@ Every uploaded plugin runs under `gexis-uploaded-<kind>@<id>.service`:
 | | |
 |---|---|
 | **User** | A temporary user made for each run - never root, never `pi` |
-| **Can write** | Only its own data folder, `$STATE_DIRECTORY` (also `$GEXIS_PLUGIN_DATA`, and `$HOME`), kept across restarts and versions and deleted with the plugin; software it downloads there can run from there. Plus its own `/tmp` |
+| **Can write** | Only its own data folder, `$STATE_DIRECTORY` (also `$GEXIS_PLUGIN_DATA`, and `$HOME`), kept across restarts and versions and deleted with the plugin; software it downloads there can run from there; `$HOME/.cache` is left out of backups. Plus its own `/tmp` |
 | **Can read** | The system, read-only. **Not** `/home` |
 | **Devices** | A **renderer** gets the sound cards (and the basics every program has, like `/dev/null`); a **service** gets no devices beyond those basics. More only as its `permissions` ask, below |
 | **Network** | Open |
@@ -341,7 +341,9 @@ with *Keep its settings and sign-in* on (as it comes), its data folder and
 its settings stay for when it is added again, and with it off they are
 deleted too.
 
-**Backups** keep your plugin's settings and data, not its package. Only
+**Backups** keep your plugin's settings and data, not its package, and not
+`.cache` in its data folder (`$HOME/.cache`): put there what it downloads or
+can build again, so a backup stays small. Only
 files and folders in the data folder go in: a link, a pipe or a device there
 (a venv's `lib64 -> lib`, a FIFO) is left out of the backup, so make it
 again at start if the plugin needs it. A restore refuses the whole backup

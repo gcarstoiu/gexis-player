@@ -120,7 +120,8 @@ def test_the_shipped_set_is_what_adr_0174_moves():
 def test_plexamp_s_claim_and_software_move_to_their_own_places(tmp_path):
     """Its store and claim record from pi's home, and the software already
     fetched with its stamp - so the plugin finds Plexamp installed at the
-    same pin and signed in. Both its old units are stopped."""
+    same pin and signed in - with its caches, into the `.cache` backups
+    leave out. Both its old units are stopped."""
     home, components = tmp_path / "home-pi", tmp_path / "components"
     (home / ".local/share/Plexamp/Settings").mkdir(parents=True)
     (home / ".local/share/Plexamp/Settings/%40Plexamp%3Auser%3Atoken").write_text("Stoken")
@@ -128,22 +129,26 @@ def test_plexamp_s_claim_and_software_move_to_their_own_places(tmp_path):
     (home / ".local/share/gexis-plexamp/claim.json").write_text('{"state": "claimed"}')
     (home / "plexamp/js").mkdir(parents=True)
     (home / "plexamp/js/index.js").write_text("plexamp")
+    (home / "Library/Caches").mkdir(parents=True)
+    (home / ".cache/Plexamp").mkdir(parents=True)
     components.mkdir()
     (components / "plexamp.sha256").write_text("86e5")
     real = next(m for m in carry_over.MOVED if m.id == "plexamp")
+
+    def here(old: Path) -> Path:  # the real places, under tmp_path
+        return home / old.relative_to("/home/pi") if old.is_relative_to("/home/pi") else components / old.name
+
     moved = carry_over.Moved(real.id, real.name, real.kind, real.unit,
-                             ((home / ".local/share/Plexamp", ".local/share/Plexamp"),
-                              (home / ".local/share/gexis-plexamp", ".local/share/gexis-plexamp"),
-                              (home / "plexamp", "plexamp"),
-                              (components / "plexamp.sha256", "plexamp.sha256")),
-                             real.package, (), real.also)
+                             tuple((here(old), sub) for old, sub in real.data), real.package, (), real.also)
     stopped, private = [], tmp_path / "private" / "gexis-uploaded"
     carry_over.carry(ours=set(), stored=lambda key: True, added=None, known=tmp_path / "known.json",
                      private=private, wants=tmp_path, versions=dict, stop=stopped.append, moved=[moved])
     folder = private / "plexamp"
     assert (folder / ".local/share/Plexamp/Settings/%40Plexamp%3Auser%3Atoken").read_text() == "Stoken"
     assert (folder / ".local/share/gexis-plexamp/claim.json").exists()
-    assert (folder / "plexamp/js/index.js").exists() and (folder / "plexamp.sha256").read_text() == "86e5"
-    assert not (home / "plexamp").exists() and not (components / "plexamp.sha256").exists()
+    assert (folder / ".cache/plexamp/js/index.js").exists() and (folder / ".cache/plexamp.sha256").read_text() == "86e5"
+    assert (folder / ".cache/Library/Caches").is_dir() and (folder / ".cache/Plexamp").is_dir()
+    assert not any((home / n).exists() for n in ("plexamp", "Library", ".cache/Plexamp", ".local/share/Plexamp"))
+    assert not (components / "plexamp.sha256").exists()
     assert stopped == ["plexamp.service", "gexis-plexamp.service"]
     assert uploads.known(tmp_path / "known.json")["plexamp"]["kind"] == "renderer"

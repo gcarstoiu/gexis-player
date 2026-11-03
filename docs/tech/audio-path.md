@@ -153,7 +153,8 @@ Notes per renderer:
   catalogue (`gcarstoiu/gexis-plexamp`), run by the sandbox's renderer unit,
   `gexis-uploaded-renderer@plexamp.service`. The plugin downloads Plexamp
   itself from the pin in its archive (URL and checksum), because it may not be
-  redistributed (ADR-0100), clears its saved queue, settles the claim and runs
+  redistributed (ADR-0100), into its folder's `.cache` with Plexamp's caches,
+  which backups leave out; it clears Plexamp's saved queue, settles the claim and runs
   it as its child, all in that one unit. It reaches `output`
   through the ALSA default (ADR-0085). Because Plexamp holds the device for
   ~14 s after a stop and has no setting to shorten it, the core takes it off

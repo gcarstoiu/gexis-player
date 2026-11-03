@@ -989,7 +989,8 @@ and when *Add plugins* opens, so GitHub sees its address, as it does for
 the update check. A plugin downloads from its author's release on GitHub.
 
 **Are plugins from the catalogue in a backup?**
-Their settings and data are. After a restore they are installed from the
+Their settings and data are, not what they download or cache (Plexamp's own
+software and its cache are fetched again). After a restore they are installed from the
 catalogue again - the version they had if it is still offered, else the
 newest - unless the catalogue has withdrawn them since. A plugin uploaded
 from a file needs uploading again.

@@ -126,6 +126,26 @@ def test_it_holds_the_beszel_fingerprint(tmp_path):
     assert "var/lib/private/gexis-uploaded/beszel/fingerprint" in held
 
 
+def test_a_plugin_s_cache_stays_out(tmp_path):
+    """ADR-0174: Plexamp's software and its engine's cache, 200 MB and more,
+    live in its folder's `.cache` - downloaded or built again, never backed
+    up. Its claim beside them is."""
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    folder = root / "var/lib/private/gexis-uploaded/plexamp"
+    (folder / ".cache/plexamp/js").mkdir(parents=True)
+    (folder / ".cache/plexamp/js/index.js").write_text("plexamp")
+    (folder / ".cache/Library/Caches").mkdir(parents=True)
+    (folder / "Library").symlink_to(".cache/Library")
+    (root / "var/lib/private/gexis-uploaded/radiofoo/.cache").mkdir()
+    (root / "var/lib/private/gexis-uploaded/radiofoo/.cache/tiles").write_text("x")
+    name = backups.create("gexis", out, root)
+    with tarfile.open(out / name) as archive:
+        held = set(archive.getnames())
+    assert not any("/.cache" in n or n.endswith("/Library") for n in held), sorted(held)
+    assert "var/lib/private/gexis-uploaded/plexamp/.local/share/Plexamp/Settings/%40Plexamp%3Auser%3Atoken" in held
+    assert "var/lib/private/gexis-uploaded/radiofoo/state" in held
+
+
 def test_an_older_backup_s_beszel_and_plexamp_data_goes_back_where_it_was(tmp_path):
     """ADR-0174: a backup from before the move holds the agent's fingerprint,
     the hub's store and Plexamp's claim in their old places. They are put

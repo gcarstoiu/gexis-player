@@ -68,12 +68,16 @@ MOVED: tuple[Moved, ...] = (
           ((Path("/var/lib/beszel-hub"), ""),), "gexis-beszel-hub", ("beszel",)),
     # Plexamp ran as pi: its store (the claim, ADR-0119) and the plugin's
     # record of it under pi's home, and the software the player fetched with
-    # its stamp - moved too, so the plugin need not fetch the same version.
+    # its stamp - moved too, so the plugin need not fetch the same version -
+    # with Plexamp's caches (its engine's `~/Library`), into the plugin's
+    # `.cache`, which backups leave out.
     Moved("plexamp", "Plexamp", "renderer", "plexamp.service",
           ((Path("/home/pi/.local/share/Plexamp"), ".local/share/Plexamp"),
            (Path("/home/pi/.local/share/gexis-plexamp"), ".local/share/gexis-plexamp"),
-           (Path("/home/pi/plexamp"), "plexamp"),
-           (Path("/var/lib/gexis/components/plexamp.sha256"), "plexamp.sha256")),
+           (Path("/home/pi/plexamp"), ".cache/plexamp"),
+           (Path("/var/lib/gexis/components/plexamp.sha256"), ".cache/plexamp.sha256"),
+           (Path("/home/pi/Library"), ".cache/Library"),
+           (Path("/home/pi/.cache/Plexamp"), ".cache/Plexamp")),
           "gexis-plexamp", (), ("gexis-plexamp.service",)),
 )
 
