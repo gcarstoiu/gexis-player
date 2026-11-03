@@ -135,7 +135,7 @@ if [ "$SIZE" = 1280x800 ]; then
 			|| { echo "ERROR: $want is not in the 1280x800 pack" >&2; exit 1; }
 	done
 fi
-if find "$ROOT" -iname preview.png | grep -q .; then
+if [ -n "$(find "$ROOT" -iname preview.png)" ]; then  # not `| grep -q` under pipefail (BUILD-TRAPS)
 	echo "ERROR: a preview.png is in the pack (ADR-0111 decision 8)" >&2; exit 1
 fi
 

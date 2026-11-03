@@ -96,7 +96,9 @@ channel_file() {  # channel tag -> writes, signs and uploads channels/<channel>
 		serial=$((previous + 1))
 		;;
 	404)
-		if exists channels && gh_retry gh release view channels --repo "$REPO" --json assets --jq '.assets[].name' | grep -qxF "$channel"; then
+		# Read whole, then searched: `| grep -q` under pipefail can fail on a
+		# match, its writer cut off (BUILD-TRAPS).
+		if exists channels && grep -qxF "$channel" <<<"$(gh_retry gh release view channels --repo "$REPO" --json assets --jq '.assets[].name')"; then
 			echo "ERROR: $BASE/channels/$channel answered 404, but the channels release has it; not moving it" >&2; exit 1
 		fi
 		serial=1
@@ -205,7 +207,7 @@ if [ "${1:-}" = --promote ]; then
 	# names, and the release page marked GitHub's latest (parts never are), so
 	# .../releases/latest/download/gexis-player.img.xz is always stable's image.
 	work=$(mktemp -d)
-	if gh_retry gh release view "$tag" --repo "$REPO" --json assets --jq '.assets[].name' | grep -qx gexis-player.img.xz; then
+	if grep -qx gexis-player.img.xz <<<"$(gh_retry gh release view "$tag" --repo "$REPO" --json assets --jq '.assets[].name')"; then
 		# **Built on GitHub** (ADR-0173): the image is on the page already,
 		# with its checksum; only its signature is made here.
 		curl -fsSL -o "$work/gexis-player.img.xz" "$BASE/$tag/gexis-player.img.xz"
