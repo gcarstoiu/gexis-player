@@ -100,12 +100,21 @@ the kill, idle, still claimed; at most 165 MB and 40 tasks (ADR-0174).
 **Found then:** a backup takes the plugin's whole folder, so Plexamp's
 software and its engine's cache (`~/Library/Caches`, 158 MB within the hour)
 would go into every backup. Fixed: backups leave a plugin's `.cache` out
-(branch `0dfcb857`, local), gexis-plexamp 0.5.1 keeps both there (local,
-`35b2a35`); the carry-over moves pi's caches too, and a reset clears what
-1.12.x left in pi's home. **Owed:** pushing both, 0.5.1 released and listed,
-a preview of it on sofapi; George's look at the Plugins page; a player with
-none of them on updated, and first use offering Plexamp from the catalogue.
-Then 29, room correction for the bass. **Open, small:** `gen_personalise.py` out of step since Phase 23;
+(branch `0dfcb857`), gexis-plexamp 0.5.1 keeps both there (gexis-plugins
+#17, George; catalogue serial 8); the carry-over moves pi's caches too, and
+a reset clears what 1.12.x left in pi's home. On sofapi (`~/preview-ph28d`,
+branch at `389574e2`): 0.5.1 started signed in without downloading again; a
+backup is 1.07 MB again. The preview's first build failed on a flaky
+`| grep -q` under `pipefail` in `inputs.sh` (BUILD-TRAPS); that and three
+more like it fixed on the branch. **Owed:** Plexamp played once on 0.5.1
+(its engine's cache now through a link); George's look at the Plugins page;
+then, agreed with George: a card from 1.12.1's image
+(`image/deploy/2026-11-03-gexis-player-v1.12.1.img.xz`, also Phase 27's
+flash), set up without Plexamp or Beszel, updated to the preview (nothing
+installed, *Add plugins* lists them), then reset to factory settings for
+first use offering Plexamp from the catalogue. Then 29, room correction for
+the bass. **Open, small:** a preview's download still holds the skin packs (1.1 of
+1.2 GB) though `release.yml` excludes them; `gen_personalise.py` out of step since Phase 23;
 the mocked Settings → Display showed two *Screen port* rows
 (`screen_port`, `screen_port_info`), not yet looked at on a player.
 

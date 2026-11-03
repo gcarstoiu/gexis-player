@@ -207,7 +207,10 @@ environment, as ours have. It cannot install Debian packages, use
   keeps Plexamp's software there and links `~/Library` into it, and the
   carry-over moves pi's copies there. 1.12.x also left Plexamp's caches in
   pi's home on a factory reset (266 MB on sofapi, 17 MB on guestpi): moved
-  by the carry-over, and on the reset's list.
+  by the carry-over, and on the reset's list. On sofapi after 0.5.1
+  (catalogue serial 8): Plexamp started without downloading again, signed
+  in; *Back up now* wrote 1.07 MB, the sign-in in it and nothing of
+  `.cache`, beside 306 MB in the plugin's `.cache`.
 
 ## Not in this phase
 
