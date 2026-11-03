@@ -139,7 +139,11 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: packages
-          path: packaging/out/*.deb
+          # The skin packs (about 1.1 GB) are left out: a preview rarely
+          # changes them, and the set without them is 133 MB (1.12.1).
+          path: |
+            packaging/out/*.deb
+            !packaging/out/gexis-skins*.deb
           retention-days: 7
           compression-level: 0
 
