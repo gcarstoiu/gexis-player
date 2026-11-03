@@ -23,21 +23,14 @@ phases; change it when a phase opens, closes or moves, and show George first. Hi
 **Testing: 1.12.1** (2026-11-03, serial 64), the first release built on
 GitHub (run 41609042614; ADR-0173, *Built*): the build machinery, squeezelite,
 peppyalsa, nqptp and shairport-sync from source archives, `rpi-eeprom`
-28.36-1. Notes approved by George; signed on R2D2 with `publish.sh --sign`
-(`packaging/release/out` linked to `~/projects/gexis-release-out` in
-`-next` for it, then removed); every signature read back good. PR #94 for
-George to merge; do not push `next` until its checks have finished.
+28.36-1. Notes approved by George; signed on R2D2 with `publish.sh --sign`;
+every signature read back good. PR #94 merged by George (2026-11-03), with
+#93 (README: 1.12.0 is the current release).
 
-**Stable: 1.12.0** (2026-11-02; Testing serial 63, Stable
-serial 13, promoted by George the same day; each read back with a good
-signature): Phase 26, Roon, with three fixes (the visualiser's tap and the
-updater's stop sending the panel token, ADR-0170 *Two callers missed*; the
-row of sources under the library narrowed to fit), built on 1.11.0 (themes,
-Phase 25, Testing serial 62; left a pre-release, as 1.9.1 was). Notes
-approved by George; PRs #91 and #92 merged by George (2026-11-02). Image
-`image/deploy/2026-11-02-gexis-player-v1.12.0.img` (160 checks passed);
-build output `~/projects/gexis-release-out/r1.12.0`. The two measurements
-are still owed (to-dos `ph22-measure`, `eq-measure`).
+**Stable: 1.12.0** (2026-11-02, serial 13): Roon (Phase 26) and three
+fixes, on 1.11.0 (themes; left a pre-release). Its image, the last built on
+R2D2: `image/deploy/2026-11-02-gexis-player-v1.12.0.img`. The two
+measurements are still owed (to-dos `ph22-measure`, `eq-measure`).
 
 **R2D2's `/` fills up**: Docker's
 containerd store keeps images on `/`, not in `/home/docker`, and pi-gen
@@ -65,21 +58,19 @@ extension through Debian's `python3-roonapi`. **Left open** (ADR-0172,
 *Built*): Roon took the output back eight seconds after Lyrion took it, the
 cause not established (0.2.1 logs the pause's answer and the loopback's
 states); not measured: bit-perfect, rates above 44.1 kHz, a group, the
-plugin off and on, Roon Bridge's own update. sofapi runs preview packages
-from `ph-roon` (in `~/gexis-pc`) and has the reboot marker set; the next
-update reboots it once. **In progress:** Phase 27, releases built on GitHub
+plugin off and on, Roon Bridge's own update. **In progress:** Phase 27, releases built on GitHub
 (`ph-github-builds`, added by George 2026-11-02; ADR-0173 accepted, decisions
-1-3), on its branch and worktree `~/projects/gexis-player-github-builds`,
-merged into `next` and released in 1.12.1 (2026-11-03). Done (Finding 140): the trial; the `inputs`
+1-3), released in 1.12.1 (2026-11-03; its branch merged and deleted). Done
+(Finding 140): the trial; the `inputs`
 mirror (a pre-release, 152 files listed in `packaging/inputs.tsv`, uploaded
 from R2D2 with `packaging/inputs.sh publish`); the four cloned sources from
 pinned archives (new revisions); earlier releases read from GitHub
 (`packaging/release/published.py`); `sign.sh`, `publish.sh --upload` and
 `--sign`; `.github/workflows/release.yml`, whose whole chain ran unsigned on
 the branch in 19 minutes; 1.12.1 built, uploaded, attested and signed that
-way. **Left:** a card flashed from 1.12.1's image (criterion 4; sofapi updated
-itself to it); a preview by `workflow_dispatch` once #94 is merged; then R2D2's
-pi-gen container and build images removed (decision 3). Check a
+way; sofapi updated itself to it. **Left:** a card flashed from 1.12.1's image
+(criterion 4, George); then R2D2's pi-gen container and build images removed
+(decision 3). Check a
 workflow parses before pushing it (`~/projects/ha-venv/bin/python` has PyYAML):
 a `: ` in a one-line `run:` failed one push. Then 28, room correction for the
 bass. **Open, small:** `gen_personalise.py` out of step since Phase 23;
@@ -110,24 +101,24 @@ from Testing (with a reboot, its marker now cleared; the preview's packages
 removed); `rpi-eeprom-update` reports a bootloader update
 available, not applied (not looked into). Roon's extension enabled in
 George's Roon; the other three last seen on 1.9.1 through their updaters
-(2026-10-29). All four on Testing, which offers 1.12.0. sofapi and the bar
+(2026-10-29). All four on Testing, which offers 1.12.1. sofapi and the bar
 grouped; AirPlay on at sofapi and guestpi. Each has its own Lyrion server.
 
 **The test venv imports the core from `~/projects/gexis-player-next`** (an
 editable install): in another worktree run the suite with `PYTHONPATH=src`
-from its `core/`, or it tests `next`'s code. **A preview of core needs the
-player meta-package too** (it pins core exactly): `packaging/build.sh` with
-every component and `player`, after copying the unchanged UI and system
-packages from the release's build output (`repos/ours-*`).
+from its `core/`, or it tests `next`'s code. **A preview is built on GitHub**
+(`gh workflow run release.yml -f ref=<branch> -f kind=preview`, then `gh run
+download <run> --name packages`): the whole set of one commit, which a preview
+of core needs (the player meta-package pins it exactly).
 
 **Deferred until a bug report** (George, 2026-10-21): a first start after a
 screen change may miss full-screen (the HMTECH 10.1"; to-do
 `first-start-fullscreen`).
 
-**Release build output lives in `~/projects/gexis-release-out`**: in each
-release worktree, `ln -s` it to `packaging/release/out` before `build.sh`
-(excluded in `.git/info/exclude`). `reuse.py` reuses a published file only
-against a local copy, so losing that folder means re-uploading every OS file.
+**Release build output lives in `~/projects/gexis-release-out`**: link it to
+`packaging/release/out` in the checkout `publish.sh` runs from (git-ignored;
+remove the link after). Since ADR-0173 `reuse.py` reads the published
+indexes, not these copies; whether to keep the folder is George's (4.8 GB).
 
 **Open:**
 - **Not checked:** iOS's handling of `interactive-widget` (the mini player
@@ -144,12 +135,8 @@ against a local copy, so losing that folder means re-uploading every OS file.
 `~/projects/ha-venv`). **HACS's default list**: hacs/default#12691 waits for
 HACS's maintainers - do not ask them for a review (their template).
 
-**Phases 20 and 21 closed 2026-10-27** (the archive has their state). Left
-from Phase 20: the measurement through a card (to-do `eq-measure`, at a time
-George picks).
-
-Next, Phase 27 (releases built on GitHub, ADR-0173 accepted), then 28 (room
-correction for the bass) and 29-32 in order, each ADR first
+After Phase 27: 28 (room correction for the bass) and 29-32 in order, each
+ADR first
 (`docs/DEVELOPMENT.md`, the IDs there); MPD parked (ADR-0151). **Raspberry
 Pi Imager** (ADR-0159, a task): Imager's own list stays open as it is
 (George, 2026-10-24).
@@ -159,7 +146,7 @@ in Claude's memory, not here) holds the open items with their detail.
 
 **Routine clean-up** (`docs/ROUTINE-CLEANUP.md`, George 2026-10-12): after
 every merged release PR, otherwise weekly on Sunday evening. **Last run:
-2026-11-02, after 1.12.0** (/home 214 -> 232 GB free, / 3.6 -> 4.6 GB).
+2026-11-03, after 1.12.1.**
 
 ## Phases
 
@@ -168,8 +155,9 @@ consecutively without letters, each with a stable ID (George, 2026-10-13);
 20 (the equaliser) and 21 (the phone remote) closed 2026-10-27 with 1.7.0,
 24 (the plugin catalogue) 2026-10-31 with 1.10.0, 25 (themes) and 26
 (Roon) 2026-11-02 with 1.11.0 and 1.12.0; 22 (multiroom) and 23 (AirPlay 2,
-limited testing) on Stable with work open; next 27 (releases built on
-GitHub), 28-29 (room correction), 30-32; MPD parked. `docs/DEVELOPMENT.md`
+limited testing) on Stable with work open; 27 (releases built on GitHub)
+in 1.12.1, a card still to flash; next 28-29 (room correction), 30-32; MPD
+parked. `docs/DEVELOPMENT.md`
 holds each phase's acceptance criteria.
 
 ## Machines
