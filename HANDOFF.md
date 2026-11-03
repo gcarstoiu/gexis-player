@@ -20,7 +20,15 @@ and the ideas as Must / Should / Could. It follows `docs/DEVELOPMENT.md`'s
 phases; change it when a phase opens, closes or moves, and show George first. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Stable and Testing: 1.12.0** (2026-11-02; Testing serial 63, Stable
+**Testing: 1.12.1** (2026-11-03, serial 64), the first release built on
+GitHub (run 41609042614; ADR-0173, *Built*): the build machinery, squeezelite,
+peppyalsa, nqptp and shairport-sync from source archives, `rpi-eeprom`
+28.36-1. Notes approved by George; signed on R2D2 with `publish.sh --sign`
+(`packaging/release/out` linked to `~/projects/gexis-release-out` in
+`-next` for it, then removed); every signature read back good. PR #94 for
+George to merge; do not push `next` until its checks have finished.
+
+**Stable: 1.12.0** (2026-11-02; Testing serial 63, Stable
 serial 13, promoted by George the same day; each read back with a good
 signature): Phase 26, Roon, with three fixes (the visualiser's tap and the
 updater's stop sending the panel token, ADR-0170 *Two callers missed*; the
@@ -61,16 +69,17 @@ plugin off and on, Roon Bridge's own update. sofapi runs preview packages
 from `ph-roon` (in `~/gexis-pc`) and has the reboot marker set; the next
 update reboots it once. **In progress:** Phase 27, releases built on GitHub
 (`ph-github-builds`, added by George 2026-11-02; ADR-0173 accepted, decisions
-1-3), on its branch and worktree `~/projects/gexis-player-github-builds`, not
-yet merged into `next`. Done there (Finding 140): the trial; the `inputs`
+1-3), on its branch and worktree `~/projects/gexis-player-github-builds`,
+merged into `next` and released in 1.12.1 (2026-11-03). Done (Finding 140): the trial; the `inputs`
 mirror (a pre-release, 152 files listed in `packaging/inputs.tsv`, uploaded
 from R2D2 with `packaging/inputs.sh publish`); the four cloned sources from
 pinned archives (new revisions); earlier releases read from GitHub
 (`packaging/release/published.py`); `sign.sh`, `publish.sh --upload` and
 `--sign`; `.github/workflows/release.yml`, whose whole chain ran unsigned on
-the branch in 19 minutes. **Not yet tried:** the upload job, `--sign` and
-attestations (they run on a release tag), previews by `workflow_dispatch`
-(needs the workflow on `main`), the four rebuilt packages on a player. Check a
+the branch in 19 minutes; 1.12.1 built, uploaded, attested and signed that
+way. **Left:** a player updating to 1.12.1 and a card flashed from its image
+(criterion 4); a preview by `workflow_dispatch` once #94 is merged; then R2D2's
+pi-gen container and build images removed (decision 3). Check a
 workflow parses before pushing it (`~/projects/ha-venv/bin/python` has PyYAML):
 a `: ` in a one-line `run:` failed one push. Then 28, room correction for the
 bass. **Open, small:** `gen_personalise.py` out of step since Phase 23;

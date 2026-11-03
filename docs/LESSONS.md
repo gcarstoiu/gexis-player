@@ -471,6 +471,12 @@ updater's stop still called without it, refused from 1.10.0 until a tap on
 sofapi went unanswered. A route that gains a guard has its callers found by
 searching for the route across the repository, and a test keeps that list.
 
+**90. A branch's own checks never read** (2026-11-03, Phase 27). Two pushes
+to `ph-github-builds` failed *Core tests* on GitHub - a test still called
+`reuse.py` the old way - while only the release workflow's runs were watched;
+the failure was found by a local run just before tagging. After a push,
+every check on that commit is read, not only the one being worked on.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target, the check quietly

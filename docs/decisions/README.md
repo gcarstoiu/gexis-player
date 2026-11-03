@@ -193,7 +193,7 @@ been written properly. **0098 has no record either.**
 | [0170](0170-plugins-that-ask-for-more.md) | Plugins that ask for more | Accepted 2026-10-30 (Phase 24, George): declared permissions `cec`, `gpio`, `usb`, granted as declared and asked for; a CEC plugin first |
 | [0171](0171-themes.md) | Themes | Built 2026-11-01, in 1.11.0 (Phase 25, George): six themes built in, one per player; today's colours through the tokens first |
 | [0172](0172-roon.md) | Roon | Built 2026-11-02, in 1.12.0 (Phase 26, George): Roon Bridge fetched on the player as a plugin, through the player's output by a loopback; Now Playing by Roon's extension API, the zone found by the loopback |
-| [0173](0173-releases-built-on-github.md) | Releases built on GitHub | Accepted 2026-11-02 (Phase 27, George: decisions 1-3): packages, image, parts and previews built on GitHub's arm64 machines; signing stays on R2D2 |
+| [0173](0173-releases-built-on-github.md) | Releases built on GitHub | Built 2026-11-03, in 1.12.1; accepted 2026-11-02 (Phase 27, George: decisions 1-3): packages, image, parts and previews built on GitHub's arm64 machines; signing stays on R2D2 |
 
 ## Cross-cutting rules
 
