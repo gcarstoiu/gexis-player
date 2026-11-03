@@ -3699,9 +3699,9 @@ packs) is read from GitHub.
    image sets up. *Half met 2026-11-03*: sofapi updated itself to 1.12.1
    (with a reboot), dpkg clean, every unit running; the card is George's.
 5. **With decision 1**, a preview built by the workflow installed on a test
-   player. *Met in part 2026-11-03*: the four rebuilt packages, built by the
-   workflow on the branch, on sofapi (George approved); by hand once the
-   workflow is on `main`.
+   player. *Met 2026-11-03*: the four rebuilt packages, built by the
+   workflow on the branch, on sofapi (George approved); a preview run by hand
+   from `main` the same day.
 6. **The documents**: `docs/tech/updates-and-releases.md` §4 and
    `docs/BUILD-TRAPS.md` describe the new way, the traps that no longer
    apply marked so. *Met 2026-11-03.*
