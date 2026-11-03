@@ -78,11 +78,15 @@ ADR-0174 accepted: the plugin downloads Plexamp; players using them carried
 over; setup keeps offering Plexamp), on its branch and worktree
 `~/projects/gexis-player-catalogue-plugins`. Done: the sandbox gives catalogue
 plugins `HOME`, the device name, a renderer's restart allowance, the connected
-status and the page link; `~/projects/gexis-beszel` (local, not yet on
-GitHub) builds both Beszel archives reproducibly, accepted by `uploads.check`
-once the ids are free. Next: the carry-over and the Beszel packages out of the
-release, then the repository, its release and the catalogue listing (George
-merges), a preview on a test player; Plexamp after. Then 29, room correction
+status and the page link; Beszel out of the release (`gexis-player`
+conflicts with its packages) and carried over (`carry_over.py`);
+`gcarstoiu/gexis-beszel` v0.21.1-1 public, listed (gexis-plugins #13, #14,
+George, admin merge for the tools change), catalogue serial 6. Previewed on
+sofapi 2026-11-03 (in `~/preview-ph28`): its agent came back from the catalogue
+and reached its hub, the hub's data moved, the `beszel` user deleted - after a
+fix: the old agent kept running, as our packages never stopped it on removal;
+the carry-over now stops the old unit first. Next: George's look at the
+Plugins page on sofapi; then Plexamp. Then 29, room correction
 for the bass. **Open, small:** `gen_personalise.py` out of step since Phase 23;
 the mocked Settings → Display showed two *Screen port* rows
 (`screen_port`, `screen_port_info`), not yet looked at on a player.
