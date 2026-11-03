@@ -1,15 +1,17 @@
 # Updates, releases and the image
 
-How Gexis Player's software reaches a device: as Debian packages, built in a
-container, published as signed apt repositories on the project's GitHub
-Releases, found through a signed channel file, and installed by a standalone
-updater that can put the previous release back. The flashable image is built
-from the same packages.
+How Gexis Player's software reaches a device: as Debian packages, built on
+GitHub's arm64 machines from the release's tag, published as signed apt
+repositories on the project's GitHub Releases - signed on one machine of
+the project's, never on GitHub - found through a signed channel file, and
+installed by a standalone updater that can put the previous release back. The
+flashable image is built from the same packages, in the same run.
 
 Decisions: ADR-0021 (flashable image), ADR-0042 (download cache), ADR-0100
 (fetched software), ADR-0105 (updates over the network), ADR-0106 (plugins),
 ADR-0107 (packages), ADR-0108 (publishing), ADR-0110 (the update experience),
-ADR-0111 / ADR-0113 (skin packs), ADR-0116 (change logs).
+ADR-0111 / ADR-0113 (skin packs), ADR-0116 (change logs), ADR-0173 (releases
+built on GitHub).
 
 ---
 
@@ -17,22 +19,25 @@ ADR-0111 / ADR-0113 (skin packs), ADR-0116 (change logs).
 
 ```mermaid
 flowchart LR
-    subgraph dev["Build machine"]
-        src[repository] --> pk["packaging/build.sh<br/>(arm64 container)"]
-        pk --> out[packaging/out/*.deb]
-        out --> img["make image<br/>(pi-gen + stage-gexis)"]
-        img --> image[(image .img)]
-        image --> rb["packaging/release/build.sh<br/>(tested set + signing)"]
-        out --> rb
-        rb --> rel[(packaging/release/out/r&lt;tag&gt;)]
-        rel --> pub["packaging/release/publish.sh"]
+    subgraph ci["GitHub Actions: release.yml, on the tag v&lt;x.y.z&gt;"]
+        src[repository at the tag] --> pk["make packages<br/>(arm64 container)"]
+        pk --> img["make image<br/>(pi-gen + stage-gexis)"]
+        img --> rb["release/build.sh --unsigned<br/>(tested set, parts)"]
+        rb --> up["publish.sh --upload<br/>(attested)"]
     end
     subgraph gh["Project's GitHub Releases"]
+        in["inputs: the build's downloads"]
         parts["parts: ours-*, skins-*, rpi-*, debian-*<br/>(flat apt repos)"]
-        page["r&lt;tag&gt;: notes, history, parts"]
+        page["r&lt;tag&gt;: notes, history, parts, image"]
         ch["channels: testing, stable"]
     end
-    pub --> parts & page & ch
+    in --> pk
+    up --> parts & page
+    subgraph key["The project's signing machine"]
+        sg["publish.sh --sign:<br/>Release files and parts list only,<br/>attestation checked, then signed"]
+    end
+    parts & page --> sg
+    sg --> parts & page & ch
     subgraph dev2["Device"]
         upd[gexis-update] -->|reads| ch
         upd -->|apt, private config| parts
@@ -49,7 +54,9 @@ Three ideas carry the design:
   `packaging/keys/gexis-release.asc`, shipped by `gexis-core` to
   `/usr/share/gexis/keys/`). The channel file, each part's `InRelease`, a
   release's `parts` file and its notes are all verified on the device with
-  `gpgv` before being believed.
+  `gpgv` before being believed. The key is on one machine of the project's
+  (ADR-0105) and never on GitHub: what GitHub builds is installed by no
+  device until that machine has signed it (ADR-0173).
 - **The updater outlives what it installs.** It is a standalone script on the
   system Python and standard library, run by its own systemd units, never by
   the core (an install restarts the core).
@@ -127,7 +134,19 @@ flowchart TD
 - **Vendored downloads** go through `image/stage-gexis/fetch-cached.sh`:
   `fetch_cached <url> <sha256> <dest>` looks in a content-addressed cache
   first (the file is named by its checksum), verifies on the way in and out,
-  and works with no cache at all (ADR-0042).
+  and works with no cache at all (ADR-0042). Another project's source pinned
+  by commit is GitHub's archive of that commit, through the same cache
+  (`packaging/fetch-source.sh`), checked by commit, date and a sha256 of its
+  files.
+- **The `inputs` mirror** (ADR-0173): a pre-release holding every download
+  under its sha256, as `packaging/inputs.tsv` lists them with their licences.
+  `packaging/inputs.sh fill <cache>` fills a build's empty cache from it;
+  `unlisted <cache>` fails a release build that downloaded anything the list
+  lacks; `publish` uploads what the mirror lacks. A download not yet in the
+  mirror comes from upstream.
+- **On GitHub every image is built cold**, on `ubuntu-24.04-arm` without
+  qemu: about 7 minutes for the image, 19 for the whole release with the
+  published skin packs reused (Finding 140).
 - **`image/verify-image.sh <img>`** checks the artefact before anyone flashes
   it: it reads the root partition with `debugfs` (no root, no loop device) and
   compares files byte for byte with the checkout - units, kiosk, Peppy driver,
@@ -147,7 +166,9 @@ flowchart TD
 
 A release is built **from the image it was tested as**, not from a package
 list. `packaging/release/build.sh <image.img>` refuses to run if the image's
-`gexis-player` differs from the one in `packaging/out`.
+`gexis-player` differs from the one in `packaging/out`. **Since 1.12.1 it is
+built on GitHub** (ADR-0173) by `.github/workflows/release.yml`, in one run
+with the packages and the image, and signed on the signing machine.
 
 ### The steps, in order
 
@@ -155,16 +176,31 @@ list. `packaging/release/build.sh <image.img>` refuses to run if the image's
    to know, impersonal, no restart promises), approved by George; then
    `python -m gexis_core.changelog ../CHANGELOG.md` from `core/`. Commit
    "Release notes: X (approved by George)" on `next` (the release branch) and tag `vX`.
-2. **Image**: a worktree at the tag, `git submodule update --init`, `make
-   image` (about 15 min); move the image to the main checkout's
-   `image/deploy/` before `build.sh`, which records its path for the
-   promotion (1.1.0's pointed into the removed worktree); `image/verify-image.sh <that image>` **run from the
-   release worktree** must pass every check - it compares the image with the
-   sources beside the script, and the main checkout (`docs`) does not
-   carry the release's code (0.11.0: five false failures from there).
-3. **Release**: `packaging/release/build.sh <image>`, then
-   `packaging/release/publish.sh rX --channel testing`; read the channel file
-   back from GitHub and verify it with the release key (serial, release).
+2. **Build, on GitHub**: pushing the tag runs `release.yml` (about 20
+   minutes). Its *Packages and image* job, with read access only:
+   - fills the download cache from the `inputs` mirror;
+   - proves every published part's index with the release key
+     (`packaging/release/published.py`) and takes the last release's skin
+     packs and wallpapers;
+   - runs `make packages` and `make image`, then `image/verify-image.sh` from
+     the same checkout;
+   - fails on a download `packaging/inputs.tsv` does not list;
+   - builds the parts with `packaging/release/build.sh <image> --unsigned`
+     and compresses the image.
+
+   Its *Upload, unsigned* job, the only one that may write, attests the
+   Release files, the parts list and the image (`actions/attest-build-provenance`)
+   and runs `publish.sh --upload rX`: the new parts' packages and indexes, the
+   release page with its notes and a link to the run, the image with its
+   checksum and package list. Nothing is installable yet: no part has an
+   `InRelease`.
+3. **Sign, on the signing machine**: `packaging/release/publish.sh --sign rX
+   --channel testing` downloads only what it signs - each new part's `Release`
+   and `Packages`, the parts list - checks each with `gh attestation verify`
+   (this workflow, this tag), signs them (`packaging/release/sign.sh`), signs
+   the notes and the history, uploads the signatures and moves the channel.
+   Read the channel file back from GitHub and verify it with the release key
+   (serial, release).
 3a. **The API's page on GitHub** (ADR-0152) is built by
    `.github/workflows/api-docs.yml` when the tag `vX` is pushed, from the
    `openapi.json` the release ships, with the release's number and trying
@@ -182,11 +218,11 @@ list. `packaging/release/build.sh <image.img>` refuses to run if the image's
 5. **After the merge**: merge `origin/main` into `docs` and `next`, delete
    `release-X` **on GitHub and locally** (`git push origin --delete
    release-X`; seven release branches were left on GitHub until 2026-10-18),
-   remove the release worktree, then the routine clean-up
-   (`docs/ROUTINE-CLEANUP.md`).
+   then the routine clean-up (`docs/ROUTINE-CLEANUP.md`).
 6. **Promotion to Stable** (when George says): `publish.sh --promote rX`
-   attaches `gexis-player.img.xz` with its checksum and signature, points
-   `stable` at the release and marks it GitHub's latest. Then **README's
+   downloads the release's `gexis-player.img.xz`, checks it against its
+   checksum and its attestation, attaches its signature, points `stable` at
+   the release and marks it GitHub's latest. Then **README's
    *Download and install* section** (George, 2026-10-12: *"a section on the
    overview page in GitHub pointing to the IMG file download with a brief
    installation instruction"*):
@@ -226,9 +262,23 @@ Updates arrive over the network from then on; you never need to flash again.
 The [installation guide](docs/INSTALL.md) has every step in detail.
 ```
 
+**Previews** are built by the same workflow by hand: *Run workflow* with a
+branch and *kind: preview* (`gh workflow run release.yml -f ref=<branch> -f
+kind=preview`) builds that branch's packages only; `gh run download <run>
+--name packages` brings them to the machine that installs them on a test
+player over SSH. *kind: release* builds the whole release without uploading
+it.
+
+**Built locally instead** (GitHub unavailable): the same scripts still work on
+an arm64 or qemu machine - a worktree at the tag, `make image`,
+`image/verify-image.sh` from that worktree, `packaging/release/build.sh
+<image>` (which signs, when the key is there) and `publish.sh rX --channel
+testing`, with every download listed in `packaging/inputs.tsv` in the cache
+or upstream.
+
 Three things that have each cost a build:
 
-- **A release worktree needs `git submodule update --init`** before
+- **A local release worktree needs `git submodule update --init`** before
   `make image`: pi-gen is a submodule, and a fresh worktree has it empty.
 - **Raising a Beszel pin raises the image check's checksums too**:
   `image/verify-image.sh` holds the tested agent binary's SHA-256 beside the
@@ -240,17 +290,17 @@ Three things that have each cost a build:
 ```mermaid
 flowchart TD
     I[(tested image)] -->|debugfs: dpkg status, archive keyrings| L[installed list:<br/>name version arch]
-    L --> OS["fetch-tested-set.py (container):<br/>each OS package at its exact version,<br/>checked against Debian / RPi signed indexes;<br/>from an earlier release of ours if the archive dropped it"]
+    L --> OS["fetch-tested-set.py (container):<br/>each OS package at its exact version,<br/>checked against Debian / RPi signed indexes;<br/>from a published part of ours if the archive dropped it"]
     L --> O["ours: exactly the versions the image has,<br/>from packaging/out"]
     SP["all five gexis-skins-WxH"] --> K
     OS --> R[rpi] & D[debian]
     O --> U[ours] & K[skins]
-    U & K & R & D --> N["per part: rename for GitHub,<br/>apt-ftparchive Packages,<br/>reuse.py: point at files already published,<br/>name = kind-sha256(Packages)[:12],<br/>Release, sign InRelease + Release.gpg"]
-    N --> C{"checks: &lt;1000 files per part,<br/>signatures verify,<br/>release count = image count + packs,<br/>alsa-lib present"}
-    C --> PF["parts file (clearsigned):<br/>Release + Parts"]
-    PF --> P["publish.sh &lt;tag&gt; [--channel testing]"]
-    P --> GH["upload missing parts (paced),<br/>r&lt;tag&gt; page with notes + parts,<br/>channel file with Serial+1"]
-    GH --> PR["publish.sh --promote &lt;tag&gt;:<br/>attach the image (xz, sha256, signature),<br/>point stable at it, mark latest"]
+    U & K & R & D --> N["per part: rename for GitHub,<br/>apt-ftparchive Packages,<br/>reuse.py: point at files already published,<br/>name = kind-sha256(Packages)[:12], Release"]
+    N --> C{"checks: &lt;1000 files per part,<br/>release count = image count + packs,<br/>alsa-lib present"}
+    C --> PF["parts.plain: Release + Parts"]
+    PF --> UP["on GitHub: publish.sh --upload &lt;tag&gt;<br/>new parts unsigned, r&lt;tag&gt; page, image"]
+    UP --> S["signing machine: publish.sh --sign &lt;tag&gt; --channel testing<br/>attestations checked, InRelease + Release.gpg,<br/>parts, notes, history signed, Serial+1"]
+    S --> PR["publish.sh --promote &lt;tag&gt;:<br/>the image's signature,<br/>point stable at it, mark latest"]
 ```
 
 **Parts, named by content.** A release is four flat apt repositories, each its
@@ -259,7 +309,11 @@ tested set) and `debian`. A part's name is `<kind>-<first 12 hex of its
 Packages' sha256>`, which is also its apt suite. Unchanged parts already exist
 on GitHub and are not uploaded again. `packaging/release/reuse.py` goes further:
 a file any published part already holds byte-for-byte is referenced from there
-(`Filename: ../<other-part>/<file>`), so each file is uploaded once, ever.
+(`Filename: ../<other-part>/<file>`), so each file is uploaded once, ever. "The
+same bytes" is proven by the holding part's own index, itself proven by its
+`InRelease` (`published.py`), so no earlier release has to be on the building
+machine. A skin pack rebuilt at a published version is replaced by the
+published file (`published.py prefer`): one name and version, one content.
 
 **The release page** `r<version>` (with `+` spelled `-`) holds:
 
@@ -275,7 +329,10 @@ a file any published part already holds byte-for-byte is referenced from there
   the waiting one, as `whats_new_all`, so a device several releases behind
   shows each one it skips (ADR-0110 amended 2026-10-07). A release without
   one, or one that does not verify, falls back to `notes`;
-- once promoted to stable, `gexis-player.img.xz` with checksum and signature.
+- `gexis-player.img.xz` with its checksum and package list
+  (`gexis-player.info`), uploaded by the build, and once promoted to stable
+  its signature;
+- `parts.plain` and `build.txt` (the run and commit that built it), attested.
 
 **Channels.** A permanent release named `channels` holds two clearsigned files,
 `testing` and `stable`:
@@ -656,6 +713,8 @@ ADR-0105 amended 2026-10-12).
 | `core/src/gexis_core/components.py`, `image/stage-gexis/03-core/files/gexis-fetch-component` | fetched software |
 | `ui/src/screens/UpdateModal.svelte`, `UpdateScreen.svelte`, `UpdateSteps.svelte` | update UI |
 | `packaging/build.sh`, `packaging/<pkg>/build.sh`, `packaging/builder.Dockerfile` | package builds |
-| `packaging/release/{build.sh,publish.sh,fetch-tested-set.py,reuse.py}` | release build and publishing |
+| `packaging/release/{build.sh,publish.sh,sign.sh,fetch-tested-set.py,reuse.py,published.py}` | release build, signing and publishing |
+| `.github/workflows/release.yml` | the release built on GitHub (ADR-0173), and previews |
+| `packaging/inputs.tsv`, `packaging/inputs.sh`, `packaging/fetch-source.sh` | the build's downloads, their mirror and pinned source archives |
 | `packaging/check-upstream.sh` | pin freshness |
 | `Makefile`, `image/config`, `image/stage-gexis/`, `image/verify-image.sh`, `image/provision.sh` | image build, verification, dev provisioning |
