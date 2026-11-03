@@ -96,9 +96,11 @@ player's.
 `GEXIS_RELEASE_GNUPGHOME=~/projects/gexis-release-key`; the scripts default
 to `~/.gnupg-gexis-release`, which no longer exists.
 
-**The players** (2026-11-02): sofapi on preview packages from `ph-roon`
-(core and system `1.11.0+git13.f93d3d2`, UI `1.11.0+git1.f946515`, Roon
-0.2.1, in `~/gexis-pc`), its reboot marker set, Roon's extension enabled in
+**The players** (2026-11-03): sofapi on preview packages from
+`ph-github-builds` (run 41525285578: `gexis-player 1.12.0+git29.52b77c0`,
+core 1.12.0, the four rebuilt from source archives; in `~/preview-ph27`; core,
+kiosk and peppy restarted, squeezelite and the AirPlay pair restarted by
+their packages), its reboot marker still set, Roon's extension enabled in
 George's Roon; the other three last seen on 1.9.1 through their updaters
 (2026-10-29). All four on Testing, which offers 1.12.0. sofapi and the bar
 grouped; AirPlay on at sofapi and guestpi. Each has its own Lyrion server.
