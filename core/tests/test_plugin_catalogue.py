@@ -571,3 +571,17 @@ def test_a_catalogue_plugin_that_downloads_its_software_shows_it_on_its_switch()
     assert keys["plexamp.enabled"]["component"] == "plexamp"
     assert "plexamp.download" in keys and "plexamp.remove" not in keys
     assert "software" in plugin_server.EVENTS
+
+
+async def test_what_part_two_may_install_without_a_question(key, tmp_path):
+    """ADR-0174 decision 3: offered to this player, and asking for nothing
+    beyond the sandbox - part 2 has no page to agree on."""
+    keyring, sign = key
+    data = archive()
+    cat = index(entry(listed(data)), entry(listed(data, permissions=["cec"]), plugin_id="tv"),
+                entry(listed(data, player="9.0.0"), plugin_id="later"), entry(listed(data), plugin_id="spotify"))
+    svc, _ = service(key, tmp_path, published(cat, sign))
+    assert svc.offered("hello") is None, "nothing read yet"
+    await svc.refresh()
+    assert svc.offered("hello")["id"] == "hello"
+    assert [svc.offered(i) for i in ("tv", "later", "spotify", "absent")] == [None] * 4

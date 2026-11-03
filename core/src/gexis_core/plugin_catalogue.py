@@ -434,6 +434,14 @@ class Service:
         entry = self.catalogue.entry(plugin_id) if self.catalogue else None
         return entry.get("summary") if entry else None
 
+    def offered(self, plugin_id: str) -> dict | None:
+        """Its entry, when a version of it is offered to this player and asks
+        for nothing beyond the sandbox - what part 2 installs without a
+        question (ADR-0174 decision 3)."""
+        entry = self.catalogue.entry(plugin_id) if self.catalogue and plugin_id not in self.ours else None
+        version = offer(entry, self.release()) if entry else None
+        return entry if version is not None and not version_permissions(version) else None
+
     def pulled(self, plugin_id: str) -> tuple[str, str] | None:
         """Whether the catalogue read last withdrew or blocked this plugin,
         or the version installed here - for its row, read with the settings."""

@@ -53,6 +53,10 @@ KEYS = (
 #: Plexamp download; AirPlay is in the image (ADR-0167) and is written
 #: either way, as Spotify is.
 PLUGIN_ROWS = ("lyrion-server.enabled", "plexamp.enabled", "airplay.enabled")
+#: **ADR-0174 decision 3**: ours that moved to the catalogue and that part 2
+#: still offers. Chosen while not installed, each is installed from the
+#: catalogue (`install`) and switched on once it is in.
+FROM_CATALOGUE = ("plexamp",)
 #: ADR-0115 decision 20: where the Lyrion server on this player reads music,
 #: written before its switch so it starts with them. The USB folders
 #: themselves are added on *Where is your music?* as they are chosen.
@@ -157,7 +161,7 @@ def checked(values: Any) -> dict:
 
 
 def apply(values: dict, settings, offered: list[dict], begin: Callable[[list[dict]], None],
-          status: dict | None = None) -> dict:
+          status: dict | None = None, install: Callable[[str], object] | None = None) -> dict:
     """**Write the answers, then switch on what downloads, then follow the
     downloads** (ADR-0128). Each setting goes through `Settings.set`, so it
     does what it does from Settings; one that refuses is reported and the
@@ -168,7 +172,11 @@ def apply(values: dict, settings, offered: list[dict], begin: Callable[[list[dic
     waited for** (ADR-0149 decision 42; George, 2026-10-19: the skins and
     Plexamp download during part 2, which "leaves only lyrion topics at the
     end"). The Lyrion server is followed past its download, through its own
-    steps (`follow`, decision 43), unless it has already read the music."""
+    steps (`follow`, decision 43), unless it has already read the music.
+
+    An offered plugin marked `catalogue` is not installed yet (ADR-0174
+    decision 3): switched on, it is installed with `install` - which
+    switches it on once in - and followed like the rest."""
     status = status or {}
     values = checked(values)
     failed, written = [], []
@@ -193,8 +201,16 @@ def apply(values: dict, settings, offered: list[dict], begin: Callable[[list[dic
     for row in PLUGIN_ROWS:
         if row not in values:
             continue
-        put(row, bool(values[row]))
         plugin = by_row.get(row)
+        if plugin and plugin.get("catalogue"):
+            if values[row]:
+                try:
+                    install(plugin["id"])
+                except Exception as exc:  # noqa: BLE001 - as a refused setting
+                    logger.warning("personalise: %s not installed: %s", plugin["id"], exc)
+                    failed.append(row)
+        else:
+            put(row, bool(values[row]))
         if values[row] and plugin and plugin.get("component") and row not in failed:
             item = {"id": plugin["component"], "name": plugin["name"]}
             if row == "lyrion-server.enabled":

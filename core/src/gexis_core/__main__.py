@@ -2168,6 +2168,18 @@ async def main() -> None:
         # ADR-0174: what catalogue plugins say of their own downloads.
         for plugin_id, record in plugin_software.items():
             status.setdefault(plugin_id, record)
+        # Before it is in: the catalogue's download of a plugin part 2 chose,
+        # on the bar that then shows the plugin's own (decision 3). Installed
+        # is still installing - the core restarts, then the plugin says.
+        for plugin_id in personalise.FROM_CATALOGUE:
+            job = catalogue.jobs.get(plugin_id)
+            if job is not None and plugin_id not in status:
+                entry = catalogue.catalogue.entry(plugin_id) if catalogue.catalogue else None
+                status[plugin_id] = {
+                    "name": plugin_id, "label": (entry or {}).get("name", plugin_id), "from": "the plugin catalogue",
+                    "state": {"downloading": "downloading", "failed": "failed"}.get(job.phase, "installing"),
+                    "received": job.done, "total": job.total or None, "attempt": None, "attempts": None,
+                    "error": job.error, "updated": int(time.time())}
         status["skins"] = skins_status()
         # ADR-0115 decision 28: after its download, what Lyrion is doing.
         stage = dict(lyrion_stage.CURRENT)
@@ -4296,7 +4308,7 @@ async def main() -> None:
         pins = components.pins()
         out = []
         for plugin in installed_plugins:
-            if plugin.built_in or plugin.uploaded:
+            if plugin.built_in or (plugin.uploaded and plugin.id not in personalise.FROM_CATALOGUE):
                 continue
             component = downloads.get(plugin.id)
             pin = pins.get(component) or {} if component else {}
@@ -4308,7 +4320,28 @@ async def main() -> None:
                 "component": component,
                 "from": pin.get("FROM"),
             })
+        # ADR-0174 decision 3: offered as before it moved, installed from
+        # the catalogue when chosen.
+        for plugin_id in personalise.FROM_CATALOGUE:
+            entry = None if plugin_id in uploads.versions() else catalogue.offered(plugin_id)
+            if entry is not None:
+                out.append({"id": plugin_id, "name": entry["name"], "kind": entry["kind"],
+                            "row": f"{plugin_id}.enabled", "summary": entry.get("summary"), "notice": None,
+                            "component": plugin_id, "from": None, "catalogue": True})
         return out
+
+    def _install_offered(plugin_id: str) -> dict:
+        """ADR-0174 decision 3: a plugin part 2 offers from the catalogue,
+        chosen there - installed as *Add plugins* installs it, and recorded
+        as the carry-over records one: switched on once in, and installed
+        at the next start if it did not get in now."""
+        offered = next((p for p in _offered_plugins() if p["id"] == plugin_id and p.get("catalogue")), None)
+        if offered is None:
+            raise plugin_catalogue.Unavailable(f"{plugin_id} is not one part 2 installs")
+        job = catalogue.start_install(plugin_id)
+        uploads.record_missing(plugin_id, {"name": offered["name"], "kind": offered["kind"], "version": None,
+                                           "origin": uploads.CATALOGUE, carry_over.SWITCH_ON: True})
+        return job.to_json()
     # ADR-0111: the pack this screen wants every few minutes - and now, once
     # the attached screen has been compared (below), so a start that
     # switches screens does not first fetch the old screen's pack.
@@ -4759,6 +4792,7 @@ async def main() -> None:
         on_painted=None,
         upload_plugin=_upload_plugin,
         uninstall_plugin=_uninstall_plugin,
+        install_offered=_install_offered,
         # ADR-0169: one store for every plugin.
         store_view=_store_view,
         store_add=_store_add,
