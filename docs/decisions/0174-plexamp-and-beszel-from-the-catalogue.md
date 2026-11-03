@@ -169,6 +169,24 @@ environment, as ours have. It cannot install Debian packages, use
   carry-over before that release (gexis-plugins #14).
 - **Older backups** hold Beszel's data in its old places: restored there
   (`backups.RESTORED_ONLY`), then moved by the carry-over like an update's.
+  The same for Plexamp's store in pi's home.
+- **Plexamp's carry-over moves pi's copy of its software, with its stamp**,
+  instead of deleting it (6): it is the plugin's installed copy at the same
+  pin, so a carried player does not download Plexamp again. Pi's home keeps
+  none of it either way. Both old units are stopped first
+  (`plexamp.service`, `gexis-plexamp.service`).
+- **Plexamp is listed for 1.12.1 and later**, as Beszel is, after the
+  catalogue's list loses `plexamp` (gexis-plugins #15, #16).
+- **Setup (decision 3)** offers Plexamp from the catalogue while it is not
+  installed: *Download* posts `POST /personalise/install`, which installs it
+  as *Add plugins* does and records it as the carry-over records one -
+  switched on once in, installed at the next start if it did not get in. A
+  catalogue not read yet (a new player reads it a minute after its start) is
+  read first. Only a listing that asks for nothing beyond the sandbox is
+  offered there, since setup has no page to agree on.
+- **One unit for the adapter and Plexamp**: a takeover's kill (ADR-0091) now
+  ends the adapter too, which comes back with Plexamp a second later. To be
+  measured with the takeovers before the release.
 
 ## Not in this phase
 
