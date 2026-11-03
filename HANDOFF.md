@@ -107,7 +107,7 @@ to `~/.gnupg-gexis-release`, which no longer exists.
 
 **The players** (2026-11-03): sofapi on 1.12.1, updated by its own updater
 from Testing (with a reboot, its marker now cleared; the preview's packages
-still in `~/preview-ph27`); `rpi-eeprom-update` reports a bootloader update
+removed); `rpi-eeprom-update` reports a bootloader update
 available, not applied (not looked into). Roon's extension enabled in
 George's Roon; the other three last seen on 1.9.1 through their updaters
 (2026-10-29). All four on Testing, which offers 1.12.0. sofapi and the bar
