@@ -146,6 +146,10 @@ environment, as ours have. It cannot install Debian packages, use
   reviewed, into its own folder, its progress on its row; over the core's
   helper fetching from a pin in the listing, and over the pin staying in the
   image.
+- **Decision 2, players using them** (2026-11-03), as proposed: carried
+  over at the first start after the update, without a question - installed
+  from the catalogue, their data moved, switched on again; retried without
+  the network, the row saying so. Over removing them and offering them again.
 
 ## Not in this phase
 
