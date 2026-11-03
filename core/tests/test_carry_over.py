@@ -27,10 +27,11 @@ def places(tmp_path, monkeypatch):
             "private": tmp_path / "private" / "gexis-uploaded"}
 
 
-def _carry(places, *, stored=None, added=None, ours=frozenset(), versions=dict):
+def _carry(places, *, stored=None, added=None, ours=frozenset(), versions=dict, stopped=None):
     return carry_over.carry(ours=set(ours), stored=lambda key: stored, added=added,
                             known=places["known"], private=places["private"], wants=places["wants"],
-                            versions=versions, moved=[places["moved"]])
+                            versions=versions, stop=(stopped if stopped is not None else []).append,
+                            moved=[places["moved"]])
 
 
 def test_a_plugin_that_was_on_is_moved_recorded_and_flagged_to_switch_on(places):
@@ -41,6 +42,18 @@ def test_a_plugin_that_was_on_is_moved_recorded_and_flagged_to_switch_on(places)
     assert record["origin"] == uploads.CATALOGUE and record["carried_on"] is True
     assert [m["id"] for m in uploads.missing(places["private"], places["known"])] == ["beszel"], \
         "the restore's path sees it as a catalogue plugin without its package"
+
+
+def test_the_old_service_is_stopped_before_its_data_moves(places):
+    """Found on sofapi, 2026-11-03: removing our package left its agent
+    running, and it went on beside the catalogue's. Stopped first, every
+    start, while the player does not ship it."""
+    stopped = []
+    _carry(places, stored=True, stopped=stopped)
+    assert stopped == ["beszel-agent.service"]
+    stopped.clear()
+    _carry(places, stored=True, ours={"beszel"}, stopped=stopped)
+    assert stopped == [], "not while the player still ships it"
 
 
 def test_a_switch_nobody_touched_reads_the_old_unit_s_enable_link(places):

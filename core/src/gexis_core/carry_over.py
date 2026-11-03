@@ -7,6 +7,9 @@ their packages - `gexis-player` conflicts with them - and their data, which
 is not package files, stays where it was. At the first start without a
 package:
 
+- **its old service is stopped first**: our packages never stopped it when
+  they were removed, and one found on sofapi (2026-11-03) went on running
+  beside the catalogue's, the same agent twice;
 - **its data moves into the plugin's own folder** (the sandbox's state
   directory, which systemd hands to the plugin's user when it starts), used
   or not, so a plugin removed with *Keep its settings and sign-in* still
@@ -101,12 +104,14 @@ def carry(*, ours: set[str], stored: Callable[[str], object], added: set[str] | 
           known: Path = uploads.KNOWN, private: Path = uploads.STATE_PRIVATE,
           wants: Path = WANTS, installed_packages: Callable[[], set[str]] | None = None,
           versions: Callable[[], dict[str, str]] = uploads.versions,
+          stop: Callable[[str], None] | None = None,
           moved: Iterable[Moved] = MOVED) -> list[str]:
     """Everything owed at this start, before the restore's list is read.
     Returns the ids recorded to be installed from the catalogue."""
     recorded = []
     left = [m for m in moved if m.id not in ours]
     for m in left:
+        (stop or _stop)(m.unit)
         if move_data(m, private):
             logger.info("carry-over: %s's data moved into its own folder", m.id)
         carried, on = used(m, stored=stored(f"{m.id}.enabled"), added=added, wants=wants)
@@ -121,6 +126,12 @@ def carry(*, ours: set[str], stored: Callable[[str], object], added: set[str] | 
         logger.info("carry-over: %s will be installed from the catalogue%s", m.id, ", and switched on" if on else "")
     _drop_users([m for m in moved if m.id in ours], left, installed_packages)
     return recorded
+
+
+def _stop(unit: str) -> None:
+    """The old unit, stopped if it still runs: its file went with its
+    package, but systemd keeps a running unit until it is stopped."""
+    subprocess.run(["systemctl", "stop", unit], check=False, capture_output=True)
 
 
 def _drop_users(still: list[Moved], gone: list[Moved],
