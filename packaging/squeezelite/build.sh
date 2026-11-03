@@ -29,12 +29,15 @@ COMMIT_DATE=20241227
 UPSTREAM=2.0.0.1517
 # sha256 of every tracked file, sorted by name (as peppyalsa's pin).
 SOURCE_SHA256=e7f2eaf0765ebd79214d8cf00aa06fc22de222b2cf9bf75b18517d6804aad645
+# GitHub's archive of the commit (fetch-source.sh, ADR-0173), in the inputs
+# mirror like every download.
+ARCHIVE_SHA256=553ee276fac0427083f98966602973846ad4753fbdf5d10a055b0125a5a3551f
 PATCH=/src/packaging/squeezelite/squeezelite-downmix.patch
 PATCH_SHA256=$(sha256sum "$PATCH" | cut -d' ' -f1)
 SHORT=$(printf '%s' "$COMMIT" | cut -c1-7)
 # The revision is ours: raised with every change to the patch or the build,
 # or apt keeps the old binary (LESSONS 53).
-VERSION="${UPSTREAM}+git${COMMIT_DATE}.${SHORT}-2"
+VERSION="${UPSTREAM}+git${COMMIT_DATE}.${SHORT}-3"
 PKG=gexis-squeezelite
 # Staged where dpkg-shlibdeps expects a package's files: debian/<package>.
 STAGE=/tmp/pkg/debian/$PKG
@@ -42,17 +45,9 @@ STAGE=/tmp/pkg/debian/$PKG
 SRC=/tmp/squeezelite
 
 rm -rf "$SRC" /tmp/pkg
-git clone -q https://github.com/ralph-irving/squeezelite.git "$SRC"
+. /src/packaging/fetch-source.sh
+fetch_source ralph-irving/squeezelite "$COMMIT" "$ARCHIVE_SHA256" "$COMMIT_DATE" "$SOURCE_SHA256" "$SRC"
 cd "$SRC"
-git checkout -q "$COMMIT"
-[ "$(git rev-parse HEAD)" = "$COMMIT" ] || { echo "ERROR: HEAD is not $COMMIT" >&2; exit 1; }
-got_date=$(TZ=UTC git log -1 --format=%cd --date=format-local:%Y%m%d)
-[ "$got_date" = "$COMMIT_DATE" ] || { echo "ERROR: $COMMIT is dated $got_date, the pin says $COMMIT_DATE" >&2; exit 1; }
-have=$(git ls-files -z | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum | cut -d' ' -f1)
-if [ "$have" != "$SOURCE_SHA256" ]; then
-	echo "ERROR: squeezelite $COMMIT source is $have, pinned $SOURCE_SHA256" >&2
-	exit 1
-fi
 
 # `git apply`, which fails loudly on a mismatch.
 git apply --verbose "$PATCH"

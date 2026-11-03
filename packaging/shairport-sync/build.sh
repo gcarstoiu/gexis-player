@@ -16,8 +16,12 @@ COMMIT=0a34fbda83724cc06266aadcf7c88acc8fef4e7d
 COMMIT_DATE=20261025
 # sha256 of every tracked file, sorted by name (as Squeezelite's pin).
 SOURCE_SHA256=65568447b74493eeadaf6f897c9552007d968bf1b61155e1d22107bc3f0115a5
+# GitHub's archive of the commit (fetch-source.sh, ADR-0173), in the inputs
+# mirror like every download. That the tag is this commit was checked when
+# it was pinned.
+ARCHIVE_SHA256=3e5a58aba5a751ed8c33ebd73228218105f0afe26da382cd76fd93fbf21f83f4
 # The revision is ours: raised with every change to the build (LESSONS 53).
-VERSION="${TAG}-1"
+VERSION="${TAG}-2"
 PKG=gexis-shairport-sync
 STAGE=/tmp/pkg/debian/$PKG
 SRC=/tmp/shairport-sync
@@ -32,18 +36,9 @@ apt-get install -y -qq --no-install-recommends libpopt-dev libconfig-dev libavah
 	libplist-dev libplist-utils libsodium-dev uuid-dev libgcrypt20-dev xxd libglib2.0-dev >/dev/null
 
 rm -rf "$SRC" /tmp/pkg
-git clone -q https://github.com/mikebrady/shairport-sync.git "$SRC"
+. /src/packaging/fetch-source.sh
+fetch_source mikebrady/shairport-sync "$COMMIT" "$ARCHIVE_SHA256" "$COMMIT_DATE" "$SOURCE_SHA256" "$SRC"
 cd "$SRC"
-git checkout -q "$COMMIT"
-[ "$(git rev-parse HEAD)" = "$COMMIT" ] || { echo "ERROR: HEAD is not $COMMIT" >&2; exit 1; }
-[ "$(git rev-parse "refs/tags/$TAG^{commit}")" = "$COMMIT" ] || { echo "ERROR: tag $TAG is not $COMMIT" >&2; exit 1; }
-got_date=$(TZ=UTC git log -1 --format=%cd --date=format-local:%Y%m%d)
-[ "$got_date" = "$COMMIT_DATE" ] || { echo "ERROR: $COMMIT is dated $got_date, the pin says $COMMIT_DATE" >&2; exit 1; }
-have=$(git ls-files -z | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum | cut -d' ' -f1)
-if [ "$have" != "$SOURCE_SHA256" ]; then
-	echo "ERROR: shairport-sync $COMMIT source is $have, pinned $SOURCE_SHA256" >&2
-	exit 1
-fi
 
 export DEB_BUILD_MAINT_OPTIONS=hardening=+all
 eval "$(dpkg-buildflags --export=sh)"

@@ -6,6 +6,12 @@
 Every release of Gexis Player and its notes, newest first. The player
 shows the last 10 under Settings → System → Change logs.
 
+## 1.12.1 — 3 November 2026
+
+### Good to know
+
+- Updates and the card image are now built on GitHub from the release's tagged source, with a public record of each build. They are signed with the same key as before.
+
 ## 1.12.0 — 2 November 2026
 
 ### New
