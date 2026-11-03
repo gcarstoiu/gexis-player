@@ -3694,13 +3694,16 @@ packs) is read from GitHub.
    27 minutes, 33 GB at the peak, the OS packages identical.
 3. **A release built on GitHub from its tag**, signed and published to
    Testing from R2D2 with nothing built there; the key never leaves R2D2.
+   *Met 2026-11-03*: 1.12.1, Testing serial 64 (ADR-0173, *Built*).
 4. **A test player updates to it** from Testing, and a card flashed from its
    image sets up.
 5. **With decision 1**, a preview built by the workflow installed on a test
-   player.
+   player. *Met in part 2026-11-03*: the four rebuilt packages, built by the
+   workflow on the branch, on sofapi (George approved); by hand once the
+   workflow is on `main`.
 6. **The documents**: `docs/tech/updates-and-releases.md` §4 and
    `docs/BUILD-TRAPS.md` describe the new way, the traps that no longer
-   apply marked so.
+   apply marked so. *Met 2026-11-03.*
 
 ### Phase 28 — Room correction for the bass, with a USB microphone
 
