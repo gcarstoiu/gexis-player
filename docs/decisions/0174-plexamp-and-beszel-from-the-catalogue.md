@@ -184,6 +184,11 @@ environment, as ours have. It cannot install Debian packages, use
   catalogue not read yet (a new player reads it a minute after its start) is
   read first. Only a listing that asks for nothing beyond the sandbox is
   offered there, since setup has no page to agree on.
+- **The plugin's own folder runs what it downloads** (found on sofapi): systemd
+  mounts a DynamicUser state directory `noexec`, and Plexamp's native module
+  failed to load from it, the plugin restarting every few seconds. Both
+  sandbox units give the folder exec back (`ExecPaths=`). Nothing was kept
+  out by it: the units' own `/tmp` and `/var/tmp` were never `noexec`.
 - **One unit for the adapter and Plexamp**: a takeover's kill (ADR-0091) now
   ends the adapter too, which comes back with Plexamp a second later. To be
   measured with the takeovers before the release.
