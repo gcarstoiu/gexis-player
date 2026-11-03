@@ -1751,3 +1751,18 @@ parts, before the notes commit.
 (`gh run list --commit <sha>`), not only the run being worked on; a branch
 is merged only with all of them green.
 
+**91. A watcher that called every failure "rebooting"** (2026-11-03, Phase
+27). sofapi was updated to 1.12.1 through its own updater, a reboot
+expected (its marker was set). A script on R2D2 started the install, then
+asked every 20 s, in one SSH command, for the boot id, `gexis-player`'s
+version and `systemctl is-active gexis-update-install.service`, and printed
+"unreachable (rebooting?)" whenever that command failed. `systemctl
+is-active` exits 3 for any state but *active*: once the install had run
+and sofapi was back, every answer ended in 3, so the script went on
+printing "unreachable" for 27 minutes, past a reboot that had taken about
+three. George asked for a status; one direct look showed 1.12.1 installed,
+the update done, dpkg clean.
+**Rule:** a watcher separates "no answer" (SSH's own failure, exit 255)
+from an answer it did not expect, prints what it got, and says so when a
+state lasts longer than it should.
+

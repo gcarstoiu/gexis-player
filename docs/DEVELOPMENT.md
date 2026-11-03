@@ -3696,7 +3696,8 @@ packs) is read from GitHub.
    Testing from R2D2 with nothing built there; the key never leaves R2D2.
    *Met 2026-11-03*: 1.12.1, Testing serial 64 (ADR-0173, *Built*).
 4. **A test player updates to it** from Testing, and a card flashed from its
-   image sets up.
+   image sets up. *Half met 2026-11-03*: sofapi updated itself to 1.12.1
+   (with a reboot), dpkg clean, every unit running; the card is George's.
 5. **With decision 1**, a preview built by the workflow installed on a test
    player. *Met in part 2026-11-03*: the four rebuilt packages, built by the
    workflow on the branch, on sofapi (George approved); by hand once the

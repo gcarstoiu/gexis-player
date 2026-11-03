@@ -477,6 +477,13 @@ to `ph-github-builds` failed *Core tests* on GitHub - a test still called
 the failure was found by a local run just before tagging. After a push,
 every check on that commit is read, not only the one being worked on.
 
+**91. A watcher that called every failure "rebooting"** (2026-11-03, Phase
+27). Following sofapi's update to 1.12.1, a script counted any non-zero exit
+of its SSH command as "unreachable (rebooting?)"; `systemctl is-active`
+exits 3 for *inactive*, so a finished update looked like a reboot for 27
+minutes, until George asked. A watcher tells "no answer" from "an answer
+it did not like", and reports a state it has not seen for too long.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target, the check quietly
