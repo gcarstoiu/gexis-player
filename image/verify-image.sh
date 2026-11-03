@@ -374,6 +374,9 @@ for u in gexis-uploaded-renderer@.service gexis-uploaded-service@.service; do
 	# ADR-0170: the kiosk's command line, with the panel's token, out of sight.
 	if grep -q '^ProtectProc=invisible' "$OUT/one"; then ok "$u hides other users' processes"
 	else bad "$u lets a plugin read the kiosk's command line"; fi
+	# ADR-0174: its folder is not noexec - Plexamp runs from it.
+	if grep -q '^ExecPaths=/var/lib/private/gexis-uploaded/%i$' "$OUT/one"; then ok "$u lets a plugin run what it downloads"
+	else bad "$u leaves the plugin's folder noexec"; fi
 	rm -f "$OUT/one"
 done
 dfs "stat /usr/lib/gexis/gexis-run-uploaded" | grep -q 'Mode:  0755' && ok "gexis-run-uploaded executable" || bad "gexis-run-uploaded missing or not executable"

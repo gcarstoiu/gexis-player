@@ -33,6 +33,11 @@ RestartPreventExitStatus=78
 DynamicUser=yes
 # Its own data, kept across versions and restarts; removed with the plugin.
 StateDirectory=gexis-uploaded/%i
+# ADR-0174: what it downloads into it runs from there (Plexamp's native
+# modules). systemd mounts a DynamicUser state directory noexec, which kept
+# nothing out - the unit's own /tmp and /var/tmp are not - and made a
+# download the plugin's to run fail to load (sofapi, 2026-11-03).
+ExecPaths=/var/lib/private/gexis-uploaded/%i
 # Everything else read-only; no home directories; its own /tmp.
 ProtectSystem=strict
 ProtectHome=yes
