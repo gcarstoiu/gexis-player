@@ -11,6 +11,11 @@ tag, then `publish.sh --sign rX --channel testing` on R2D2. The *Building*
 traps below are a local build's, kept for when GitHub is unavailable.
 
 **On GitHub**
+- **No `| grep -q` in a script with `pipefail`** (2026-11-03): `grep -q`
+  stops at its match, the writer's next write fails (`cut: write error:
+  Broken pipe`), and the pipeline counts as failed - a listed download was
+  reported unlisted on a runner, never on R2D2 (the 64 KB pipe buffer took
+  it all). Read the output whole first: `grep -q x <<<"$(...)"`.
 - **Parse a workflow before pushing it** (2026-11-02): a `: ` inside a
   one-line `run:` is YAML's key separator, and GitHub rejected the whole
   file with no job started. `~/projects/ha-venv/bin/python` has PyYAML:
