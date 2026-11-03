@@ -153,7 +153,9 @@ The traps are in `docs/BUILD-TRAPS.md`.
 
 - **Decision 1, previews too.** The phase branch's packages are built by
   the same workflow, run by hand, and kept as an artifact for a few days.
-  Ours weighed 76 MB in 1.12.0. R2D2 downloads them (`gh run download`)
+  Ours weighed 76 MB in 1.12.0. *Corrected 2026-11-03:* that was 1.12.0's
+  new packages; a preview downloads the whole set, 133 MB without the skin
+  packs (1.12.1), 1.2 GB with them. R2D2 downloads them (`gh run download`)
   and installs them on a test player over SSH, as today. R2D2 then needs no
   Docker builds at all. *Recommended.* The alternative is releases only,
   with previews still built here.
@@ -264,10 +266,12 @@ On `ph-github-builds`, released in 1.12.1:
 1.12.1 (run 41609042614): built in about 18 minutes and uploaded in 1.5,
 then signed on R2D2 from four `Release` files, four `Packages` and the parts
 list. Read back: Testing serial 64, every signature good, each part's
-`InRelease` listing its own `Packages`. One OS package moved with the image:
+`InRelease` listing its own `Packages`. sofapi updated itself to it. A
+preview by hand (`workflow_dispatch` from `main`, `next`'s packages) took
+about 5 minutes; its artifact was 1.2 GB with the skin packs, which previews
+now leave out. One OS package moved with the image:
 `rpi-eeprom` 28.36-1, published by Raspberry Pi overnight. **Not yet seen:** a
-player updating to it, a card flashed from its image, a preview run by hand
-(`workflow_dispatch` needs the workflow on `main`).
+card flashed from its image.
 
 ## Settings (ADR-0022)
 
