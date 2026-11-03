@@ -8402,3 +8402,122 @@ plugins installed, DevTools off; `~/gexis-pd` removed. sofapi and the bar groupe
 AirPlay on at sofapi and guestpi. Each has its own Lyrion server. The old
 preview folders are gone (of those named, only `gexis-lead` and `gexis-pj`
 were still there, on sofapi and the bar).
+
+
+## From HANDOFF, 2026-11-02 (1.11.0 on Testing; Phases 25 and 26 in progress)
+
+**1.11.0 on Testing** (2026-11-01, serial 62, read back with a good
+signature): Phase 25, themes, with the idle screen keeping today's look and
+the FAQ's Roon over AirPlay; notes approved by George. PR #91 open for George
+to merge; Stable still 1.10.0 until George promotes. Image
+`image/deploy/2026-11-01-gexis-player-v1.11.0.img` (152 checks passed); build
+output `~/projects/gexis-release-out/r1.11.0`; worktree
+`~/projects/gexis-player-r1.11.0`.
+
+**Now: Phase 25, themes** (`ph-themes`, worktree
+`~/projects/gexis-player-themes`, pushed up to the ADR; local since), started
+2026-11-01. [ADR-0171](docs/decisions/0171-themes.md) accepted (George: six
+themes built in, one per player, the row in Display with Deep Teal the
+default). **Built, not yet on a player**: the design's rule as
+`ui/src/lib/themeRule.js`, `ui/scripts/themes.mjs` writing `themes.css`
+(checked against the design by the build); today's colours and corners
+through tokens - Deep Teal pixel-identical on 101 mocked screens (panel at
+the 10", 7" and TV sizes, bar, phone); the monos from fontsource; a core test
+against new literals. The harness: `~/projects/scratch/ph25/` (`run.sh`,
+`capture.py`, `compare.py`; `THEME`, `COVER`, `EQ` for the mocked core; do
+not edit `run.sh` while a capture runs). The equaliser stays as the rule
+gives it on the light themes, and the idle screen keeps today's look
+(George, 2026-11-01). **Open**: a preview on
+sofapi, after George's OK; `gen_personalise.py` out of step since Phase 23
+(the first-use page's header says so).
+
+**Also now: Phase 26, Roon** (`ph-roon`, worktree
+`~/projects/gexis-player-roon`), started 2026-11-01 (George).
+[ADR-0172](docs/decisions/0172-roon.md) accepted: Roon Bridge as a plugin
+(fetched on switch-on, Roon's own updates, a user of its own), through a
+third `snd-aloop` card into `pcm.output`, Now Playing by Roon's extension API.
+Roon over AirPlay already plays since 1.10.0 (classic AirPlay; Roon's
+*Compatibility mode*; FAQ on `fix-roon-airplay`).
+
+
+
+## From HANDOFF, 2026-11-02 (after 1.12.0's merge: Stable 1.10.0's detail, Phase 24, the players)
+
+**Stable: 1.10.0** (2026-10-31: Testing
+serial 61, Stable serial 12, each read back with a good signature; the image
+downloaded through the README's link, its checksum matching). PR #90 merged
+by George (2026-11-01). 1.10.0 carries Phase 24 (the plugin catalogue, one
+store for every plugin, plugins that ask for more), the fixes from George's
+two tests on 2026-10-31, the phone dialogs' fix and Vite 8.3.3. Image
+`image/deploy/2026-10-31-gexis-player-v1.10.0.img` (152 checks passed);
+build output `~/projects/gexis-release-out/r1.10.0`. Stable was promoted
+without the two measurements (George; to-dos `ph22-measure`, `eq-measure`).
+**R2D2's `/` fills up**: Docker's containerd store keeps images on `/`, not
+in `/home/docker`, and pi-gen rebuilds its 1.16 GB build image on every
+image build, about 1.7 GB at a build's peak; check `df -h /` before one
+(4.7 GB free on 2026-11-01, after the clean-up).
+
+**Phase 24, the plugin catalogue, closed 2026-10-31** with 1.10.0
+(`docs/DEVELOPMENT.md`; its story is in the archive). The catalogue is
+`gcarstoiu/gexis-plugins` (local copy `~/projects/gexis-plugins`; published
+with `tools/publish.sh` and
+`GEXIS_CATALOGUE_GNUPGHOME=~/projects/gexis-catalogue-key`), at serial 5:
+TV remote (HDMI-CEC) 0.1.1 listed (#12), its source public at
+`gcarstoiu/gexis-tv-remote` (local copy `~/projects/gexis-tv-remote`;
+ADR-0170, *Published and listed*); the samples
+(`gcarstoiu/gexis-sample-plugins`) withdrawn. The catalogue key's master
+and revocation certificate still wait in
+`~/projects/gexis-catalogue-key-for-george` until George has them, then
+that folder is deleted. **Not yet seen on a player:** the visualiser's
+window put back after a real drop of the TV's output (ADR-0147, *Amended
+2026-10-31*); the store on a bar; a new player's setup writing its plugin
+record, and Remove with *Keep* off for one of ours (ADR-0169). George's
+phone test of the dialogs is still owed (to-do `fix-remote-dialogs-test`).
+The mocked-screen checks (`~/projects/scratch/dpad`, `~/projects/scratch/ph24`)
+build from `~/projects/gexis-player-next` unless `WT` names another worktree.
+
+**The players** (2026-11-01): sofapi on the themes preview (core
+`1.10.0+git9.da56e56`, UI and player `1.10.0+git12.a36666b`, from
+`ph-themes`: the idle screen keeping today's look, George) with
+`tv-remote` 0.1.1, DevTools off, its preview packages in `~/gexis-pc`; the
+other three on 1.9.1 through their updaters (2026-10-29); all four on
+Testing, where 1.10.0 is offered. sofapi and the bar grouped; AirPlay on at
+sofapi and guestpi. Each has its own Lyrion server.
+
+**Phase 22, multiroom for every source**, in every release since 1.8.0 and
+on Stable with 1.10.0;
+[ADR-0166](docs/decisions/0166-multiroom-for-every-source.md) all confirmed
+by George; he found the group in sync before the promotion (2026-10-31).
+**Open:** the measurement session (at 192 kHz the bar lost sync over Wi-Fi;
+a card's own delay, USB or optical, is measured there too); the Home
+Assistant integration's join and unjoin (its `multiroom` branch,
+`9744bb3`), released after the player's; back and forth between Lyrion-app
+grouping and the player's. The tests and the build's story are in the
+archive (2026-10-28).
+
+**The Home Assistant integration** (Phase 19, closed 2026-10-25):
+`gcarstoiu/gexis-player-homeassistant` at 0.5.0 (2026-10-27: the card as the
+phone remote, the equaliser's switch and setting, seeking, Fixed mute, the
+app's registration fix; local copy
+`~/projects/gexis-player-homeassistant`, tests on `~/projects/ha-venv`; a
+Home Assistant 2026.10.3 in Docker, `~/projects/scratch/ha-test`). **HACS's
+default list**: hacs/default#12691 (from George's fork `gcarstoiu/default`),
+every automated check passed; it waits for HACS's maintainers - do not ask
+them for a review (their template).
+
+
+## From HANDOFF, 2026-11-02 (1.12.0 promoted to Stable)
+
+**1.12.0 on Testing** (2026-11-02, serial 63, read back with a good
+signature): Phase 26, Roon, with three fixes (the visualiser's tap and the
+updater's stop sending the panel token, ADR-0170 *Two callers missed*; the
+row of sources under the library narrowed to fit), built on 1.11.0 (themes,
+Phase 25, serial 62). Notes approved by George; PRs #91 and #92 merged
+by George (2026-11-02). Image
+`image/deploy/2026-11-02-gexis-player-v1.12.0.img` (160 checks passed);
+build output `~/projects/gexis-release-out/r1.12.0`. Stable still 1.10.0
+until George promotes.
+
+**Stable: 1.10.0** (2026-10-31, Stable serial 12; promoted without the
+two measurements, to-dos `ph22-measure`, `eq-measure`); build output
+`~/projects/gexis-release-out/r1.10.0`.

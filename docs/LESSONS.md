@@ -464,6 +464,13 @@ panel was laid out at 1024 x 600 CSS pixels, not the 1280 x 750 the kiosk's
 layout is measured at the page the kiosk gives the screen - its size divided
 by `GEXIS_SCREEN_SCALE` - before any number goes into a question.
 
+**89. A guard checked from the callers it knew** (2026-11-02, Phase 26).
+ADR-0170 made the panel's routes ask for a token and was checked from the
+page and the one script it named; the visualiser's touch report and the
+updater's stop still called without it, refused from 1.10.0 until a tap on
+sofapi went unanswered. A route that gains a guard has its callers found by
+searching for the route across the repository, and a test keeps that list.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target, the check quietly

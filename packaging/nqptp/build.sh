@@ -14,25 +14,20 @@ COMMIT=ab8fb67483411640fd7f1e193889482f2421c37c
 COMMIT_DATE=20261014
 # sha256 of every tracked file, sorted by name (as Squeezelite's pin).
 SOURCE_SHA256=4ccb3f3fd8e6810b168177d9f9c0797842889b098834ac30adde7d5e03a2aba2
+# GitHub's archive of the commit (fetch-source.sh, ADR-0173), in the inputs
+# mirror like every download. That the tag is this commit was checked when
+# it was pinned.
+ARCHIVE_SHA256=3e90e2ea1f52f5c1559a5a46b2cdadb46ac6532a08a34f8cd7e77aa39f6a90c7
 # The revision is ours: raised with every change to the build (LESSONS 53).
-VERSION="${TAG}-1"
+VERSION="${TAG}-2"
 PKG=gexis-nqptp
 STAGE=/tmp/pkg/debian/$PKG
 SRC=/tmp/nqptp
 
 rm -rf "$SRC" /tmp/pkg
-git clone -q https://github.com/mikebrady/nqptp.git "$SRC"
+. /src/packaging/fetch-source.sh
+fetch_source mikebrady/nqptp "$COMMIT" "$ARCHIVE_SHA256" "$COMMIT_DATE" "$SOURCE_SHA256" "$SRC"
 cd "$SRC"
-git checkout -q "$COMMIT"
-[ "$(git rev-parse HEAD)" = "$COMMIT" ] || { echo "ERROR: HEAD is not $COMMIT" >&2; exit 1; }
-[ "$(git rev-parse "refs/tags/$TAG^{commit}")" = "$COMMIT" ] || { echo "ERROR: tag $TAG is not $COMMIT" >&2; exit 1; }
-got_date=$(TZ=UTC git log -1 --format=%cd --date=format-local:%Y%m%d)
-[ "$got_date" = "$COMMIT_DATE" ] || { echo "ERROR: $COMMIT is dated $got_date, the pin says $COMMIT_DATE" >&2; exit 1; }
-have=$(git ls-files -z | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum | cut -d' ' -f1)
-if [ "$have" != "$SOURCE_SHA256" ]; then
-	echo "ERROR: nqptp $COMMIT source is $have, pinned $SOURCE_SHA256" >&2
-	exit 1
-fi
 
 export DEB_BUILD_MAINT_OPTIONS=hardening=+all
 eval "$(dpkg-buildflags --export=sh)"
