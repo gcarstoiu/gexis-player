@@ -825,10 +825,11 @@ Optional parts, each with its own switch: the **visualiser skins** for this
 screen's size, **AirPlay** (in the player already, nothing to download;
 on for a new player, off on one updated from an earlier release; marked
 *Limited testing*),
-**Plexamp**, **Roon** (Roon Bridge, downloaded from Roon Labs), the **Lyrion Server** and the **Beszel** monitoring agent, among
-others. A plugin that needs software from its maker
-downloads it when switched on. Setup offers the same plugins, and the first
-start shows each download arriving.
+**Roon** (Roon Bridge, downloaded from Roon Labs) and the **Lyrion Server**, among
+others; **Plexamp** and the **Beszel** monitoring agent and hub come from the
+plugin catalogue. A plugin that needs software from its maker
+downloads it when switched on. Setup offers the same plugins, Plexamp
+included, and the first start shows each download arriving.
 Each plugin's switch says its version (for example *Version 0.4.7*); the
 software it downloads is named, with its own version, on the line below once
 it is installed.

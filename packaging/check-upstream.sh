@@ -25,9 +25,10 @@ report() {  # name pinned latest
 	fi
 }
 
-# Plexamp: Plex publishes the headless build's latest version as JSON.
-plex_pin=image/stage-gexis/03-core/files/components/plexamp.env
-plex_have=$(pin "$plex_pin" URL | sed -E 's/.*-v([0-9.]+)\.tar\.bz2$/\1/')
+# Plexamp: Plex publishes the headless build's latest version as JSON. The
+# pin is the catalogue plugin's since ADR-0174 (gcarstoiu/gexis-plexamp).
+plex_have=$(curl -fsS --max-time 20 https://raw.githubusercontent.com/gcarstoiu/gexis-plexamp/main/plexamp.pin 2>/dev/null \
+	| sed -n 's/^URL=.*-v\([0-9.]*\)\.tar\.bz2$/\1/p')
 plex_latest=$(curl -fsS --max-time 20 https://plexamp.plex.tv/headless/version.json 2>/dev/null \
 	| python3 -c 'import json, sys; print(json.load(sys.stdin)["latestVersion"])' 2>/dev/null)
 report Plexamp "$plex_have" "$plex_latest"
@@ -47,8 +48,11 @@ gh_latest() {
 	curl -fsS --max-time 20 "https://api.github.com/repos/$1/releases/latest" 2>/dev/null \
 		| python3 -c 'import json, sys; print(json.load(sys.stdin)["tag_name"])' 2>/dev/null
 }
-report "Beszel agent" "$(pin packaging/beszel-agent/pins.sh BESZEL_VERSION)" "$(gh_latest henrygd/beszel)"
-report "Beszel hub" "$(pin packaging/beszel-hub/pins.sh BESZEL_HUB_VERSION)" "$(gh_latest henrygd/beszel)"
+# Beszel's agent and hub are catalogue plugins since ADR-0174: their pin is in
+# their own repository.
+beszel_have=$(curl -fsS --max-time 20 https://raw.githubusercontent.com/gcarstoiu/gexis-beszel/main/pins.sh 2>/dev/null \
+	| sed -n 's/^BESZEL_VERSION="\(.*\)"/\1/p')
+report "Beszel (gexis-beszel)" "$beszel_have" "$(gh_latest henrygd/beszel)"
 report go-librespot "$(pin packaging/go-librespot/pins.sh GO_LIBRESPOT_VERSION)" "$(gh_latest devgianlu/go-librespot)"
 report CamillaDSP "$(pin packaging/camilladsp/pins.sh CAMILLADSP_VERSION)" "$(gh_latest HEnquist/camilladsp)"
 

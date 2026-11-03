@@ -15,6 +15,11 @@ ExecStart=/usr/lib/gexis/gexis-run-uploaded %i
 EnvironmentFile=-/run/gexis/plugins/%i.env
 Environment=GEXIS_PLUGIN_SOCKET=/run/gexis/plugins.sock
 Environment=GEXIS_PLUGIN_DATA=/var/lib/gexis-uploaded/%i
+# ADR-0174: what our own plugins' units gave them - a home of its own (the
+# state directory: a program that keeps its files under ~ keeps them there)
+# and the device's name (ADR-0048), as GEXIS_DEVICE_NAME.
+Environment=HOME=/var/lib/gexis-uploaded/%i
+EnvironmentFile=-/etc/gexis/device-name.env
 Restart=on-failure
 RestartSec=3
 # gexis-run-uploaded's "no package": not retried (2026-10-12).
@@ -24,6 +29,11 @@ RestartPreventExitStatus=78
 DynamicUser=yes
 # Its own data, kept across versions and restarts; removed with the plugin.
 StateDirectory=gexis-uploaded/%i
+# ADR-0174: what it downloads into it runs from there (Plexamp's native
+# modules). systemd mounts a DynamicUser state directory noexec, which kept
+# nothing out - the unit's own /tmp and /var/tmp are not - and made a
+# download the plugin's to run fail to load (sofapi, 2026-11-03).
+ExecPaths=/var/lib/private/gexis-uploaded/%i
 # Everything else read-only; no home directories; its own /tmp.
 ProtectSystem=strict
 ProtectHome=yes

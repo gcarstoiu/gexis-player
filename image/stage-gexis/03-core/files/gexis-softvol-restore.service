@@ -8,7 +8,7 @@ Documentation=file:///opt/gexis-core/venv/lib/python3.13/site-packages/gexis_cor
 # sets that level first, when the volume type is Software, and nothing
 # otherwise. Uploaded renderers start after the core, which sets it too.
 After=local-fs.target sound.target gexis-factory-reset.service
-Before=squeezelite.service go-librespot.service bluealsa-aplay.service plexamp.service
+Before=squeezelite.service go-librespot.service bluealsa-aplay.service
 Before=gexis-core.service
 
 [Service]

@@ -178,6 +178,7 @@ class StateServer:
         upload_plugin=None,
         catalogue=None,
         uninstall_plugin=None,
+        install_offered=None,
         weather=None,
         wallpapers=None,
         own=None,
@@ -317,6 +318,9 @@ class StateServer:
         #: ADR-0168: `plugin_catalogue.Service`.
         self._catalogue = catalogue
         self._uninstall_plugin = uninstall_plugin
+        #: ADR-0174 decision 3: part 2's install of a plugin it offers from
+        #: the catalogue.
+        self._install_offered = install_offered
         self._weather = weather
         self._wallpapers = wallpapers
         #: ADR-0133: the player's own pictures, for Gexis wallpapers and Space
@@ -2678,9 +2682,38 @@ class StateServer:
         return web.json_response({
             "state": personalise.state(),
             "first": personalise.first(),
-            "plugins": [{"row": p["row"], "name": p["name"], "component": p.get("component")}
+            "plugins": [{"id": p["id"], "row": p["row"], "name": p["name"], "component": p.get("component"),
+                         "catalogue": bool(p.get("catalogue"))}
                         for p in self._personalise_offered() if p["row"] in personalise.PLUGIN_ROWS],
         })
+
+    async def _handle_personalise_install(self, request: web.Request) -> web.Response:
+        """ADR-0174 decision 3: a plugin part 2 offers from the catalogue,
+        chosen on its step - `{"id": ...}` - installed now, so its download
+        goes on while part 2 does, and switched on once in. Its progress is
+        its component's."""
+        from gexis_core import plugin_catalogue
+        if self._install_offered is None:
+            return web.json_response({"error": "the catalogue is not wired up"}, status=503)
+        try:
+            body = await request.json()
+        except ValueError:
+            body = None
+        plugin_id = body.get("id") if isinstance(body, dict) else None
+        if not isinstance(plugin_id, str) or not plugin_id:
+            return web.json_response({"error": "say which plugin: {\"id\": \"...\"}"}, status=400)
+        try:
+            job = self._install_offered(plugin_id)
+        except plugin_catalogue.Unavailable:
+            # Not in the catalogue read last - none yet, on a new player whose
+            # first read is a minute after its start: read it, then once more.
+            if self._catalogue is not None:
+                await self._catalogue.refresh(older_than=60)
+            try:
+                job = self._install_offered(plugin_id)
+            except plugin_catalogue.Unavailable as exc:
+                return web.json_response({"error": f"Not installed: {exc}."}, status=409)
+        return web.json_response({"started": plugin_id, **job})
 
     async def _handle_personalise_finish(self, request: web.Request) -> web.Response:
         """**The answers, written in one go** (ADR-0149): `{"settings": {key:
@@ -2695,7 +2728,7 @@ class StateServer:
         except (ValueError, AttributeError) as exc:
             return web.json_response({"error": str(exc)}, status=400)
         result = personalise.apply(values, self._settings, self._personalise_offered(), settling.begin,
-                                   self._store.state.components)
+                                   self._store.state.components, install=self._install_offered)
         personalise.end(personalise.DONE)
         self._store.set_personalise(None)
         if "lms_server" in result["written"]:
@@ -3499,6 +3532,7 @@ class StateServer:
         app.router.add_get("/setup/outputs", self._handle_setup_outputs)
         app.router.add_get("/personalise", self._handle_personalise)
         app.router.add_post("/personalise/finish", self._handle_personalise_finish)
+        app.router.add_post("/personalise/install", self._handle_personalise_install)
         app.router.add_post("/personalise/later", self._handle_personalise_later)
         app.router.add_post("/settling/done", self._handle_settling_done)
         app.router.add_post("/settling/hide", self._handle_settling_hide)

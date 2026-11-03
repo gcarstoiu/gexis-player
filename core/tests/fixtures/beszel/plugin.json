@@ -1,9 +1,10 @@
 {
   "id": "beszel",
   "name": "Beszel",
-  "summary": "Reports how the player is doing - CPU, memory, temperature - to a Beszel hub elsewhere on your network.",
   "kind": "service",
-  "unit": "beszel-agent.service",
+  "version": "0.21.1-1",
+  "run": "run",
+  "summary": "Reports how the player is doing - CPU, memory, temperature - to a Beszel hub elsewhere on your network.",
   "connection": true,
   "settings": [
     {

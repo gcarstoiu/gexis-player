@@ -59,7 +59,7 @@ flowchart TB
         sq["squeezelite<br/>(Lyrion / LMS)"]
         lib["go-librespot<br/>(Spotify Connect)"]
         bt["bluealsa + bluealsa-aplay<br/>(Bluetooth A2DP sink)"]
-        px["Plexamp<br/>(plugin)"]
+        px["Plexamp<br/>(catalogue plugin)"]
         ap["Shairport Sync<br/>(AirPlay, plugin)"]
         rn["Roon Bridge<br/>(Roon, plugin)"]
     end
@@ -93,7 +93,7 @@ flowchart LR
         sq["squeezelite.service"]
         gl["go-librespot.service<br/>API :3678"]
         bluez["bluetoothd + bluealsa"]
-        px["plexamp.service (plugin)"]
+        px["gexis-uploaded-renderer@plexamp<br/>(Plexamp, catalogue plugin)"]
         lyr["gexis-lyrion.service<br/>(optional on-device LMS :9000)"]
         upd["gexis-update-*<br/>check timer + install"]
         sock[("/run/gexis/plugins.sock")]
@@ -166,7 +166,6 @@ Notes on the diagram:
 | `gexis-panel-warmup.service` | Reads the kiosk's binaries into page cache before the kiosk needs them |
 | `gexis-splash-backstop.*` | Quits the boot splash if the panel never reports a first frame (ADR-0043) |
 | `gexis-bluetooth-setup.service` | Unblocks and powers the Bluetooth adapter before bluealsa |
-| `beszel-agent` / `beszel-hub` | Optional system-metrics plugins (ADR-0087, ADR-0114) |
 | `gexis-equaliser.service` | CamillaDSP behind the equaliser's loopback; started and stopped by the core while the equaliser is on for the output in use, never enabled (ADR-0162) |
 | `gexis-snapserver.service` / `gexis-snapclient.service` | Snapcast for a group of players: the server on every member, the client playing from the leader; started and stopped by the core while the player is in a group, never enabled; Debian's own `snapserver` and `snapclient` units are masked (ADR-0166) |
 

@@ -56,10 +56,14 @@ fill)
 	;;
 unlisted)
 	dir="${2:?usage: inputs.sh unlisted <dir>}"
+	# Read whole first: `listed | grep -q` under pipefail failed when grep
+	# stopped at its match before cut had written the rest (a listed file
+	# reported unlisted, a preview on GitHub, 2026-11-03).
+	known=$(listed)
 	n=0
 	for f in "$dir"/*; do
 		[ -f "$f" ] || continue
-		listed | grep -qxF "$(basename "$f")" && continue
+		grep -qxF "$(basename "$f")" <<<"$known" && continue
 		echo "not in $LIST: $(basename "$f")"; n=$((n + 1))
 	done
 	[ "$n" -eq 0 ]

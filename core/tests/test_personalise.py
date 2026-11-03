@@ -217,3 +217,60 @@ def test_what_is_already_in_is_not_waited_for_and_lyrion_is_followed():
     read = {"lyrion-server": {"state": "installed", "after": {"phase": "ready"}}}
     personalise.apply({"lyrion-server.enabled": True}, FakeSettings(), OFFERED, begun.extend, read)
     assert begun == []
+
+
+def test_plexamp_from_the_catalogue_is_installed_not_written_and_followed():
+    """ADR-0174 decision 3: Plexamp not installed yet has no switch to write;
+    chosen, it is installed from the catalogue (which switches it on once
+    in) and its download followed as before."""
+    offered = [p if p["id"] != "plexamp" else {**p, "catalogue": True} for p in OFFERED]
+    settings, begun, installed = FakeSettings(), [], []
+    result = personalise.apply({"plexamp.enabled": True, "spotify_enabled": True}, settings, offered,
+                               begun.extend, install=installed.append)
+    assert installed == ["plexamp"] and "plexamp.enabled" not in settings.values
+    assert begun == [{"id": "plexamp", "name": "Plexamp"}] and result["failed"] == []
+    # Left off, nothing is installed; one that cannot be is named.
+    installed.clear()
+    personalise.apply({"plexamp.enabled": False}, FakeSettings(), offered, begun.extend, install=installed.append)
+    assert installed == []
+
+    def refused(plugin_id):
+        raise RuntimeError("not in the catalogue")
+
+    begun.clear()
+    result = personalise.apply({"plexamp.enabled": True}, FakeSettings(), offered, begun.extend, install=refused)
+    assert result["failed"] == ["plexamp.enabled"] and begun == []
+
+
+@pytest.mark.asyncio
+async def test_the_install_route_reads_the_catalogue_again_before_saying_no(tmp_path):
+    """A new player's first catalogue read is a minute after its start:
+    a Download pressed before it reads it then, and tries once more."""
+    from aiohttp.test_utils import TestClient, TestServer
+    from gexis_core import plugin_catalogue
+    from gexis_core.state import StateStore
+    from gexis_core.wsserver import StateServer
+
+    class Catalogue:
+        read, listed = 0, True
+
+        async def refresh(self, *, older_than=0):
+            self.read += 1
+
+    catalogue, calls = Catalogue(), []
+
+    def install(plugin_id):
+        calls.append(plugin_id)
+        if not (catalogue.read and catalogue.listed):
+            raise plugin_catalogue.Unavailable(f"{plugin_id} is not one part 2 installs")
+        return {"version": "0.5.0", "phase": "downloading", "done": 0, "total": 1, "error": None}
+
+    server = StateServer(StateStore({}), settings=FakeSettings(), catalogue=catalogue, install_offered=install)
+    async with TestClient(TestServer(server.make_app())) as client:
+        r = await client.post("/personalise/install", json={"id": "plexamp"})
+        assert r.status == 200 and (await r.json())["started"] == "plexamp"
+        assert calls == ["plexamp", "plexamp"] and catalogue.read == 1
+        catalogue.listed = False  # not offered after the read either: said so
+        r = await client.post("/personalise/install", json={"id": "plexamp"})
+        assert r.status == 409 and "not one part 2 installs" in (await r.json())["error"]
+        assert catalogue.read == 2

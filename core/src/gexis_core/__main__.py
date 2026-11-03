@@ -77,7 +77,7 @@ from gexis_core.lyrion_usb import UsbFolders
 from gexis_core.fanart import Fanart
 from gexis_core.peppy_metadata import PeppyMetadataWriter, next_track
 from gexis_core.model import BLANK_METADATA, Queue, TrackMetadata
-from gexis_core import connections, discovery, hardware_report, hardware_reports, personalise, settings_migrations, settling, updates, wired
+from gexis_core import carry_over, connections, discovery, hardware_report, hardware_reports, personalise, settings_migrations, settling, updates, wired
 from gexis_core.dashboard import Dashboard, DashboardSchedule, explain as explain_dashboard
 from gexis_core.panel_input import PanelInput
 from gexis_core import standby as standby_module
@@ -194,6 +194,10 @@ COVER_LOOK_BACK_S = 6.0
 BLUETOOTH_SETUP_UNIT = "gexis-bluetooth-setup.service"
 
 logger = logging.getLogger("gexis_core")
+
+#: ADR-0174: the steps a catalogue plugin's own download may report, as a
+#: component's (`components.BUSY`, installed, failed).
+SOFTWARE_STATES = frozenset(components.BUSY | {"installed", "failed"})
 
 
 async def set_unit_enabled(unit: str, enabled: bool, *, now: bool = True) -> None:
@@ -767,6 +771,15 @@ async def main() -> None:
     # uploaded id can never shadow one of ours; the check refuses it at
     # upload, and this refuses it again if one was placed by hand.
     shipped_ids = {p.id for p in shipped_plugins}
+    # **ADR-0174: ours that moved to the catalogue, carried over** - their
+    # data into their own folders, and the ones this player used recorded for
+    # the restore's path below to install from the catalogue.
+    try:
+        carry_over.carry(ours=shipped_ids, stored=settings_store.get,
+                         added=plugin_store.read(settings_store.get(plugin_store.ADDED)),
+                         installed_packages=carry_over.installed_packages)
+    except OSError as exc:
+        logger.warning("carry-over: %s", exc)
     installed_plugins = shipped_plugins + [p for p in uploads.installed() if p.id not in shipped_ids]
     # What each plugin's row says it is (George, 2026-10-12): its version -
     # an upload's manifest, else the package that installed it - and the
@@ -2069,6 +2082,19 @@ async def main() -> None:
         plugin.id: name for plugin in installed_plugins
         if (name := components.for_plugin(plugin.id)) is not None
     }
+    # ADR-0174: a catalogue plugin that downloads its software itself, under
+    # its own id, from what it reports (`software` messages).
+    downloads.update({p.id: p.id for p in installed_plugins if p.uploaded and p.downloads})
+    #: The last `software` message of each such plugin, shaped as a
+    #: component's status, for the switch and setup to show.
+    plugin_software: dict[str, dict] = {}
+
+    def _plugin_software(plugin, state: str, **more) -> dict:
+        record = {"name": plugin.id, "label": plugin.downloads, "from": "its maker", "state": state,
+                  "received": None, "total": None, "attempt": None, "attempts": None, "error": None,
+                  "updated": int(time.time())}
+        record.update({k: v for k, v in more.items() if k in record and k != "name"})
+        return record
 
     def _volume_notes() -> dict:
         """The Fixed note, with what it means for DSD on this DAC."""
@@ -2139,6 +2165,21 @@ async def main() -> None:
 
     def _all_components() -> dict:
         status = components.all_status()
+        # ADR-0174: what catalogue plugins say of their own downloads.
+        for plugin_id, record in plugin_software.items():
+            status.setdefault(plugin_id, record)
+        # Before it is in: the catalogue's download of a plugin part 2 chose,
+        # on the bar that then shows the plugin's own (decision 3). Installed
+        # is still installing - the core restarts, then the plugin says.
+        for plugin_id in personalise.FROM_CATALOGUE:
+            job = catalogue.jobs.get(plugin_id)
+            if job is not None and plugin_id not in status:
+                entry = catalogue.catalogue.entry(plugin_id) if catalogue.catalogue else None
+                status[plugin_id] = {
+                    "name": plugin_id, "label": (entry or {}).get("name", plugin_id), "from": "the plugin catalogue",
+                    "state": {"downloading": "downloading", "failed": "failed"}.get(job.phase, "installing"),
+                    "received": job.done, "total": job.total or None, "attempt": None, "attempts": None,
+                    "error": job.error, "updated": int(time.time())}
         status["skins"] = skins_status()
         # ADR-0115 decision 28: after its download, what Lyrion is doing.
         stage = dict(lyrion_stage.CURRENT)
@@ -2170,6 +2211,15 @@ async def main() -> None:
         """The Retry under a failed download: clear the failure and start
         again. With the switch on that is the plugin's own unit, which pulls
         the download in; with it off, the download alone."""
+        if plugin.uploaded:
+            # ADR-0174: a catalogue plugin downloads at its own start.
+            plugin_software[plugin.id] = _plugin_software(plugin, "preparing")
+            _publish_components()
+            if settings.value(f"{plugin.id}.enabled") is not False:
+                await asyncio.to_thread(lambda: (
+                    subprocess.run(["systemctl", "reset-failed", plugin.unit], check=False, capture_output=True),
+                    subprocess.run(["systemctl", "restart", plugin.unit], check=False, capture_output=True)))
+            return
         name = downloads[plugin.id]
         pin = components.pins().get(name)
         components.preparing(name, pin)
@@ -2264,13 +2314,18 @@ async def main() -> None:
         """
         if on:
             _plugin_env(plugin)
-            if plugin.id in downloads:
+            if plugin.id in downloads and plugin.uploaded:
+                # ADR-0174: said at once, until the plugin's own report.
+                if plugin_software.get(plugin.id, {}).get("state") != "installed":
+                    plugin_software[plugin.id] = _plugin_software(plugin, "preparing")
+                    _publish_components()
+            elif plugin.id in downloads:
                 # Told at once, before systemd has even begun: the user flipped
                 # a switch and must see that something started.
                 components.preparing(downloads[plugin.id], components.pins().get(downloads[plugin.id]))
                 _publish_components()
         await set_unit_enabled(plugin.unit, on)
-        if not on and plugin.id in downloads:
+        if not on and plugin.id in downloads and not plugin.uploaded:
             # A finished download stays "active (exited)", which would make the
             # next switch-on skip checking what is on disk.
             fetch = f"gexis-fetch@{downloads[plugin.id]}.service"
@@ -2290,6 +2345,14 @@ async def main() -> None:
         for plugin in installed_plugins
         if plugin.enabled_row is None
     }
+
+    # ADR-0174: a carried-over plugin that was on, on again once installed -
+    # stored as on, since a catalogue plugin's switch reads off by default.
+    for carried_id in carry_over.to_switch_on({p.id for p in installed_plugins if p.uploaded}):
+        carried = next(p for p in installed_plugins if p.id == carried_id)
+        settings_store.set(f"{carried_id}.enabled", True)
+        asyncio.ensure_future(_apply_plugin_unit(carried, True))
+        logger.info("carry-over: %s switched on again", carried_id)
 
     #: **What that switch reads before anyone has touched it: whatever systemd
     #: says about the unit.** Not a value the manifest declares. Found on the
@@ -3032,7 +3095,7 @@ async def main() -> None:
                   for plugin in installed_plugins if plugin.id in downloads},
                # ADR-0100, amended 2026-09-28: Remove, beside Retry.
                **{f"{plugin.id}.remove": (lambda _value=None, p=plugin: asyncio.ensure_future(_remove_download(p)))
-                  for plugin in installed_plugins if plugin.id in downloads}},
+                  for plugin in installed_plugins if plugin.id in downloads and not plugin.uploaded}},
         # **Phase 9 criterion 2.** These two act through
         # `POST /settings/{key}/items`, not through `set` - joining a network
         # and forgetting a device - so they are wired, and saying otherwise
@@ -4199,8 +4262,7 @@ async def main() -> None:
                     said.discard(row)
                 else:
                     changed = False
-                # Not an uploaded one: its user is made afresh for every run.
-                if plugin.connection and not plugin.uploaded:
+                if plugin.connection:
                     changed = _indicate_connection(plugin, row, state, quiet_since, uids) or changed
                 if changed:
                     state_store.bump_settings_revision()
@@ -4213,7 +4275,9 @@ async def main() -> None:
         if state is None:
             quiet_since.pop(row, None)
             return settings.indicate(row, None)
-        if plugin.unit not in uids or uids[plugin.unit] is None:
+        # A catalogue plugin's user is made afresh for every run (ADR-0174):
+        # looked up each time, never kept.
+        if plugin.uploaded or plugin.unit not in uids or uids[plugin.unit] is None:
             uids[plugin.unit] = connections.unit_uid(plugin.unit)
         uid = uids[plugin.unit]
         connected = state == "active" and uid is not None and connections.established(uid)
@@ -4244,7 +4308,7 @@ async def main() -> None:
         pins = components.pins()
         out = []
         for plugin in installed_plugins:
-            if plugin.built_in or plugin.uploaded:
+            if plugin.built_in or (plugin.uploaded and plugin.id not in personalise.FROM_CATALOGUE):
                 continue
             component = downloads.get(plugin.id)
             pin = pins.get(component) or {} if component else {}
@@ -4256,7 +4320,28 @@ async def main() -> None:
                 "component": component,
                 "from": pin.get("FROM"),
             })
+        # ADR-0174 decision 3: offered as before it moved, installed from
+        # the catalogue when chosen.
+        for plugin_id in personalise.FROM_CATALOGUE:
+            entry = None if plugin_id in uploads.versions() else catalogue.offered(plugin_id)
+            if entry is not None:
+                out.append({"id": plugin_id, "name": entry["name"], "kind": entry["kind"],
+                            "row": f"{plugin_id}.enabled", "summary": entry.get("summary"), "notice": None,
+                            "component": plugin_id, "from": None, "catalogue": True})
         return out
+
+    def _install_offered(plugin_id: str) -> dict:
+        """ADR-0174 decision 3: a plugin part 2 offers from the catalogue,
+        chosen there - installed as *Add plugins* installs it, and recorded
+        as the carry-over records one: switched on once in, and installed
+        at the next start if it did not get in now."""
+        offered = next((p for p in _offered_plugins() if p["id"] == plugin_id and p.get("catalogue")), None)
+        if offered is None:
+            raise plugin_catalogue.Unavailable(f"{plugin_id} is not one part 2 installs")
+        job = catalogue.start_install(plugin_id)
+        uploads.record_missing(plugin_id, {"name": offered["name"], "kind": offered["kind"], "version": None,
+                                           "origin": uploads.CATALOGUE, carry_over.SWITCH_ON: True})
+        return job.to_json()
     # ADR-0111: the pack this screen wants every few minutes - and now, once
     # the attached screen has been compared (below), so a start that
     # switches screens does not first fetch the old screen's pack.
@@ -4707,6 +4792,7 @@ async def main() -> None:
         on_painted=None,
         upload_plugin=_upload_plugin,
         uninstall_plugin=_uninstall_plugin,
+        install_offered=_install_offered,
         # ADR-0169: one store for every plugin.
         store_view=_store_view,
         store_add=_store_add,
@@ -4912,6 +4998,20 @@ async def main() -> None:
                 logger.warning("plugins: %s sent a cover that was refused: %s", session.id, exc)
                 return
             logger.debug("plugins: %s handed over a cover, %s", session.id, key)
+            return
+        if kind == "software":
+            # ADR-0174: a catalogue plugin's own download, shown on its switch
+            # and in setup as ours are.
+            plugin = next((p for p in installed_plugins if p.id == session.id and p.downloads), None)
+            state = message.get("state")
+            if plugin is None or state not in SOFTWARE_STATES:
+                logger.warning("plugins: %s reported a download it does not declare, or %r", session.id, state)
+                return
+            plugin_software[session.id] = _plugin_software(
+                plugin, state, **{k: message.get(k) for k in ("label", "from", "received", "total",
+                                                              "attempt", "attempts", "error")
+                                  if message.get(k) is not None})
+            _publish_components()
             return
         if kind == "row":
             # ADR-0119: a plugin says what one of its own rows is - a

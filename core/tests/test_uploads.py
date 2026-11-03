@@ -202,3 +202,15 @@ def test_a_plugin_switched_on_without_its_package_is_not_retried():
     assert result.returncode == 78 and "not installed" in result.stderr
     for unit in ("gexis-uploaded-renderer@.service", "gexis-uploaded-service@.service"):
         assert "RestartPreventExitStatus=78" in (files / unit).read_text()
+
+
+def test_what_a_plugin_downloads_into_its_folder_can_run():
+    """ADR-0174, found on sofapi 2026-11-03: systemd mounts a DynamicUser
+    state directory noexec, and Plexamp's native module, unpacked there by
+    its plugin, failed to load. Both units give the folder exec back."""
+    from pathlib import Path
+    files = Path(__file__).resolve().parents[2] / "image" / "stage-gexis" / "03-core" / "files"
+    for unit in ("gexis-uploaded-renderer@.service", "gexis-uploaded-service@.service"):
+        lines = (files / unit).read_text().splitlines()
+        assert "StateDirectory=gexis-uploaded/%i" in lines
+        assert "ExecPaths=/var/lib/private/gexis-uploaded/%i" in lines, unit

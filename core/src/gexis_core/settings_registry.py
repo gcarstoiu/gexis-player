@@ -613,12 +613,15 @@ class Settings:
                 if getattr(plugin, "notice", None):
                     # ADR-0098: read and confirmed before it turns on.
                     switches[-1]["warn"] = plugin.notice
+                page = None
                 if getattr(plugin, "port", None):
                     # ADR-0114: where its own page is - the device's name is
                     # read when the registry is built, which a rename (a
                     # restart, ADR-0048) rebuilds.
                     from gexis_core import device_name as _name
-                    switches[-1]["note"] = f"Open http://{_name.hostname() or 'gexis'}.local:{plugin.port}"
+                    page = f"Open http://{_name.hostname() or 'gexis'}.local:{plugin.port}"
+                if page:
+                    switches[-1]["note"] = page
                 elif plugin_line(plugin):
                     # ADR-0169: every plugin's row says what it does.
                     switches[-1]["note"] = plugin_line(plugin)
@@ -627,13 +630,14 @@ class Settings:
                     # it was uploaded; its note what it does.
                     switches[-1]["default"] = False
                     switches[-1]["uploaded"] = True
-                    switches[-1]["note"] = plugin_line(plugin, "file")
+                    # ADR-0174: its page, if it has one, as ours show theirs.
+                    switches[-1]["note"] = page or plugin_line(plugin, "file")
                 if getattr(plugin, "catalogue", False):
                     # ADR-0168: from the catalogue - and why, if it was
                     # withdrawn or blocked there. Blocked stays off.
                     switches[-1]["catalogue"] = True
                     state = getattr(plugin, "pulled", None)
-                    switches[-1]["note"] = catalogue_note(state, plugin_line(plugin, "catalogue"))
+                    switches[-1]["note"] = catalogue_note(state, page or plugin_line(plugin, "catalogue"))
                     if state and state[0] == "blocked":
                         switches[-1]["blocked"] = True
             # **ADR-0100 as amended: a plugin that downloads its software says
@@ -651,14 +655,17 @@ class Settings:
                                  "surfaced": False, "note": None})
                 # ADR-0100, amended 2026-09-28: Remove, offered in the same row
                 # while the switch is off. It asks first, and says what stays.
-                switches.append({"key": f"{plugin.id}.remove", "type": "action",
-                                 "label": f"Remove {plugin.name}", "component": component,
-                                 "surfaced": False, "danger": True, "confirm": "Remove",
-                                 "note": None,
-                                 "warn": f"This deletes the software {plugin.name} downloaded. "
-                                         + (getattr(plugin, "removes", None)
-                                            or f"Its settings and sign-in stay on the device. "
-                                               f"Switching {plugin.name} on again downloads it again.")})
+                # Not for a catalogue plugin (ADR-0174): its download is its
+                # own, and goes with it when it is removed.
+                if not getattr(plugin, "uploaded", False):
+                    switches.append({"key": f"{plugin.id}.remove", "type": "action",
+                                     "label": f"Remove {plugin.name}", "component": component,
+                                     "surfaced": False, "danger": True, "confirm": "Remove",
+                                     "note": None,
+                                     "warn": f"This deletes the software {plugin.name} downloaded. "
+                                             + (getattr(plugin, "removes", None)
+                                                or f"Its settings and sign-in stay on the device. "
+                                                   f"Switching {plugin.name} on again downloads it again.")})
             if switches and switch_group is None:
                 # A registry with no `plugins` category cannot hold the switch,
                 # and a plugin with no switch is the thing ADR-0086's amendment
