@@ -1,6 +1,10 @@
 {
  "_about": "Every release's notes, newest first, exactly as published and signed (ADR-0116). publish.sh reads a release's notes from here; Settings -> Change logs shows the last 10.",
  "releases": {
+  "1.13.0": {
+   "date": "2026-11-03",
+   "notes": "New\n• Plexamp and Beszel come from the plugin catalogue, in Settings → Plugins → Add plugins, and their new versions are offered there without a player update.\n• A player that used them gets them from the catalogue with this update, signed in, with their settings and the hub's history.\n• A plugin from the catalogue shows its connection and a link to its own page in Settings, as the player's own do.\n\nFixed\n• A factory reset also removes Plexamp's caches.\n\nGood to know\n• Setup still offers Plexamp, and installs it from the catalogue when chosen.\n• A backup keeps a plugin's settings and sign-ins, not the software it downloads, which is fetched again after a restore.\n• Without a network at the update, they are installed once it is back."
+  },
   "1.12.1": {
    "date": "2026-11-03",
    "notes": "Good to know\n• Updates and the card image are now built on GitHub from the release's tagged source, with a public record of each build. They are signed with the same key as before."
