@@ -80,7 +80,7 @@ builds the UI first (`npm ci && npm run build`) and then all packages.
 | `gexis-peppyalsa`, `gexis-peppy-engines` | the meter tap library; PeppyMeter/PeppySpectrum |
 | `gexis-go-librespot`, `gexis-camilladsp` | upstream binaries, as built upstream (ADR-0093; CamillaDSP for the equaliser, ADR-0162) |
 | `gexis-squeezelite` | Lyrion's player: the commit Debian trixie packages, built with Debian's options and our patch that folds multichannel files down to stereo (ADR-0145); `Provides`/`Conflicts`/`Replaces: squeezelite`, Debian's package, which a device updated from an earlier release has removed |
-| `gexis-lyrion-server`, `gexis-plexamp` | plugins; Lyrion and Plexamp themselves are *not* inside (see §7) |
+| `gexis-lyrion-server` | a plugin; the Lyrion server itself is *not* inside (see §7) |
 | `gexis-skins-<W>x<H>` | one visualiser skin pack per screen size (ADR-0111); never in the image. Until one is installed, `gexis-peppy` exits cleanly saying so, and the core restarts it once the pack is in (2026-10-09). `gexis-update pack-install` fetches it at 3 MB/s (apt's `Dl-Limit`) while the player is in use - a card playing, or go-librespot, BlueALSA or BlueZ active in the last 10 min - and restarts apt at the other speed when that changes, resuming the partial file (ADR-0111 amended 2026-10-07) |
 | `gexis-player` | **the release**: exact `Depends` on all of the above (skins excepted), on `libasound2t64`, and the OS packages the device runs |
 
@@ -653,8 +653,8 @@ minutes. A device that still has the old single `gexis-skins` keeps it as its
 
 ## 7. Software we may not ship, and plugins
 
-**Fetched on the device (ADR-0100).** Plexamp and the Lyrion server are not
-redistributable, so their packages carry a *pin* instead:
+**Fetched on the device (ADR-0100).** The Lyrion server and Roon Bridge are
+not redistributable, so their packages carry a *pin* instead:
 `/usr/share/gexis/components/<name>.env` with URL, SHA256, format, destination,
 owner and a label. When the user switches the plugin on,
 `gexis-fetch@<name>.service` runs `gexis-fetch-component`, which downloads
@@ -669,13 +669,18 @@ maker's own "latest" feed and reports which pins are behind (exit 1) or
 unreadable (exit 2). It changes nothing; a new version is tried on a device
 before its pin moves.
 
-**Our plugins** (Plexamp adapter, Lyrion server) update **with the
-release** - one catalogue, one Updates screen (ADR-0106). Beszel's agent and
-hub are catalogue plugins since ADR-0174 (`gcarstoiu/gexis-beszel`): the
-release that dropped their packages (`gexis-player` *conflicts* with them)
-carries a player that used them over at its next start (`carry_over.py`) -
-their data moved into the plugins' own folders, recorded for the catalogue's
-install, switched on again.
+**Our plugins** (Lyrion server, AirPlay, Roon) update **with the
+release** - one catalogue, one Updates screen (ADR-0106). Plexamp, and
+Beszel's agent and hub, are catalogue plugins since ADR-0174
+(`gcarstoiu/gexis-plexamp`, `gcarstoiu/gexis-beszel`): the release that
+dropped their packages (`gexis-player` *conflicts* with them) carries a
+player that used them over at its next start (`carry_over.py`) - their old
+units stopped, their data moved into the plugins' own folders (Plexamp's
+store, its claim record, and its software with the stamp of its pin, so the
+same version is not fetched again), recorded for the catalogue's install,
+switched on again. Plexamp's plugin downloads Plexamp itself, from the pin in
+its archive, into its own folder, and reports it with the contract's
+`software` messages; a new Plexamp is a new plugin version.
 
 **Uploaded plugins** (ADR-0106, `core/src/gexis_core/uploads.py`) bypass the
 release entirely: a `.tar.gz` with `plugin.json` (plus `version` and `run`),

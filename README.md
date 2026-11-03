@@ -178,8 +178,8 @@ Gexis is built to be extended. A plugin adds a **source** that plays through
 the player or a **service** that runs beside it, and is switched on, updated
 or removed from Settings, with its progress shown in the switch itself.
 
-- **Ready today:** Plexamp, the Lyrion Server and the visualiser skin packs;
-  from the catalogue, Beszel monitoring, with its connection shown in
+- **Ready today:** the Lyrion Server and the visualiser skin packs; from
+  the catalogue, Plexamp, Beszel monitoring, with its connection shown in
   Settings, and the TV's own remote over HDMI-CEC.
 - **One store:** *Add plugins* in Settings lists the player's own optional
   plugins beside other authors' from the

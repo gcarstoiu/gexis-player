@@ -53,7 +53,7 @@ brings one is refused.
 
 | Field | Required | Meaning |
 |---|---|---|
-| `id` | yes | Lowercase letters, digits and `-`, starting with a letter, 2-31 characters. It is the folder, the prefix of your settings, and a URL part. It may not be one of the player's own (`lms`, `spotify`, `bluetooth`, `plexamp`, `airplay`, …) |
+| `id` | yes | Lowercase letters, digits and `-`, starting with a letter, 2-31 characters. It is the folder, the prefix of your settings, and a URL part. It may not be one of the player's own (`lms`, `spotify`, `bluetooth`, `airplay`, `roon`, …) |
 | `name` | yes | What people see |
 | `kind` | yes | `renderer` or `service` |
 | `version` | yes | Letters, digits and `. + ~ -`, up to 40 characters, starting with a letter or digit. Uploading a different version updates the plugin; the same version again is refused. Shown on your plugin's switch in Settings → Plugins |

@@ -885,8 +885,10 @@ AirPlay list - the whole group plays - or, for players not grouped, choose
 several of them in the AirPlay list together.
 
 **How do I connect Plexamp?**
-Switch on *Plexamp* on the Plugins page (it is downloaded from Plex). Then, in
-its *Claim token* row under *Settings → Sources*, paste a token from
+Add *Plexamp* under *Settings → Plugins → Add plugins*, or choose it while
+making the player yours after setup: it comes from the plugin catalogue, and
+downloads Plexamp itself from Plex. Then, in its *Claim token* row under
+*Settings → Sources*, paste a token from
 plex.tv/claim; the row then shows *Claimed*. *Claim again* moves the player
 to another Plex account, and registers it there as a new player. A token
 lasts only a few minutes, so paste it soon after making it. If the row says
@@ -1038,8 +1040,9 @@ have problems; Stable gets it once it has been tried. Going back to Stable
 does not downgrade: the player stays where it is until Stable passes it.
 
 **Do Plexamp and the Lyrion server update?**
-Yes, with the player: a new version of either comes as part of the player
-update that brings it.
+Yes. The Lyrion server updates with the player: a new version comes as part
+of the player update that brings it. Plexamp comes from the plugin catalogue,
+which offers its new versions under *Add plugins*.
 
 **How do I find the player's shares from a computer or phone?**
 The player shares its Pictures and Backups folders (and Music, with the
@@ -1098,11 +1101,12 @@ skins and plugins setup chooses.
 to 100 MB) to help track down a problem. It is on by default on the Testing
 channel; switching it off deletes the logs kept.
 
-**Where did Beszel go?**
-Since 1.13.0 its agent and hub come from the plugin catalogue, under *Add
-plugins*, and update on their own instead of with each release. A player
-that had one switched on gets it back by itself after the update, with its
-connection and history; it needs the network once for that.
+**Where did Beszel and Plexamp go?**
+Since 1.13.0 Plexamp, and Beszel's agent and hub, come from the plugin
+catalogue, under *Add plugins*, where their new versions are offered instead
+of coming with each release. A player that had one switched on gets it back by itself after the
+update, with its sign-in, connection and history; it needs the network once
+for that.
 
 **Is Beszel reaching its hub?**
 Its heading in *Settings → System*, above the hub address, token and key,

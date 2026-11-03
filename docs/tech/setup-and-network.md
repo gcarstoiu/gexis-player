@@ -383,8 +383,8 @@ sequenceDiagram
      it restores.
    - with a name that differs from the backup's and `second_player` not
      false, `backups.IDENTITIES` are left out of `restore_file()` (the
-     Beszel agent's data, in its old place or its plugin folder, Plexamp's
-     store, go-librespot's `state.json` and
+     Beszel agent's data and Plexamp's store, each in its old place or its
+     plugin folder, go-librespot's `state.json` and
      `/var/lib/bluetooth`), and `backups.forget_settings()` removes
      `IDENTITY_SETTINGS` from the restored settings: every `beszel.` key
      and `plexamp.claim_token`;
@@ -437,7 +437,7 @@ nothing there is followed through a link:
   again. Then `_refuse_links_on_disk()` walks each member's path on the
   disk with `lstat`, **before anything is stopped or written**, and refuses
   the whole archive if any part of it is already a link - an uploaded
-  plugin owns its data folder, and Plexamp, as `pi`, its own. The
+  plugin owns its data folder, and Plexamp before 1.13.0, as `pi`, its own. The
   extraction is the module's own (`_put_back()`): each folder opened from
   the one above with `O_NOFOLLOW`, each file written beside its place under
   a random name and renamed over it; Python's `tar` filter still decides
@@ -783,11 +783,21 @@ Plexamp's switch (its download) and claim token, a pairing answered
 (`/bluetooth/pairing/{accept,reject}`), a share added
 (`lyrion-server.shares`), and `visualiser_skins` once the visualiser is
 switched on at its step - it starts off (ADR-0149 decision 42:
-`live.downloadSkins`, once; the step shows `live.stage('skins')`). Finish posts `/personalise/finish` with
+`live.downloadSkins`, once; the step shows `live.stage('skins')`).
+**Plexamp not installed yet** (a catalogue plugin since ADR-0174; decision 3)
+has no switch to write: `GET /personalise` lists it with `catalogue`, and
+*Download* posts `/personalise/install` instead. The core installs it from
+the catalogue as *Add plugins* does (reading the catalogue again first when
+the last read does not offer it - a new player's first read is a minute
+after its start), and records it as the carry-over records a plugin: switched
+on once installed, installed at the next start if it did not get in now.
+Until the core's restart its component is the catalogue's download of the
+archive; then the plugin's own `software` reports, the same bar. Finish posts `/personalise/finish` with
 `{"settings": {...}}`. `personalise.checked` refuses the request whole if any
 key is outside `KEYS` and `PLUGIN_ROWS`. `personalise.apply` writes the
 settings through `Settings.set` (a refusal is logged, named in the answer,
-and the rest go on), then the plugin switches. The page only ever sends them
+and the rest go on), then the plugin switches - Plexamp, still not
+installed, through the same install. The page only ever sends them
 on - after adding any USB folder or share still ticked on *Where is your
 music?* (decision 45; `live.addPicked`). Then `settling.begin` follows what is
 not in yet: `apply` is given

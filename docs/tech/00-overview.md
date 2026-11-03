@@ -59,7 +59,7 @@ flowchart TB
         sq["squeezelite<br/>(Lyrion / LMS)"]
         lib["go-librespot<br/>(Spotify Connect)"]
         bt["bluealsa + bluealsa-aplay<br/>(Bluetooth A2DP sink)"]
-        px["Plexamp<br/>(plugin)"]
+        px["Plexamp<br/>(catalogue plugin)"]
         ap["Shairport Sync<br/>(AirPlay, plugin)"]
         rn["Roon Bridge<br/>(Roon, plugin)"]
     end
@@ -93,7 +93,7 @@ flowchart LR
         sq["squeezelite.service"]
         gl["go-librespot.service<br/>API :3678"]
         bluez["bluetoothd + bluealsa"]
-        px["plexamp.service (plugin)"]
+        px["gexis-uploaded-renderer@plexamp<br/>(Plexamp, catalogue plugin)"]
         lyr["gexis-lyrion.service<br/>(optional on-device LMS :9000)"]
         upd["gexis-update-*<br/>check timer + install"]
         sock[("/run/gexis/plugins.sock")]

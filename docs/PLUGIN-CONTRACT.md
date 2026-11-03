@@ -71,7 +71,6 @@ Every message has a `t` (type). Everything else depends on `t`.
 ```json
 {"t": "hello", "contract": 1, "id": "plexamp", "kind": "renderer",
  "name": "Plexamp",
- "unit": "plexamp.service",
  "release_action": "disconnect",
  "capabilities": {
    "audio_connection": "output",
