@@ -1,7 +1,7 @@
 # ADR-0175 — Room correction for the bass
 
-**Status:** **Proposed** 2026-11-03, Phase 29 (`ph-room-correction`). How is
-Claude's proposal; the decisions below are George's.
+**Status:** **Accepted** 2026-11-03 (George: decisions 1-6), Phase 29
+(`ph-room-correction`). How is Claude's proposal; the decisions are George's.
 **Builds on:** [ADR-0162](0162-a-simple-equaliser.md) (the equaliser's filter
 stage) and [Finding 124](../findings/124-room-correction-what-open-source-offers.md)
 (what open source offers, the microphones). **Followed by:** Phase 30
@@ -110,7 +110,9 @@ correction of its own.
    UMIK-1's name carries its gain), its gain set explicitly. Its calibration
    (decision 4) is the 90° file, the microphone pointing at the ceiling at
    every position, checked as one (frequency and dB columns, a sensitivity
-   line) and kept by the microphone's serial.
+   line) and kept by the microphone's serial. Not yet verified: miniDSP's
+   download address, and whether the UMIK-1 gives its calibration serial
+   over USB; if it does not, the owner types the serial.
 10. **What is kept**: for each output the measurement (average and
     positions at 1/24 octave, a few kB), the design and the switch; each
     microphone's calibration. In the settings store, so in backups and
@@ -147,13 +149,30 @@ correction of its own.
   listed untested once someone tries them; (b) also the Dayton Audio iMM-6C
   and UMM-6 from the start, untested.
 
+## Decided (George)
+
+- **Decision 1, the target** (2026-11-03): (b), a gentle rise below about
+  80 Hz (+3 dB), over flat and over the owner choosing. With cuts only
+  (decision 2) the rise means the correction cuts less down there; it never
+  lifts the deep bass.
+- **Decision 2, boosts** (2026-11-03), as recommended: none, cuts only.
+- **Decision 3, the bass limit** (2026-11-03), as recommended: 250 Hz, fixed.
+- **Decision 4, the calibration file** (2026-11-03): (b), the player
+  downloads it from miniDSP by the microphone's serial, over giving it from
+  the phone.
+- **Decision 5, the after** (2026-11-03), as recommended: measured again at
+  every position, with the correction on.
+- **Decision 6, the microphones** (2026-11-03), as recommended: the UMIK-1
+  only at first; George has one to measure with.
+
 ## Settings (ADR-0022)
 
-Proposed, appended to the inventory only after George confirms:
+Appended to the inventory 2026-11-03, confirmed by George:
 - **[N]** Room correction on and off, for each output.
 - **[N]** The measurement and its design, for each output (internal).
-- **[N]** A microphone's calibration, by its serial.
-- **[?]** The target (decision 1) and the bass limit (decision 3).
+- **[N]** A microphone's calibration, downloaded by its serial.
+- **[H]** The target: a gentle rise below about 80 Hz (decision 1).
+- **[H]** The bass limit, 250 Hz (decision 3).
 - **[H]** Five positions, eight cuts of up to 12 dB, 75 dB SPL.
 
 ## Measured before it is called done

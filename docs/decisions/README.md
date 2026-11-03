@@ -195,7 +195,7 @@ been written properly. **0098 has no record either.**
 | [0172](0172-roon.md) | Roon | Built 2026-11-02, in 1.12.0 (Phase 26, George): Roon Bridge fetched on the player as a plugin, through the player's output by a loopback; Now Playing by Roon's extension API, the zone found by the loopback |
 | [0173](0173-releases-built-on-github.md) | Releases built on GitHub | Built 2026-11-03, in 1.12.1; accepted 2026-11-02 (Phase 27, George: decisions 1-3): packages, image, parts and previews built on GitHub's arm64 machines; signing stays on R2D2 |
 | [0174](0174-plexamp-and-beszel-from-the-catalogue.md) | Plexamp and Beszel from the catalogue | Accepted 2026-11-03 (Phase 28, George: decisions 1-3): out of the release, installed and updated from the catalogue, carried over |
-| [0175](0175-room-correction-for-the-bass.md) | Room correction for the bass | Proposed 2026-11-03 (Phase 29): up to eight Peaking cuts per channel in the equaliser's stage, from five positions measured on the phone; six decisions for George |
+| [0175](0175-room-correction-for-the-bass.md) | Room correction for the bass | Accepted 2026-11-03 (Phase 29, George: decisions 1-6): cuts only below 250 Hz towards a gentle bass rise, in the equaliser's stage; five positions, measured again after; UMIK-1, calibration downloaded |
 
 ## Cross-cutting rules
 
