@@ -77,8 +77,8 @@ pinned archives (new revisions); earlier releases read from GitHub
 (`packaging/release/published.py`); `sign.sh`, `publish.sh --upload` and
 `--sign`; `.github/workflows/release.yml`, whose whole chain ran unsigned on
 the branch in 19 minutes; 1.12.1 built, uploaded, attested and signed that
-way. **Left:** a player updating to 1.12.1 and a card flashed from its image
-(criterion 4); a preview by `workflow_dispatch` once #94 is merged; then R2D2's
+way. **Left:** a card flashed from 1.12.1's image (criterion 4; sofapi updated
+itself to it); a preview by `workflow_dispatch` once #94 is merged; then R2D2's
 pi-gen container and build images removed (decision 3). Check a
 workflow parses before pushing it (`~/projects/ha-venv/bin/python` has PyYAML):
 a `: ` in a one-line `run:` failed one push. Then 28, room correction for the
@@ -105,11 +105,10 @@ player's.
 `GEXIS_RELEASE_GNUPGHOME=~/projects/gexis-release-key`; the scripts default
 to `~/.gnupg-gexis-release`, which no longer exists.
 
-**The players** (2026-11-03): sofapi on preview packages from
-`ph-github-builds` (run 41525285578: `gexis-player 1.12.0+git29.52b77c0`,
-core 1.12.0, the four rebuilt from source archives; in `~/preview-ph27`; core,
-kiosk and peppy restarted, squeezelite and the AirPlay pair restarted by
-their packages), its reboot marker still set, Roon's extension enabled in
+**The players** (2026-11-03): sofapi on 1.12.1, updated by its own updater
+from Testing (with a reboot, its marker now cleared; the preview's packages
+still in `~/preview-ph27`); `rpi-eeprom-update` reports a bootloader update
+available, not applied (not looked into). Roon's extension enabled in
 George's Roon; the other three last seen on 1.9.1 through their updaters
 (2026-10-29). All four on Testing, which offers 1.12.0. sofapi and the bar
 grouped; AirPlay on at sofapi and guestpi. Each has its own Lyrion server.
