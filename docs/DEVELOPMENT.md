@@ -3723,7 +3723,8 @@ how.
 
 **Acceptance**
 
-1. **ADR-0174 accepted.**
+1. **ADR-0174 accepted.** *Met 2026-11-03*: decisions 1-3 (the plugin
+   downloads Plexamp; carried over; setup offers it as today).
 2. **Each in its own repository, released and listed** in the catalogue,
    checked and signed as TV remote was.
 3. **Out of the image and the release**: the image holds none of them and

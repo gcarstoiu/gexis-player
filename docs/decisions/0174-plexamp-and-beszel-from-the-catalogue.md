@@ -1,9 +1,9 @@
 # ADR-0174 — Plexamp and Beszel from the catalogue
 
-**Status:** **Proposed** 2026-11-03, Phase 28 (`ph-catalogue-plugins`).
-George decided the move on 2026-11-03: Plexamp, and Beszel's agent and hub,
-out of the player, as standalone plugins. How is Claude's proposal; three
-decisions are his.
+**Status:** **Accepted** 2026-11-03 (George: decisions 1-3), Phase 28
+(`ph-catalogue-plugins`). George decided the move on 2026-11-03: Plexamp, and
+Beszel's agent and hub, out of the player, as standalone plugins. How is
+Claude's proposal; three decisions are his.
 **Changes:** [ADR-0168](0168-a-plugin-catalogue.md) decision 11 (ours stay
 with the release) for these three; [ADR-0169](0169-one-store-for-every-plugin.md)
 decision 11 (they become catalogue rows); [ADR-0087](0087-the-beszel-agent-is-the-first-service-plugin.md),
@@ -150,6 +150,10 @@ environment, as ours have. It cannot install Debian packages, use
   over at the first start after the update, without a question - installed
   from the catalogue, their data moved, switched on again; retried without
   the network, the row saying so. Over removing them and offering them again.
+- **Decision 3, first use** (2026-11-03), as proposed: setup offers what it
+  offers today; Plexamp, chosen in its second part, is installed from the
+  catalogue there, then asks for the Plex claim as now. Over setup no longer
+  offering it.
 
 ## Not in this phase
 
