@@ -27,7 +27,7 @@ ours=""
 # one that already has gexis-skins keeps it, since apt leaves an installed
 # package alone when nothing depends on it any more.
 for pkg in gexis-core gexis-ui gexis-system gexis-wallpapers gexis-peppyalsa gexis-peppy-engines \
-	gexis-go-librespot gexis-squeezelite gexis-camilladsp gexis-lyrion-server gexis-plexamp \
+	gexis-go-librespot gexis-squeezelite gexis-camilladsp gexis-lyrion-server \
 	gexis-nqptp gexis-shairport-sync gexis-airplay gexis-roon; do
 	v=$(version_of "$pkg")
 	ours="$ours, $pkg (= $v)"
@@ -63,7 +63,7 @@ install -D -m 644 /tmp/peppy_screensaver-LICENSE \
 # update that brings this release - an update never removes a package on its
 # own - and the core carries each over from the catalogue at its next start,
 # its data kept (carry_over.py).
-MOVED="gexis-beszel-agent, gexis-beszel-hub"
+MOVED="gexis-beszel-agent, gexis-beszel-hub, gexis-plexamp"
 
 cat > "$STAGE/DEBIAN/control" <<CTL
 Package: gexis-player

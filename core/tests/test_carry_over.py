@@ -11,7 +11,7 @@ import pytest
 from gexis_core import carry_over, uploads
 
 AGENT = carry_over.Moved("beszel", "Beszel", "service", "beszel-agent.service",
-                         (Path("agent-data"),), "gexis-beszel-agent", ("beszel",))
+                         ((Path("agent-data"), ""),), "gexis-beszel-agent", ("beszel",))
 
 
 @pytest.fixture
@@ -19,7 +19,7 @@ def places(tmp_path, monkeypatch):
     old = tmp_path / "var-lib-beszel-agent"
     old.mkdir()
     (old / "fingerprint").write_text("48 bytes of identity")
-    moved = carry_over.Moved(AGENT.id, AGENT.name, AGENT.kind, AGENT.unit, (old,), AGENT.package, ())
+    moved = carry_over.Moved(AGENT.id, AGENT.name, AGENT.kind, AGENT.unit, ((old, ""),), AGENT.package, ())
     wants = tmp_path / "wants"
     wants.mkdir()
     monkeypatch.setattr(carry_over, "subprocess", None)  # no user is touched here
@@ -113,5 +113,37 @@ def test_remembering_installed_plugins_keeps_the_flag(places, tmp_path):
 
 
 def test_the_shipped_set_is_what_adr_0174_moves():
-    assert {m.id for m in carry_over.MOVED} == {"beszel", "beszel-hub"}
-    assert {m.package for m in carry_over.MOVED} == {"gexis-beszel-agent", "gexis-beszel-hub"}
+    assert {m.id for m in carry_over.MOVED} == {"beszel", "beszel-hub", "plexamp"}
+    assert {m.package for m in carry_over.MOVED} == {"gexis-beszel-agent", "gexis-beszel-hub", "gexis-plexamp"}
+
+
+def test_plexamp_s_claim_and_software_move_to_their_own_places(tmp_path):
+    """Its store and claim record from pi's home, and the software already
+    fetched with its stamp - so the plugin finds Plexamp installed at the
+    same pin and signed in. Both its old units are stopped."""
+    home, components = tmp_path / "home-pi", tmp_path / "components"
+    (home / ".local/share/Plexamp/Settings").mkdir(parents=True)
+    (home / ".local/share/Plexamp/Settings/%40Plexamp%3Auser%3Atoken").write_text("Stoken")
+    (home / ".local/share/gexis-plexamp").mkdir(parents=True)
+    (home / ".local/share/gexis-plexamp/claim.json").write_text('{"state": "claimed"}')
+    (home / "plexamp/js").mkdir(parents=True)
+    (home / "plexamp/js/index.js").write_text("plexamp")
+    components.mkdir()
+    (components / "plexamp.sha256").write_text("86e5")
+    real = next(m for m in carry_over.MOVED if m.id == "plexamp")
+    moved = carry_over.Moved(real.id, real.name, real.kind, real.unit,
+                             ((home / ".local/share/Plexamp", ".local/share/Plexamp"),
+                              (home / ".local/share/gexis-plexamp", ".local/share/gexis-plexamp"),
+                              (home / "plexamp", "plexamp"),
+                              (components / "plexamp.sha256", "plexamp.sha256")),
+                             real.package, (), real.also)
+    stopped, private = [], tmp_path / "private" / "gexis-uploaded"
+    carry_over.carry(ours=set(), stored=lambda key: True, added=None, known=tmp_path / "known.json",
+                     private=private, wants=tmp_path, versions=dict, stop=stopped.append, moved=[moved])
+    folder = private / "plexamp"
+    assert (folder / ".local/share/Plexamp/Settings/%40Plexamp%3Auser%3Atoken").read_text() == "Stoken"
+    assert (folder / ".local/share/gexis-plexamp/claim.json").exists()
+    assert (folder / "plexamp/js/index.js").exists() and (folder / "plexamp.sha256").read_text() == "86e5"
+    assert not (home / "plexamp").exists() and not (components / "plexamp.sha256").exists()
+    assert stopped == ["plexamp.service", "gexis-plexamp.service"]
+    assert uploads.known(tmp_path / "known.json")["plexamp"]["kind"] == "renderer"

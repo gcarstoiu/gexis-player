@@ -25,9 +25,10 @@ report() {  # name pinned latest
 	fi
 }
 
-# Plexamp: Plex publishes the headless build's latest version as JSON.
-plex_pin=image/stage-gexis/03-core/files/components/plexamp.env
-plex_have=$(pin "$plex_pin" URL | sed -E 's/.*-v([0-9.]+)\.tar\.bz2$/\1/')
+# Plexamp: Plex publishes the headless build's latest version as JSON. The
+# pin is the catalogue plugin's since ADR-0174 (gcarstoiu/gexis-plexamp).
+plex_have=$(curl -fsS --max-time 20 https://raw.githubusercontent.com/gcarstoiu/gexis-plexamp/main/plexamp.pin 2>/dev/null \
+	| sed -n 's/^URL=.*-v\([0-9.]*\)\.tar\.bz2$/\1/p')
 plex_latest=$(curl -fsS --max-time 20 https://plexamp.plex.tv/headless/version.json 2>/dev/null \
 	| python3 -c 'import json, sys; print(json.load(sys.stdin)["latestVersion"])' 2>/dev/null)
 report Plexamp "$plex_have" "$plex_latest"

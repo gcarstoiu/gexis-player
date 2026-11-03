@@ -67,15 +67,6 @@ MEMBERS = (
     # music in the Music folder, which can be any size.
     "var/lib/squeezeboxserver/prefs",
     "var/lib/gexis-music/Playlists",
-    # **Plexamp's claim** (added 2026-09-26, ADR-0090). The third time for the
-    # same lesson, and this one was learned the hard way: the card was
-    # flashed, the restore put the settings back with `plexamp.enabled` on,
-    # and Plexamp came up unclaimed - not in the Plex player list at all. The
-    # player's identity and the token that signs it in live in `Settings/`
-    # here, one file per key (Finding 077); the claim token that made them is
-    # single-use and minutes-lived, so it cannot stand in. Runs as `pi`,
-    # hence under the home directory. ~200 KB.
-    "home/pi/.local/share/Plexamp",
     # **Uploaded plugins: their data and the list of them, not their
     # packages** (ADR-0106; George, 13a criterion 4: "Agree with your
     # suggestion"). What an uploaded plugin runs is the user's to bring back;
@@ -98,7 +89,11 @@ FORMERLY_BACKED_UP = ("var/lib/go-librespot",)
 #: data is the plugins' own folders now, under `var/lib/private/gexis-uploaded`.
 #: An older backup puts them back where they were, and the carry-over moves
 #: them into those folders at the next start (`carry_over.py`).
-RESTORED_ONLY = ("var/lib/beszel-agent", "var/lib/beszel-hub")
+RESTORED_ONLY = ("var/lib/beszel-agent", "var/lib/beszel-hub",
+                 # **Plexamp's claim** (ADR-0090: its identity and the token that
+                 # signs it in, learned the hard way on 2026-09-26), in pi's home
+                 # until Plexamp became a catalogue plugin too.
+                 "home/pi/.local/share/Plexamp")
 
 #: **What makes a backup this player and no other** (ADR-0131 as amended;
 #: George, 2026-10-08: "Setup could offer to leave these behind when the name
@@ -109,6 +104,7 @@ RESTORED_ONLY = ("var/lib/beszel-agent", "var/lib/beszel-hub")
 IDENTITIES = (
     ("var/lib/private/gexis-uploaded/beszel", "Beszel connection"),
     ("var/lib/beszel-agent", "Beszel connection"),
+    ("var/lib/private/gexis-uploaded/plexamp/.local/share/Plexamp", "Plexamp's claim"),
     ("home/pi/.local/share/Plexamp", "Plexamp's claim"),
     ("var/lib/go-librespot/state.json", "Spotify sign-in"),
     ("var/lib/bluetooth", "Bluetooth pairings"),
@@ -916,7 +912,8 @@ def inspect(path: Path, known_migrations: int, schema_key: str = "_settings_sche
         carried.append(("sources", f"{paired} paired Bluetooth {'device' if paired == 1 else 'devices'}"))
     if "var/lib/go-librespot/state.json" in names:
         carried.append(("sources", "Spotify sign-in"))
-    if any(n.startswith("home/pi/.local/share/Plexamp/Settings/") for n in names):
+    if any(n.startswith(("home/pi/.local/share/Plexamp/Settings/",
+                         "var/lib/private/gexis-uploaded/plexamp/.local/share/Plexamp/Settings/")) for n in names):
         carried.append(("sources", "Plexamp's claim"))
     if any(n.startswith(("var/lib/beszel-agent/", "var/lib/private/gexis-uploaded/beszel/")) for n in names):
         carried.append(("plugins", "Beszel connection"))

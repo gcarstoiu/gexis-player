@@ -324,18 +324,6 @@
       ]
     },
     {
-      "name": "gexis-plexamp",
-      "group": "renderer",
-      "role": "Connects Plexamp to the player.",
-      "author": "George Carstoiu",
-      "licence": "GPL-3.0-or-later",
-      "url": "https://github.com/gcarstoiu/gexis-plexamp",
-      "arrives": "Fetched from its release when the image is built, checked against a pinned checksum",
-      "sources": [
-        "github.com/gcarstoiu/gexis-plexamp"
-      ]
-    },
-    {
       "name": "Shairport Sync",
       "group": "renderer",
       "role": "Receives AirPlay 2 from an iPhone, iPad or Mac.",
@@ -643,16 +631,6 @@
       "credit": false
     },
     {
-      "name": "Plex chevron",
-      "group": "marks",
-      "role": "Shows that Plexamp is playing.",
-      "author": "Plex, Inc.; drawn from the Wikimedia Commons file 'Plex logo 2022.svg'",
-      "licence": "Trademark of Plex, Inc.; the drawing is public domain as a text logo",
-      "url": "https://commons.wikimedia.org/wiki/File:Plex_logo_2022.svg",
-      "arrives": "Included in gexis-plexamp",
-      "credit": false
-    },
-    {
       "name": "Svelte",
       "group": "ui",
       "role": "The framework the panel's screens are written in.",
@@ -785,18 +763,6 @@
       "licence": "Output owned by the project",
       "url": "https://www.anthropic.com/claude",
       "arrives": "Used to design and build"
-    },
-    {
-      "name": "Plexamp",
-      "group": "downloaded",
-      "role": "Plays Plex and Plexamp music.",
-      "author": "Plex, Inc.",
-      "licence": "Proprietary; Plex's terms. Includes BASS audio libraries by Un4seen Developments",
-      "url": "https://www.plex.tv/plexamp/",
-      "arrives": "Not in the image. Downloaded from Plex on the device when you switch Plexamp on, checked against a pinned checksum",
-      "sources": [
-        "plexamp.plex.tv"
-      ]
     },
     {
       "name": "Roon Bridge",

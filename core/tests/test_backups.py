@@ -40,8 +40,9 @@ def _device(root):
     (root / "var/lib/squeezeboxserver/prefs/server.prefs").write_text("---\n")
     (root / "var/lib/gexis-music/Playlists").mkdir(parents=True)
     (root / "var/lib/gexis-music/Playlists/Evening.m3u").write_text("#EXTM3U\n")
-    (root / "home/pi/.local/share/Plexamp/Settings").mkdir(parents=True)
-    (root / "home/pi/.local/share/Plexamp/Settings/%40Plexamp%3Auser%3Atoken").write_text("Stoken")
+    # ADR-0174: Plexamp's store, in its plugin's own folder.
+    (root / "var/lib/private/gexis-uploaded/plexamp/.local/share/Plexamp/Settings").mkdir(parents=True)
+    (root / "var/lib/private/gexis-uploaded/plexamp/.local/share/Plexamp/Settings/%40Plexamp%3Auser%3Atoken").write_text("Stoken")
     # ADR-0106: an uploaded plugin's data and the list of them.
     (root / "var/lib/private/gexis-uploaded/radiofoo").mkdir(parents=True)
     (root / "var/lib/private/gexis-uploaded/radiofoo/state").write_text("learned")
@@ -125,10 +126,11 @@ def test_it_holds_the_beszel_fingerprint(tmp_path):
     assert "var/lib/private/gexis-uploaded/beszel/fingerprint" in held
 
 
-def test_an_older_backup_s_beszel_data_goes_back_where_it_was(tmp_path):
-    """ADR-0174: a backup from before the move holds the agent's fingerprint
-    and the hub's store in their old places. They are put back there, and the
-    carry-over moves them into the plugins' folders at the next start."""
+def test_an_older_backup_s_beszel_and_plexamp_data_goes_back_where_it_was(tmp_path):
+    """ADR-0174: a backup from before the move holds the agent's fingerprint,
+    the hub's store and Plexamp's claim in their old places. They are put
+    back there, and the carry-over moves them into the plugins' folders at
+    the next start."""
     import io
     out = tmp_path / "out"
     out.mkdir()
@@ -136,6 +138,7 @@ def test_an_older_backup_s_beszel_data_goes_back_where_it_was(tmp_path):
     with tarfile.open(out / name, "w:gz") as archive:
         for path, data in (("var/lib/beszel-agent/fingerprint", b"ec4c41e0"),
                            ("var/lib/beszel-hub/data.db", b"hub"),
+                           ("home/pi/.local/share/Plexamp/Settings/token", b"Stoken"),
                            ("var/lib/gexis-core/settings.db", b"settings")):
             info = tarfile.TarInfo(path)
             info.size = len(data)
@@ -144,6 +147,7 @@ def test_an_older_backup_s_beszel_data_goes_back_where_it_was(tmp_path):
     backups.restore_file(out / name, target, run=None)
     assert (target / "var/lib/beszel-agent/fingerprint").read_text() == "ec4c41e0"
     assert (target / "var/lib/beszel-hub/data.db").read_bytes() == b"hub"
+    assert (target / "home/pi/.local/share/Plexamp/Settings/token").read_bytes() == b"Stoken"
 
 
 def test_it_holds_the_plexamp_claim_and_puts_it_back(tmp_path):
@@ -154,7 +158,7 @@ def test_it_holds_the_plexamp_claim_and_puts_it_back(tmp_path):
     directory rather than /var/lib."""
     root, out = _device(tmp_path / "root"), tmp_path / "out"
     name = backups.create("gexis", out, root)
-    token = "home/pi/.local/share/Plexamp/Settings/%40Plexamp%3Auser%3Atoken"
+    token = "var/lib/private/gexis-uploaded/plexamp/.local/share/Plexamp/Settings/%40Plexamp%3Auser%3Atoken"
 
     with tarfile.open(out / name) as archive:
         assert token in set(archive.getnames())

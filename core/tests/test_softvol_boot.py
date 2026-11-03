@@ -172,9 +172,12 @@ def test_the_unit_runs_before_every_renderer():
     unit = (Path(__file__).resolve().parents[2] / "image/stage-gexis/03-core/files/"
             "gexis-softvol-restore.service").read_text()
     before = " ".join(line.split("=", 1)[1] for line in unit.splitlines() if line.startswith("Before="))
-    for renderer in ("squeezelite.service", "go-librespot.service", "bluealsa-aplay.service",
-                     "plexamp.service"):
+    for renderer in ("squeezelite.service", "go-librespot.service", "bluealsa-aplay.service", "gexis-core.service"):
         assert renderer in before
+    # ADR-0174: Plexamp is a catalogue renderer, whose unit follows the core.
+    uploaded = (Path(__file__).resolve().parents[2] / "image/stage-gexis/03-core/files/"
+                "gexis-uploaded-renderer@.service").read_text()
+    assert "gexis-core.service" in next(line for line in uploaded.splitlines() if line.startswith("After="))
     assert "Type=oneshot" in unit
     assert "-m gexis_core.softvol_boot" in unit
 

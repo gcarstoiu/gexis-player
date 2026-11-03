@@ -37,8 +37,6 @@ inputs() {
 		# change of ours is a new version (2026-10-03: gexis-lyrion-server
 		# went out twice as 9.1.1-2 with different bytes).
 		lyrion-server) echo packaging/lyrion-server image/stage-gexis/10-lyrion ;;
-		plexamp) echo packaging/plexamp image/stage-gexis/08-plexamp \
-			image/stage-gexis/03-core/files/components/plexamp.env ;;
 		# ADR-0167: the adapter's pin and our units, configuration and hook.
 		airplay) echo packaging/airplay image/stage-gexis/13-airplay ;;
 		# ADR-0172: the adapter's pin, Roon Bridge's unit, user and download pin.
@@ -111,7 +109,7 @@ reused=""
 # The skin packs (ADR-0111) are built with the rest, and the release carries
 # them all; the image installs none (decision 9: 01-packages leaves them out).
 SKIN_PACKS="skins-1920x1080 skins-1280x400 skins-1480x320 skins-800x480 skins-1280x800"
-for pkg in ${*:-core ui system wallpapers skins $SKIN_PACKS peppyalsa peppy-engines go-librespot squeezelite camilladsp lyrion-server plexamp nqptp shairport-sync airplay roon player}; do
+for pkg in ${*:-core ui system wallpapers skins $SKIN_PACKS peppyalsa peppy-engines go-librespot squeezelite camilladsp lyrion-server nqptp shairport-sync airplay roon player}; do
 	case "$pkg" in
 		skins|skins-*|wallpapers)
 			ver=$(version_for "$pkg")

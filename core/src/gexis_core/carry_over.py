@@ -47,21 +47,34 @@ class Moved:
     id: str
     name: str
     kind: str
-    #: The unit its package ran it under.
+    #: The unit its package ran it under - the one whose switch it was.
     unit: str
-    #: What it kept, each moved into the plugin's own folder whole.
-    data: tuple[Path, ...]
+    #: What it kept: each old place and where it goes in the plugin's own
+    #: folder - "" for its contents into the folder itself, else a path the
+    #: old file or folder is moved to whole.
+    data: tuple[tuple[Path, str], ...]
     #: The package that installed it, gone from the release.
     package: str
     #: System users its package made, deleted when no such package is left.
     users: tuple[str, ...] = ()
+    #: Other units its package ran beside it, stopped as well.
+    also: tuple[str, ...] = ()
 
 
 MOVED: tuple[Moved, ...] = (
     Moved("beszel", "Beszel", "service", "beszel-agent.service",
-          (Path("/var/lib/beszel-agent"),), "gexis-beszel-agent", ("beszel",)),
+          ((Path("/var/lib/beszel-agent"), ""),), "gexis-beszel-agent", ("beszel",)),
     Moved("beszel-hub", "Beszel hub", "service", "beszel-hub.service",
-          (Path("/var/lib/beszel-hub"),), "gexis-beszel-hub", ("beszel",)),
+          ((Path("/var/lib/beszel-hub"), ""),), "gexis-beszel-hub", ("beszel",)),
+    # Plexamp ran as pi: its store (the claim, ADR-0119) and the plugin's
+    # record of it under pi's home, and the software the player fetched with
+    # its stamp - moved too, so the plugin need not fetch the same version.
+    Moved("plexamp", "Plexamp", "renderer", "plexamp.service",
+          ((Path("/home/pi/.local/share/Plexamp"), ".local/share/Plexamp"),
+           (Path("/home/pi/.local/share/gexis-plexamp"), ".local/share/gexis-plexamp"),
+           (Path("/home/pi/plexamp"), "plexamp"),
+           (Path("/var/lib/gexis/components/plexamp.sha256"), "plexamp.sha256")),
+          "gexis-plexamp", (), ("gexis-plexamp.service",)),
 )
 
 #: The record's flag: switch it on once its package is installed.
@@ -75,17 +88,28 @@ def used(moved: Moved, *, stored: object, added: set[str] | None, wants: Path = 
 
 
 def move_data(moved: Moved, private: Path = uploads.STATE_PRIVATE) -> bool:
-    """Its old places' contents into its own folder, once: a file already
-    there is the plugin's own and stays. True when something moved."""
+    """Its old places into its own folder, once: a file already there is the
+    plugin's own and stays. True when something moved."""
     target = private / moved.id
     did = False
-    for old in moved.data:
-        if not old.is_dir() or old.is_symlink():
+    for old, sub in moved.data:
+        if old.is_symlink() or not old.exists():
             continue
         if not private.parent.exists():
             # /var/lib/private: systemd makes it 0700 for DynamicUser units.
             private.parent.mkdir(mode=0o700, parents=True)
         target.mkdir(parents=True, exist_ok=True)
+        if sub:
+            # Whole, to its own place.
+            if (target / sub).exists():
+                logger.warning("carry-over: %s already has %s; the old one stays at %s", moved.id, sub, old)
+                continue
+            (target / sub).parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(old), str(target / sub))
+            did = True
+            continue
+        if not old.is_dir():
+            continue
         for item in sorted(old.iterdir()):
             if (target / item.name).exists():
                 logger.warning("carry-over: %s already has %s; the old one stays in %s",
@@ -111,7 +135,8 @@ def carry(*, ours: set[str], stored: Callable[[str], object], added: set[str] | 
     recorded = []
     left = [m for m in moved if m.id not in ours]
     for m in left:
-        (stop or _stop)(m.unit)
+        for unit in (m.unit, *m.also):
+            (stop or _stop)(unit)
         if move_data(m, private):
             logger.info("carry-over: %s's data moved into its own folder", m.id)
         carried, on = used(m, stored=stored(f"{m.id}.enabled"), added=added, wants=wants)

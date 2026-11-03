@@ -305,132 +305,19 @@ fi
 dfs "cat /etc/modprobe.d/gexis-loopback.conf" | grep -q 'id=Loopback,Multiroom,Roon' \
 	&& ok "the Roon loopback card in snd-aloop's options" || bad "no Roon card in snd-aloop's options"
 
-echo "== Plexamp (ADR-0090), a renderer from another repository"
-for f in /usr/lib/systemd/system/plexamp.service \
-         /usr/lib/systemd/system/gexis-plexamp.service \
-         /usr/share/gexis/plugins/plexamp/plugin.json \
-         /usr/share/gexis/plugins/plexamp/mark.png \
-         /opt/gexis-plexamp/src/gexis_plexamp/main.py \
-         /usr/lib/gexis/plexamp-run \
-         /usr/lib/gexis/gexis-fetch-component \
-         /usr/lib/systemd/system/gexis-fetch@.service \
-         /usr/share/gexis/components/plexamp.env; do
-	dfs "stat $f" | grep -q 'Inode:' && ok "$f" || bad "$f missing"
+echo "== Plexamp: a catalogue plugin since ADR-0174, nothing of it in the image"
+# Its plugin (gcarstoiu/gexis-plexamp) comes from the plugin catalogue and
+# downloads Plexamp itself; a player that used it carries it over at its first
+# start. A leftover here would keep the id the player's own.
+for gone in /usr/lib/systemd/system/plexamp.service /usr/lib/systemd/system/gexis-plexamp.service \
+	/usr/share/gexis/plugins/plexamp /opt/gexis-plexamp /usr/lib/gexis/plexamp-run \
+	/usr/lib/gexis/plexamp-start-idle /usr/share/gexis/components/plexamp.env /home/pi/plexamp; do
+	dfs "stat $gone" | grep -q 'Inode:' && bad "$gone is in the image" || ok "$gone not in the image"
 done
-# **ADR-0100: Plex's software is not in the image.** It is fetched on the device
-# when Plexamp is switched on; a copy here would be a redistribution nobody has
-# established a right to.
-if dfs "stat /home/pi/plexamp" | grep -q 'Inode:'; then
-	bad "/home/pi/plexamp is in the image - ADR-0100 fetches it on the device"
-else
-	ok "Plexamp itself is not shipped"
-fi
-dfs "dump /usr/lib/systemd/system/plexamp.service $OUT/unit-fetch" >/dev/null
-if grep -q '^Requires=gexis-fetch@plexamp\.service' "$OUT/unit-fetch" && grep -q '^After=gexis-fetch@plexamp\.service' "$OUT/unit-fetch"; then
-	ok "plexamp.service fetches Plexamp before it starts"
-else
-	bad "plexamp.service does not require gexis-fetch@plexamp.service"
-fi
-# Node is the runtime Plexamp needs and nothing else here uses. Its absence
-# would be a renderer that cannot start, with the reason two layers down.
+# Node is the runtime the plugin's Plexamp needs, and the sandbox cannot
+# install it: the release carries it (ADR-0174). Its absence would be a
+# renderer that cannot start, with the reason two layers down.
 dfs "stat /usr/bin/node" | grep -q 'Inode:' && ok "node installed" || bad "node missing"
-# **Neither unit enabled.** An unclaimed Plexamp cannot play anything, and the
-# Plugins row reads the unit's real state.
-for u in plexamp gexis-plexamp; do
-	if dfs "stat /etc/systemd/system/multi-user.target.wants/$u.service" | grep -q 'Inode:'; then
-		bad "$u is enabled in the image - ADR-0090 ships it off"
-	else
-		ok "$u not enabled"
-	fi
-done
-# **The pair, actually wired** (ADR-0090's design, ADR-0091's discovery).
-# `Wants=gexis-plexamp.service` sat under `[Service]` from the day the stage was
-# written until 2026-09-26, and systemd says exactly what it did with it:
-# "Unknown key 'Wants' in section [Service], ignoring." So one switch did not
-# control both, nothing here noticed, and it surfaced only when a release ladder
-# started stopping the player for real. Checked by *position*, because the key
-# being present was never the part that was wrong.
-dfs "dump /usr/lib/systemd/system/plexamp.service $OUT/unit" >/dev/null
-service_at=$(grep -n '^\[Service\]' "$OUT/unit" | head -1 | cut -d: -f1)
-wants_at=$(grep -n '^Wants=gexis-plexamp\.service' "$OUT/unit" | head -1 | cut -d: -f1)
-if [ -n "$wants_at" ] && [ -n "$service_at" ] && [ "$wants_at" -lt "$service_at" ]; then
-	ok "plexamp.service pulls the plugin in, from [Unit] where it counts"
-else
-	bad "plexamp.service does not Wants= the plugin from its [Unit] section"
-fi
-# **The plugin tree is not nested.** `cp -a SRC DEST` copies *into* DEST when
-# DEST exists, and builds here run `CONTINUE=1` over a preserved rootfs - so a
-# warm rebuild used to leave the previous release in place and hide the new one
-# at `src/gexis_plexamp/gexis_plexamp/`, which PYTHONPATH does not import. The
-# file-exists check above passed throughout, which is exactly why this one looks
-# for the wrong shape rather than for a file.
-if dfs "stat /opt/gexis-plexamp/src/gexis_plexamp/gexis_plexamp" | grep -q 'Inode:'; then
-	bad "the plugin is nested - a warm rebuild copied into the old tree instead of replacing it"
-else
-	ok "the plugin tree is not nested"
-fi
-
-# **And the whole tree against the release it is pinned to**, the way the venv is
-# checked against `core/src` rather than being counted. The nesting check above
-# names one failure; this one would have caught it without knowing its shape,
-# which is the difference that let it through.
-#
-# Opportunistic on the build cache, because the plugin deliberately lives in
-# another repository and there is no copy here to compare with. Skipped, loudly,
-# when the pinned tarball is not cached - the alternative is a verifier that
-# fetches from the network, and this script's whole point is checking a file.
-plugin_sum=$(grep -oE '^PLUGIN_SHA256="[a-f0-9]+"' \
-	"$REPO/packaging/plexamp/pins.sh" | cut -d'"' -f2)
-plugin_tar="${GEXIS_BUILD_CACHE:-$HOME/.cache/gexis-player/downloads}/${plugin_sum}"
-if [ -r "$plugin_tar" ]; then
-	mkdir -p "$OUT/pinned" "$OUT/shipped"
-	tar -xzf "$plugin_tar" -C "$OUT/pinned"
-	dfs "rdump /opt/gexis-plexamp/src/gexis_plexamp $OUT/shipped" >/dev/null
-	d=$(diff -r -x __pycache__ \
-		"$OUT/pinned/gexis-plexamp/src/gexis_plexamp" \
-		"$OUT/shipped/gexis_plexamp" 2>&1)
-	if [ -z "$d" ]; then
-		ok "the plugin in the image is the release it pins (${plugin_sum:0:12})"
-	else
-		bad "the plugin differs from the release it pins:"
-		echo "$d" | head -10
-	fi
-	rm -rf "$OUT/pinned" "$OUT/shipped"
-else
-	echo "  --   the pinned plugin tarball is not in the build cache, so its"
-	echo "       contents were not compared - only the nesting check above ran"
-fi
-
-# **ADR-0091 kills this unit on every takeover** and `Restart=on-failure` is the
-# only way back, so the restart burst is spent by ordinary arbitration now. A
-# burst of 5 is what squeezelite had when Finding 013 section 1 exhausted it and
-# left that unit permanently failed.
-if grep -q '^StartLimitBurst=20' "$OUT/unit"; then
-	ok "plexamp.service has the restart headroom a killed renderer needs"
-else
-	bad "plexamp.service is back to a restart burst that arbitration can exhaust"
-fi
-# **A restarted Plexamp must come back idle** (ADR-0091, amended 2026-09-26).
-# It restores a saved paused queue by opening the ALSA device, unasked; a kill
-# that lands before it has saved its stop leaves exactly that queue behind. The
-# helper keeps the volume, so it has to be there and executable, not only named.
-if grep -q '^ExecStartPre=/usr/lib/gexis/plexamp-start-idle$' "$OUT/unit" \
-	&& dfs "stat /usr/lib/gexis/plexamp-start-idle" | grep -q 'Mode: *0755'; then
-	ok "plexamp.service clears the saved queue a killed player would restore"
-else
-	bad "plexamp.service lets Plexamp restore a queue and take the device unasked"
-fi
-rm -f "$OUT/unit"
-
-# The manifest is the plugin repository's, so this checks what it must say
-# rather than that it matches a copy here - there is no copy here.
-dfs "dump /usr/share/gexis/plugins/plexamp/plugin.json $OUT/one" >/dev/null
-if grep -q '"unit": *"plexamp.service"' "$OUT/one" && grep -q '"kind": *"renderer"' "$OUT/one"; then
-	ok "the manifest names the unit the release ladder escalates against"
-else
-	bad "plexamp's manifest does not name plexamp.service as a renderer"
-fi
-rm -f "$OUT/one"
 
 echo "== ADR-0145: Squeezelite is ours, which folds multichannel down to stereo"
 # dpkg's own record of who installed the file: Debian's squeezelite has the
