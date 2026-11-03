@@ -4,14 +4,12 @@
 #
 # - a tag v<x.y.z>: the release, built, then uploaded unsigned and attested;
 # - by hand: a branch's packages for a preview (kind: preview), or the whole
-#   release without uploading it (kind: release);
-# - a push to ph-github-builds: the whole release, not uploaded (Phase 27).
+#   release without uploading it (kind: release).
 name: Release build
 
 on:
   push:
     tags: ["v*"]
-    branches: [ph-github-builds]
   workflow_dispatch:
     inputs:
       ref:
