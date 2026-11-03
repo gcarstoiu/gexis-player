@@ -195,6 +195,10 @@ BLUETOOTH_SETUP_UNIT = "gexis-bluetooth-setup.service"
 
 logger = logging.getLogger("gexis_core")
 
+#: ADR-0174: the steps a catalogue plugin's own download may report, as a
+#: component's (`components.BUSY`, installed, failed).
+SOFTWARE_STATES = frozenset(components.BUSY | {"installed", "failed"})
+
 
 async def set_unit_enabled(unit: str, enabled: bool, *, now: bool = True) -> None:
     """`systemd.set_enabled` off the event loop.
@@ -2078,6 +2082,19 @@ async def main() -> None:
         plugin.id: name for plugin in installed_plugins
         if (name := components.for_plugin(plugin.id)) is not None
     }
+    # ADR-0174: a catalogue plugin that downloads its software itself, under
+    # its own id, from what it reports (`software` messages).
+    downloads.update({p.id: p.id for p in installed_plugins if p.uploaded and p.downloads})
+    #: The last `software` message of each such plugin, shaped as a
+    #: component's status, for the switch and setup to show.
+    plugin_software: dict[str, dict] = {}
+
+    def _plugin_software(plugin, state: str, **more) -> dict:
+        record = {"name": plugin.id, "label": plugin.downloads, "from": "its maker", "state": state,
+                  "received": None, "total": None, "attempt": None, "attempts": None, "error": None,
+                  "updated": int(time.time())}
+        record.update({k: v for k, v in more.items() if k in record and k != "name"})
+        return record
 
     def _volume_notes() -> dict:
         """The Fixed note, with what it means for DSD on this DAC."""
@@ -2148,6 +2165,9 @@ async def main() -> None:
 
     def _all_components() -> dict:
         status = components.all_status()
+        # ADR-0174: what catalogue plugins say of their own downloads.
+        for plugin_id, record in plugin_software.items():
+            status.setdefault(plugin_id, record)
         status["skins"] = skins_status()
         # ADR-0115 decision 28: after its download, what Lyrion is doing.
         stage = dict(lyrion_stage.CURRENT)
@@ -2179,6 +2199,15 @@ async def main() -> None:
         """The Retry under a failed download: clear the failure and start
         again. With the switch on that is the plugin's own unit, which pulls
         the download in; with it off, the download alone."""
+        if plugin.uploaded:
+            # ADR-0174: a catalogue plugin downloads at its own start.
+            plugin_software[plugin.id] = _plugin_software(plugin, "preparing")
+            _publish_components()
+            if settings.value(f"{plugin.id}.enabled") is not False:
+                await asyncio.to_thread(lambda: (
+                    subprocess.run(["systemctl", "reset-failed", plugin.unit], check=False, capture_output=True),
+                    subprocess.run(["systemctl", "restart", plugin.unit], check=False, capture_output=True)))
+            return
         name = downloads[plugin.id]
         pin = components.pins().get(name)
         components.preparing(name, pin)
@@ -2273,13 +2302,18 @@ async def main() -> None:
         """
         if on:
             _plugin_env(plugin)
-            if plugin.id in downloads:
+            if plugin.id in downloads and plugin.uploaded:
+                # ADR-0174: said at once, until the plugin's own report.
+                if plugin_software.get(plugin.id, {}).get("state") != "installed":
+                    plugin_software[plugin.id] = _plugin_software(plugin, "preparing")
+                    _publish_components()
+            elif plugin.id in downloads:
                 # Told at once, before systemd has even begun: the user flipped
                 # a switch and must see that something started.
                 components.preparing(downloads[plugin.id], components.pins().get(downloads[plugin.id]))
                 _publish_components()
         await set_unit_enabled(plugin.unit, on)
-        if not on and plugin.id in downloads:
+        if not on and plugin.id in downloads and not plugin.uploaded:
             # A finished download stays "active (exited)", which would make the
             # next switch-on skip checking what is on disk.
             fetch = f"gexis-fetch@{downloads[plugin.id]}.service"
@@ -3049,7 +3083,7 @@ async def main() -> None:
                   for plugin in installed_plugins if plugin.id in downloads},
                # ADR-0100, amended 2026-09-28: Remove, beside Retry.
                **{f"{plugin.id}.remove": (lambda _value=None, p=plugin: asyncio.ensure_future(_remove_download(p)))
-                  for plugin in installed_plugins if plugin.id in downloads}},
+                  for plugin in installed_plugins if plugin.id in downloads and not plugin.uploaded}},
         # **Phase 9 criterion 2.** These two act through
         # `POST /settings/{key}/items`, not through `set` - joining a network
         # and forgetting a device - so they are wired, and saying otherwise
@@ -4930,6 +4964,20 @@ async def main() -> None:
                 logger.warning("plugins: %s sent a cover that was refused: %s", session.id, exc)
                 return
             logger.debug("plugins: %s handed over a cover, %s", session.id, key)
+            return
+        if kind == "software":
+            # ADR-0174: a catalogue plugin's own download, shown on its switch
+            # and in setup as ours are.
+            plugin = next((p for p in installed_plugins if p.id == session.id and p.downloads), None)
+            state = message.get("state")
+            if plugin is None or state not in SOFTWARE_STATES:
+                logger.warning("plugins: %s reported a download it does not declare, or %r", session.id, state)
+                return
+            plugin_software[session.id] = _plugin_software(
+                plugin, state, **{k: message.get(k) for k in ("label", "from", "received", "total",
+                                                              "attempt", "attempts", "error")
+                                  if message.get(k) is not None})
+            _publish_components()
             return
         if kind == "row":
             # ADR-0119: a plugin says what one of its own rows is - a

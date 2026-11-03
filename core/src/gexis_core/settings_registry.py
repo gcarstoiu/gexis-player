@@ -655,14 +655,17 @@ class Settings:
                                  "surfaced": False, "note": None})
                 # ADR-0100, amended 2026-09-28: Remove, offered in the same row
                 # while the switch is off. It asks first, and says what stays.
-                switches.append({"key": f"{plugin.id}.remove", "type": "action",
-                                 "label": f"Remove {plugin.name}", "component": component,
-                                 "surfaced": False, "danger": True, "confirm": "Remove",
-                                 "note": None,
-                                 "warn": f"This deletes the software {plugin.name} downloaded. "
-                                         + (getattr(plugin, "removes", None)
-                                            or f"Its settings and sign-in stay on the device. "
-                                               f"Switching {plugin.name} on again downloads it again.")})
+                # Not for a catalogue plugin (ADR-0174): its download is its
+                # own, and goes with it when it is removed.
+                if not getattr(plugin, "uploaded", False):
+                    switches.append({"key": f"{plugin.id}.remove", "type": "action",
+                                     "label": f"Remove {plugin.name}", "component": component,
+                                     "surfaced": False, "danger": True, "confirm": "Remove",
+                                     "note": None,
+                                     "warn": f"This deletes the software {plugin.name} downloaded. "
+                                             + (getattr(plugin, "removes", None)
+                                                or f"Its settings and sign-in stay on the device. "
+                                                   f"Switching {plugin.name} on again downloads it again.")})
             if switches and switch_group is None:
                 # A registry with no `plugins` category cannot hold the switch,
                 # and a plugin with no switch is the thing ADR-0086's amendment

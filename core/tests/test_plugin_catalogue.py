@@ -552,3 +552,22 @@ def test_a_row_s_group_is_its_area_else_its_kind_s():
     rows = pc.rows(pc.Catalogue(serial=1, date="", plugins=(e, {**e, "id": "lib", "area": "library"})),
                    release="1.10.0", installed={}, from_catalogue=set(), ours=set())
     assert {r["id"]: r["area"] for r in rows} == {"hello": "system", "lib": "library"}
+
+
+def test_a_catalogue_plugin_that_downloads_its_software_shows_it_on_its_switch():
+    """ADR-0174: Plexamp from the catalogue downloads Plexamp itself; its
+    switch shows that download, with Retry, as ours do - but not Remove the
+    software, which goes with the plugin."""
+    from dataclasses import replace
+    from gexis_core import plugin_server
+    raw = {"id": "plexamp", "name": "Plexamp", "kind": "renderer", "software": "Plexamp",
+           "unit": "gexis-uploaded-renderer@plexamp.service"}
+    plugin = replace(plugins.parse(raw), uploaded=True, catalogue=True)
+    assert plugin.downloads == "Plexamp"
+    assert plugins.parse({**raw, "software": "x" * 41}).downloads is None
+    rows = settings_registry.Settings.with_plugins(settings_registry.load_registry(), [plugin],
+                                                   downloads={"plexamp": "plexamp"})
+    keys = {r.get("key"): r for g in rows for r in g.get("rows", []) if r.get("key")}
+    assert keys["plexamp.enabled"]["component"] == "plexamp"
+    assert "plexamp.download" in keys and "plexamp.remove" not in keys
+    assert "software" in plugin_server.EVENTS

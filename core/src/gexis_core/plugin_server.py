@@ -52,7 +52,8 @@ MAX_LINE = 1 << 20
 #: What a plugin may send unprompted. Anything else is answered with an error
 #: rather than ignored: a plugin author cannot see this log.
 EVENTS = frozenset(
-    {"acquire", "release", "available", "metadata", "queue", "volume", "row", "announce", "artwork"}
+    {"acquire", "release", "available", "metadata", "queue", "volume", "row", "announce", "artwork",
+     "software"}
 )
 
 #: How long a command waits for its `ok` before the caller is told it failed.

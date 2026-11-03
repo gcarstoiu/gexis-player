@@ -65,6 +65,7 @@ brings one is refused.
 | `summary` | no | One line on what it is. The player's own plugins show it in setup's Plugins step; an uploaded plugin arrives after setup, so it is not shown there |
 | `tag` | no | A few words beside its name on its switch in Settings, 24 characters at most - the player's AirPlay says *Limited testing* |
 | `connection` | no | For a `service` that connects somewhere off this device: the heading above its rows then says *Connected*, *Connecting* or *Not connected*, read from the connections its running process holds |
+| `software` | no | What it downloads itself, from its maker, when it starts - `"Plexamp"`, 40 characters at most. Its switch then shows that download as the player's own are shown, from the `software` messages it sends (PLUGIN-CONTRACT.md); Retry under a failed one restarts the plugin |
 | `port` | no | A web page of its own on this device, by port number: its switch then says *Open http://<name>.local:<port>* (the Beszel hub's is 8095; 8090 and 8091 are the player's) |
 | `settings` | no | Rows for **Settings**, below |
 | `permissions` | no | What it needs beyond the sandbox (section 3): a list of `cec`, `gpio`, `usb`. The person adding it is told, and the player grants exactly those. Absent: none |
