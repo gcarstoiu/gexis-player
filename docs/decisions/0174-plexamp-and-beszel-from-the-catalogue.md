@@ -139,6 +139,14 @@ environment, as ours have. It cannot install Debian packages, use
   setup's second part has the network. The alternative: setup stops
   offering Plexamp, and it is found under *Add plugins*.
 
+## Decided (George)
+
+- **Decision 1, Plexamp's own software** (2026-11-03), as (a) proposes: the
+  plugin downloads it, from a pin in its archive read when the listing is
+  reviewed, into its own folder, its progress on its row; over the core's
+  helper fetching from a pin in the listing, and over the pin staying in the
+  image.
+
 ## Not in this phase
 
 - Roon, AirPlay 2 and the Lyrion server: each needs a permission the
