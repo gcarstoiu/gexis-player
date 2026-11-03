@@ -1711,7 +1711,7 @@ def test_a_text_row_with_a_pattern_refuses_what_does_not_fit_and_says_why():
 
     from gexis_core.settings_registry import InvalidValue, validate
 
-    manifest = Path(__file__).parents[2] / "image" / "stage-gexis" / "07-beszel" / "files" / "plugin.json"
+    manifest = Path(__file__).parent / "fixtures" / "beszel" / "plugin.json"
     row = next(r for r in json.loads(manifest.read_text())["settings"] if r["key"] == "key")
     key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFZVk7Y67bQyvENPVjSUAOS9eZvS+Cabc123"
     assert validate(row, key) == key

@@ -62,14 +62,6 @@ MEMBERS = (
     # an image update put the old one back, and would have undone ADR-0095's
     # `audio_device: output_wait` without a word.
     "var/lib/go-librespot/state.json",
-    # **The Beszel agent's fingerprint** (added 2026-09-25, ADR-0087). Same
-    # lesson as the line above, applied before it could be learned twice: the
-    # agent's `DATA_DIR` holds the identity the hub binds this system to, and a
-    # reflash that loses it is a device the hub no longer recognises. Absent
-    # until the plugin has run, and `create` skips a member that is not there.
-    "var/lib/beszel-agent",
-    # ADR-0114: the hub's history, systems and account.
-    "var/lib/beszel-hub",
     # ADR-0115: the Lyrion server's own settings and the playlists it saved -
     # not its database or artwork cache (a rescan rebuilds them), and not the
     # music in the Music folder, which can be any size.
@@ -100,6 +92,14 @@ MEMBERS = (
 #: the sake of one image-owned file.
 FORMERLY_BACKED_UP = ("var/lib/go-librespot",)
 
+#: **Restored, no longer written** (ADR-0174). The Beszel agent's fingerprint
+#: (ADR-0087: the identity the hub binds this system to) and the hub's history
+#: (ADR-0114) were ours to back up until they became catalogue plugins; their
+#: data is the plugins' own folders now, under `var/lib/private/gexis-uploaded`.
+#: An older backup puts them back where they were, and the carry-over moves
+#: them into those folders at the next start (`carry_over.py`).
+RESTORED_ONLY = ("var/lib/beszel-agent", "var/lib/beszel-hub")
+
 #: **What makes a backup this player and no other** (ADR-0131 as amended;
 #: George, 2026-10-08: "Setup could offer to leave these behind when the name
 #: is changed" - "yes"). A backup restored onto a second player leaves these
@@ -107,6 +107,7 @@ FORMERLY_BACKED_UP = ("var/lib/go-librespot",)
 #: places on the Beszel hub, one Plex player on two devices. The pairings
 #: are bound to the first Pi's adapter and do nothing on another.
 IDENTITIES = (
+    ("var/lib/private/gexis-uploaded/beszel", "Beszel connection"),
     ("var/lib/beszel-agent", "Beszel connection"),
     ("home/pi/.local/share/Plexamp", "Plexamp's claim"),
     ("var/lib/go-librespot/state.json", "Spotify sign-in"),
@@ -141,7 +142,6 @@ SETTINGS_DB = "var/lib/gexis-core/settings.db"
 #: the restore was undone for it, or the file corrupted. A unit with a `*`
 #: is a pattern: each one of them that runs is stopped.
 STOPPED_FOR_RESTORE = (
-    ("var/lib/beszel-hub", "beszel-hub.service"),
     ("var/lib/private/gexis-uploaded", "gexis-uploaded-*@*.service"),
 )
 
@@ -541,7 +541,7 @@ def _checked(archive: tarfile.TarFile, label: str) -> list[tarfile.TarInfo]:
         parts = member.name.split("/")
         if member.name.startswith("/") or any(part in ("", ".", "..") for part in parts):
             raise ValueError(f"{label}: refuses to write {member.name!r}")
-        ours = _under(member.name, MEMBERS)
+        ours = _under(member.name, MEMBERS + RESTORED_ONLY)
         if not (member.isfile() or member.isdir()):
             if not (ours or _under(member.name, FORMERLY_BACKED_UP)):
                 raise ValueError(f"{label}: refuses to write {member.name!r}")
@@ -918,9 +918,9 @@ def inspect(path: Path, known_migrations: int, schema_key: str = "_settings_sche
         carried.append(("sources", "Spotify sign-in"))
     if any(n.startswith("home/pi/.local/share/Plexamp/Settings/") for n in names):
         carried.append(("sources", "Plexamp's claim"))
-    if any(n.startswith("var/lib/beszel-agent/") for n in names):
+    if any(n.startswith(("var/lib/beszel-agent/", "var/lib/private/gexis-uploaded/beszel/")) for n in names):
         carried.append(("plugins", "Beszel connection"))
-    if any(n.startswith("var/lib/beszel-hub/") for n in names):
+    if any(n.startswith(("var/lib/beszel-hub/", "var/lib/private/gexis-uploaded/beszel-hub/")) for n in names):
         carried.append(("plugins", "Beszel hub history"))
     if any(n.startswith("var/lib/squeezeboxserver/prefs/") for n in names):
         carried.append(("sources", "Lyrion server settings"))
@@ -932,8 +932,8 @@ def inspect(path: Path, known_migrations: int, schema_key: str = "_settings_sche
     if any(n.startswith("var/lib/private/gexis-uploaded/") for n in names):
         carried.append(("plugins", "Uploaded plugins' data"))
     brings = [text for _, text in carried]
-    held = [label for prefix, label in IDENTITIES
-            if any(n == prefix or n.startswith(prefix + "/") for n in names)]
+    held = list(dict.fromkeys(label for prefix, label in IDENTITIES
+                              if any(n == prefix or n.startswith(prefix + "/") for n in names)))
     return {
         "name": name,
         "made": made,

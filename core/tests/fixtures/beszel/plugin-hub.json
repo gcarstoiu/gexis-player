@@ -1,0 +1,11 @@
+{
+  "id": "beszel-hub",
+  "name": "Beszel hub",
+  "kind": "service",
+  "version": "0.21.1-1",
+  "run": "run",
+  "summary": "A Beszel hub on the player: its own page showing how this player, and others that report to it, are doing.",
+  "area": "system",
+  "port": 8095,
+  "settings": []
+}

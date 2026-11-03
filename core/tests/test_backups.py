@@ -29,11 +29,12 @@ def _device(root):
     (root / "etc/gexis/core.toml").write_text('idle_url = "secret"')
     (root / "etc/gexis/device-name.env").write_text("NAME=gexis")
     (root / "var/lib/bluetooth/11:22/info").write_text("paired")
-    (root / "var/lib/beszel-agent").mkdir(parents=True)
-    (root / "var/lib/beszel-agent/fingerprint").write_text("ec4c41e0")
-    # ADR-0114: the hub's history, systems and account.
-    (root / "var/lib/beszel-hub").mkdir(parents=True)
-    (root / "var/lib/beszel-hub/data.db").write_bytes(b"hub")
+    # ADR-0174: Beszel's agent and hub are catalogue plugins, their data in
+    # their own folders - the fingerprint, and the hub's history.
+    (root / "var/lib/private/gexis-uploaded/beszel").mkdir(parents=True)
+    (root / "var/lib/private/gexis-uploaded/beszel/fingerprint").write_text("ec4c41e0")
+    (root / "var/lib/private/gexis-uploaded/beszel-hub").mkdir(parents=True)
+    (root / "var/lib/private/gexis-uploaded/beszel-hub/data.db").write_bytes(b"hub")
     # ADR-0115: the Lyrion server's settings and saved playlists.
     (root / "var/lib/squeezeboxserver/prefs").mkdir(parents=True)
     (root / "var/lib/squeezeboxserver/prefs/server.prefs").write_text("---\n")
@@ -121,7 +122,28 @@ def test_it_holds_the_beszel_fingerprint(tmp_path):
 
     with tarfile.open(out / name) as archive:
         held = set(archive.getnames())
-    assert "var/lib/beszel-agent/fingerprint" in held
+    assert "var/lib/private/gexis-uploaded/beszel/fingerprint" in held
+
+
+def test_an_older_backup_s_beszel_data_goes_back_where_it_was(tmp_path):
+    """ADR-0174: a backup from before the move holds the agent's fingerprint
+    and the hub's store in their old places. They are put back there, and the
+    carry-over moves them into the plugins' folders at the next start."""
+    import io
+    out = tmp_path / "out"
+    out.mkdir()
+    name = "gexis.backup.tar.gz"
+    with tarfile.open(out / name, "w:gz") as archive:
+        for path, data in (("var/lib/beszel-agent/fingerprint", b"ec4c41e0"),
+                           ("var/lib/beszel-hub/data.db", b"hub"),
+                           ("var/lib/gexis-core/settings.db", b"settings")):
+            info = tarfile.TarInfo(path)
+            info.size = len(data)
+            archive.addfile(info, io.BytesIO(data))
+    target = _device(tmp_path / "target")
+    backups.restore_file(out / name, target, run=None)
+    assert (target / "var/lib/beszel-agent/fingerprint").read_text() == "ec4c41e0"
+    assert (target / "var/lib/beszel-hub/data.db").read_bytes() == b"hub"
 
 
 def test_it_holds_the_plexamp_claim_and_puts_it_back(tmp_path):
@@ -565,7 +587,7 @@ def _live_hub(root):
     """The hub's PocketBase store as the hub leaves it while it runs: WAL
     mode, the newest rows still in `data.db-wal`. The connection returned
     is the hub, holding it open."""
-    hub = root / "var/lib/beszel-hub"
+    hub = root / "var/lib/private/gexis-uploaded/beszel-hub"
     (hub / "data.db").unlink()
     conn = sqlite3.connect(hub / "data.db")
     conn.execute("PRAGMA journal_mode=WAL")
@@ -589,10 +611,11 @@ def test_a_live_database_is_backed_up_as_one_consistent_file(tmp_path):
 
     with tarfile.open(out / name) as archive:
         held = set(archive.getnames())
-        assert "var/lib/beszel-hub/data.db" in held
-        assert not {"var/lib/beszel-hub/data.db-wal", "var/lib/beszel-hub/data.db-shm"} & held
-        archive.extract("var/lib/beszel-hub/data.db", tmp_path / "x", filter="tar")
-    copy = sqlite3.connect(tmp_path / "x/var/lib/beszel-hub/data.db")
+        db = "var/lib/private/gexis-uploaded/beszel-hub/data.db"
+        assert db in held
+        assert not {db + "-wal", db + "-shm"} & held
+        archive.extract(db, tmp_path / "x", filter="tar")
+    copy = sqlite3.connect(tmp_path / "x" / db)
     assert copy.execute("SELECT count(*) FROM history").fetchone()[0] == 3000
     assert copy.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
 
@@ -605,27 +628,29 @@ def test_the_hub_is_stopped_before_its_files_are_put_back(tmp_path):
     root, out = _device(tmp_path / "root"), tmp_path / "out"
     name = backups.create("gexis", out, root)
     target = _device(tmp_path / "target")
-    (target / "var/lib/beszel-hub/data.db-wal").write_bytes(b"the running hub's")
-    (target / "var/lib/beszel-hub/data.db-shm").write_bytes(b"its index")
+    hub = target / "var/lib/private/gexis-uploaded/beszel-hub"
+    (hub / "data.db-wal").write_bytes(b"the running hub's")
+    (hub / "data.db-shm").write_bytes(b"its index")
     calls = []
 
     def run(argv, **kw):
-        calls.append((argv, (target / "var/lib/beszel-hub/data.db-wal").exists()))
+        calls.append((argv, (hub / "data.db-wal").exists()))
         import subprocess
         return subprocess.CompletedProcess(argv, 0, "", "")
 
     backups.restore_file(out / name, target, run=run)
     stops = [argv for argv, _ in calls if argv[:2] == ["systemctl", "stop"]]
-    assert ["systemctl", "stop", "beszel-hub.service"] in stops
-    assert not (target / "var/lib/beszel-hub/data.db-wal").exists()
-    assert not (target / "var/lib/beszel-hub/data.db-shm").exists()
-    assert (target / "var/lib/beszel-hub/data.db").read_bytes() == b"hub"
+    # ADR-0174: the hub is a catalogue plugin, stopped with every one of them.
+    assert ["systemctl", "stop", "gexis-uploaded-*@*.service"] in stops
+    assert not (hub / "data.db-wal").exists()
+    assert not (hub / "data.db-shm").exists()
+    assert (hub / "data.db").read_bytes() == b"hub"
 
 
 def test_an_archive_without_the_hub_leaves_it_running(tmp_path):
     root, out = _device(tmp_path / "root"), tmp_path / "out"
     import shutil
-    shutil.rmtree(root / "var/lib/beszel-hub")
+    shutil.rmtree(root / "var/lib/private/gexis-uploaded/beszel-hub")
     name = backups.create("gexis", out, root)
     calls = []
     backups.restore_file(out / name, _device(tmp_path / "target"), run=lambda argv, **kw: calls.append(argv))
@@ -640,7 +665,9 @@ def test_a_restore_that_fails_starts_the_hub_it_stopped(tmp_path, monkeypatch):
 
     def run(argv, **kw):
         calls.append(argv)
-        return subprocess.CompletedProcess(argv, 0, "", "")   # is-active: it was running
+        # ADR-0174: the hub runs as a catalogue plugin, listed as running.
+        listed = "gexis-uploaded-service@beszel-hub.service loaded active running Beszel hub\n"
+        return subprocess.CompletedProcess(argv, 0, listed if "list-units" in argv else "", "")
 
     def full(*a, **k):
         raise OSError("no space left on device")
@@ -648,7 +675,7 @@ def test_a_restore_that_fails_starts_the_hub_it_stopped(tmp_path, monkeypatch):
     monkeypatch.setattr(backups, "_write_beside", full)
     with pytest.raises(OSError):
         backups.restore_file(out / name, _device(tmp_path / "target"), run=run)
-    assert calls[-1] == ["systemctl", "start", "beszel-hub.service"]
+    assert calls[-1] == ["systemctl", "start", "gexis-uploaded-service@beszel-hub.service"]
 
 
 # --- the updater's backups, kept three deep (George, 2026-10-12, answer 3) ---

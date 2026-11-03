@@ -246,7 +246,8 @@ def remember(root: Path = UPLOADS, path: Path = KNOWN) -> None:
     restore brought back without their package, and where each came from."""
     known = _read_known(path)
     for plugin, version in _installed_versions(root):
-        kept = {k: v for k, v in (known.get(plugin.id) or {}).items() if k in ("origin", "granted")}
+        kept = {k: v for k, v in (known.get(plugin.id) or {}).items()
+                if k in ("origin", "granted", "carried_on")}
         known[plugin.id] = {"name": plugin.name, "kind": plugin.kind, "area": plugin.area, "version": version,
                             **kept}
     _write_known(path, known)
@@ -255,6 +256,25 @@ def remember(root: Path = UPLOADS, path: Path = KNOWN) -> None:
 #: **ADR-0168: a plugin installed from the catalogue**, as `origin` in the
 #: record backups keep - so a restore installs it from there again.
 CATALOGUE = "catalogue"
+
+
+def known(path: Path = KNOWN) -> dict:
+    """Every record, as stored."""
+    return _read_known(path)
+
+
+def record_missing(plugin_id: str, info: dict, path: Path = KNOWN) -> None:
+    """ADR-0174: a plugin to be installed from where `info` says, as a restore
+    records one brought back without its package."""
+    entries = _read_known(path)
+    entries[plugin_id] = {**info, **{k: v for k, v in (entries.get(plugin_id) or {}).items() if k == "granted"}}
+    _write_known(path, entries)
+
+
+def clear_flag(plugin_id: str, flag: str, path: Path = KNOWN) -> None:
+    entries = _read_known(path)
+    if isinstance(entries.get(plugin_id), dict) and entries[plugin_id].pop(flag, None) is not None:
+        _write_known(path, entries)
 
 
 def set_origin(plugin_id: str, origin: str | None, path: Path = KNOWN) -> None:

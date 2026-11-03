@@ -246,16 +246,20 @@ def test_a_synthesised_switch_reads_the_units_real_state(monkeypatch):
     assert all(argv[:2] == ["systemctl", "is-enabled"] for argv in seen)
 
 
-BESZEL = (Path(__file__).resolve().parents[2] / "image" / "stage-gexis"
-          / "07-beszel" / "files")
+#: Beszel's manifests as its catalogue plugin ships them (gcarstoiu/gexis-beszel;
+#: ADR-0174), copied here: still the contract's example of a service.
+BESZEL = Path(__file__).resolve().parent / "fixtures" / "beszel"
 
 
-def test_the_shipped_beszel_manifest_is_what_the_record_says():
+def test_the_beszel_manifest_is_what_the_record_says():
     """**ADR-0087's row list**, which George confirmed as a settings decision -
-    so a drift here is a drift from a decision, not a detail."""
-    plugin = parse(json.loads((BESZEL / "plugin.json").read_text()))
-    assert (plugin.id, plugin.kind, plugin.unit) == (
-        "beszel", "service", "beszel-agent.service")
+    so a drift here is a drift from a decision, not a detail. Kept by the
+    catalogue plugin (ADR-0174) under the same id, so every stored row carries
+    over."""
+    raw = json.loads((BESZEL / "plugin.json").read_text())
+    plugin = parse({**raw, "unit": "gexis-uploaded-service@beszel.service"})
+    assert (plugin.id, plugin.kind) == ("beszel", "service")
+    assert "unit" not in raw and raw["run"] == "run", "a catalogue plugin runs under our template"
     # No `enabled_row`, so ADR-0086's amendment synthesises the switch. That is
     # the point of this plugin: it proves the contract carries a non-renderer
     # without the core knowing its name.
@@ -271,38 +275,28 @@ def test_the_shipped_beszel_manifest_is_what_the_record_says():
     assert [bool(r.get("secret")) for r in plugin.settings] == [False, True, True]
 
 
-def test_the_beszel_unit_reads_what_the_contract_writes():
+def test_the_sandbox_reads_what_the_contract_writes():
     """The unit and ADR-0088 have to agree on one path, and nothing else checks
-    it: the manifest names variables, the unit names the file they arrive in."""
+    it: the manifest names variables, the unit names the file they arrive in.
+    Since ADR-0174 that unit is the catalogue's template. (`--listen -1` and
+    its check are the plugin's own `run`, in gcarstoiu/gexis-beszel.)"""
     from gexis_core import plugin_env
 
-    unit = (BESZEL / "beszel-agent.service").read_text()
-    assert f"EnvironmentFile=-{plugin_env.path('beszel')}" in unit
-    # ADR-0087, Finding 078: the agent opens an inbound SSH port on 45876 even in
-    # outbound mode, and this is the flag that removes it. Not a settings row -
-    # a security property, not a preference.
-    assert "--listen -1" in unit
-    assert "DATA_DIR=/var/lib/beszel-agent" in unit
-    assert "StateDirectory=beszel-agent" in unit
+    template = (Path(__file__).resolve().parents[2] / "image/stage-gexis/03-core/files"
+                / "gexis-uploaded-service@.service").read_text()
+    assert "EnvironmentFile=-/run/gexis/plugins/%i.env" in template
+    assert str(plugin_env.path("beszel")) == "/run/gexis/plugins/beszel.env"
 
 
 def test_the_fingerprint_is_in_the_backup():
     """It is the identity the hub binds this system to. The Spotify pairing
-    taught this the expensive way (ADR-0083, 2026-09-25)."""
-    from gexis_core.backups import MEMBERS
+    taught this the expensive way (ADR-0083, 2026-09-25). Since ADR-0174 it is
+    the plugin's own folder, which uploaded plugins' data carries; an older
+    backup's is put back where it was, for the carry-over."""
+    from gexis_core.backups import MEMBERS, RESTORED_ONLY
 
-    assert "var/lib/beszel-agent" in MEMBERS
-
-
-def test_the_listen_check_runs_after_the_agent_has_started():
-    """**Before would measure the wrong thing.** What matters is what the agent
-    actually bound, not what it was asked to bind - `-1` is a value the flag
-    parser happens to accept and an upgrade could start ignoring it."""
-    unit = (BESZEL / "beszel-agent.service").read_text()
-    assert "ExecStartPost=/usr/lib/gexis/beszel-agent-listen-check.sh" in unit
-    assert "ExecStartPre=/usr/lib/gexis/beszel-agent-listen-check.sh" not in unit
-    check = (BESZEL / "beszel-agent-listen-check.sh").read_text()
-    assert "45876" in check
+    assert "var/lib/private/gexis-uploaded" in MEMBERS
+    assert "var/lib/beszel-agent" in RESTORED_ONLY and "var/lib/beszel-agent" not in MEMBERS
 
 
 def test_a_changed_value_restarts_a_unit_that_is_enabled_even_if_it_failed(monkeypatch):
@@ -353,9 +347,10 @@ def test_a_plugin_with_a_page_of_its_own_names_its_port():
 
     from gexis_core import plugins
 
-    shipped = json.loads((Path(__file__).parents[2] / "image/stage-gexis/07-beszel/files/plugin-hub.json").read_text())
-    hub = plugins.parse(shipped, built_in=True)
-    assert hub.port == 8095 and hub.unit == "beszel-hub.service"
+    shipped = json.loads((Path(__file__).parent / "fixtures/beszel/plugin-hub.json").read_text())
+    shipped = {**shipped, "unit": "gexis-uploaded-service@beszel-hub.service"}
+    hub = plugins.parse(shipped)
+    assert hub.port == 8095
     assert plugins.parse({**shipped, "port": "8095"}).port is None, "a number, or nothing"
     assert plugins.parse({**shipped, "port": 70000}).port is None
 

@@ -77,7 +77,7 @@ from gexis_core.lyrion_usb import UsbFolders
 from gexis_core.fanart import Fanart
 from gexis_core.peppy_metadata import PeppyMetadataWriter, next_track
 from gexis_core.model import BLANK_METADATA, Queue, TrackMetadata
-from gexis_core import connections, discovery, hardware_report, hardware_reports, personalise, settings_migrations, settling, updates, wired
+from gexis_core import carry_over, connections, discovery, hardware_report, hardware_reports, personalise, settings_migrations, settling, updates, wired
 from gexis_core.dashboard import Dashboard, DashboardSchedule, explain as explain_dashboard
 from gexis_core.panel_input import PanelInput
 from gexis_core import standby as standby_module
@@ -767,6 +767,15 @@ async def main() -> None:
     # uploaded id can never shadow one of ours; the check refuses it at
     # upload, and this refuses it again if one was placed by hand.
     shipped_ids = {p.id for p in shipped_plugins}
+    # **ADR-0174: ours that moved to the catalogue, carried over** - their
+    # data into their own folders, and the ones this player used recorded for
+    # the restore's path below to install from the catalogue.
+    try:
+        carry_over.carry(ours=shipped_ids, stored=settings_store.get,
+                         added=plugin_store.read(settings_store.get(plugin_store.ADDED)),
+                         installed_packages=carry_over.installed_packages)
+    except OSError as exc:
+        logger.warning("carry-over: %s", exc)
     installed_plugins = shipped_plugins + [p for p in uploads.installed() if p.id not in shipped_ids]
     # What each plugin's row says it is (George, 2026-10-12): its version -
     # an upload's manifest, else the package that installed it - and the
@@ -2290,6 +2299,14 @@ async def main() -> None:
         for plugin in installed_plugins
         if plugin.enabled_row is None
     }
+
+    # ADR-0174: a carried-over plugin that was on, on again once installed -
+    # stored as on, since a catalogue plugin's switch reads off by default.
+    for carried_id in carry_over.to_switch_on({p.id for p in installed_plugins if p.uploaded}):
+        carried = next(p for p in installed_plugins if p.id == carried_id)
+        settings_store.set(f"{carried_id}.enabled", True)
+        asyncio.ensure_future(_apply_plugin_unit(carried, True))
+        logger.info("carry-over: %s switched on again", carried_id)
 
     #: **What that switch reads before anyone has touched it: whatever systemd
     #: says about the unit.** Not a value the manifest declares. Found on the
