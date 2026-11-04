@@ -179,6 +179,8 @@ curves; three questions it raised, then one that followed):
   *off* takes it out. The design keeps the two apart, and the volume drawer
   shows when *without* is set.
 
+The brief for Claude Design: `design/briefs/29-room-correction.md`.
+
 ## Settings (ADR-0022)
 
 Appended to the inventory 2026-11-03 and 2026-11-04, confirmed by George:

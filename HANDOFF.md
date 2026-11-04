@@ -82,7 +82,9 @@ serial (the address and whether the microphone gives its serial over USB
 not yet verified). George has a UMIK-1. Its settings are in ADR-0022's
 inventory. The phone's flow settled with George from a clickable mock-up
 (2026-11-04: a tap and a countdown at each position, the check can be
-skipped, A/B a saved switch); next the brief for Claude Design.
+skipped, A/B a saved switch); the brief for Claude Design is
+`design/briefs/29-room-correction.md`, for George to hand over with the
+mock-up (`~/projects/scratch/ph29-mockup/room-correction.html`).
 
 **Open, small:** a preview's download still holds the skin packs (1.1 of
 1.2 GB) though `release.yml` excludes them; `gen_personalise.py` out of step since Phase 23;
