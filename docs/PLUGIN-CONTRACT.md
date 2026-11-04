@@ -71,7 +71,6 @@ Every message has a `t` (type). Everything else depends on `t`.
 ```json
 {"t": "hello", "contract": 1, "id": "plexamp", "kind": "renderer",
  "name": "Plexamp",
- "unit": "plexamp.service",
  "release_action": "disconnect",
  "capabilities": {
    "audio_connection": "output",
@@ -170,6 +169,7 @@ Taken from `Adapter` and `Capabilities` as they are. The prose for each is in
 {"t": "row", "key": "claim_token", "state": "done", "text": "Claimed"}
 {"t": "announce", "services": [{"type": "_radio-foo._tcp", "port": 8200, "txt": {"id": "abc"}}]}
 {"t": "artwork", "type": "image/jpeg", "data": "<base64>"}
+{"t": "software", "state": "downloading", "label": "Plexamp 4.13.2", "from": "Plex", "received": 4194304, "total": 14600000}
 ```
 
 - **`acquire`** — a deliberate acquisition (ADR-0010's table as amended by
@@ -204,6 +204,16 @@ Taken from `Adapter` and `Capabilities` as they are. The prose for each is in
   never stored, and a plugin that disconnects takes its reports with it, so
   a plugin says it again after reconnecting. A core older than this logs the
   event and ignores it.
+- **`software`** — *added 2026-11-03* ([ADR-0174](decisions/0174-plexamp-and-beszel-from-the-catalogue.md)).
+  A plugin that downloads its maker's software itself - one whose manifest
+  says what with `software` - says how that download goes, and its switch
+  and setup show it as the player's own downloads are shown. `state` is
+  `preparing`, `downloading`, `retrying`, `verifying`, `installing`,
+  `installed` or `failed`; `label` names what (with its version), `from`
+  whose it is, `received` and `total` are bytes, `attempt` and `attempts`
+  count retries, `error` is one sentence a person reads. Send the last one
+  again after reconnecting. A plugin whose manifest declares no `software`
+  is not listened to.
 - **`announce`** — *added 2026-10-12* ([ADR-0142](decisions/0142-the-player-announces-for-its-plugins.md)).
   What the plugin wants found on the local network, announced **by the
   player** through avahi under the device's own host name. **An uploaded

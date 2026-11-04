@@ -6,6 +6,24 @@
 Every release of Gexis Player and its notes, newest first. The player
 shows the last 10 under Settings → System → Change logs.
 
+## 1.13.0 — 3 November 2026
+
+### New
+
+- Plexamp and Beszel come from the plugin catalogue, in Settings → Plugins → Add plugins, and their new versions are offered there without a player update.
+- A player that used them gets them from the catalogue with this update, signed in, with their settings and the hub's history.
+- A plugin from the catalogue shows its connection and a link to its own page in Settings, as the player's own do.
+
+### Fixed
+
+- A factory reset also removes Plexamp's caches.
+
+### Good to know
+
+- Setup still offers Plexamp, and installs it from the catalogue when chosen.
+- A backup keeps a plugin's settings and sign-ins, not the software it downloads, which is fetched again after a restore.
+- Without a network at the update, they are installed once it is back.
+
 ## 1.12.1 — 3 November 2026
 
 ### Good to know

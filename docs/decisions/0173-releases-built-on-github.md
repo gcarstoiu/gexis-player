@@ -1,7 +1,8 @@
 # ADR-0173 — Releases built on GitHub
 
-**Status:** **Accepted** 2026-11-02 (George: decisions 1-3), Phase 27
-(`ph-github-builds`); the trial passed the same day
+**Status:** **Built** 2026-11-03, in 1.12.1 (Testing serial 64). **Accepted**
+2026-11-02 (George: decisions 1-3), Phase 27 (`ph-github-builds`); the trial
+passed the same day
 ([Finding 140](../findings/140-a-release-built-on-github-the-trial.md)). George
 asked for it on 2026-11-02, before room correction, as building releases on
 R2D2 has become troublesome. It was a *Should* idea since 2026-10-18: the
@@ -152,7 +153,9 @@ The traps are in `docs/BUILD-TRAPS.md`.
 
 - **Decision 1, previews too.** The phase branch's packages are built by
   the same workflow, run by hand, and kept as an artifact for a few days.
-  Ours weighed 76 MB in 1.12.0. R2D2 downloads them (`gh run download`)
+  Ours weighed 76 MB in 1.12.0. *Corrected 2026-11-03:* that was 1.12.0's
+  new packages; a preview downloads the whole set, 133 MB without the skin
+  packs (1.12.1), 1.2 GB with them. R2D2 downloads them (`gh run download`)
   and installs them on a test player over SSH, as today. R2D2 then needs no
   Docker builds at all. *Recommended.* The alternative is releases only,
   with previews still built here.
@@ -240,6 +243,35 @@ None of the fallbacks below is needed.
 - Building for other boards: the Pi 5 stays where the ideas list puts it.
 - The plugin repositories (`gexis-roon`, `gexis-airplay`, …) building their
   own tarballs; they remain releases cut by hand.
+
+## Built (2026-11-03)
+
+On `ph-github-builds`, released in 1.12.1:
+
+- **`.github/workflows/release.yml`**: on a tag, *Packages and image* (read
+  access only) and *Upload, unsigned* (the one job that may write, which
+  attests); by hand, *kind: preview* or *release*. Actions pinned by commit,
+  the runner pinned to `ubuntu-24.04-arm`.
+- **The `inputs` mirror** (`packaging/inputs.tsv`, `packaging/inputs.sh`): 152
+  files, 2.12 GB, uploaded from R2D2's cache; the workflow fills its cache
+  from it and fails on an unlisted download.
+- **Sources from archives** (`packaging/fetch-source.sh`): squeezelite -3,
+  peppyalsa -6, nqptp -2, shairport-sync -2.
+- **Earlier releases from GitHub** (`packaging/release/published.py`): every
+  published part's index proven by the release key; `reuse.py`,
+  `fetch-tested-set.py` and the skin packs read from it.
+- **Signing apart** (`packaging/release/sign.sh`; `publish.sh --upload` on
+  GitHub, `--sign` on R2D2, which checks each file's attestation first).
+
+1.12.1 (run 41609042614): built in about 18 minutes and uploaded in 1.5,
+then signed on R2D2 from four `Release` files, four `Packages` and the parts
+list. Read back: Testing serial 64, every signature good, each part's
+`InRelease` listing its own `Packages`. sofapi updated itself to it. A
+preview by hand (`workflow_dispatch` from `main`, `next`'s packages) took
+about 5 minutes; its artifact was 1.2 GB with the skin packs, which previews
+now leave out. One OS package moved with the image:
+`rpi-eeprom` 28.36-1, published by Raspberry Pi overnight. **Not yet seen:** a
+card flashed from its image.
 
 ## Settings (ADR-0022)
 

@@ -3257,7 +3257,7 @@
           "Personalise"
         ],
         "summary": "Write part 2's answers and start what they install",
-        "description": "Writes part 2's answers in one go (ADR-0149), each through Settings as if set there; one that refuses is named in failed and the rest go on. Plugins switched on and the visualiser's skins are then followed as downloads on the settling screen (ADR-0128), except what is already installed. Part 2 is marked done. If lms_server was written, the core restarts once those downloads are in, so the new server is used. The settings keys accepted are only part 2's (personalise.checked): lms_enabled, lms_server, lms_extended_nav, lms_library, spotify_enabled, bt_enabled, phone_touchpad, visualiser_skins, viz_timeout, skin_corpus, skin_motion, record_speed, waiting_clock, waiting_background, waiting_wallpaper_styles, idle_enabled, idle_background, wallpaper_styles, idle_clock, idle_weather, weather_location, standby_schedule, standby_times, lyrion-server.music_folder, lyrion-server.usb, lyrion-server.enabled, plexamp.enabled; any other key refuses the whole request.",
+        "description": "Writes part 2's answers in one go (ADR-0149), each through Settings as if set there; one that refuses is named in failed and the rest go on. A plugin offered from the catalogue and not installed yet (ADR-0174: Plexamp) is installed from it instead of written, as `POST /personalise/install` does. Plugins switched on and the visualiser's skins are then followed as downloads on the settling screen (ADR-0128), except what is already installed. Part 2 is marked done. If lms_server was written, the core restarts once those downloads are in, so the new server is used. The settings keys accepted are only part 2's (personalise.checked): lms_enabled, lms_server, lms_extended_nav, lms_library, spotify_enabled, bt_enabled, phone_touchpad, visualiser_skins, viz_timeout, skin_corpus, skin_motion, record_speed, waiting_clock, waiting_background, waiting_wallpaper_styles, idle_enabled, idle_background, wallpaper_styles, idle_clock, idle_weather, weather_location, standby_schedule, standby_times, lyrion-server.music_folder, lyrion-server.usb, lyrion-server.enabled, plexamp.enabled; any other key refuses the whole request.",
         "parameters": [],
         "responses": {
           "200": {
@@ -3306,6 +3306,82 @@
             }
           }
         }
+      }
+    },
+    "/personalise/install": {
+      "post": {
+        "operationId": "personalise_install",
+        "tags": [
+          "Personalise"
+        ],
+        "summary": "Install a plugin part 2 offers from the catalogue",
+        "description": "For a plugin part 2 offers from the plugin catalogue and this player does not have yet (ADR-0174 decision 3: Plexamp): starts installing the version the catalogue offers, as Add plugins does, and answers at once, so its download goes on while part 2 does. It is switched on once installed, after the core's restart, and installed at the next start if it did not get in now. Its progress is its component's in `GET /state`. A plugin the last catalogue read does not offer is looked for again in a fresh read first.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "id"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "The plugin's id, as `GET /personalise` lists it."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Started.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PluginCatalogueStarted"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "No `id` given.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Not one part 2 installs from the catalogue, or the catalogue cannot install it now.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The catalogue is not wired up.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-gexis-stability": "internal",
+        "x-gexis-adr": [
+          "ADR-0149",
+          "ADR-0174"
+        ]
       }
     },
     "/personalise/later": {
@@ -9395,7 +9471,7 @@
           },
           "plugins": {
             "type": "array",
-            "description": "The plugins part 2 can switch on (the Lyrion Server, Plexamp), when the release ships them.",
+            "description": "The plugins part 2 can switch on (the Lyrion Server, Plexamp), when the release ships them or, for Plexamp, the plugin catalogue offers it.",
             "items": {
               "type": "object",
               "required": [
@@ -9403,6 +9479,10 @@
                 "name"
               ],
               "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "The plugin's id."
+                },
                 "row": {
                   "type": "string",
                   "enum": [
@@ -9420,6 +9500,10 @@
                     "null"
                   ],
                   "description": "The download it waits for, or null."
+                },
+                "catalogue": {
+                  "type": "boolean",
+                  "description": "ADR-0174: not installed yet, offered from the plugin catalogue - chosen, it is installed with `POST /personalise/install`, not written."
                 }
               }
             }

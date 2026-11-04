@@ -533,7 +533,8 @@ def test_a_backup_given_another_name_leaves_the_first_player_s_identities_behind
     flow.save({"ssid": "Home", "password": "hunter22", "name": "Kitchen"})
     asyncio.run(_finish_told(flow, net))
     card = tmp_path / "card"
-    for gone in ("var/lib/beszel-agent", "home/pi/.local/share/Plexamp", "var/lib/go-librespot/state.json",
+    for gone in ("var/lib/private/gexis-uploaded/beszel", "var/lib/private/gexis-uploaded/plexamp/.local/share/Plexamp",
+                 "var/lib/go-librespot/state.json",
                  "var/lib/bluetooth"):
         assert not (card / gone).exists(), gone
     assert (card / "var/lib/gexis-music/Playlists/Evening.m3u").exists()
@@ -550,8 +551,8 @@ def test_the_same_player_keeps_them_renamed_or_not(tmp_path):
         flow.take_backup(upload)
         flow.save({"ssid": "Home", "password": "hunter22", **answers})
         asyncio.run(_finish_told(flow, net))
-        assert (root / "card/var/lib/beszel-agent/fingerprint").exists(), answers
-        assert (root / "card/home/pi/.local/share/Plexamp/Settings").exists(), answers
+        assert (root / "card/var/lib/private/gexis-uploaded/beszel/fingerprint").exists(), answers
+        assert (root / "card/var/lib/private/gexis-uploaded/plexamp/.local/share/Plexamp/Settings").exists(), answers
 
 
 CONNECTED = {**VALUES, "beszel.enabled": True, "beszel.hub": "http://192.0.2.9:8090", "beszel.key": "ssh-ed25519 AAAA",

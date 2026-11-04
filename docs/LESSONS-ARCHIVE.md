@@ -1734,3 +1734,35 @@ it failed on the old code.
 route across the repository - scripts, units, the updater - not only the
 page that prompted it, and keep the list in a test.
 
+**90. A branch's own checks never read** (2026-11-03, Phase 27). Building
+releases on GitHub (ADR-0173) changed `packaging/release/reuse.py`: it read
+an asset list and copies built on R2D2, and now reads published indexes.
+`core/tests/test_release_reuse.py` still called it the old way. The branch
+was pushed three times; each push ran two workflows, `Tests` and `Release
+build`, and only the release build's runs were followed - its steps, its
+timings, its artifact. `Tests` failed on the second and third pushes
+(d350d10, 52b77c0) and nobody looked. The branch was merged into `next`, the
+notes were written, and the failure surfaced only from a local run of the
+core suite before tagging - which, done after the tag, would have meant a
+release whose own tests failed on `main`'s required check. The tests were
+rewritten for the new interface, with two more for what reads the published
+parts, before the notes commit.
+**Rule:** after a push, read every check GitHub ran on that commit
+(`gh run list --commit <sha>`), not only the run being worked on; a branch
+is merged only with all of them green.
+
+**91. A watcher that called every failure "rebooting"** (2026-11-03, Phase
+27). sofapi was updated to 1.12.1 through its own updater, a reboot
+expected (its marker was set). A script on R2D2 started the install, then
+asked every 20 s, in one SSH command, for the boot id, `gexis-player`'s
+version and `systemctl is-active gexis-update-install.service`, and printed
+"unreachable (rebooting?)" whenever that command failed. `systemctl
+is-active` exits 3 for any state but *active*: once the install had run
+and sofapi was back, every answer ended in 3, so the script went on
+printing "unreachable" for 27 minutes, past a reboot that had taken about
+three. George asked for a status; one direct look showed 1.12.1 installed,
+the update done, dpkg clean.
+**Rule:** a watcher separates "no answer" (SSH's own failure, exit 255)
+from an answer it did not expect, prints what it got, and says so when a
+state lasts longer than it should.
+

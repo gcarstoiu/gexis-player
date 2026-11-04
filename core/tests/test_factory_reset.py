@@ -19,6 +19,7 @@ def _used_player(root: Path) -> None:
                 "var/lib/gexis/screen.json", "etc/gexis/screen.env", "var/lib/gexis/components/plexamp.sha256",
                 "var/lib/go-librespot/state.json", "var/lib/beszel-agent/fingerprint",
                 "home/pi/.local/share/Plexamp/Settings/x", "home/pi/plexamp/js/index.js",
+                "home/pi/Library/Caches/x", "home/pi/.cache/Plexamp/x",
                 "var/lib/squeezeboxserver/prefs/server.prefs", "var/lib/gexis-music/Album/track.flac",
                 "var/lib/gexis-music/Playlists/Evening.m3u", "var/lib/bluetooth/DC:A6:32:00:00:01/settings",
                 "etc/NetworkManager/system-connections/HomeNet.nmconnection",
@@ -44,6 +45,7 @@ def test_a_used_player_goes_back_to_a_freshly_flashed_card(tmp_path):
                  "etc/machine-info", "var/lib/gexis/setup-done", "var/lib/gexis/screen.json",
                  "etc/gexis/screen.env", "var/lib/gexis/components", "var/lib/go-librespot/state.json",
                  "var/lib/beszel-agent", "home/pi/.local/share/Plexamp", "home/pi/plexamp",
+                 "home/pi/Library", "home/pi/.cache/Plexamp",
                  "var/lib/squeezeboxserver/prefs", "var/lib/gexis/plugins"):
         assert not (tmp_path / gone).exists(), gone
     # The owner's music, playlists and pictures stay (ADR-0132 as amended).

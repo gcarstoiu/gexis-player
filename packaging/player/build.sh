@@ -27,7 +27,7 @@ ours=""
 # one that already has gexis-skins keeps it, since apt leaves an installed
 # package alone when nothing depends on it any more.
 for pkg in gexis-core gexis-ui gexis-system gexis-wallpapers gexis-peppyalsa gexis-peppy-engines \
-	gexis-go-librespot gexis-squeezelite gexis-camilladsp gexis-beszel-agent gexis-beszel-hub gexis-lyrion-server gexis-plexamp \
+	gexis-go-librespot gexis-squeezelite gexis-camilladsp gexis-lyrion-server \
 	gexis-nqptp gexis-shairport-sync gexis-airplay gexis-roon; do
 	v=$(version_of "$pkg")
 	ours="$ours, $pkg (= $v)"
@@ -59,6 +59,12 @@ fetch_cached "https://raw.githubusercontent.com/foonerd/peppy_screensaver/${SCRE
 install -D -m 644 /tmp/peppy_screensaver-LICENSE \
 	"$STAGE/usr/share/doc/gexis-player/licenses/peppy_screensaver/LICENSE"
 
+# **Ours that moved to the catalogue** (ADR-0174): their packages go with the
+# update that brings this release - an update never removes a package on its
+# own - and the core carries each over from the catalogue at its next start,
+# its data kept (carry_over.py).
+MOVED="gexis-beszel-agent, gexis-beszel-hub, gexis-plexamp"
+
 cat > "$STAGE/DEBIAN/control" <<CTL
 Package: gexis-player
 Version: $VERSION
@@ -66,6 +72,7 @@ Architecture: all
 Maintainer: Gexis Player <noreply@github.com>
 Depends: ${ours#, }, $ALSA, $OS
 Replaces: gexis-skins
+Conflicts: $MOVED
 Section: sound
 Priority: optional
 Description: Gexis Player, one release

@@ -178,8 +178,9 @@ Gexis is built to be extended. A plugin adds a **source** that plays through
 the player or a **service** that runs beside it, and is switched on, updated
 or removed from Settings, with its progress shown in the switch itself.
 
-- **Ready today:** Plexamp, the Lyrion Server, the visualiser skin packs, and
-  Beszel monitoring with its connection shown in Settings.
+- **Ready today:** the Lyrion Server and the visualiser skin packs; from
+  the catalogue, Plexamp, Beszel monitoring, with its connection shown in
+  Settings, and the TV's own remote over HDMI-CEC.
 - **One store:** *Add plugins* in Settings lists the player's own optional
   plugins beside other authors' from the
   [plugin catalogue](https://github.com/gcarstoiu/gexis-plugins), where every
@@ -206,17 +207,21 @@ or removed from Settings, with its progress shown in the switch itself.
 | 🔀 **Handover** | One source at a time, never mixed · takeover in any direction · the previous source released before the next one plays |
 | 📡 **Multiroom** | Players joined into a group play the same music in sync, for every source · music started on any of them plays on all · each keeps its own level and equaliser, and an *All* slider moves them together · Lyrion's own sync for Lyrion, and Lyrion's synced players grouped too · groups last until undone, restarts included |
 | 🖼️ **Now playing** | Artwork · synced or plain lyrics · artist information and photos · the Lyrion queue |
+| 📚 **Library** | Lyrion's albums, artists, genres, playlists and radio on the screen, with search · the Lyrion server you already run, or the Lyrion Server plugin on the player, reading the folders you tick on USB drives, network shares and its own Music share, its progress shown, at the lowest priority |
 | 📈 **Visualiser** | Up to 287 skins, depending on the screen · VU meters, spectrum, turntables and tape decks · progress, time, volume and play-state in each skin's own style · skins that rotate per track |
+| 🌙 **Idle screen** | A clock, 24 h or 12 h · the weather with a three-day forecast and, at night, the moon in tonight's phase · seven styles of weather icons, animated or still · behind it the player's own public-domain wallpapers, following the time of day, the seasons and the holidays, or artist pictures, photos from Pixabay, pictures copied onto the player, or black · or a web page of your choice · standby at set times |
 | 🖥️ **Screens** | HDMI touchscreens from 7" to 13.3", including 7.9" and 11.9" bar displays, and DSI screens on the Pi's own display connector, leaving HDMI free for sound · recognised and laid out for their shape · or Headless, with no screen at all |
 | 🎨 **Themes** | Deep Teal, Bauhaus, Sage, Velvet, Ink and Gauge, one per player, on its screen and on every phone showing it · the colours, the corners and the typeface of figures and labels; nothing moves or changes size |
 | 🧭 **Setup** | Over the player's own Wi-Fi (WPA2, password on the panel) or your network on a cable · only what the player needs to run, then *make it yours* from your home Wi-Fi · a wrong password brings setup back with the reason · a player that starts without its Wi-Fi offers setup again after 90 seconds |
 | 💾 **Backup & restore** | Settings, pairings and source logins in one archive, on a network share or downloaded to your phone · restored during setup, which asks for this player's output and screen and lets you change the rest · one player's backup can start a second one, leaving the first one's sign-ins behind · a factory reset starts the player over without re-flashing |
-| ⬆️ **Updates** | Over the network, with release notes · *Testing* gets each release first, *Stable* once it has been tried |
+| ⬆️ **Updates** | Over the network, with release notes · *Testing* gets each release first, *Stable* once it has been tried · every release built on GitHub from its source, with a record of the build, and signed |
 | 🔗 **Network** | Wi-Fi or cable, and the cable wins while it is plugged in · a fixed address on either, kept only once it is shown to work |
 | 📱 **Settings anywhere** | The full settings on the panel and on any phone or computer on your network |
 | 🖐️ **Phone as a remote** | What plays, its controls, the volume and the equaliser · for a player with a screen, a trackpad that moves a pointer on it (one finger moves, a tap presses, two fingers scroll, a pinch zooms) or a D-pad, to drive it from across the room, and a text field on it brings up the phone's keyboard · for one without, a large cover and a bar to move through the track · every player on the network in one menu · no app to install |
+| 🕹️ **Without touching the screen** | The arrows of a USB keyboard, the phone's D-pad, Home Assistant's, or with the TV remote plugin the TV's own remote, move a ring from control to control; OK presses and Back goes back · the TV remote's play, pause and skip keys play, pause and skip |
 | 🏠 **Home Assistant dashboard** | Your room's Home Assistant dashboard on the screen, every control usable · up from a button, from Home Assistant itself, or in place of the idle screen at set times · the music plays on, and it stays until you dismiss it |
 | 🏡 **In Home Assistant** | Each player as a media player in Home Assistant: what plays, its artwork, the transport, volume and the source playing · the equaliser and its setting · switches for the screen, the dashboard, the visualiser and the idle screen, buttons for Home, Now Playing and Lyrics, and a D-pad for the screen · a dashboard card of its own, laid out as the phone's remote, with every player in one place · found on the network · the [Gexis Player integration](https://github.com/gcarstoiu/gexis-player-homeassistant), installed through HACS |
+| 🔌 **Plugins** | A signed catalogue in Settings: Plexamp, Beszel monitoring and its hub, the TV's remote over HDMI-CEC, open to other authors · each version checked and read before it is listed, a new one offered and never installed by itself · each runs in a sandbox, and one that needs HDMI-CEC, GPIO or USB asks first · your own uploaded from the phone · its settings and sign-ins in backups, its software fetched again |
 | 🧩 **Open API** | Everything the screen and phone page do, over HTTP and a live WebSocket, described as OpenAPI · *API explorer* shows and tries it on the player itself |
 | 🩺 **When something is wrong** | A problem report in one download, with addresses, names, keys and what you play taken out first · hardware feedback that tests your screen's touch and your DAC's rates |
 
@@ -278,7 +283,9 @@ Rough, and subject to change:
   source. AirPlay 2 from an iPhone, iPad or Mac. A plugin catalogue: other
   authors' plugins installed from Settings. Themes: six looks for the screen
   and the phone. Roon, with the player as a Roon device and Roon's Now
-  Playing on its screen.
+  Playing on its screen. Releases built on GitHub, each with a record of
+  its build. Plexamp and Beszel as plugins from the catalogue, updated
+  there.
 - 🔜 **Next:** room correction with a USB microphone, for the bass and then
   the full range.
 - 🎨 **Later:** internet radio without a Lyrion server. With Plex switched on, your own Plex server fills in

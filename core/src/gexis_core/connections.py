@@ -28,15 +28,30 @@ GRACE_S = 60.0
 _LOOPBACK_V6 = ("00000000000000000000000001000000",)
 
 
-def unit_uid(unit: str) -> int | None:
-    """The uid `User=` names, or None for a unit run as root or not asked."""
+def _show(unit: str, prop: str) -> str:
+    result = subprocess.run(["systemctl", "show", "-p", prop, "--value", unit],
+                            check=False, capture_output=True, text=True, timeout=5)
+    return (result.stdout or "").strip()
+
+
+def unit_uid(unit: str, proc: Path = Path("/proc")) -> int | None:
+    """The uid `User=` names; for a unit run as a temporary user (a catalogue
+    plugin's sandbox, ADR-0174), its running process's. None for a unit run
+    as root, not running, or not asked."""
     try:
-        result = subprocess.run(["systemctl", "show", "-p", "User", "--value", unit],
-                                check=False, capture_output=True, text=True, timeout=5)
-        name = (result.stdout or "").strip()
-        return pwd.getpwnam(name).pw_uid if name else None
-    except (OSError, subprocess.SubprocessError, KeyError):
-        return None
+        name = _show(unit, "User")
+        if name:
+            return pwd.getpwnam(name).pw_uid
+        pid = _show(unit, "MainPID")
+        if not pid or pid == "0":
+            return None
+        for line in (proc / pid / "status").read_text().splitlines():
+            if line.startswith("Uid:"):
+                uid = int(line.split()[1])
+                return uid or None
+    except (OSError, subprocess.SubprocessError, KeyError, ValueError):
+        pass
+    return None
 
 
 def _off_device(remote: str) -> bool:

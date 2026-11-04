@@ -8521,3 +8521,52 @@ until George promotes.
 **Stable: 1.10.0** (2026-10-31, Stable serial 12; promoted without the
 two measurements, to-dos `ph22-measure`, `eq-measure`); build output
 `~/projects/gexis-release-out/r1.10.0`.
+
+## From HANDOFF, 2026-11-03 (1.12.1 merged; Phase 27's branch merged and deleted)
+
+28.36-1. Notes approved by George; signed on R2D2 with `publish.sh --sign`
+(`packaging/release/out` linked to `~/projects/gexis-release-out` in
+`-next` for it, then removed); every signature read back good. PR #94 for
+George to merge; do not push `next` until its checks have finished.
+
+plugin off and on, Roon Bridge's own update. sofapi runs preview packages
+from `ph-roon` (in `~/gexis-pc`) and has the reboot marker set; the next
+update reboots it once. **In progress:**
+
+1-3), on its branch and worktree `~/projects/gexis-player-github-builds`,
+merged into `next` and released in 1.12.1 (2026-11-03). Done (Finding 140):
+
+way. **Left:** a card flashed from 1.12.1's image (criterion 4; sofapi updated
+itself to it); a preview by `workflow_dispatch` once #94 is merged; then R2D2's
+pi-gen container and build images removed (decision 3).
+
+(2026-10-29). All four on Testing, which offers 1.12.0. sofapi and the bar
+
+editable install): in another worktree run the suite with `PYTHONPATH=src`
+from its `core/`, or it tests `next`'s code. **A preview of core needs the
+player meta-package too** (it pins core exactly): `packaging/build.sh` with
+every component and `player`, after copying the unchanged UI and system
+packages from the release's build output (`repos/ours-*`).
+
+**Release build output lives in `~/projects/gexis-release-out`**: in each
+release worktree, `ln -s` it to `packaging/release/out` before `build.sh`
+(excluded in `.git/info/exclude`). `reuse.py` reuses a published file only
+against a local copy, so losing that folder means re-uploading every OS file.
+
+**Stable: 1.12.0** (2026-11-02; Testing serial 63, Stable
+serial 13, promoted by George the same day; each read back with a good
+signature): Phase 26, Roon, with three fixes (the visualiser's tap and the
+updater's stop sending the panel token, ADR-0170 *Two callers missed*; the
+row of sources under the library narrowed to fit), built on 1.11.0 (themes,
+Phase 25, Testing serial 62; left a pre-release, as 1.9.1 was). Notes
+approved by George; PRs #91 and #92 merged by George (2026-11-02). Image
+`image/deploy/2026-11-02-gexis-player-v1.12.0.img` (160 checks passed);
+build output `~/projects/gexis-release-out/r1.12.0`. The two measurements
+are still owed (to-dos `ph22-measure`, `eq-measure`).
+
+**Phases 20 and 21 closed 2026-10-27** (the archive has their state). Left
+from Phase 20: the measurement through a card (to-do `eq-measure`, at a time
+George picks).
+
+Next, Phase 27 (releases built on GitHub, ADR-0173 accepted), then 28 (room
+correction for the bass) and 29-32 in order, each ADR first
