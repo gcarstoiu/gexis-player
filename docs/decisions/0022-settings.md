@@ -627,3 +627,16 @@ Confirmed by George, 2026-10-25, [ADR-0162](0162-a-simple-equaliser.md):
 | Equaliser | [N] | On or off, kept for each output (the DAC, HDMI, optical); off by default. Off, the output is bit-perfect as before |
 | Equaliser preset | [N] | The preset or one of the owner's settings in use, kept for each output; *Flat* by default |
 | Your equaliser settings | [N] | Up to ten, named, saved from the bands as set; one list shared by every output |
+
+### Appended 2026-11-03 — room correction for the bass
+
+Confirmed by George, 2026-11-03, [ADR-0175](0175-room-correction-for-the-bass.md):
+
+| Setting | Mark | Notes |
+|---|---|---|
+| Room correction | [N] | On or off, kept for each output; off by default. With the equaliser also off, the output is bit-perfect as before |
+| Room measurement | [N] | The last measurement and the correction made from it, kept for each output (internal) |
+| Microphone calibration | [N] | Downloaded from miniDSP by the microphone's serial, kept for each microphone |
+| Correction target | [H] | A gentle rise below about 80 Hz (+3 dB) |
+| Bass limit | [H] | 250 Hz |
+| Measurement | [H] | Five positions; up to eight cuts per channel of at most 12 dB; sweeps at about 75 dB SPL |

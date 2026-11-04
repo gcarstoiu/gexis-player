@@ -211,6 +211,11 @@ environment, as ours have. It cannot install Debian packages, use
   (catalogue serial 8): Plexamp started without downloading again, signed
   in; *Back up now* wrote 1.07 MB, the sign-in in it and nothing of
   `.cache`, beside 306 MB in the plugin's `.cache`.
+- **Not built in this phase**: 8's second fix, setup's second part adding
+  what it switches on to the Plugins page's list (`plugin_store.ADDED`).
+  Left open for a later release.
+- **Released in 1.13.0** (Testing, 2026-11-03). Still to be seen there: a
+  player with none of them on updated, and first use on a fresh card.
 
 ## Not in this phase
 
