@@ -8636,3 +8636,25 @@ flash), set up without Plexamp or Beszel, updated to the preview (nothing
 installed, *Add plugins* lists them), then reset to factory settings for
 first use offering Plexamp from the catalogue. Then 29, room correction for
 the bass.
+
+## From HANDOFF, 2026-11-04 (1.13.0's release PR merged; Phase 28's branch merged and deleted)
+
+**Phases 25 (themes) and 26 (Roon) closed 2026-11-02** (George: satisfied
+with Roon, nothing more measured; one release with everything). Roon's
+plugin is `gcarstoiu/gexis-roon` (local `~/projects/gexis-roon`), 0.2.1
+released with its asset and pinned in `packaging/roon/pins.sh`; Roon's
+extension through Debian's `python3-roonapi`. **Left open** (ADR-0172,
+*Built*): Roon took the output back eight seconds after Lyrion took it, the
+cause not established (0.2.1 logs the pause's answer and the loopback's
+states); not measured: bit-perfect, rates above 44.1 kHz, a group, the
+plugin off and on, Roon Bridge's own update.
+
+Closed: 0-21 and 24-26 (13 with letters a-f). Phases are numbered
+consecutively without letters, each with a stable ID (George, 2026-10-13);
+20 (the equaliser) and 21 (the phone remote) closed 2026-10-27 with 1.7.0,
+24 (the plugin catalogue) 2026-10-31 with 1.10.0, 25 (themes) and 26
+(Roon) 2026-11-02 with 1.11.0 and 1.12.0; 22 (multiroom) and 23 (AirPlay 2,
+limited testing) on Stable with work open; 27 (releases built on GitHub)
+in 1.12.1, a card still to flash; 28 (Plexamp and Beszel to the catalogue)
+started; next 29-30 (room correction), 31-33; MPD parked. `docs/DEVELOPMENT.md`
+holds each phase's acceptance criteria.

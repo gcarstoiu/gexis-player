@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-11-03 (on R2D2).
+Last updated: 2026-11-04 (on R2D2).
 
 ## Start here
 
@@ -23,8 +23,7 @@ phases; change it when a phase opens, closes or moves, and show George first. Hi
 **Testing: 1.13.0** (2026-11-03, serial 65): Plexamp and Beszel from the
 catalogue (Phase 28). Built by run 41718806895 (`verify-image.sh` all checks
 passed), signed on R2D2, read back good against the shipped key; Stable not
-moved. Notes approved by George. **Release PR #95 waits for George**; push
-`next` only after it is merged (BUILD-TRAPS), then the routine clean-up.
+moved. Notes approved by George; release PR #95 merged 2026-11-04.
 
 **Stable: 1.12.0** (2026-11-02, serial 13): Roon (Phase 26) and three
 fixes, on 1.11.0 (themes; left a pre-release). Its image, the last built on
@@ -49,15 +48,12 @@ with *Keep* off (ADR-0147, ADR-0169); George's phone test of the dialogs
 (`~/projects/scratch/dpad`, `ph24`, `ph26/sources`, `ph26/blog`) build from
 `~/projects/gexis-player-next` unless `WT` names another worktree.
 
-**Phases 25 (themes) and 26 (Roon) closed 2026-11-02** (George: satisfied
-with Roon, nothing more measured; one release with everything). Roon's
-plugin is `gcarstoiu/gexis-roon` (local `~/projects/gexis-roon`), 0.2.1
-released with its asset and pinned in `packaging/roon/pins.sh`; Roon's
-extension through Debian's `python3-roonapi`. **Left open** (ADR-0172,
-*Built*): Roon took the output back eight seconds after Lyrion took it, the
-cause not established (0.2.1 logs the pause's answer and the loopback's
-states); not measured: bit-perfect, rates above 44.1 kHz, a group, the
-plugin off and on, Roon Bridge's own update.
+**Roon** (Phase 26, closed): `gcarstoiu/gexis-roon` (local
+`~/projects/gexis-roon`) 0.2.1, pinned in `packaging/roon/pins.sh`. **Left
+open** (ADR-0172, *Built*): Roon took the output back eight seconds after
+Lyrion took it, the cause not established (0.2.1 logs the pause's answer
+and the loopback's states); not measured: bit-perfect, rates above 44.1 kHz,
+a group, the plugin off and on, Roon Bridge's own update.
 
 **Phase 27** (releases built on GitHub, ADR-0173) is in 1.12.1. **Left:** a
 card flashed from 1.12.1's image (criterion 4: the card below), then R2D2's
@@ -160,18 +156,16 @@ in Claude's memory, not here) holds the open items with their detail.
 
 **Routine clean-up** (`docs/ROUTINE-CLEANUP.md`, George 2026-10-12): after
 every merged release PR, otherwise weekly on Sunday evening. **Last run:
-2026-11-03, after 1.12.1.**
+2026-11-04, after 1.13.0.**
 
 ## Phases
 
 Closed: 0-21 and 24-26 (13 with letters a-f). Phases are numbered
-consecutively without letters, each with a stable ID (George, 2026-10-13);
-20 (the equaliser) and 21 (the phone remote) closed 2026-10-27 with 1.7.0,
-24 (the plugin catalogue) 2026-10-31 with 1.10.0, 25 (themes) and 26
-(Roon) 2026-11-02 with 1.11.0 and 1.12.0; 22 (multiroom) and 23 (AirPlay 2,
-limited testing) on Stable with work open; 27 (releases built on GitHub)
-in 1.12.1, a card still to flash; 28 (Plexamp and Beszel to the catalogue)
-started; next 29-30 (room correction), 31-33; MPD parked. `docs/DEVELOPMENT.md`
+consecutively without letters, each with a stable ID (George, 2026-10-13).
+On Stable with work open: 22 (multiroom), 23 (AirPlay 2, limited testing).
+27 (releases built on GitHub) in 1.12.1, a card still to flash; 28 (Plexamp
+and Beszel to the catalogue) in 1.13.0 on Testing; 29 (room correction for
+the bass) in progress; next 30, then 31-33; MPD parked. `docs/DEVELOPMENT.md`
 holds each phase's acceptance criteria.
 
 ## Machines
