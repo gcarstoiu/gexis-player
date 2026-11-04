@@ -53,7 +53,7 @@ brings one is refused.
 
 | Field | Required | Meaning |
 |---|---|---|
-| `id` | yes | Lowercase letters, digits and `-`, starting with a letter, 2-31 characters. It is the folder, the prefix of your settings, and a URL part. It may not be one of the player's own (`lms`, `spotify`, `bluetooth`, `plexamp`, `beszel`, …) |
+| `id` | yes | Lowercase letters, digits and `-`, starting with a letter, 2-31 characters. It is the folder, the prefix of your settings, and a URL part. It may not be one of the player's own (`lms`, `spotify`, `bluetooth`, `airplay`, `roon`, …) |
 | `name` | yes | What people see |
 | `kind` | yes | `renderer` or `service` |
 | `version` | yes | Letters, digits and `. + ~ -`, up to 40 characters, starting with a letter or digit. Uploading a different version updates the plugin; the same version again is refused. Shown on your plugin's switch in Settings → Plugins |
@@ -64,7 +64,9 @@ brings one is refused.
 | `status` | no | The waiting screen's second line under your mark (`"Ready"`, `"Pairable"`) |
 | `summary` | no | One line on what it is. The player's own plugins show it in setup's Plugins step; an uploaded plugin arrives after setup, so it is not shown there |
 | `tag` | no | A few words beside its name on its switch in Settings, 24 characters at most - the player's AirPlay says *Limited testing* |
-| `connection` | no | Honoured only on the player's own `service` plugins, not on an uploaded one: the heading above its rows then says *Connected*, *Connecting* or *Not connected*. An uploaded plugin runs as a user made for each run, so there is no fixed user to read connections from |
+| `connection` | no | For a `service` that connects somewhere off this device: the heading above its rows then says *Connected*, *Connecting* or *Not connected*, read from the connections its running process holds |
+| `software` | no | What it downloads itself, from its maker, when it starts - `"Plexamp"`, 40 characters at most. Its switch then shows that download as the player's own are shown, from the `software` messages it sends (PLUGIN-CONTRACT.md); Retry under a failed one restarts the plugin |
+| `port` | no | A web page of its own on this device, by port number: its switch then says *Open http://<name>.local:<port>* (the Beszel hub's is 8095; 8090 and 8091 are the player's) |
 | `settings` | no | Rows for **Settings**, below |
 | `permissions` | no | What it needs beyond the sandbox (section 3): a list of `cec`, `gpio`, `usb`. The person adding it is told, and the player grants exactly those. Absent: none |
 
@@ -78,7 +80,7 @@ Every uploaded plugin runs under `gexis-uploaded-<kind>@<id>.service`:
 | | |
 |---|---|
 | **User** | A temporary user made for each run - never root, never `pi` |
-| **Can write** | Only its own data folder, `$STATE_DIRECTORY` (also `$GEXIS_PLUGIN_DATA`), kept across restarts and versions and deleted with the plugin. Plus its own `/tmp` |
+| **Can write** | Only its own data folder, `$STATE_DIRECTORY` (also `$GEXIS_PLUGIN_DATA`, and `$HOME`), kept across restarts and versions and deleted with the plugin; software it downloads there can run from there; `$HOME/.cache` is left out of backups. Plus its own `/tmp` |
 | **Can read** | The system, read-only. **Not** `/home` |
 | **Devices** | A **renderer** gets the sound cards (and the basics every program has, like `/dev/null`); a **service** gets no devices beyond those basics. More only as its `permissions` ask, below |
 | **Network** | Open |
@@ -334,10 +336,14 @@ The checks, so you can pass them first time:
 **Update** by uploading a package with a different `version`. The version
 before it is kept on the device for one step back; your data folder is kept.
 
-**Remove** from the plugin's row (switch it off first). Its package, its data
-folder and its settings are deleted.
+**Remove** from the plugin's row (switch it off first). Its package goes;
+with *Keep its settings and sign-in* on (as it comes), its data folder and
+its settings stay for when it is added again, and with it off they are
+deleted too.
 
-**Backups** keep your plugin's settings and data, not its package. Only
+**Backups** keep your plugin's settings and data, not its package, and not
+`.cache` in its data folder (`$HOME/.cache`): put there what it downloads or
+can build again, so a backup stays small. Only
 files and folders in the data folder go in: a link, a pipe or a device there
 (a venv's `lib64 -> lib`, a FIFO) is left out of the backup, so make it
 again at start if the plugin needs it. A restore refuses the whole backup

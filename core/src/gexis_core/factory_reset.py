@@ -45,6 +45,9 @@ REMOVED = (
     # The downloaded wallpapers: Pixabay's and Space pictures (ADR-0133).
     "var/lib/gexis-core/wallpapers", "var/lib/gexis-core/space",
     "home/pi/plexamp",
+    # Plexamp's caches as 1.12.x left them in pi's home: its engine's and its
+    # own (ADR-0174 moves them into the plugin's folder).
+    "home/pi/Library", "home/pi/.cache/Plexamp",
     # Identities.
     "var/lib/go-librespot/state.json", "var/lib/beszel-agent", "var/lib/beszel-hub",
     "home/pi/.local/share/Plexamp",

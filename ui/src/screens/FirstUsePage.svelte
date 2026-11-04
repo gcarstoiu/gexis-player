@@ -452,7 +452,7 @@ class Component extends DCLogic {
         const g = live.stage(live.component('plexamp.enabled', 'plexamp')), inst = g.done;
         const dl = prog(inst ? 'Plexamp is installed' : g.label, g.pct, g.meta, inst ? '' : g.line);
         if (s.plexClaimed) return { title: 'Plexamp', sub, blocks: [dl, status('ok', nm + ' is on your Plex account', 'Signed in to Plex'), P('Open Plexamp on your phone and pick ' + nm + ' as the player.')] };
-        if (!s.plexOn && !inst) return { title: 'Plexamp', sub, blocks: [list([{ k: 'plain', label: 'Plexamp', note: 'From Plex', icon: 'plex' }]), num([['Download Plexamp', 'next'], ['Sign in to Plex with a claim code', 'next']]), P('Skip, and add Plexamp later from Settings → Plugins → Add plugins.')],
+        if (!s.plexOn && !inst) return { title: 'Plexamp', sub, blocks: [list([{ k: 'plain', label: 'Plexamp', note: 'From Plex', icon: 'plex' }]), num([['Download Plexamp', 'next'], ['Sign in to Plex with a claim code', 'next']]), ...(s.plexDlError ? [note('warn', '', s.plexDlError)] : []), P('Skip, and add Plexamp later from Settings → Plugins → Add plugins.')],
           foot: { alt: 'Skip', altFn: () => this.setState({ plexSkipped: true, plexState: 'later' }, () => this.skip()), next: 'Download', nextFn: () => this.setState({ plexOn: true, plexSkipped: false }, () => live.downloadPlex()), keep: true } };
         const later = () => this.setState({ plexState: 'later' }, () => this.skip());
         const skipP = P('Or skip, and sign in later from Settings → Plugins → Plexamp.' + (inst ? '' : ' The download carries on.'));
@@ -597,7 +597,7 @@ class Component extends DCLogic {
   //: the player: its name, clock, network, the Lyrion search, Plexamp's
   //: download, a phone asking to pair, the network shares, the downloads.
   let st = $state(Object.assign(init('A', mode === 'p1' ? 'p1' : 'p2', false), {
-    first: true, nameSaved: false, second: true, touchpad: true, plexClaimed: false, plexError: null, skinsAsked: false,
+    first: true, nameSaved: false, second: true, touchpad: true, plexClaimed: false, plexError: null, plexDlError: null, skinsAsked: false,
     volume: 'Hardware', volHw: {}, volNotes: {}, outTags: {}, outProblems: {}, town: '', net: 'your network', lyrMeta: '', lyrServer: null, pairDevice: '', pairCode: '',
     shareServers: [], shareFound: [], shareFolder: null, musicSpace: null, picks: { usb: [], share: [] }, shareSrvItem: null, shareError: null, finishError: null, finished: null,
     plugins: [], tick: 0, ready: false,
@@ -898,9 +898,18 @@ class Component extends DCLogic {
       Object.assign(st, { shareStep: null, shareAddr: '', shareAU: '', shareAP: '', shareUser: '', sharePw: '' });
       live.loadShares();
     },
+    //: ADR-0174 decision 3: Plexamp not installed yet comes from the
+    //: catalogue, switched on once it is in; installed, its switch.
     async downloadPlex() {
-      const r = await writeSetting('plexamp.enabled', true);
-      if (!r.ok) st.plexOn = false;
+      st.plexDlError = null;
+      const p = st.plugins.find((x) => x.row === 'plexamp.enabled');
+      if (p && !p.catalogue) {
+        const r = await writeSetting('plexamp.enabled', true);
+        if (!r.ok) st.plexOn = false;
+        return;
+      }
+      try { await json('/personalise/install', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: 'plexamp' }) }); }
+      catch { Object.assign(st, { plexOn: false, plexDlError: 'Plexamp could not be fetched from the plugin catalogue. Check the network, then try again.' }); }
     },
     //: **The skins download at the visualiser step** (ADR-0149 decision 42;
     //: George, 2026-10-19: as Plexamp's does, so the owner sees it carry on
@@ -1226,7 +1235,9 @@ class Component extends DCLogic {
       scr: v.headless === true ? 'headless' : 'panel', loc: v.weather_location ?? '',
       net: typeof v.wifi === 'string' && v.wifi ? v.wifi : 'your network',
       town: String(v.timezone ?? '').split('/').pop().replace(/_/g, ' '),
-      plexOn: v['plexamp.enabled'] === true, plexPct: v['plexamp.enabled'] === true ? 100 : 0
+      // Its install from the catalogue under way is Plexamp chosen too.
+      plexOn: v['plexamp.enabled'] === true || (!!st.plugins.find((p) => p.row === 'plexamp.enabled')?.catalogue && !!$components?.plexamp),
+      plexPct: v['plexamp.enabled'] === true ? 100 : 0
     });
     if (!st.first) fromSettings(v);
     st.shown = true;

@@ -98,7 +98,7 @@ each through that renderer's own control API, via an **adapter**
 | Bluetooth | `bluealsa-aplay.service` (with `bluealsa` and BlueZ) | BlueZ over D-Bus (`adapters/bluetooth.py`) | `MediaTransport1` or `MediaPlayer1` appearing | `Device1.Disconnect()` |
 | AirPlay (plugin, ADR-0167) | `gexis-shairport-sync.service`, with `gexis-nqptp` and the `gexis-airplay` plugin | the plugin over the socket; it reads Shairport Sync's metadata pipe and calls its D-Bus | the active-state hook asks the plugin, which sends `acquire` and lets Shairport Sync open the device on `device_freed` | `release`: D-Bus `DropSession`, then the ladder |
 | Roon (plugin, ADR-0172) | `gexis-roonbridge.service` (Roon Bridge, user `roonbridge`), with the `gexis-roon` plugin | the plugin over the socket; it reads the `Roon` loopback's state in `/proc/asound` and Roon's extension API (`python3-roonapi`) | the loopback's device 0 running: the plugin sends `acquire` and copies on `device_freed` | `release`: the copy stops, and Roon's zone is paused through the extension |
-| Plugin renderer (Plexamp) | the unit named in the plugin's manifest | JSON lines over a Unix socket (`adapters/plugin.py`, ADR-0084/0089) | the plugin sends `acquire` | the plugin is sent `release`, then the core kills the unit (ADR-0091) |
+| Plugin renderer (Plexamp) | the sandbox's `gexis-uploaded-renderer@plexamp.service` (a catalogue plugin, ADR-0174), with Plexamp as the plugin's child | JSON lines over a Unix socket (`adapters/plugin.py`, ADR-0084/0089) | the plugin sends `acquire` | the plugin is sent `release`, then the core kills the unit (ADR-0091) |
 
 Notes per renderer:
 
@@ -149,10 +149,13 @@ Notes per renderer:
   writes the phone's level directly over bluealsa's D-Bus API
   (`bluealsa_volume.py`, ADR-0054 §1). Pairing is confirmed on the panel by
   the core's own BlueZ agent (ADR-0045).
-- **Plexamp** is not in the image's renderer stage. The `gexis-plexamp`
-  plugin package (ADR-0090) carries the bridge and the units; Plexamp itself
-  is downloaded on the device by a pinned URL and checksum when it is switched
-  on, because it may not be redistributed (ADR-0100). It reaches `output`
+- **Plexamp** is not in the image: since ADR-0174 it is a plugin from the
+  catalogue (`gcarstoiu/gexis-plexamp`), run by the sandbox's renderer unit,
+  `gexis-uploaded-renderer@plexamp.service`. The plugin downloads Plexamp
+  itself from the pin in its archive (URL and checksum), because it may not be
+  redistributed (ADR-0100), into its folder's `.cache` with Plexamp's caches,
+  which backups leave out; it clears Plexamp's saved queue, settles the claim and runs
+  it as its child, all in that one unit. It reaches `output`
   through the ALSA default (ADR-0085). Because Plexamp holds the device for
   ~14 s after a stop and has no setting to shorten it, the core takes it off
   the device by killing its unit rather than waiting (ADR-0091); a new play

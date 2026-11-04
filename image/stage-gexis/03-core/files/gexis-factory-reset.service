@@ -13,7 +13,7 @@ After=local-fs.target
 Before=systemd-journal-flush.service
 Before=sysinit.target NetworkManager.service bluetooth.service systemd-hostnamed.service
 Before=gexis-screen-check.service gexis-core.service gexis-kiosk.service gexis-peppy.service
-Before=squeezelite.service go-librespot.service plexamp.service beszel-agent.service gexis-lyrion.service
+Before=squeezelite.service go-librespot.service gexis-lyrion.service
 Conflicts=shutdown.target
 
 [Service]

@@ -466,7 +466,7 @@ class SetupFlow:
         leave = tuple(prefix for prefix, _ in backups.IDENTITIES) if second else ()
         if second:
             logger.info("setup: restoring as another player; leaving behind %s",
-                        ", ".join(label for _, label in backups.IDENTITIES))
+                        ", ".join(dict.fromkeys(label for _, label in backups.IDENTITIES)))
         try:
             await asyncio.to_thread(backups.restore_file, self._backup, self._restore_root, leave)
             if second:

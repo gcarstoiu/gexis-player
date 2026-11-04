@@ -131,6 +131,10 @@ class Plugin:
     #: The program it downloads and runs, as its pin names it - "Plexamp
     #: 4.13.2" - when that is not the plugin itself (`with_software`).
     software: str | None = None
+    #: **ADR-0174: what a catalogue plugin downloads itself** ("Plexamp"),
+    #: from its manifest's `software`: its switch shows the download it
+    #: reports (the contract's `software` message) as ours show theirs.
+    downloads: str | None = None
     #: **ADR-0170: what it asks for beyond the sandbox** - names from
     #: `plugin_permissions.KNOWN`, granted only once the person adding it
     #: agreed.
@@ -231,6 +235,8 @@ def parse(raw: dict, *, directory: Path | None = None, built_in: bool = False) -
         settings=tuple(settings),
         built_in=built_in,
         version=raw["version"] if isinstance(raw.get("version"), str) and raw["version"].strip() else None,
+        downloads=(raw["software"].strip() if isinstance(raw.get("software"), str)
+                   and 0 < len(raw["software"].strip()) <= 40 else None),
         permissions=permissions,
     )
 
