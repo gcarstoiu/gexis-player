@@ -27,7 +27,7 @@ moved. Notes approved by George; release PR #95 merged 2026-11-04.
 
 **Stable: 1.12.0** (2026-11-02, serial 13): Roon (Phase 26) and three
 fixes, on 1.11.0 (themes; left a pre-release). Its image, the last built on
-R2D2: `image/deploy/2026-11-02-gexis-player-v1.12.0.img`. The two
+R2D2, was deleted 2026-11-04 (George). The two
 measurements are still owed (to-dos `ph22-measure`, `eq-measure`).
 
 **R2D2's `/` fills up**: Docker's
@@ -80,7 +80,9 @@ equaliser's CamillaDSP stage; five positions, each channel alone, measured
 again after; the UMIK-1 only, its calibration downloaded from miniDSP by the
 serial (the address and whether the microphone gives its serial over USB
 not yet verified). George has a UMIK-1. Its settings are in ADR-0022's
-inventory.
+inventory. The phone's flow settled with George from a clickable mock-up
+(2026-11-04: a tap and a countdown at each position, the check can be
+skipped, A/B a saved switch); next the brief for Claude Design.
 
 **Open, small:** a preview's download still holds the skin packs (1.1 of
 1.2 GB) though `release.yml` excludes them; `gen_personalise.py` out of step since Phase 23;
@@ -128,7 +130,8 @@ screen change may miss full-screen (the HMTECH 10.1"; to-do
 **Release build output lives in `~/projects/gexis-release-out`**: link it to
 `packaging/release/out` in the checkout `publish.sh` runs from (git-ignored;
 remove the link after). Since ADR-0173 `reuse.py` reads the published
-indexes, not these copies; whether to keep the folder is George's (4.8 GB).
+indexes, not these copies; George had the older releases' copies removed
+(2026-11-04), 1.13.0's kept.
 
 **Open:**
 - **Not checked:** iOS's handling of `interactive-widget` (the mini player

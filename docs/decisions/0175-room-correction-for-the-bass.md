@@ -165,15 +165,31 @@ correction of its own.
 - **Decision 6, the microphones** (2026-11-03), as recommended: the UMIK-1
   only at first; George has one to measure with.
 
+**The flow on the phone** (2026-11-04, from a clickable mock-up of made-up
+curves; three questions it raised, then one that followed):
+- **Moving the microphone**: a tap at each position once the microphone is
+  in place, then a 3-second countdown before its sweeps; it does not carry
+  on by itself.
+- **The check** (decision 5) can be skipped: the correction is kept as
+  designed, and the result shows the predicted after, marked as not checked
+  until the room is measured again.
+- **A/B is a switch that stays** where the owner puts it, not a hold; it is
+  saved for each output like the on/off switch and kept in backups. Set to
+  *without*, the stage stays in the path with the cuts at 0 dB (item 2);
+  *off* takes it out. The design keeps the two apart, and the volume drawer
+  shows when *without* is set.
+
 ## Settings (ADR-0022)
 
-Appended to the inventory 2026-11-03, confirmed by George:
+Appended to the inventory 2026-11-03 and 2026-11-04, confirmed by George:
 - **[N]** Room correction on and off, for each output.
 - **[N]** The measurement and its design, for each output (internal).
 - **[N]** A microphone's calibration, downloaded by its serial.
 - **[H]** The target: a gentle rise below about 80 Hz (decision 1).
 - **[H]** The bass limit, 250 Hz (decision 3).
 - **[H]** Five positions, eight cuts of up to 12 dB, 75 dB SPL.
+- **[N]** A/B, with or without, for each output (2026-11-04).
+- **[H]** A 3-second countdown at each position (2026-11-04).
 
 ## Measured before it is called done
 

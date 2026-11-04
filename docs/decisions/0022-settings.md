@@ -630,7 +630,7 @@ Confirmed by George, 2026-10-25, [ADR-0162](0162-a-simple-equaliser.md):
 
 ### Appended 2026-11-03 — room correction for the bass
 
-Confirmed by George, 2026-11-03, [ADR-0175](0175-room-correction-for-the-bass.md):
+Confirmed by George, 2026-11-03 (the last two rows 2026-11-04), [ADR-0175](0175-room-correction-for-the-bass.md):
 
 | Setting | Mark | Notes |
 |---|---|---|
@@ -640,3 +640,5 @@ Confirmed by George, 2026-11-03, [ADR-0175](0175-room-correction-for-the-bass.md
 | Correction target | [H] | A gentle rise below about 80 Hz (+3 dB) |
 | Bass limit | [H] | 250 Hz |
 | Measurement | [H] | Five positions; up to eight cuts per channel of at most 12 dB; sweeps at about 75 dB SPL |
+| Room correction A/B | [N] | With or without, kept for each output and in backups (George, 2026-11-04); *without* keeps the stage in the path with the cuts at 0 dB, *off* takes it out |
+| Measurement countdown | [H] | 3 s after the tap at each position, before its sweeps |
