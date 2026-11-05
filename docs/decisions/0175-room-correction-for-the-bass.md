@@ -196,12 +196,35 @@ George's answers on it (2026-11-05):
   tagged A/B and amber (the theme's warn colour) wherever *Without* shows;
   and its new copy, verbatim.
 
+**Decision 4 changed** (George, 2026-11-05): **the owner gets the 90° file
+from miniDSP's page and gives it to the player**, over the player
+downloading it. Found while building: miniDSP has no API - the file comes
+from an undocumented script behind their page's form
+(`/scripts/umikcal/umik90.php/<serial>_90deg.txt`), behind Cloudflare, which
+refused a script's request; their website's terms forbid automated tools
+gathering data without written consent. **The UMIK-1 does not give its
+serial over USB** (its USB serial is a placeholder, as three projects report);
+the file's first line does (`"Sens Factor =-0.667dB, AGain =18dB, SERNO:
+7103946"`), so with the file the owner types nothing on the player.
+
+**What else the microphone is** (research, 2026-11-05, sources kept outside
+the repository): USB `2752:0007`, product *Umik-1  Gain: 18dB* (ALSA's card
+id `U18dB`); 24-bit at 48 kHz only (`S24_3LE`), stereo on older units and
+mono on newer; a capture volume. The 90° file is `<serial>_90deg.txt`, about
+615 points from 10 Hz to 20 kHz, the microphone's response (subtracted);
+miniDSP has changed files' sensitivity lines without renaming them. **The
+sensitivity's meaning is not published**: REW reads it as the RMS level at
+94 dB SPL at the capture's full volume, which this follows - so a level in
+dB SPL here is approximate (two readings of it differ by 6 dB) until checked
+against a calibrator.
+
 ## Settings (ADR-0022)
 
 Appended to the inventory 2026-11-03 to 2026-11-05, confirmed by George:
 - **[N]** Room correction on and off, for each output.
 - **[N]** The measurement and its design, for each output (internal).
-- **[N]** A microphone's calibration, downloaded by its serial.
+- **[N]** A microphone's calibration, by its serial (given as a file,
+  2026-11-05).
 - **[H]** The target: a gentle rise below about 80 Hz (decision 1).
 - **[H]** The bass limit, 250 Hz (decision 3).
 - **[H]** Five positions, eight cuts of up to 12 dB, 75 dB SPL.
