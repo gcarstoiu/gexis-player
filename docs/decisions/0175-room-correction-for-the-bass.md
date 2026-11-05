@@ -235,6 +235,13 @@ chart: the left speaker's main peak at 45 Hz cut by 2 dB, the right's by 1):
   room's noise and over 55: at 50 dB (−18 dBFS) sofapi's run swept 12 times
   more than the two a position needs, and one position's left speaker never
   had two sweeps agree in six.
+- **How deep** (item 6): as deep as bringing the peak to the target takes,
+  no cap at 12 dB in all - the aim is the target. Cuts stack where one is
+  not enough, each still up to 12 dB: redesigned from sofapi's positions
+  1-3, the left's 46 Hz peak takes two (15.4 dB together), and the stacked
+  design leaves 0.85 dB RMS above the target where one deeper cut leaves
+  1.26 (it loses the cut at 68 Hz). The screens list cuts at one frequency
+  as one line.
 
 **What else the microphone is** (research, 2026-11-05, sources kept outside
 the repository): USB `2752:0007`, product *Umik-1  Gain: 18dB* (ALSA's card
@@ -257,7 +264,8 @@ Appended to the inventory 2026-11-03 to 2026-11-05, confirmed by George:
 - **[H]** The target: a gentle rise below about 80 Hz (decision 1).
 - **[H]** The bass limit, 250 Hz (decision 3).
 - **[H]** Three positions (George, 2026-11-05, over five), eight cuts of up
-  to 12 dB; the level 60 dB SPL (George, 2026-11-05, over 75 dB and over 50
+  to 12 dB, stacked where a peak needs more (George, 2026-11-05); the level
+  60 dB SPL (George, 2026-11-05, over 75 dB and over 50
   to 60 from the room's noise).
 - **[N]** A/B, with or without, for each output (2026-11-04).
 - **[H]** A 3-second countdown at each position (2026-11-04).
