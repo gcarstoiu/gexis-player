@@ -207,6 +207,14 @@ serial over USB** (its USB serial is a placeholder, as three projects report);
 the file's first line does (`"Sens Factor =-0.667dB, AGain =18dB, SERNO:
 7103946"`), so with the file the owner types nothing on the player.
 
+**The level** (George, 2026-11-05): **from the room's own noise** - the
+quiet room heard first, then about 20 dB above its noise in the bass,
+between 55 and 65 dB, and *too quiet* only below 55 dB - over 75 dB fixed
+(item 4) and over 65 or 60 dB fixed. The 75 dB was Claude's, carried from
+home-cinema calibration without a reason this player needs it; on sofapi's
+first run it took the amplifier turned up three times to reach, and George
+found it far too loud.
+
 **What else the microphone is** (research, 2026-11-05, sources kept outside
 the repository): USB `2752:0007`, product *Umik-1  Gain: 18dB* (ALSA's card
 id `U18dB`); 24-bit at 48 kHz only (`S24_3LE`), stereo on older units and
@@ -227,7 +235,8 @@ Appended to the inventory 2026-11-03 to 2026-11-05, confirmed by George:
   2026-11-05).
 - **[H]** The target: a gentle rise below about 80 Hz (decision 1).
 - **[H]** The bass limit, 250 Hz (decision 3).
-- **[H]** Five positions, eight cuts of up to 12 dB, 75 dB SPL.
+- **[H]** Five positions, eight cuts of up to 12 dB; the level about 20 dB
+  over the room's noise, 55 to 65 dB SPL (George, 2026-11-05, over 75 dB).
 - **[N]** A/B, with or without, for each output (2026-11-04).
 - **[H]** A 3-second countdown at each position (2026-11-04).
 - **[H]** A run waiting for a tap is cancelled after 10 minutes (2026-11-05).
