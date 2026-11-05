@@ -8,7 +8,7 @@ it is (the design's R18), and the panel shows that it is running. The steps:
 1. *place* - the device taken (what plays stops, nothing else can start),
    waiting for *Start*;
 2. *level* - the quiet room listened to, then soft noise, louder in steps
-   until the seat hears about 20 dB over the room's noise (55 to 65 dB),
+   until the seat hears about 20 dB over the room's noise (50 to 60 dB),
    never above the output's maximum level;
 3. *measure* - each speaker alone, two sweeps that agree, at position 1;
    then *move* (waiting for *Measure here*), a 3-second *countdown*, and
@@ -43,15 +43,15 @@ COUNTDOWN_S = 3
 #: George, 2026-11-05: a run waiting for a tap is cancelled after this.
 TIMEOUT_S = 600
 #: **The level aimed for at the seat** (George, 2026-11-05, over the 75 dB
-#: first proposed, which sofapi's run found far too loud): about 20 dB above
-#: the room's own noise in the bass, between 55 and 65 dB; and how close is
-#: close enough. A level that cannot reach the aim is still taken from 55 dB
-#: and 12 dB above the noise.
+#: first proposed, which sofapi's run found far too loud, and then 65): about
+#: 20 dB above the room's own noise in the bass, between 50 and 60 dB at
+#: most; and how close is close enough. A level that cannot reach the aim is
+#: still taken from 45 dB and 15 dB above the noise.
 AIM_ABOVE_NOISE = 20.0
-AIM_MIN, AIM_MAX = 55.0, 65.0
+AIM_MIN, AIM_MAX = 50.0, 60.0
 AIM_WITHIN = 1.5
-TAKE_MIN = 55.0
-TAKE_ABOVE_NOISE = 12.0
+TAKE_MIN = 45.0
+TAKE_ABOVE_NOISE = 15.0
 #: How long the quiet room is listened to first.
 NOISE_S = 1.5
 
@@ -182,30 +182,48 @@ class Run:
         self._checked: dict[str, list] = {c: [] for c in rc.CHANNELS}
         self._designs: dict = {}
         self._waiting = False
+        self._prep: asyncio.Future | None = None
+        self._finishing = False
+        #: The player put back after the run: no other source until then.
+        self.released = False
 
     # -- what the control calls ----------------------------------------------------
 
     async def start(self) -> None:
-        try:
-            await self._host.take()
-            await self._host.stage(None)
-            await self._host.loud()
-        except Exception:
-            await self._end("failed")
-            raise
+        """**Begins at once** (George, 2026-11-05: Measure was slow to
+        answer): the run shows *place* from here, and the player is prepared
+        behind it - the device taken, the stage in the path, the level - while
+        the microphone is put in place. *Start* waits for that."""
         self._set(RunState("place"))
+        self._prep = asyncio.ensure_future(self._prepare())
         self._task = asyncio.create_task(self._running())
+
+    async def _prepare(self) -> None:
+        await self._host.take()
+        await self._host.stage(None)
+        await self._host.loud()
 
     def tap(self, what: str) -> None:
         """`start`, `next` (*Measure here*), `check` (*Check it*), `skip`,
         `keep`, `discard`, `again` (*Try again*), `done`."""
         self._taps.put_nowait(what)
 
-    async def cancel(self) -> None:
+    def cancel(self) -> None:
+        """**Cancel is instant** (George, 2026-11-05): the end is shown at
+        once and the sound stops (the run's task is cancelled, which stops
+        what plays); putting the player back follows, and other sources are
+        let in once it has (`released`)."""
+        if self.ended is None:
+            self.ended = {"how": "cancelled", "why": "cancel"}
+            self._host.publish(None, dict(self.ended))
         if self._task is not None and not self._task.done():
             self._task.cancel()
+
+    async def wait(self) -> None:
+        """Until the run, its putting back included, is over."""
+        if self._task is not None:
             try:
-                await self._task
+                await asyncio.shield(self._task)
             except asyncio.CancelledError:
                 pass
 
@@ -246,6 +264,9 @@ class Run:
     async def _running(self) -> None:
         how, why = "failed", None
         try:
+            # Shielded: cancelling never stops it halfway through a rewrite
+            # of the chain; `_end` waits for it before putting things back.
+            await asyncio.shield(self._prep)
             how = await self._steps()
         except Cancelled as exc:
             how, why = "cancelled", str(exc)
@@ -294,14 +315,21 @@ class Run:
         return "kept" if await self._wait("keep", "discard") == "keep" else "discarded"
 
     async def _end(self, how: str, why: str | None = None) -> None:
-        if self.ended is not None:
+        if self.ended is None:
+            self.ended = {"how": how, "why": why}
+            self._host.publish(None, dict(self.ended))
+        if self._finishing:
             return
-        self.ended = {"how": how, "why": why}
+        self._finishing = True
+        if self._prep is not None and not self._prep.done():
+            await asyncio.wait([self._prep])
         try:
-            await self._host.finish(self.pending if how == "kept" else None)
+            await self._host.finish(self.pending if self.ended["how"] == "kept" else None)
         except Exception:  # noqa: BLE001
             logger.exception("room: could not put the player back")
-        logger.info("room: the run ended (%s%s)", how, f", {why}" if why else "")
+        self.released = True
+        logger.info("room: the run ended (%s%s)", self.ended["how"],
+                    f", {self.ended['why']}" if self.ended.get("why") else "")
         self._host.publish(None, dict(self.ended))
 
     async def _move(self, n: int, checking: bool) -> str:

@@ -808,9 +808,9 @@ nothing to press. On the player's screen, *Measure from your phone* (or
 2. Put the microphone where your head is, on a stand at ear height,
    pointing at the ceiling, and tap **Start**.
 3. The player listens to the quiet room, then soft noise gets louder until
-   the microphone hears it about 20 dB above the room's own noise - 55 to
-   65 dB, about as loud as a conversation - never above the output's
-   *Maximum volume*. Only if it cannot reach 55 dB, turn the amplifier up a
+   the microphone hears it about 20 dB above the room's own noise - 50 to
+   60 dB at most, quieter than a conversation - never above the output's
+   *Maximum volume*. Only if it cannot reach 45 dB, turn the amplifier up a
    little and tap **Try again**.
 4. Each speaker plays two sweeps on its own, about 25 seconds a position.
    Then move the microphone where the phone shows - five positions within

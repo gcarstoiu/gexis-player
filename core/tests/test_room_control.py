@@ -100,7 +100,7 @@ class Rig:
                 await self.control.tap("next")
         await self.run_to("result")
         await self.control.tap("keep" if keep else "discard")
-        await asyncio.wait_for(self.control.run._task, 10)
+        await asyncio.wait_for(self.control.run.wait(), 10)
 
 
 def test_the_day_as_the_screens_say_it():
@@ -173,6 +173,9 @@ async def test_while_it_runs_the_player_is_held_and_the_equaliser_flat():
     with pytest.raises(RoomError, match="Not while"):
         await rig.control.update({"on": False})
     await rig.control.tap("cancel")
+    assert rig.control.summary()["ended"] == {"how": "cancelled", "why": "cancel"}, "shown at once"
+    assert rig.control.summary()["run"] is None
+    await rig.control.run.wait()
     assert rig.control.frozen() is None and not rig.control.in_path("sndrpihifiberry")
     assert ("reopen", "room correction measured") in rig.calls, "the stage taken out again"
     assert rig.names()[-1] == "release"

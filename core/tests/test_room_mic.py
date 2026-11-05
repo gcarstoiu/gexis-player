@@ -59,3 +59,46 @@ def test_the_level_in_db_spl_as_rew_reads_the_sensitivity():
     assert room_mic.spl_offset(cal, Microphone("U18dB", 18.0)) == 94.667
     assert room_mic.spl_offset(cal, Microphone("U12dB", 12.0)) == 100.667, "its switches set 6 dB less"
     assert room_mic.spl_offset(cal, Microphone("UMIK1", None)) == 94.667
+
+
+async def test_a_cancelled_signal_stops_its_sound(monkeypatch):
+    """The player and the recorder are both stopped when a run is cancelled
+    mid-sweep (George, 2026-11-05: Cancel should be instant)."""
+    import asyncio
+
+    import pytest
+    np = pytest.importorskip("numpy")
+    procs = []
+
+    class Proc:
+        def __init__(self, name):
+            self.name, self.returncode, self.killed = name, None, False
+            self.stdout = self
+
+        async def read(self):
+            await asyncio.sleep(60)
+            return b""
+
+        async def communicate(self, data=None):
+            await asyncio.sleep(60)
+            return b"", b""
+
+        async def wait(self):
+            return 0
+
+        def kill(self):
+            self.killed, self.returncode = True, -9
+
+    async def exec_(*args, **_kwargs):
+        p = Proc(args[0])
+        procs.append(p)
+        return p
+
+    cal = rc.Calibration("7071234", -0.7, ((10.0, 0.0), (20000.0, 0.0)), "2026-11-05")
+    audio = room_mic.Audio(Microphone("UMIK1", None), cal, exec_=exec_)
+    task = asyncio.create_task(audio.play(np.zeros(48000), channel=0))
+    await asyncio.sleep(room_mic.LEAD_S + 0.1)
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert [p.name for p in procs] == ["arecord", "aplay"] and all(p.killed for p in procs)

@@ -51,12 +51,28 @@ export class RoomReader {
     this.#timer = poll ? setInterval(() => this.read(), 2000) : null;
   }
 
+  #reading = false;
+  #again = false;
+
+  //: One read at a time: asked again while one is out, the next follows it
+  //: (sofapi, 2026-11-05: a dozen reads within a third of a second).
   async read() {
+    if (this.#reading) {
+      this.#again = true;
+      return;
+    }
+    this.#reading = true;
     try {
       this.full = await readRoom();
       this.error = null;
     } catch (e) {
       this.error = e.message;
+    } finally {
+      this.#reading = false;
+    }
+    if (this.#again) {
+      this.#again = false;
+      this.read();
     }
   }
 

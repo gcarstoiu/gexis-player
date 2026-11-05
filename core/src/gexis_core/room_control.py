@@ -100,7 +100,9 @@ class RoomControl:
         return Room.from_settings(self._store.get(rc.KEY))
 
     def running(self) -> bool:
-        return self.run is not None and self.run.running
+        """A run shows: from its start until it has ended (Cancel ends it at
+        once, though putting the player back follows)."""
+        return self.run is not None and self.run.ended is None
 
     def _active(self, card: str | None = None) -> bool:
         """A run holds the player (from its start to its end, *Keep it*'s
@@ -127,8 +129,9 @@ class RoomControl:
 
     def frozen(self) -> str | None:
         """The reason no source may take the device (arbitration's `frozen`),
-        while a run holds it."""
-        return "the room is being measured" if self._active() else None
+        while a run holds it - until the player is put back after it."""
+        held = self.run is not None and not self.run.released
+        return "the room is being measured" if held else None
 
     def _microphone(self) -> dict:
         status, mic = self._find_mic()
@@ -166,7 +169,7 @@ class RoomControl:
                 "date": measured.date, "day": day(measured.date), "checked": measured.checked},
             "row": self._row(here),
             "dsd": bool(here.on and self._dsd()),
-            "run": run.state.as_dict() if (run is not None and run.running) else None,
+            "run": run.state.as_dict() if self.running() else None,
             "ended": self._ended,
         }
 
@@ -206,8 +209,12 @@ class RoomControl:
                          for k in rc.CHANNELS}}
         return out
 
+    def _held(self) -> bool:
+        """A run, or putting the player back after one."""
+        return self.run is not None and not self.run.released
+
     def _can_measure(self, mic: dict) -> tuple[bool, str | None]:
-        if self.running():
+        if self._held():
             return False, "running"
         if mic["state"] != "found":
             return False, "microphone"
@@ -241,7 +248,7 @@ class RoomControl:
             if key in changes and not isinstance(changes[key], bool):
                 raise RoomError(f"{key.capitalize()} is true or false.")
         async with self._lock:
-            if self.running():
+            if self._held():
                 raise RoomError("Not while the room is being measured.")
             card = self._card()
             old = self.state()
@@ -310,7 +317,7 @@ class RoomControl:
     async def tap(self, what: str) -> dict:
         if what == "cancel":
             if self.run is not None:
-                await self.run.cancel()
+                self.run.cancel()
             return self.snapshot()
         if what == "done":
             # The phone has shown how it ended; nothing left to show.

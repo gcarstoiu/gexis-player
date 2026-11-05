@@ -135,6 +135,7 @@ class Audio:
         rec = await self._exec("arecord", "-q", "-D", self.mic.device, "-f", "S32_LE", "-r", str(FS),
                                "-c", "1", "-t", "raw", "-s", str(samples), stdout=asyncio.subprocess.PIPE)
         reading = asyncio.create_task(rec.stdout.read())
+        play = None
         try:
             await asyncio.sleep(LEAD_S)
             play = await self._exec("aplay", "-q", "-D", self._playback, "-f", "S32_LE", "-r", str(FS),
@@ -146,8 +147,9 @@ class Audio:
             raw = await asyncio.wait_for(reading, len(signal) / FS + LEAD_S + tail_s + 5)
             await rec.wait()
         except BaseException:
-            for p in (rec,):
-                if p.returncode is None:
+            # Cancelled (or broken) mid-signal: the sound stops now.
+            for p in (play, rec):
+                if p is not None and p.returncode is None:
                     p.kill()
             reading.cancel()
             raise
