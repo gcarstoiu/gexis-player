@@ -242,8 +242,9 @@ chart: the left speaker's main peak at 45 Hz cut by 2 dB, the right's by 1):
   design leaves 0.85 dB RMS above the target where one deeper cut leaves
   1.26 (it loses the cut at 68 Hz). The screens list cuts at one frequency
   as one line.
-- **Boosts stay out** (decision 2 kept, George asking its pros and cons the
-  same day): the one dip all three of sofapi's positions share, the right's
+- **Boosts**: decision 2 stands, none; George asked for their pros and cons
+  the same day (Claude's answer: cuts only). The one dip all three of
+  sofapi's positions share, the right's
   at 85-113 Hz, is 8 to 18 dB deep and moves from place to place - a
   cancellation - and option (b)'s +3 dB would lift it by about 2.
 - **Both speakers together** (item 4), swept at each position after each
