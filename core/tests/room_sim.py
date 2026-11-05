@@ -95,14 +95,14 @@ class Audio:
     def spl_offset(self, cal):
         return self.offset
 
-    async def play(self, signal, channel):
+    async def play(self, signal, channel, tail_s=1.1):
         self.plays.append((channel, self.position))
         seed = (channel or 0) * 100 + self.position
         if channel is not None:
             self.sweeps += 1
         burst = (0.5, -20) if (channel is not None and self.sweeps in self.bursts) else None
         modes = self.modes
-        recording = record(signal, seed=seed, modes=modes, noise_db=-110, burst=burst, tail_s=1.1)
+        recording = record(signal, seed=seed, modes=modes, noise_db=-110, burst=burst, tail_s=tail_s)
         if self.stage is not None and channel is not None:
             # The stage's cuts, as CamillaDSP would play them.
             cuts = [rd.Cut(f, g, q) for f, g, q in self.stage[channel]]

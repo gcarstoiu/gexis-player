@@ -121,9 +121,9 @@ class Audio:
             # A unit without a capture control has nothing to set.
             logger.info("room: %s's capture volume not set (%s)", self.mic.card, err.decode(errors="replace").strip())
 
-    async def play(self, signal, channel: int | None):
+    async def play(self, signal, channel: int | None, tail_s: float = TAIL_S):
         """`signal` played - to both speakers, or to `channel` alone - while
-        the microphone listens from `LEAD_S` before to `TAIL_S` after; the
+        the microphone listens from `LEAD_S` before to `tail_s` after; the
         recording, as floats."""
         import numpy as np
         signal = np.clip(np.asarray(signal, dtype=float), -1.0, 1.0)
@@ -131,7 +131,7 @@ class Audio:
         for c in ((0, 1) if channel is None else (channel,)):
             frames[:, c] = signal
         data = (frames * (2 ** 31 - 1)).astype("<i4").tobytes()
-        samples = int((LEAD_S + len(signal) / FS + TAIL_S) * FS)
+        samples = int((LEAD_S + len(signal) / FS + tail_s) * FS)
         rec = await self._exec("arecord", "-q", "-D", self.mic.device, "-f", "S32_LE", "-r", str(FS),
                                "-c", "1", "-t", "raw", "-s", str(samples), stdout=asyncio.subprocess.PIPE)
         reading = asyncio.create_task(rec.stdout.read())
@@ -143,7 +143,7 @@ class Audio:
             _, perr = await play.communicate(data)
             if play.returncode:
                 raise RuntimeError(f"aplay: {perr.decode(errors='replace').strip()}")
-            raw = await asyncio.wait_for(reading, len(signal) / FS + LEAD_S + TAIL_S + 5)
+            raw = await asyncio.wait_for(reading, len(signal) / FS + LEAD_S + tail_s + 5)
             await rec.wait()
         except BaseException:
             for p in (rec,):

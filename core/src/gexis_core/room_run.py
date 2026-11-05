@@ -50,6 +50,10 @@ LEVEL_START_DBFS = -54.0
 LEVEL_STEP_DB = 3.0
 LEVEL_CAP_DBFS = -12.0
 LEVEL_BURST_S = 1.0
+#: Where in a burst's recording the level is read: from the lead's end and
+#: the chain's start to before the burst's fade - the noise alone.
+LEVEL_WINDOW_S = (0.5, 1.2)
+LEVEL_TAIL_S = 0.2
 #: The noise is raised only while the microphone follows it: steps that
 #: move the reading by less than this did not reach it. The first steps may
 #: be under the room's own noise, so it takes this many in a row (24 dB)
@@ -307,8 +311,9 @@ class Run:
         last = None
         unheard = 0
         while True:
-            recording = await self._audio.play(noise * 10 ** (level / 20), channel=None)
-            spl = self._spl(recording[int(0.2 * dsp.FS):])
+            recording = await self._audio.play(noise * 10 ** (level / 20), channel=None, tail_s=LEVEL_TAIL_S)
+            lo, hi = (int(t * dsp.FS) for t in LEVEL_WINDOW_S)
+            spl = self._spl(recording[lo:hi])
             self._set(replace(self.state, level_db=spl))
             if abs(spl - AIM_SPL) <= AIM_WITHIN:
                 break

@@ -179,7 +179,7 @@ async def test_a_microphone_that_does_not_hear_stops_the_level_early():
     """The noise is raised only while the microphone follows it."""
     audio = Audio(offset=60.0)
 
-    async def silent(signal, channel):
+    async def silent(signal, channel, tail_s=1.5):
         audio.plays.append((channel, 1))
         return np.random.default_rng(len(audio.plays)).standard_normal(len(signal) + 48000) * 1e-4
     audio.play = silent
