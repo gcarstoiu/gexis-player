@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,300..800&family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
+<style>html,body{margin:0;padding:0;background:#0c1014;}a{color:#7ed6bc;}a:hover{color:#a8e5d3;}</style>
+</helmet>
+<div style="min-height:100vh;background:#0c1014;color:#e9eef2;font-family:'Nunito Sans','Avenir Next','Segoe UI',system-ui,sans-serif;padding:40px 48px 80px;box-sizing:border-box;display:flex;flex-direction:column;gap:44px;">
+  <header style="display:flex;flex-direction:column;gap:12px;max-width:1100px;">
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(233,238,242,0.6);">Phase 29 · ADR-0175 · room correction</span>
+    <h1 style="margin:0;font-size:36px;font-weight:800;letter-spacing:-0.015em;">Room correction, every surface and state</h1>
+    <p style="margin:0;font-size:16px;line-height:1.5;color:rgba(233,238,242,0.78);max-width:80ch;text-wrap:pretty;">Each artboard is live: tap through the phone flow, switch Left and Right, try Hear it without. Curves are made up from an invented room. Every theme is the same file recoloured by the Phase 28 build.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;">
+      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="6">
+        <a href="{{ t.href }}" style="height:40px;padding:0 16px;border-radius:10px;box-sizing:border-box;display:flex;align-items:center;font-size:15px;font-weight:700;text-decoration:none;background:{{ t.bg }};border:1px solid {{ t.line }};color:{{ t.ink }};">{{ t.name }}</a>
+      </sc-for>
+    </div>
+  </header>
+
+  <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;max-width:1400px;">
+    <sc-for list="{{ notes }}" as="n" hint-placeholder-count="6">
+      <div style="background:#101a21;border:1px solid rgba(233,238,242,0.1);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:6px;">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:{{ n.ink }};">{{ n.kind }}</span>
+        <span style="font-size:16px;font-weight:700;">{{ n.title }}</span>
+        <span style="font-size:14px;line-height:1.5;color:rgba(233,238,242,0.78);text-wrap:pretty;">{{ n.body }}</span>
+      </div>
+    </sc-for>
+  </section>
+
+  <sc-for list="{{ groups }}" as="g" hint-placeholder-count="4">
+    <section style="display:flex;flex-direction:column;gap:18px;">
+      <div style="display:flex;align-items:baseline;gap:16px;">
+        <h2 style="margin:0;font-size:24px;font-weight:800;">{{ g.title }}</h2>
+        <span style="font-size:15px;color:rgba(233,238,242,0.6);">{{ g.sub }}</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start;">
+        <sc-for list="{{ g.items }}" as="a" hint-placeholder-count="6">
+          <div id="{{ a.id }}" data-screen-label="{{ a.id }}" style="display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;gap:10px;align-items:baseline;max-width:{{ a.boxW }};">
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:#7ed6bc;">{{ a.id }}</span>
+              <span style="font-size:14px;color:rgba(233,238,242,0.78);">{{ a.label }}</span>
+            </div>
+            <div style="overflow:hidden;border-radius:8px;background:#000;width:{{ a.boxW }};height:{{ a.boxH }};">
+              <iframe src="{{ a.src }}" title="{{ a.id }}" loading="lazy" style="border:0;display:block;transform-origin:0 0;width:{{ a.w }};height:{{ a.h }};transform:{{ a.scale }};"></iframe>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const THEMES = [['', 'Default (Deep Teal)'], ['bauhaus', 'Bauhaus'], ['sage', 'Sage'], ['velvet', 'Velvet'], ['ink', 'Ink'], ['gauge', 'Gauge']];
+const PH = [412, 880], PN = [1280, 800], BR = [1850, 400], TR = [412, 280];
+const A = (id, label, size, q, scale) => ({ id, label, size, q, scale });
+const GROUPS = [
+  { title: 'Phone · Settings and before', sub: 'Settings → Audio, then the page before a first measurement', items: [
+    A('R01', 'Audio · not measured yet', PH, 'surface=phone&screen=audio&v=never'),
+    A('R02', 'Audio · on', PH, 'surface=phone&screen=audio&v=on'),
+    A('R03', 'Audio · without', PH, 'surface=phone&screen=audio&v=without'),
+    A('R04', 'Audio · off', PH, 'surface=phone&screen=audio&v=off'),
+    A('R05', 'Before · ready', PH, 'surface=phone&screen=before&v=ok'),
+    A('R06', 'Before · a source playing', PH, 'surface=phone&screen=before&v=playing'),
+    A('R07', 'Before · DSD playing', PH, 'surface=phone&screen=before&v=dsd'),
+    A('R08', 'Microphone · not plugged in', PH, 'surface=phone&screen=before&v=nomic'),
+    A('R09', 'Microphone · another one', PH, 'surface=phone&screen=before&v=othermic'),
+    A('R10', 'Calibration · downloading', PH, 'surface=phone&screen=before&v=downloading'),
+    A('R11', 'Calibration · no file, type it', PH, 'surface=phone&screen=before&v=nofile'),
+    A('R12', 'Calibration · typed', PH, 'surface=phone&screen=before&v=typed')
+  ] },
+  { title: 'Phone · the run', sub: 'Cancel on every step; it never carries on to a new position by itself', items: [
+    A('R13', 'Place the microphone', PH, 'surface=phone&screen=place'),
+    A('R14', 'Finding the level · rising', PH, 'surface=phone&screen=level'),
+    A('R15', 'Finding the level · too quiet', PH, 'surface=phone&screen=level&v=quiet'),
+    A('R16', 'Measuring · position 1, right sweep 1 of 2', PH, 'surface=phone&screen=measure&n=1&spk=R&sweep=1'),
+    A('R17', 'Measuring · a noise spoiled a sweep', PH, 'surface=phone&screen=measure&v=noise&n=3&spk=L&sweep=2'),
+    A('R18', 'Measuring · page opened again mid-run', PH, 'surface=phone&screen=measure&resumed=true&n=3&spk=R&sweep=2'),
+    A('R19', 'Move the microphone · waits for the tap', PH, 'surface=phone&screen=move&n=2'),
+    A('R20', 'Move · the countdown', PH, 'surface=phone&screen=move&n=2&v=count&count=3'),
+    A('R21', 'The correction · left', PH, 'surface=phone&screen=correction&ch=L'),
+    A('R22', 'The correction · right', PH, 'surface=phone&screen=correction&ch=R'),
+    A('R23', 'Nothing to cut', PH, 'surface=phone&screen=correction&v=nothing'),
+    A('R24', 'Checking · Skip offered', PH, 'surface=phone&screen=checking&n=3'),
+    A('R25', 'The result · measured', PH, 'surface=phone&screen=result'),
+    A('R26', 'The result · not checked', PH, 'surface=phone&screen=unchecked'),
+    A('R27', 'Cancelled', PH, 'surface=phone&screen=cancelled')
+  ] },
+  { title: 'Phone · Room correction page', sub: 'On / off, the A/B, the last measurement, the chart', items: [
+    A('R28', 'On', PH, 'surface=phone&screen=page&v=on'),
+    A('R29', 'Without (A/B)', PH, 'surface=phone&screen=page&v=without'),
+    A('R30', 'Off', PH, 'surface=phone&screen=page&v=off'),
+    A('R31', 'Not checked', PH, 'surface=phone&screen=page&v=unchecked'),
+    A('R32', 'DSD playing', PH, 'surface=phone&screen=page&v=dsd'),
+    A('R33', 'A player without a screen · place', PH, 'surface=phone&screen=place&screenless=true'),
+    A('R34', '360 px · the correction', [360, 800], 'surface=phone&screen=correction'),
+    A('R35', '360 px · the page', [360, 800], 'surface=phone&screen=page&v=on')
+  ] },
+  { title: 'Panel · 1280 × 800', sub: 'The page, and the screen while it measures', items: [
+    A('N01', 'On', PN, 'surface=panel&screen=page&v=on'),
+    A('N02', 'Without (A/B)', PN, 'surface=panel&screen=page&v=without'),
+    A('N03', 'Off', PN, 'surface=panel&screen=page&v=off'),
+    A('N04', 'Not checked', PN, 'surface=panel&screen=page&v=unchecked'),
+    A('N05', 'DSD playing', PN, 'surface=panel&screen=page&v=dsd'),
+    A('N06', 'Never measured', PN, 'surface=panel&screen=page&v=never'),
+    A('N07', 'Measure from your phone', PN, 'surface=panel&screen=page&v=on&sheet=true'),
+    A('N08', 'Running · finding the level', PN, 'surface=panel&screen=run&v=level'),
+    A('N09', 'Running · a sweep', PN, 'surface=panel&screen=run&v=sweep&n=2&spk=R'),
+    A('N10', 'Running · waiting for the tap', PN, 'surface=panel&screen=run&v=wait'),
+    A('N11', 'Running · the countdown', PN, 'surface=panel&screen=run&v=count'),
+    A('N12', 'Running · checking', PN, 'surface=panel&screen=run&v=check&n=3')
+  ] },
+  { title: 'Bars · 1850 × 400 at 0.8, and 1280 × 400', sub: 'The page and the running screen', items: [
+    A('B01', 'On', BR, 'surface=bar&screen=page&v=on', 0.8),
+    A('B02', 'Without (A/B)', BR, 'surface=bar&screen=page&v=without', 0.8),
+    A('B03', 'Never measured', BR, 'surface=bar&screen=page&v=never', 0.8),
+    A('B04', 'Measure from your phone', BR, 'surface=bar&screen=page&v=on&sheet=true', 0.8),
+    A('B05', 'Running · a sweep', BR, 'surface=bar&screen=run&v=sweep&n=2&spk=R', 0.8),
+    A('B06', 'Running · waiting for the tap', BR, 'surface=bar&screen=run&v=wait', 0.8),
+    A('B07', '1280 · on', [1280, 400], 'surface=bar&screen=page&v=on&w=1280'),
+    A('B08', '1280 · running', [1280, 400], 'surface=bar&screen=run&v=sweep&n=2&spk=R&w=1280')
+  ] },
+  { title: 'Close to the music', sub: 'A tap on Room is the A/B. Off: it opens the page. Never measured: not shown.', items: [
+    A('Q01', 'Volume drawer · on', PN, 'surface=drawer&v=on'),
+    A('Q02', 'Volume drawer · without', PN, 'surface=drawer&v=without'),
+    A('Q03', 'Volume drawer · off', PN, 'surface=drawer&v=off'),
+    A('Q04', 'Volume drawer · DSD', PN, 'surface=drawer&v=dsd'),
+    A('Q05', 'Bar tray · on', BR, 'surface=bartray&v=on', 0.8),
+    A('Q06', 'Bar tray · without', BR, 'surface=bartray&v=without', 0.8),
+    A('Q07', 'Bar tray · off', BR, 'surface=bartray&v=off', 0.8),
+    A('Q08', 'Phone tray · on', TR, 'surface=phonetray&v=on'),
+    A('Q09', 'Phone tray · without', TR, 'surface=phonetray&v=without'),
+    A('Q10', 'Phone tray · off', TR, 'surface=phonetray&v=off'),
+    A('Q11', 'Phone tray · never measured', TR, 'surface=phonetray&v=never')
+  ] }
+];
+const NOTES = [
+  ['Proposed', 'The panel sends the owner to the phone', 'Measure again on the panel and the bars opens a sheet with a QR code and the address, straight to Settings · Audio · Room correction on the phone. Nothing on the panel starts a run.'],
+  ['Proposed', 'Off and never measured, close to the music', 'Off: the control reads Room · Off and opens the page; only on and without are a tap apart. Never measured: no Room control at all, so nothing invites a tap that cannot work. DSD: dimmed and inert, as the equaliser is.'],
+  ['Proposed', 'Which switch is the comparison', 'On / off is the power control in the header, as on the equaliser. Hear it without carries an A/B tag, sits apart, and turns amber when set, with Without in amber wherever the state is shown (Settings row, drawer, trays).'],
+  ['Proposed', 'The chart', 'Told apart by weight and dash: before is a solid line, each position a hairline, the target dotted, after measured thick and solid, after expected thick and dashed. What the cuts take away is shaded. Above 250 Hz is hatched and left alone.'],
+  ['Open', 'Does the check wait for taps?', 'The brief says the five positions are measured again in about a minute. Drawn as running on its own; if the microphone has to be moved, it should wait for Measure here at each position as the first pass does.'],
+  ['Open', 'Stopping from the panel', 'The panel only shows that it is running, as the brief asks. If the phone is lost mid-run the sweeps carry on until the run times out. A Stop on the panel would cover it.']
+];
+
+class Component extends DCLogic {
+  renderVals() {
+    let theme = '';
+    try { theme = new URLSearchParams(location.search).get('theme') || ''; } catch (e) {}
+    const file = theme ? theme + '-room.dc.html' : 'Room Correction.dc.html';
+    const tabs = THEMES.map(([id, name]) => { const on = id === theme; return { name, href: '?theme=' + id, bg: on ? 'rgba(126,214,188,0.16)' : 'rgba(233,238,242,0.05)', line: on ? 'rgba(126,214,188,0.55)' : 'rgba(233,238,242,0.12)', ink: on ? '#7ed6bc' : '#e9eef2' }; });
+    const groups = GROUPS.map(g => ({ ...g, items: g.items.map(a => { const k = a.scale || 1; return { id: a.id, label: a.label, src: encodeURI(file) + '?' + a.q, w: a.size[0] + 'px', h: a.size[1] + 'px', boxW: Math.round(a.size[0] * k) + 'px', boxH: Math.round(a.size[1] * k) + 'px', scale: k === 1 ? 'none' : 'scale(' + k + ')' }; }) }));
+    const notes = NOTES.map(([kind, title, body]) => ({ kind, title, body, ink: kind === 'Open' ? '#e0a758' : '#7ed6bc' }));
+    return { tabs, groups, notes };
+  }
+}
+</script>
+</body>
+</html>
