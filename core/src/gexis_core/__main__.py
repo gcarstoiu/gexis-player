@@ -4744,14 +4744,19 @@ async def main() -> None:
     # ADR-0175: room correction - its controller, and what a measurement
     # changes on the player: the device held, the volume at its maximum and
     # back, the stage's path.
-    room_volume = {"value": None}
+    #: **The level before a measurement, kept in the store** until the run
+    #: puts it back: a restart, a crash or a power cut mid-run would
+    #: otherwise leave the output at the run's maximum (sofapi, 2026-11-05:
+    #: a core restarted mid-run left it at 100 %, not 44).
+    ROOM_VOLUME_KEY = "_room_volume_before"
 
     async def _room_take() -> None:
         await supervisor.stop_active()
 
     async def _room_loud() -> None:
         volume = state_store.state.volume
-        room_volume["value"] = (volume.percent, volume.muted) if volume is not None else None
+        if volume is not None and settings_store.get(ROOM_VOLUME_KEY) is None:
+            settings_store.set(ROOM_VOLUME_KEY, {"percent": volume.percent, "muted": bool(volume.muted)})
         if fixed_now["value"]:
             return
         if volume is not None and volume.muted:
@@ -4759,13 +4764,24 @@ async def main() -> None:
         await set_volume(100)
 
     async def _room_quiet() -> None:
-        was, room_volume["value"] = room_volume["value"], None
-        if was is None or fixed_now["value"]:
+        was = settings_store.get(ROOM_VOLUME_KEY)
+        if not isinstance(was, dict) or fixed_now["value"]:
+            settings_store.set(ROOM_VOLUME_KEY, None)
             return
-        percent, muted = was
-        await set_volume(percent)
-        if muted:
-            await set_mute(True)
+        try:
+            await set_volume(float(was.get("percent", 0)))
+            if was.get("muted"):
+                await set_mute(True)
+        finally:
+            settings_store.set(ROOM_VOLUME_KEY, None)
+
+    async def _room_volume_after_restart() -> None:
+        """A measurement cut short by a restart: the level it raised put
+        back to the one before it."""
+        was = settings_store.get(ROOM_VOLUME_KEY)
+        if isinstance(was, dict):
+            logger.info("room: a measurement was cut short; the volume back to %s%%", was.get("percent"))
+            await _room_quiet()
 
     async def _room_release() -> None:
         state_store.bump_settings_revision()
@@ -4799,6 +4815,7 @@ async def main() -> None:
         changed=state_store.bump_settings_revision,
     )
     asyncio.ensure_future(equaliser.sync())
+    asyncio.ensure_future(_room_volume_after_restart())
     room.publish()
 
     # ADR-0167 T9: covers a plugin hands over as bytes, served by the
