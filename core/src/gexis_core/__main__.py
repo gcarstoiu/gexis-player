@@ -4794,6 +4794,7 @@ async def main() -> None:
         busy=_installing,
         screen=lambda: settings.value("headless") is not True,
         playing=_room_playing,
+        address=lambda: f"{device_name.hostname()}.local:{config.state_port}",
         publish=state_store.set_room,
         changed=state_store.bump_settings_revision,
     )

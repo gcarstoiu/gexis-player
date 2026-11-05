@@ -14143,6 +14143,20 @@
           "pending": {
             "type": "object",
             "description": "While a measurement shows its correction or result: its chart and cuts, before *Keep it*."
+          },
+          "address": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "The player's page for a phone, opened at Room correction: `shown` as it is typed (`<name>.local:8090`), `url` with `#room`."
+          },
+          "playing": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "What a measurement would stop: `source` by name, and `dsd`."
           }
         }
       },

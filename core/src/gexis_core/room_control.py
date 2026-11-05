@@ -58,6 +58,7 @@ class RoomControl:
                  busy: Callable[[], str | None] = lambda: None,
                  screen: Callable[[], bool] = lambda: True,
                  playing: Callable[[], str | None] = lambda: None,
+                 address: Callable[[], str | None] = lambda: None,
                  find_mic=None, audio=None,
                  publish: Callable[[dict], None] = lambda summary: None,
                  changed: Callable[[], None] = lambda: None,
@@ -79,6 +80,7 @@ class RoomControl:
         self._busy = busy
         self._screen = screen
         self._playing = playing
+        self._address = address
         self._find_mic = find_mic or room_mic.find
         self._audio = audio or (lambda mic, cal: room_mic.Audio(mic, cal))
         self._publish = publish
@@ -182,6 +184,10 @@ class RoomControl:
         out["can_measure"], out["why_not"] = self._can_measure(out["microphone"])
         out["screen"] = bool(self._screen())
         out["playing"] = self._playing()
+        # The panel's *Measure from your phone*: the player's page, opened
+        # at Room correction (`#room`), and the address as it is typed.
+        at = self._address()
+        out["address"] = None if not at else {"shown": at, "url": f"http://{at}/#room"}
         out["eq_on"] = bool(self._eq_on(output.card))
         out["chart"] = rc.chart(measured)
         if measured is not None:
