@@ -680,11 +680,14 @@ hw:Loopback,1,0 → CamillaDSP (headroom fader, ten bands, then eight cuts on th
   (`aplay`, S32_LE, 48 kHz, one speaker at a time), and recorded from the
   UMIK-1 (`arecord` through `plughw`, mono 48 kHz), found by its USB
   identity `2752:0007` and its capture volume set to the full.
-- **The level step**: band-limited pink noise from −54 dBFS in 3 dB steps
-  until the microphone reads about 75 dB SPL (its calibration's sensitivity
-  line read as REW does: the RMS level at 94 dB SPL at full capture volume),
-  never above −12 dBFS, and only while the reading follows the steps (eight
-  steps that do not move it end it as *too quiet*).
+- **The level step**: the quiet room recorded first; then band-limited pink
+  noise from −54 dBFS in 3 dB steps until the microphone reads about 20 dB
+  above that noise, between 55 and 65 dB SPL (George, 2026-11-05; its
+  calibration's sensitivity line read as REW does: the RMS level at 94 dB
+  SPL at full capture volume), never above −12 dBFS. Short of the aim at
+  that ceiling, a level from 55 dB and 12 dB above the noise is taken; below,
+  *too quiet*. Once the noise is clearly heard, four steps that do not move
+  the reading end it.
 - **The sweeps**: a logarithmic sweep from 10 Hz to 1 kHz, 5 s, at the
   level found; the room's response is the recording's spectrum over the
   sweep's, windowed to a second from the arrival, the calibration file

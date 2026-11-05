@@ -7,7 +7,8 @@ it is (the design's R18), and the panel shows that it is running. The steps:
 
 1. *place* - the device taken (what plays stops, nothing else can start),
    waiting for *Start*;
-2. *level* - soft noise, louder in steps until the seat hears about 75 dB,
+2. *level* - the quiet room listened to, then soft noise, louder in steps
+   until the seat hears about 20 dB over the room's noise (55 to 65 dB),
    never above the output's maximum level;
 3. *measure* - each speaker alone, two sweeps that agree, at position 1;
    then *move* (waiting for *Measure here*), a 3-second *countdown*, and
@@ -41,9 +42,23 @@ logger = logging.getLogger("gexis_core.room_run")
 COUNTDOWN_S = 3
 #: George, 2026-11-05: a run waiting for a tap is cancelled after this.
 TIMEOUT_S = 600
-#: Item 4: the level aimed for at the seat, and how close is close enough.
-AIM_SPL = 75.0
+#: **The level aimed for at the seat** (George, 2026-11-05, over the 75 dB
+#: first proposed, which sofapi's run found far too loud): about 20 dB above
+#: the room's own noise in the bass, between 55 and 65 dB; and how close is
+#: close enough. A level that cannot reach the aim is still taken from 55 dB
+#: and 12 dB above the noise.
+AIM_ABOVE_NOISE = 20.0
+AIM_MIN, AIM_MAX = 55.0, 65.0
 AIM_WITHIN = 1.5
+TAKE_MIN = 55.0
+TAKE_ABOVE_NOISE = 12.0
+#: How long the quiet room is listened to first.
+NOISE_S = 1.5
+
+
+def aim_for(noise_spl: float) -> float:
+    """The level to aim for, from the room's noise."""
+    return min(AIM_MAX, max(AIM_MIN, noise_spl + AIM_ABOVE_NOISE))
 #: The level step: from this, in these steps, never above the cap - the
 #: signal's part; the volume is at the output's maximum (`host.loud`).
 LEVEL_START_DBFS = -54.0
@@ -54,12 +69,14 @@ LEVEL_BURST_S = 1.0
 #: the chain's start to before the burst's fade - the noise alone.
 LEVEL_WINDOW_S = (0.5, 1.2)
 LEVEL_TAIL_S = 0.2
-#: The noise is raised only while the microphone follows it: steps that
-#: move the reading by less than this did not reach it. The first steps may
-#: be under the room's own noise, so it takes this many in a row (24 dB)
-#: to stop.
+#: The noise is raised only while the microphone follows it: once it is
+#: clearly heard (`LEVEL_HEARD_OVER` above the room's noise), steps that
+#: move the reading by less than `LEVEL_HEARD_DB`, this many in a row, end
+#: it. Until it is heard the cap alone bounds it: the first steps may be
+#: well under the room's noise.
+LEVEL_HEARD_OVER = 6.0
 LEVEL_HEARD_DB = 1.5
-LEVEL_UNHEARD_STEPS = 8
+LEVEL_UNHEARD_STEPS = 4
 #: Item 4: sweeps per speaker at a position, and how many tries before the
 #: two that agree best are taken.
 SWEEPS = 2
@@ -83,6 +100,7 @@ class RunState:
     sweep: int = 0                  # 1-2 while one plays
     noise: bool = False             # the last sweep was spoiled and is repeated
     level_db: float | None = None   # at the seat, in the level step and after
+    aim_db: float | None = None     # the level aimed for (from the room's noise)
     count: int = 0                  # the countdown's number
     checking: bool = False          # the check's positions, not the run's
     progress: float = 0.0           # 0-1, as the design's §3
@@ -94,6 +112,7 @@ class RunState:
     def as_dict(self) -> dict:
         return {"step": self.step, "position": self.position, "speaker": self.speaker, "sweep": self.sweep,
                 "noise": self.noise, "level_db": None if self.level_db is None else round(self.level_db),
+                "aim_db": None if self.aim_db is None else round(self.aim_db),
                 "count": self.count, "checking": self.checking, "progress": round(self.progress, 3),
                 "done": list(self.done), "expected": self.expected, "too_quiet": self.too_quiet}
 
@@ -158,6 +177,7 @@ class Run:
         self.pending: rc.Measurement | None = None
         self.ended: dict | None = None        # {"how": cancelled|kept|discarded|done|failed, ...}
         self._level_dbfs = LEVEL_START_DBFS
+        self._aim: float | None = None
         self._positions: dict[str, list] = {c: [] for c in rc.CHANNELS}
         self._checked: dict[str, list] = {c: [] for c in rc.CHANNELS}
         self._designs: dict = {}
@@ -201,6 +221,8 @@ class Run:
     # -- the run ---------------------------------------------------------------------
 
     def _set(self, state: RunState) -> None:
+        if state.aim_db is None and self._aim is not None:
+            state = replace(state, aim_db=self._aim)
         self.state = state
         self._host.publish(state, None)
 
@@ -300,35 +322,50 @@ class Run:
         return self._dsp.band_level_db(recording) + self._audio.spl_offset(self._cal)
 
     async def _level(self) -> bool:
-        """**The level step** (item 4): pink noise from `LEVEL_START_DBFS`,
-        3 dB a step, until the seat hears about 75 dB; never above the cap,
-        and only while the microphone follows. False when it cannot get
-        there (*Too quiet*)."""
+        """**The level step** (item 4): the quiet room listened to first,
+        which sets the aim; then pink noise from `LEVEL_START_DBFS`, 3 dB a
+        step, until the seat hears about the aim - never above the cap, and
+        only while the microphone follows. A level short of the aim is taken
+        from `TAKE_MIN` and `TAKE_ABOVE_NOISE` over the noise; below that,
+        False (*Too quiet*)."""
         self._set(RunState("level", progress=0.05))
         dsp = self._dsp
+        import numpy as np
+        quiet = await self._audio.play(np.zeros(int(NOISE_S * dsp.FS)), channel=None, tail_s=LEVEL_TAIL_S)
+        lo, hi = (int(t * dsp.FS) for t in LEVEL_WINDOW_S)
+        room_noise = self._spl(quiet[lo:])
+        aim = aim_for(room_noise)
+        self._aim = aim
+        take = max(TAKE_MIN, room_noise + TAKE_ABOVE_NOISE)
+        self._set(replace(self.state, aim_db=aim))
+        logger.info("room: the room's noise %.0f dB at the seat; aiming for %.0f dB", room_noise, aim)
         noise = dsp.pink_noise(LEVEL_BURST_S)
         level = LEVEL_START_DBFS
         last = None
         unheard = 0
+        heard = False
         while True:
             recording = await self._audio.play(noise * 10 ** (level / 20), channel=None, tail_s=LEVEL_TAIL_S)
-            lo, hi = (int(t * dsp.FS) for t in LEVEL_WINDOW_S)
             spl = self._spl(recording[lo:hi])
             self._set(replace(self.state, level_db=spl))
-            if abs(spl - AIM_SPL) <= AIM_WITHIN:
+            if abs(spl - aim) <= AIM_WITHIN:
                 break
-            if spl > AIM_SPL:
-                level -= max(1.0, spl - AIM_SPL)
+            if spl > aim:
+                level -= max(1.0, spl - aim)
                 if level < LEVEL_START_DBFS - 30:
                     break
                 continue
-            if last is not None and spl - last < LEVEL_HEARD_DB:
+            heard = heard or spl >= room_noise + LEVEL_HEARD_OVER
+            if heard and last is not None and spl - last < LEVEL_HEARD_DB:
                 unheard += 1
             else:
                 unheard = 0
-            last = spl
-            step = min(LEVEL_STEP_DB, max(1.0, AIM_SPL - spl))
+            last = spl if heard else None
+            step = min(LEVEL_STEP_DB, max(1.0, aim - spl))
             if level + step > LEVEL_CAP_DBFS or unheard >= LEVEL_UNHEARD_STEPS:
+                if spl >= take and unheard < LEVEL_UNHEARD_STEPS:
+                    logger.info("room: %.0f dB at the seat at %.0f dBFS, short of %.0f: taken", spl, level, aim)
+                    break
                 logger.info("room: %.0f dB at the seat at %.0f dBFS: too quiet", spl, level)
                 return False
             level += step

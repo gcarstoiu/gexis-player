@@ -170,7 +170,8 @@
       case 'place': return ['Put the microphone where your head is', ''];
       case 'level': return tooQuiet
         ? [`Only ${run.level_db ?? '—'} dB at the seat`, "At the player's maximum level. Turn the amplifier up a little and try again."]
-        : ['Finding the level', 'Soft noise, getting louder until the microphone hears about 75 dB.'];
+        : ['Finding the level', run.aim_db == null ? 'Listening to the room first.'
+          : `Soft noise, getting louder until the microphone hears about ${run.aim_db} dB.`];
       case 'measure': return [`Position ${n} of 5`, ''];
       case 'move': return [checking && n === 1 ? 'Move it back to position 1' : `Move it to position ${n}`, ''];
       case 'correction': return [cutsHeading(pending?.cuts), ''];
@@ -199,7 +200,9 @@
   const showTracker = $derived(['measure', 'move', 'checking'].includes(screenName));
   const showSeat = $derived(['place', 'measure', 'move', 'checking'].includes(screenName));
   const done = $derived(run?.done ?? []);
-  const levelPct = (db) => `${Math.max(0, Math.min(100, Math.round(((db - 50) / 35) * 100)))}%`;
+  //: The scale round the aim, as the design's 50 · 75 · 85 is round 75.
+  const aim = $derived(run?.aim_db ?? 65);
+  const levelPct = (db) => `${Math.max(0, Math.min(100, Math.round(((db - (aim - 25)) / 35) * 100)))}%`;
   const checkPct = $derived(`${Math.round(Math.max(0, Math.min(1, ((run?.progress ?? 0.8) - 0.8) / 0.2)) * 100)}%`);
 
   //: The foot: [quiet, second, primary], each [label, action] or null.
@@ -316,9 +319,9 @@
           </div>
           <div class="track">
             <div class="track__fill" class:is-amber={tooQuiet} style="width:{run.level_db == null ? '0%' : levelPct(run.level_db)}"></div>
-            <div class="track__aim" style="left:{levelPct(75)}"></div>
+            <div class="track__aim" style="left:{levelPct(aim)}"></div>
           </div>
-          <div class="scale"><span>50</span><span class="scale__aim">75 dB · the aim</span><span>85</span></div>
+          <div class="scale"><span>{aim - 25}</span><span class="scale__aim">{aim} dB · the aim</span><span>{aim + 10}</span></div>
         </div>
         <div class="note">Never above the maximum level set for this output.</div>
       {/if}

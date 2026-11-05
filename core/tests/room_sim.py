@@ -83,8 +83,10 @@ class Audio:
     """The microphone in a made-up room: where it is, how loud the system
     plays, and a noise when asked for."""
 
-    def __init__(self, offset=120.0, modes=MODES, bursts=()):
+    def __init__(self, offset=120.0, modes=MODES, bursts=(), noise_db=-110.0, gain=1.0):
         self.offset = offset
+        self.noise_db = noise_db
+        self.gain = gain
         self.modes = modes
         self.position = 1
         self.plays = []
@@ -102,7 +104,8 @@ class Audio:
             self.sweeps += 1
         burst = (0.5, -20) if (channel is not None and self.sweeps in self.bursts) else None
         modes = self.modes
-        recording = record(signal, seed=seed, modes=modes, noise_db=-110, burst=burst, tail_s=tail_s)
+        recording = record(signal, seed=seed, modes=modes, noise_db=self.noise_db, burst=burst, tail_s=tail_s,
+                           gain=self.gain)
         if self.stage is not None and channel is not None:
             # The stage's cuts, as CamillaDSP would play them.
             cuts = [rd.Cut(f, g, q) for f, g, q in self.stage[channel]]

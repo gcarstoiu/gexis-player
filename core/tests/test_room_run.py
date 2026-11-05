@@ -146,14 +146,43 @@ async def test_each_speaker_alone_two_sweeps_each():
     await rig.run.cancel()
 
 
-async def test_the_level_comes_to_about_75_db():
-    rig = Rig()
+async def _level_only(audio):
+    rig = Rig(audio)
     await rig.run.start()
     await rig.until("place")
     rig.run.tap("start")
-    await rig.until("move", 2)
-    assert abs(rig.run.state.level_db - room_run.AIM_SPL) <= room_run.AIM_WITHIN
+    for _ in range(600):
+        s = rig.run.state
+        if s.too_quiet or s.step != "level" and s.step != "place":
+            break
+        await asyncio.sleep(0.01)
+    return rig
+
+
+async def test_the_level_aims_20_db_above_the_rooms_noise():
+    """George, 2026-11-05: from the room's noise, not 75 dB."""
+    rig = await _level_only(Audio(noise_db=-61))
+    s = rig.run.state
+    assert room_run.AIM_MIN < s.aim_db < room_run.AIM_MAX
+    assert not s.too_quiet and abs(s.level_db - s.aim_db) <= room_run.AIM_WITHIN
     assert rig.run._level_dbfs <= room_run.LEVEL_CAP_DBFS
+    await rig.run.cancel()
+
+
+async def test_a_quiet_room_aims_at_55_and_a_noisy_one_at_most_65():
+    assert room_run.aim_for(20) == 55 and room_run.aim_for(42) == 62 and room_run.aim_for(60) == 65
+    rig = await _level_only(Audio())
+    assert rig.run.state.aim_db == 55
+    await rig.run.cancel()
+
+
+async def test_short_of_the_aim_it_is_taken_from_55_db():
+    """At the cap, a level short of the aim but over 55 dB and 12 dB over
+    the noise goes on: nobody is asked to turn the amplifier up for it."""
+    rig = await _level_only(Audio(noise_db=-61, gain=10 ** (-54 / 20)))
+    s = rig.run.state
+    assert not s.too_quiet, s
+    assert s.level_db < s.aim_db - room_run.AIM_WITHIN and s.level_db >= room_run.TAKE_MIN
     await rig.run.cancel()
 
 
@@ -175,25 +204,48 @@ async def test_too_quiet_waits_for_try_again():
     await rig.run.cancel()
 
 
-async def test_a_microphone_that_does_not_hear_stops_the_level_early():
-    """The noise is raised only while the microphone follows it."""
+async def test_a_microphone_that_does_not_hear_goes_no_higher_than_the_cap():
+    """A covered microphone: the noise rises to the cap and no further."""
     audio = Audio(offset=60.0)
+    levels = []
 
     async def silent(signal, channel, tail_s=1.5):
         audio.plays.append((channel, 1))
+        levels.append(float(np.sqrt(np.mean(np.square(signal)))) if len(signal) else 0.0)
         return np.random.default_rng(len(audio.plays)).standard_normal(len(signal) + 48000) * 1e-4
     audio.play = silent
     rig = Rig(audio)
     await rig.run.start()
     await rig.until("place")
     rig.run.tap("start")
-    for _ in range(200):
+    for _ in range(300):
         if rig.run.state.too_quiet:
             break
         await asyncio.sleep(0.01)
-    steps = len(audio.plays)
-    assert steps <= room_run.LEVEL_UNHEARD_STEPS + 1
-    assert rig.run._level_dbfs < room_run.LEVEL_CAP_DBFS - 6
+    assert rig.run.state.too_quiet
+    loudest = 20 * np.log10(max(levels))
+    assert loudest <= room_run.LEVEL_CAP_DBFS + 0.5
+    await rig.run.cancel()
+
+
+async def test_a_microphone_that_stops_following_ends_it_early():
+    """Heard, then not following the steps (something saturates): it stops
+    within four steps, well under the cap."""
+    audio = Audio()
+    real = audio.play
+    count = {"n": 0}
+
+    async def flat(signal, channel, tail_s=1.5):
+        count["n"] += 1
+        # From the fourth burst on, the microphone hears the same as the third.
+        if count["n"] >= 4 and channel is None and len(signal) and np.any(signal):
+            signal = signal / np.sqrt(np.mean(np.square(signal))) * 10 ** ((room_run.LEVEL_START_DBFS + 6) / 20)
+        return await real(signal, channel, tail_s)
+    audio.play = flat
+    audio.offset = 90.0
+    rig = await _level_only(audio)
+    assert rig.run.state.too_quiet
+    assert count["n"] <= 1 + 3 + room_run.LEVEL_UNHEARD_STEPS + 1
     await rig.run.cancel()
 
 
