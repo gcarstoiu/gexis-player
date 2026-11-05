@@ -10,6 +10,7 @@
   import LockIcon from '../lib/LockIcon.svelte';
   import VolumeIcon from '../lib/VolumeIcon.svelte';
   import EqQuick from './eq/EqQuick.svelte';
+  import RoomQuick from './room/RoomQuick.svelte';
   import GroupGlyph from '../lib/GroupGlyph.svelte';
   import { group } from '../lib/group.svelte.js';
   import PanelGroupVolume from './group/PanelGroupVolume.svelte';
@@ -18,7 +19,7 @@
 
   //: `armsAt`: before this (performance.now()), a drawer that opened by
   //: itself takes no touch on its level or mute (App.svelte, VOLUME_ARM_MS).
-  let { open, armsAt = 0, volume, active, onclose, onexternal, onactivity, onsettled, onequaliser = null } = $props();
+  let { open, armsAt = 0, volume, active, onclose, onexternal, onactivity, onsettled, onequaliser = null, onroom = null } = $props();
 
   //: The level, dragging, mute and the changes from elsewhere: one copy,
   //: shared with the bar's tray (lib/volumeControl.svelte.js).
@@ -149,6 +150,8 @@
   <!-- ADR-0162 (design/source/20, Q01-Q05): the equaliser's quick change. -->
   <div class="eq">
     <EqQuick host="drawer" onedit={() => { onclose?.(); onequaliser?.(); }} />
+    <!-- ADR-0175 (design/source/29, Q01-Q04): room correction's, under it. -->
+    <RoomQuick host="drawer" onopen={() => { onclose?.(); onroom?.(); }} />
   </div>
 </div>
 
