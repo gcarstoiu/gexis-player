@@ -77,20 +77,36 @@
   async function finish(action) {
     await send(action);
   }
+  //: *Done* tells the player the end has been shown - always sent, even
+  //: with the last button's request still in flight.
+  async function sayDone() {
+    try {
+      await runRoom('done');
+    } catch {
+      // Nothing to show: the end stays until another page says it.
+    }
+  }
   async function doneAndLeave(toPage) {
-    await send('done');
+    await sayDone();
     if (toPage) onpage?.();
     else onback?.();
   }
   //: How a run that has ended takes this page: kept, to the page; discarded
-  //: or nothing to cut, back to Audio; cancelled, its own screen.
+  //: or nothing to cut, back to Audio; cancelled, its own screen. An end
+  //: this page did not see happen (the page opened after it) is cleared
+  //: quietly, and Before shows.
+  let sawRun = $state(false);
   let handled = $state(null);
+  $effect(() => {
+    if (run) sawRun = true;
+  });
   $effect(() => {
     const how = ended?.how;
     if (!how || handled === how || run) return;
     handled = how;
-    if (how === 'kept') doneAndLeave(true);
-    else if (how === 'discarded' || how === 'done') doneAndLeave(false);
+    if (how !== 'kept' && how !== 'discarded' && how !== 'done') return;
+    if (!sawRun) sayDone();
+    else doneAndLeave(how === 'kept');
   });
 
   async function pick(event) {
