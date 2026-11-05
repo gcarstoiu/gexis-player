@@ -242,6 +242,16 @@ chart: the left speaker's main peak at 45 Hz cut by 2 dB, the right's by 1):
   design leaves 0.85 dB RMS above the target where one deeper cut leaves
   1.26 (it loses the cut at 68 Hz). The screens list cuts at one frequency
   as one line.
+- **Boosts stay out** (decision 2 kept, George asking its pros and cons the
+  same day): the one dip all three of sofapi's positions share, the right's
+  at 85-113 Hz, is 8 to 18 dB deep and moves from place to place - a
+  cancellation - and option (b)'s +3 dB would lift it by about 2.
+- **Both speakers together** (item 4), swept at each position after each
+  alone, before in the run and after in the check, over the check only:
+  what is heard is the two adding at the seat, which neither alone shows,
+  and the store keeps levels, not the timing a sum would need. Shown as a
+  third tab, never designed from; 6 dB lower each, so no louder than one.
+  About 45 s more for the run and for the check.
 
 **What else the microphone is** (research, 2026-11-05, sources kept outside
 the repository): USB `2752:0007`, product *Umik-1  Gain: 18dB* (ALSA's card
