@@ -213,7 +213,11 @@ between 55 and 65 dB, and *too quiet* only below 55 dB - over 75 dB fixed
 (item 4) and over 65 or 60 dB fixed. The 75 dB was Claude's, carried from
 home-cinema calibration without a reason this player needs it; on sofapi's
 first run it took the amplifier turned up three times to reach, and George
-found it far too loud.
+found it far too loud. **Then 60 at most** (George, the same day, after the
+second run): 50 to 60 dB from the room's noise, taken from 45 dB when the
+ceiling is reached short of the aim. **Measure answers at once and Cancel is
+instant** (George): the run shows *place* while the player is prepared
+behind it; Cancel stops the sound at once, and the player is put back after.
 
 **What else the microphone is** (research, 2026-11-05, sources kept outside
 the repository): USB `2752:0007`, product *Umik-1  Gain: 18dB* (ALSA's card
@@ -236,7 +240,7 @@ Appended to the inventory 2026-11-03 to 2026-11-05, confirmed by George:
 - **[H]** The target: a gentle rise below about 80 Hz (decision 1).
 - **[H]** The bass limit, 250 Hz (decision 3).
 - **[H]** Five positions, eight cuts of up to 12 dB; the level about 20 dB
-  over the room's noise, 55 to 65 dB SPL (George, 2026-11-05, over 75 dB).
+  over the room's noise, 50 to 60 dB SPL (George, 2026-11-05, over 75 dB).
 - **[N]** A/B, with or without, for each output (2026-11-04).
 - **[H]** A 3-second countdown at each position (2026-11-04).
 - **[H]** A run waiting for a tap is cancelled after 10 minutes (2026-11-05).
