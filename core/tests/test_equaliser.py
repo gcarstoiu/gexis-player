@@ -159,3 +159,40 @@ def test_camilladsps_hold_is_two_chunks_at_every_rate():
         assert round(eq.latency_ms(rate), 1) == 42.7
     # The chunk stays at 4096 above 192 kHz, so it holds half as long.
     assert round(eq.latency_ms(352800), 1) == 23.2 and round(eq.latency_ms(384000), 1) == 21.3
+
+
+# ---- ADR-0175: room correction's cuts in the same stage ---------------------------
+
+
+def test_room_slots_are_eight_for_each_speaker_the_rest_idle():
+    slots = eq.room_slots([(42.1, -4.1, 8.6), (86.2, -8.4, 5.7)])
+    assert len(slots) == eq.ROOM_SLOTS
+    assert slots[:2] == ((42.1, -4.1, 8.6), (86.2, -8.4, 5.7))
+    assert slots[2:] == (eq.ROOM_IDLE,) * 6
+    assert eq.room_slots([(50, 3, 2)])[0] == (50.0, 0.0, 2.0), "never a boost (decision 2)"
+    assert len(eq.room_slots([(50, -1, 2)] * 12)) == eq.ROOM_SLOTS
+    assert eq.room_stage(None) == ((eq.ROOM_IDLE,) * 8, (eq.ROOM_IDLE,) * 8)
+
+
+def test_room_cuts_follow_the_bands_one_step_for_each_speaker():
+    c = eq.camilla_config(48000, "S32_LE", 2, eq.FLAT, "eq_out", room=([(42, -4, 8.6)], [(87, -8, 5.7)]))
+    steps = c["pipeline"]
+    assert steps[0]["names"][0] == "headroom" and "channels" not in steps[0]
+    assert steps[1] == {"type": "Filter", "channels": [0], "names": [f"room_l_{i}" for i in range(1, 9)]}
+    assert steps[2] == {"type": "Filter", "channels": [1], "names": [f"room_r_{i}" for i in range(1, 9)]}
+    assert c["filters"]["room_l_1"]["parameters"] == {"type": "Peaking", "freq": 42.0, "gain": -4.0, "q": 8.6}
+    assert c["filters"]["room_r_1"]["parameters"]["freq"] == 87.0
+    assert c["filters"]["room_r_2"]["parameters"]["gain"] == 0.0
+
+
+def test_room_slots_are_there_with_nothing_measured():
+    """The pipeline's shape is the same with or without a correction, so
+    switching it is a change of gains."""
+    c = eq.camilla_config(44100, "S16_LE", 2, eq.FLAT, "x")
+    assert len(c["pipeline"]) == 3
+    assert all(c["filters"][f"room_{s}_{i}"]["parameters"]["gain"] == 0 for s in "lr" for i in range(1, 9))
+
+
+def test_a_mono_stream_has_the_left_speakers_cuts_only():
+    c = eq.camilla_config(44100, "S16_LE", 1, eq.FLAT, "x", room=([(42, -4, 8)], [(87, -8, 5)]))
+    assert [s.get("channels") for s in c["pipeline"]] == [None, [0]]

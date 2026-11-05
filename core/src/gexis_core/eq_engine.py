@@ -28,6 +28,11 @@ and at once while nothing plays through CamillaDSP.
 **Native DSD goes past it** (D7, decision 5): a DSD stream on the loopback is
 sent on to the card untouched (`alsaloop`), and the equaliser stands aside
 until the next PCM one.
+
+**Room correction's cuts run in the same stage** (ADR-0175 items 1-2): the
+stage is in the path when either is on, and its cuts are patched as the
+bands are - switched on or off, compared (*Hear it without*), or replaced by
+a new measurement, all heard at once.
 """
 from __future__ import annotations
 
@@ -171,9 +176,10 @@ class Camilla:
 class EqEngine:
     """Runs the equaliser for whichever output has it on.
 
-    `configure(card, gains)` is all the core calls: the card the equaliser
-    is on for (None when it is not in the path) and the bands. `on_change`
-    hears the state worth showing (whether DSD is standing it aside)."""
+    `configure(card, gains, room)` is all the core calls: the card the
+    stage is on for (None when it is not in the path), the bands, and room
+    correction's cuts (`equaliser.room_stage`'s argument). `on_change` hears
+    the state worth showing (whether DSD is standing it aside)."""
 
     def __init__(self, *, camilla: Camilla | None = None,
                  systemctl: Callable[..., Awaitable[None]] = _systemctl,
@@ -192,19 +198,21 @@ class EqEngine:
         self._cards = cards
         self._card: str | None = None
         self._gains: tuple[int, ...] = eq.FLAT
+        self._room = eq.room_stage(None)
         self._watch: asyncio.Task | None = None
         self._stream: Stream | None = None
-        self._applied: tuple[tuple[int, ...], float] | None = None   # what CamillaDSP has now
+        self._applied: tuple | None = None   # (gains, headroom, room): what CamillaDSP has now
         self._push: asyncio.Task | None = None
         self._forward: asyncio.subprocess.Process | None = None
         self._status: dict = {}
 
     # -- what the core calls ------------------------------------------------
 
-    async def configure(self, card: str | None, gains, restart: bool = False) -> None:
+    async def configure(self, card: str | None, gains, restart: bool = False, room=None) -> None:
         """`restart` after `output.conf` was rewritten under a running
         CamillaDSP, which reads ALSA's configuration only when it starts."""
         gains = eq.gains_from(gains)
+        self._room = eq.room_stage(room)
         if card is None:
             if self._card is not None or self._watch is not None:
                 self._card = None
@@ -322,7 +330,8 @@ class EqEngine:
     async def _start_stream(self, stream: Stream) -> None:
         gains = self._gains
         headroom = eq.headroom_db(gains)
-        config = eq.camilla_config(stream.rate, stream.fmt, stream.channels, gains, outputs.EQ_OUT)
+        room = self._room
+        config = eq.camilla_config(stream.rate, stream.fmt, stream.channels, gains, outputs.EQ_OUT, room)
         if self._takes_rate(self._card, stream.rate) is False:
             # A rate the card lacks (ADR-0155): to its highest, as
             # Squeezelite's own resampler would - which sees the loopback
@@ -338,7 +347,7 @@ class EqEngine:
         try:
             await self._camilla.cmd("SetFaderVolume", [eq.HEADROOM_FADER, -headroom])
             await self._camilla.cmd("SetConfigJson", json.dumps(config))
-            self._applied = (gains, headroom)
+            self._applied = (gains, headroom, room)
             logger.info("equaliser: %d Hz %s, %d channels, lowered %.1f dB",
                         stream.rate, stream.fmt, stream.channels, headroom)
         except (ConnectionError, RuntimeError) as exc:
@@ -380,9 +389,9 @@ class EqEngine:
 
     async def _pushing(self) -> None:
         while self._applied is not None and self._stream is not None and not self._stream.dsd:
-            gains, headroom = self._gains, eq.headroom_db(self._gains)
-            old_gains, old_headroom = self._applied
-            if (gains, headroom) == (old_gains, old_headroom):
+            gains, headroom, room = self._gains, eq.headroom_db(self._gains), self._room
+            old_gains, old_headroom, old_room = self._applied
+            if (gains, headroom, room) == (old_gains, old_headroom, old_room):
                 return
             try:
                 if headroom > old_headroom:
@@ -392,13 +401,19 @@ class EqEngine:
                     await self._give(headroom)
                 changed = {eq.filter_name(i): {"parameters": {"gain": g}}
                            for i, (g, was) in enumerate(zip(gains, old_gains)) if g != was}
+                for channel in range(min(self._stream.channels, len(eq.ROOM_CHANNELS))):
+                    for slot, (now, was) in enumerate(zip(room[channel], old_room[channel])):
+                        if now != was:
+                            freq, gain, q = now
+                            changed[eq.room_filter_name(channel, slot)] = {
+                                "parameters": {"freq": freq, "gain": gain, "q": q}}
                 if changed:
                     await self._camilla.cmd("PatchConfig", {"filters": changed})
                 if headroom < old_headroom:
                     await self._camilla.cmd("SetFaderVolume", [eq.HEADROOM_FADER, -headroom])
                 else:
                     await self._give(headroom)
-                self._applied = (gains, headroom)
+                self._applied = (gains, headroom, room)
             except (ConnectionError, RuntimeError) as exc:
                 logger.warning("equaliser: a change did not reach CamillaDSP (%s)", exc)
                 return
