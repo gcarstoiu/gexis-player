@@ -12,7 +12,7 @@
 <script>
   import { encode } from 'uqr';
   import { onDestroy } from 'svelte';
-  import { capitalised, chartSpan, countWord, cutFreq, cutGain, outputPhrase, outputShort, peaksDown, room,
+  import { capitalised, chartSpan, countWord, cutFreq, cutGain, cutRows, outputPhrase, outputShort, peaksDown, room,
     RoomReader, setRoom, worseLine } from '../../lib/room.svelte.js';
   import { screen } from '../../lib/family.svelte.js';
   import RoomChart from './RoomChart.svelte';
@@ -77,7 +77,7 @@
   const speaker = $derived(chart?.speakers?.[ch] ?? null);
   const kind = $derived(chart?.after_kind ?? 'measured');
   const notChecked = $derived(!!measured && !measured.checked);
-  const cuts = $derived(full?.cuts?.[ch] ?? []);
+  const cuts = $derived(cutRows(full?.cuts?.[ch]));
   const cutsHead = $derived(`${ch === 'L' ? 'Left' : 'Right'} speaker · ${cuts.length} ${cuts.length === 1 ? 'cut' : 'cuts'}`);
   //: The speaker shown: its own number, not the larger of the two.
   const resultHead = $derived(peaksDown(speaker?.peaks_down ?? measured?.peaks_down));
@@ -281,7 +281,7 @@
                 </div>
                 <div class="lcard__cuts">
                   <span class="lcard__head">{cutsHead}</span>
-                  {#each cuts as c (c.freq)}
+                  {#each cuts as c, i (i)}
                     <div class="cut cut--panel"><span class="cut__f">{cutFreq(c)}</span><span class="cut__g">{cutGain(c)}</span></div>
                   {/each}
                 </div>

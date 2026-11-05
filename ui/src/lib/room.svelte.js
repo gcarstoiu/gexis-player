@@ -91,11 +91,24 @@ export const outputShort = (o) => o?.kind ?? '';
 export const cutFreq = (c) => `${Math.round(c.freq)} Hz`;
 export const cutGain = (c) => `${c.gain < 0 ? '−' : '+'}${Math.abs(c.gain).toFixed(1)} dB`;
 
+/** **The cuts as listed**: cuts at one frequency - a peak deeper than one
+ *  cut takes, two stacked (George, 2026-11-05: as close to the target as
+ *  it goes) - are one line, their gains added. */
+export function cutRows(list) {
+  const rows = [];
+  for (const c of list ?? []) {
+    const same = rows.find((r) => Math.round(r.freq) === Math.round(c.freq));
+    if (same) same.gain = Math.round((same.gain + c.gain) * 10) / 10;
+    else rows.push({ ...c });
+  }
+  return rows;
+}
+
 /** *Four cuts for each speaker*, or *Three cuts on the left, four on the right*. */
 const NUMBERS = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight'];
 export function cutsHeading(cuts) {
-  const l = cuts?.L?.length ?? 0;
-  const r = cuts?.R?.length ?? 0;
+  const l = cutRows(cuts?.L).length;
+  const r = cutRows(cuts?.R).length;
   const word = (n) => NUMBERS[n] ?? String(n);
   if (l === r) return `${word(l)} ${l === 1 ? 'cut' : 'cuts'} for each speaker`;
   return `${word(l)} ${l === 1 ? 'cut' : 'cuts'} on the left, ${word(r).toLowerCase()} on the right`;

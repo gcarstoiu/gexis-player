@@ -10,7 +10,7 @@
   2026-11-05): the 90° file from miniDSP's page, chosen here.
 -->
 <script>
-  import { chartSpan, countWord, cutFreq, cutGain, cutsHeading, dips, dipsLine, giveCalibration, MOVES, outputShort,
+  import { chartSpan, countWord, cutFreq, cutGain, cutRows, cutsHeading, dips, dipsLine, giveCalibration, MOVES, outputShort,
     peaksDown, POSITIONS,
     runRoom, worseLine } from '../../lib/room.svelte.js';
   import RoomChart from './RoomChart.svelte';
@@ -386,11 +386,11 @@
       {/if}
 
       {#if screenName === 'correction' && pending}
-        {@const list = pending.cuts?.[ch] ?? []}
+        {@const list = cutRows(pending.cuts?.[ch])}
         <div class="card cuts">
           <div class="cuts__head"><span>{ch === 'L' ? 'Left' : 'Right'} speaker · {list.length} {list.length === 1 ? 'cut' : 'cuts'}</span><span class="rule"></span></div>
           <div class="cuts__grid">
-            {#each list as c (c.freq)}
+            {#each list as c, i (i)}
               <div class="cut"><span class="cut__f">{cutFreq(c)}</span><span class="cut__g">{cutGain(c)}</span></div>
             {/each}
           </div>

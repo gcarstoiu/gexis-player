@@ -990,6 +990,9 @@ the drawing differs, or says nothing:
 - **[S]** **The chart's reach grows past ±15 dB** in 5 dB steps when a
   curve of either speaker goes past it, the same for both tabs: sofapi's
   room peaked at +18 dB, which the drawing's scale cut flat.
+- **[S]** **Cuts at one frequency are one line**, their gains added (*46 Hz
+  −15.4 dB*), and counted once: a peak deeper than one cut takes gets two
+  (George: as close to the target as it goes).
 - **[S]** **The page's heading is the speaker shown**: *Peaks down by up to
   N dB* under the Left/Right tabs is that speaker's number; the drawing had
   one number for both, which read as the right's when it was the left's.
