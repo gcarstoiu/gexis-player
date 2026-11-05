@@ -87,6 +87,12 @@ export class RoomReader {
 export const outputPhrase = (o) => (o ? `the ${o.kind}, ${o.name}` : '');
 export const outputShort = (o) => o?.kind ?? '';
 
+/** **The chart's tabs**: each speaker, and both together where the
+ *  measurement has them (George, 2026-11-05: as heard, never corrected). */
+export const BOTH = 'both';
+export const sides = (chart) => ['L', 'R', ...(chart?.speakers?.[BOTH] ? [BOTH] : [])];
+export const sideName = (k) => ({ L: 'Left', R: 'Right', both: 'Both' })[k] ?? k;
+
 /** A cut as the design writes it: *42 Hz*, *−6.5 dB*. */
 export const cutFreq = (c) => `${Math.round(c.freq)} Hz`;
 export const cutGain = (c) => `${c.gain < 0 ? '−' : '+'}${Math.abs(c.gain).toFixed(1)} dB`;
@@ -161,7 +167,7 @@ export function dipsLine(list) {
   const rest = 'The bass rise below 80 Hz is the target.';
   if (!list.length) return `${lead}nothing is raised, as more power does not fill a dip. ${rest}`;
   const at = list.length === 1 ? `the dip at ${list[0]} Hz stays` : `the dips at ${list[0]} and ${list[1]} Hz stay`;
-  return `${lead}${at}, as more power does not fill them. ${rest}`;
+  return `${lead}${at}, as more power does not fill ${list.length === 1 ? 'it' : 'them'}. ${rest}`;
 }
 
 // ---- the chart (the design's §5) ---------------------------------------------------

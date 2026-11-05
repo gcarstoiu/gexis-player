@@ -14099,7 +14099,7 @@
               "object",
               "null"
             ],
-            "description": "A measurement in progress: `step` (place, level, measure, move, countdown, correction, nothing, checking, result), `position` from 1 to `positions` (how many the run measures, 3), `speaker` L or R, `sweep`, `noise`, `level_db`, `aim_db`, `count`, `checking`, `progress` 0-1, `done`, `expected`, `too_quiet`."
+            "description": "A measurement in progress: `step` (place, level, measure, move, countdown, correction, nothing, checking, result), `position` from 1 to `positions` (how many the run measures, 3), `speaker` L, R or both (the two together), `sweep`, `noise`, `level_db`, `aim_db`, `count`, `checking`, `progress` 0-1, `done`, `expected`, `too_quiet`."
           },
           "ended": {
             "type": [
@@ -14134,7 +14134,7 @@
               "object",
               "null"
             ],
-            "description": "Up to 300 Hz: `freqs`, `limit`, `after_kind` (measured or expected), and for L and R `before`, `target`, `after`, `positions`, `cuts`, `peaks_down` - dB relative to the target's level."
+            "description": "Up to 300 Hz: `freqs`, `limit`, `after_kind` (measured or expected), and for L and R `before`, `target`, `after`, `positions`, `cuts`, `peaks_down` - dB relative to the target's level; `both`, the two speakers together as heard, the same with no cuts and `after` empty until the check measures it."
           },
           "cuts": {
             "type": "object",

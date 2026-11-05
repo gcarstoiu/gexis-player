@@ -122,13 +122,13 @@ class Audio:
             logger.info("room: %s's capture volume not set (%s)", self.mic.card, err.decode(errors="replace").strip())
 
     async def play(self, signal, channel: int | None, tail_s: float = TAIL_S):
-        """`signal` played - to both speakers, or to `channel` alone - while
-        the microphone listens from `LEAD_S` before to `tail_s` after; the
-        recording, as floats."""
+        """`signal` played - to `channel` alone, to the channels of a tuple,
+        or to both with None - while the microphone listens from `LEAD_S`
+        before to `tail_s` after; the recording, as floats."""
         import numpy as np
         signal = np.clip(np.asarray(signal, dtype=float), -1.0, 1.0)
         frames = np.zeros((len(signal), 2))
-        for c in ((0, 1) if channel is None else (channel,)):
+        for c in ((0, 1) if channel is None else (channel,) if isinstance(channel, int) else tuple(channel)):
             frames[:, c] = signal
         data = (frames * (2 ** 31 - 1)).astype("<i4").tobytes()
         samples = int((LEAD_S + len(signal) / FS + tail_s) * FS)

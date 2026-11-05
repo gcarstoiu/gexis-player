@@ -12,8 +12,8 @@
 <script>
   import { encode } from 'uqr';
   import { onDestroy } from 'svelte';
-  import { capitalised, chartSpan, countWord, cutFreq, cutGain, cutRows, outputPhrase, outputShort, peaksDown, room,
-    RoomReader, setRoom, worseLine } from '../../lib/room.svelte.js';
+  import { BOTH, capitalised, chartSpan, countWord, cutFreq, cutGain, cutRows, outputPhrase, outputShort, peaksDown,
+    room, RoomReader, setRoom, sideName, sides, worseLine } from '../../lib/room.svelte.js';
   import { screen } from '../../lib/family.svelte.js';
   import RoomChart from './RoomChart.svelte';
   import RoomFlow from './RoomFlow.svelte';
@@ -74,16 +74,26 @@
   const toggleAb = () => abLive && change('without', !ab);
 
   const chart = $derived(full?.chart ?? null);
+  //: A measurement from before both were swept has no Both tab.
+  $effect(() => {
+    if (chart && !sides(chart).includes(ch)) ch = 'L';
+  });
+  const both = $derived(ch === BOTH);
   const speaker = $derived(chart?.speakers?.[ch] ?? null);
+  const bothAfter = $derived(both && !!speaker?.after?.length);
   const kind = $derived(chart?.after_kind ?? 'measured');
   const notChecked = $derived(!!measured && !measured.checked);
   const cuts = $derived(cutRows(full?.cuts?.[ch]));
-  const cutsHead = $derived(`${ch === 'L' ? 'Left' : 'Right'} speaker · ${cuts.length} ${cuts.length === 1 ? 'cut' : 'cuts'}`);
+  const cutsHead = $derived(both ? "Both speakers together · each speaker's cuts"
+    : `${ch === 'L' ? 'Left' : 'Right'} speaker · ${cuts.length} ${cuts.length === 1 ? 'cut' : 'cuts'}`);
   //: The speaker shown: its own number, not the larger of the two.
-  const resultHead = $derived(peaksDown(speaker?.peaks_down ?? measured?.peaks_down));
+  const resultHead = $derived(both && !bothAfter ? 'Both speakers, before'
+    : peaksDown(speaker?.peaks_down ?? measured?.peaks_down));
   const span = $derived(chartSpan(chart));
   const positionsWord = $derived(countWord(measured?.positions ?? 0));
-  const resultLine = $derived(notChecked ? 'Expected, not checked. Measure again to check it.' : worseLine(measured?.worse));
+  const resultLine = $derived(both ? (bothAfter ? 'The two together, as you hear them.'
+    : 'The two together, as you hear them. Measure again and check it to see them after.')
+    : notChecked ? 'Expected, not checked. Measure again to check it.' : worseLine(measured?.worse));
   const abSub = $derived(!on ? 'Only while room correction is on.'
     : ab ? 'Now without: the cuts at 0 dB. Switch back to hear them.'
       : 'Compare: the cuts at 0 dB, heard at once. Stays where you put it.');
@@ -137,8 +147,8 @@
 
 {#snippet segs(size)}
   <div class="segs segs--{size}" role="group" aria-label="Speaker">
-    {#each ['L', 'R'] as k (k)}
-      <button type="button" class="segbtn" class:is-sel={ch === k} aria-pressed={ch === k} onclick={() => (ch = k)}>{k === 'L' ? 'Left' : 'Right'}</button>
+    {#each sides(chart) as k (k)}
+      <button type="button" class="segbtn" class:is-sel={ch === k} aria-pressed={ch === k} onclick={() => (ch = k)}>{sideName(k)}</button>
     {/each}
   </div>
 {/snippet}
@@ -1187,6 +1197,15 @@
   }
   .right--narrow .right__title {
     font-size: 24px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  /* Three tabs (Both) beside the heading on the 1280-wide bar. */
+  .right--narrow .segs--bar .segbtn {
+    height: 46px;
+    padding: 0 14px;
+    font-size: 16px;
   }
   .right--narrow .right__line {
     font-size: 15px;

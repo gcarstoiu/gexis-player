@@ -383,6 +383,19 @@ def design(positions, grid=GRID) -> Design:
     return Design(tuple(cuts), offset, before - offset, target - offset, after - offset, positions - offset)
 
 
+def as_heard(positions, grid=GRID) -> Design:
+    """**Both speakers together**, as the positions heard them: their
+    average and the target on its level, as `design` gives them, with no
+    cuts of their own - the after is measured in the check, or none."""
+    grid = np.asarray(grid, dtype=float)
+    positions = np.asarray(positions, dtype=float)
+    before = power_average(positions)
+    above = (grid > LIMIT) & (grid <= 2 * LIMIT)
+    offset = float(np.mean(before[above])) if above.any() else float(np.mean(before))
+    target = target_db(grid)
+    return Design((), offset, before - offset, target, np.array([]), positions - offset)
+
+
 def peaks_down_db(before, after, grid=GRID) -> float:
     """*Peaks down by up to N dB*: the most the correction takes off, below
     the limit."""

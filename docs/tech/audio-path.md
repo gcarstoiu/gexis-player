@@ -677,7 +677,7 @@ hw:Loopback,1,0 → CamillaDSP (headroom fader, ten bands, then eight cuts on th
   and the cuts at 0 dB - the room as it is - sets the output to its maximum
   level (100 % of *Maximum volume*; Fixed stays fixed), and puts both back
   at the end. Its signals are played into `output`, as a renderer's music is
-  (`aplay`, S32_LE, 48 kHz, one speaker at a time), and recorded from the
+  (`aplay`, S32_LE, 48 kHz, one speaker at a time, then both), and recorded from the
   UMIK-1 (`arecord` through `plughw`, mono 48 kHz), found by its USB
   identity `2752:0007` and its capture volume set to the full.
 - **The level step**: the quiet room recorded first; then band-limited pink
@@ -696,7 +696,11 @@ hw:Loopback,1,0 → CamillaDSP (headroom fader, ten bands, then eight cuts on th
   sweep's, windowed to a second from the arrival, the calibration file
   subtracted, smoothed to 1/6 octave on a 1/24-octave grid from 15 to 500 Hz
   (`room_dsp.py`, numpy). Two sweeps per speaker and position that differ by
-  more than 1.5 dB below 250 Hz are repeated, up to six.
+  more than 1.5 dB below 250 Hz are repeated, up to six. After each speaker
+  alone, **both together** (George, 2026-11-05), 6 dB lower each so the two
+  adding in the bass are no louder than one: shown as heard (`both` in the
+  chart, `room_dsp.as_heard`), before in the run and after in the check,
+  never designed from - the cuts are each speaker's.
 - **The design** (`room_dsp.design`): the three positions' power average
   (the head and 40 cm to either side; a measurement keeps its own number); the
   target - +3 dB below about 80 Hz - on the average's level an octave above

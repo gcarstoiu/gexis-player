@@ -9,7 +9,9 @@ it is (the design's R18), and the panel shows that it is running. The steps:
    waiting for *Start*;
 2. *level* - the quiet room listened to, then soft noise, louder in steps
    until the seat hears about 60 dB, never above the output's maximum level;
-3. *measure* - each speaker alone, two sweeps that agree, at position 1;
+3. *measure* - each speaker alone, then both together (George,
+   2026-11-05: as heard, shown and never corrected), two sweeps that agree
+   each, at position 1;
    then *move* (waiting for *Measure here*), a 3-second *countdown*, and
    *measure* again, to the last position;
 4. *correction* (or *nothing* to cut) - waiting for *Check it*;
@@ -94,7 +96,7 @@ class RunState:
     """What every screen shows of a run (the design's *State*)."""
     step: str                       # place level measure move countdown correction nothing checking result
     position: int = 1               # 1 to rc.POSITIONS
-    speaker: str | None = None      # "L" / "R" while one plays
+    speaker: str | None = None      # "L" / "R" / "both" while one plays
     sweep: int = 0                  # 1-2 while one plays
     noise: bool = False             # the last sweep was spoiled and is repeated
     level_db: float | None = None   # at the seat, in the level step and after
@@ -118,18 +120,20 @@ class RunState:
 
 def _progress(step: str, position: int = 1, speaker: str | None = None, sweep: int = 0,
               checking: bool = False) -> float:
-    """The design's §3: the level 5 %; positions 8 to 78 % (each a half per
-    speaker, a quarter per sweep); checking 80 to 100 %."""
-    right = 0.5 if speaker == "R" else 0.0
+    """The design's §3: the level 5 %; positions 8 to 78 % (each an equal
+    share for the left, the right and both, half of it a sweep); checking 80
+    to 100 %."""
+    share = 1 / len(rc.SWEPT)
+    part = rc.SWEPT.index(speaker) * share if speaker in rc.SWEPT else 0.0
     if checking:
-        return 0.8 + 0.2 * (position - 1 + (right if step == "checking" else 0)) / rc.POSITIONS
+        return 0.8 + 0.2 * (position - 1 + (part if step == "checking" else 0)) / rc.POSITIONS
     if step == "level":
         return 0.05
     if step == "place":
         return 0.0
     base = 0.08 + 0.7 * (position - 1) / rc.POSITIONS
     if step == "measure":
-        base += 0.7 / rc.POSITIONS * (right + 0.25 * max(0, min(sweep, SWEEPS) - 1))
+        base += 0.7 / rc.POSITIONS * (part + share / SWEEPS * max(0, min(sweep, SWEEPS) - 1))
     return base
 
 
@@ -177,8 +181,8 @@ class Run:
         self.ended: dict | None = None        # {"how": cancelled|kept|discarded|done|failed, ...}
         self._level_dbfs = LEVEL_START_DBFS
         self._aim: float | None = None
-        self._positions: dict[str, list] = {c: [] for c in rc.CHANNELS}
-        self._checked: dict[str, list] = {c: [] for c in rc.CHANNELS}
+        self._positions: dict[str, list] = {c: [] for c in rc.SWEPT}
+        self._checked: dict[str, list] = {c: [] for c in rc.SWEPT}
         self._designs: dict = {}
         self._waiting = False
         self._prep: asyncio.Future | None = None
@@ -416,10 +420,13 @@ class Run:
     async def _curve(self, channel: str) -> object:
         dsp = self._dsp
         sweep = dsp.log_sweep(seconds=self._sweep_s)
-        # The sweep's level in the band, matched to the noise's.
+        # The sweep's level in the band, matched to the noise's; both
+        # speakers 6 dB lower each, so the two adding in the bass are no
+        # louder than one.
         scale = 10 ** (self._level_dbfs / 20) / 10 ** (dsp.band_level_db(sweep) / 20)
-        played = sweep * scale
-        recording = await self._audio.play(played, channel=rc.CHANNELS.index(channel))
+        both = channel == rc.BOTH
+        played = sweep * scale * (0.5 if both else 1.0)
+        recording = await self._audio.play(played, channel=(0, 1) if both else rc.CHANNELS.index(channel))
         curve = dsp.response_db(dsp.transfer(recording, played))
         return curve - self._calibration_curve()
 
@@ -430,12 +437,12 @@ class Run:
         return self._cal_curve
 
     async def _measure(self, n: int, checking: bool) -> None:
-        """Each speaker alone at position `n` (item 4): sweeps until two
-        agree, up to `MAX_SWEEPS`, then the two closest."""
+        """Each speaker alone at position `n` (item 4), then both: sweeps
+        until two agree, up to `MAX_SWEEPS`, then the two closest."""
         dsp = self._dsp
         step = "checking" if checking else "measure"
         done = tuple(range(1, n))
-        for channel in rc.CHANNELS:
+        for channel in rc.SWEPT:
             curves = []
             noise = False
             while True:
@@ -484,6 +491,10 @@ class Run:
             speakers[channel] = rc.Speaker(cuts=tuple((c.freq, c.gain, c.q) for c in d.cuts),
                                            before=tuple(d.before), target=tuple(d.target),
                                            after=tuple(d.after), positions=tuple(tuple(p) for p in d.positions))
+        d = self._dsp.as_heard(self._positions[rc.BOTH])
+        self._designs[rc.BOTH] = d
+        speakers[rc.BOTH] = rc.Speaker(before=tuple(d.before), target=tuple(d.target),
+                                       positions=tuple(tuple(p) for p in d.positions))
         self.pending = rc.Measurement(self._today(), False, speakers)
 
     def _cuts(self):
@@ -502,6 +513,9 @@ class Run:
             after = self._dsp.power_average(measured)
             speakers[channel] = replace(self.pending.speakers[channel], after=tuple(after))
             worse += self._dsp.worse_positions(d.positions, measured, d.target, d.cuts)
+        d = self._designs[rc.BOTH]
+        after = self._dsp.power_average([c - d.offset for c in self._checked[rc.BOTH]])
+        speakers[rc.BOTH] = replace(self.pending.speakers[rc.BOTH], after=tuple(after))
         found = {}
         for n, db in worse:
             found[n] = max(db, found.get(n, 0))

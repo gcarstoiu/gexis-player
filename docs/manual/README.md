@@ -811,7 +811,8 @@ nothing to press. On the player's screen, *Measure from your phone* (or
    the microphone hears about 60 dB, the level of a conversation, never
    above the output's *Maximum volume*. Only if it cannot reach 45 dB, turn
    the amplifier up a little and tap **Try again**.
-4. Each speaker plays two sweeps on its own, about 25 seconds a position.
+4. Each speaker plays two sweeps on its own, then both together, about 45
+   seconds a position.
    Then move the microphone where the phone shows - three positions: your
    head, and about 40 cm to either side - step back and tap **Measure
    here**; three seconds later the sweeps play. It never moves on without
@@ -820,8 +821,8 @@ nothing to press. On the player's screen, *Measure from your phone* (or
    average of the three positions), each position, the target and the
    expected after. A peak is cut unless most positions would end further
    from the target. **Check it** measures the three positions again with
-   the correction on, a tap at each again, about a minute more; **Skip**
-   keeps it as worked out, marked *Not checked*.
+   the correction on, a tap at each again, about three minutes more;
+   **Skip** keeps it as worked out, marked *Not checked*.
 6. **Keep it** switches room correction on; **Discard** leaves the output as
    it was. **Cancel**, at any step, leaves it as it was too, and so does
    ten minutes without a tap. A room whose bass is already near the target
@@ -837,7 +838,9 @@ On its page:
   switched back.
 - **The chart**, for the left and the right speaker: before, each position,
   the target (dotted) and after - measured, or dashed and *expected* when the
-  check was skipped. Above 250 Hz is left alone.
+  check was skipped. Above 250 Hz is left alone. **Both** shows the two
+  speakers together, as you hear them: never cut themselves, and their after
+  only once the check has measured it.
 - **Measure again** replaces the measurement once the new one is kept.
 - **DSD** plays untouched: room correction stands aside while a DSD track
   plays natively, and is back for the next PCM track.

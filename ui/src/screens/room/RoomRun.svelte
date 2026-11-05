@@ -12,7 +12,7 @@
   const count = $derived(run.positions ?? 5);
 
   const head = $derived(run.checking ? 'Checking the room' : 'Measuring the room');
-  const speaker = (k) => (k === 'L' ? 'Left' : 'Right');
+  const speaker = (k) => (k === 'L' ? 'Left speaker' : k === 'R' ? 'Right speaker' : 'Both speakers');
   const line = $derived.by(() => {
     const at = `Position ${run.position} of ${count}`;
     switch (run.step) {
@@ -21,7 +21,7 @@
       case 'move': return `${at} · Moving the microphone`;
       case 'countdown': return `${at} · Sweeps in ${run.count}`;
       case 'measure':
-      case 'checking': return `${at} · ${speaker(run.speaker ?? 'L')} speaker`;
+      case 'checking': return `${at} · ${speaker(run.speaker ?? 'L')}`;
       default: return 'Waiting for the phone';
     }
   });

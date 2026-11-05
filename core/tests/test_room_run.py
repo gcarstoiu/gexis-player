@@ -136,15 +136,48 @@ async def test_the_tap_is_followed_by_a_countdown():
     await rig.run.wait()
 
 
-async def test_each_speaker_alone_two_sweeps_each():
+async def test_each_speaker_alone_then_both_two_sweeps_each():
     rig = Rig()
+    levels = {}
+    real = rig.audio.play
+
+    async def play(signal, channel, tail_s=1.1):
+        if channel is not None:
+            levels.setdefault(str(channel), float(np.sqrt(np.mean(np.square(signal)))))
+        return await real(signal, channel, tail_s)
+    rig.audio.play = play
     await rig.run.start()
     await rig.until("place")
     rig.run.tap("start")
     await rig.until("move", 2)
     sweeps = [c for c, _ in rig.audio.plays if c is not None]
-    assert sweeps == [0, 0, 1, 1]
-    assert [c for c, _ in rig.audio.plays[: -4]] == [None] * (len(rig.audio.plays) - 4), "the level with both"
+    assert sweeps == [0, 0, 1, 1, (0, 1), (0, 1)]
+    assert [c for c, _ in rig.audio.plays[: -6]] == [None] * (len(rig.audio.plays) - 6), "the level with both"
+    assert levels["(0, 1)"] == pytest.approx(levels["0"] / 2), "both 6 dB lower each, no louder than one"
+    rig.run.cancel()
+    await rig.run.wait()
+
+
+async def test_both_together_is_shown_and_never_corrected():
+    """George, 2026-11-05: both speakers, as heard - before in the run and
+    after in the check; the cuts stay each speaker's."""
+    rig = Rig()
+    await rig.measure_all()
+    both = rig.run.pending.speakers[rc.BOTH]
+    assert both.cuts == () and both.after == () and len(both.positions) == rc.POSITIONS
+    assert set(rig.run._cuts()) <= {rig.run.pending.cuts("L"), rig.run.pending.cuts("R")}
+    rig.run.tap("check")
+    for n in range(1, rc.POSITIONS + 1):
+        await rig.until("move", n, checking=True)
+        rig.audio.position = n
+        rig.run.tap("next")
+    await rig.until("result")
+    both = rig.run.pending.speakers[rc.BOTH]
+    assert len(both.after) == len(both.before)
+    fit = (rd.GRID >= 20) & (rd.GRID <= 250)
+    gap_before = np.max((np.array(both.before) - np.array(both.target))[fit])
+    gap_after = np.max((np.array(both.after) - np.array(both.target))[fit])
+    assert gap_after < gap_before - 3, "the two together come down too"
     rig.run.cancel()
     await rig.run.wait()
 

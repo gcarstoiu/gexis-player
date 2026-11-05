@@ -990,6 +990,17 @@ the drawing differs, or says nothing:
 - **[S]** **The chart's reach grows past ±15 dB** in 5 dB steps when a
   curve of either speaker goes past it, the same for both tabs: sofapi's
   room peaked at +18 dB, which the drawing's scale cut flat.
+- **[G]** **Both speakers together** (George): a third tab, *Both*, beside
+  Left and Right wherever the chart is, measured at each position in the run
+  and in the check after each speaker alone - before, each position, the
+  target and the after measured; never cut. New words: *Both speakers* (and
+  *Two sweeps together, after the right*) while measuring; *Both speakers,
+  before* and *The two together, as you hear them. Measure again and check it
+  to see them after.* until the check measures them; *The two together, as
+  you hear them.* after; *Both speakers together · each speaker's cuts* in
+  the panel's card; *About four minutes*, *about 45 seconds a position*, *about
+  three minutes more* for the check. On the 1280-wide bar the three tabs are
+  a little narrower.
 - **[S]** **Cuts at one frequency are one line**, their gains added (*46 Hz
   −15.4 dB*), and counted once: a peak deeper than one cut takes gets two
   (George: as close to the target as it goes).

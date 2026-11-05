@@ -10,7 +10,7 @@
   import { PLACES } from '../../lib/room.svelte.js';
 
   //: `active`: the position in use (from 1) or 0; `done`: those measured;
-  //: `playing`: 'L', 'R' or null; `arrow`: draw the way from the head to `active`.
+  //: `playing`: 'L', 'R', 'both' or null; `arrow`: draw the way from the head to `active`.
   let { active = 1, done = [], playing = null, arrow = false } = $props();
 
   const places = $derived(PLACES.map(([x, y], i) => {
@@ -39,10 +39,10 @@
 
 <div class="card">
   <div class="box" role="img" aria-label={`Where the microphone goes: position ${active || 1} of ${PLACES.length} around your seat`}>
-    <div class="spk spk--l" class:is-playing={playing === 'L'}><span></span></div>
-    <div class="spk spk--r" class:is-playing={playing === 'R'}><span></span></div>
-    <span class="spklab spklab--l" class:is-playing={playing === 'L'}>L</span>
-    <span class="spklab spklab--r" class:is-playing={playing === 'R'}>R</span>
+    <div class="spk spk--l" class:is-playing={playing === 'L' || playing === 'both'}><span></span></div>
+    <div class="spk spk--r" class:is-playing={playing === 'R' || playing === 'both'}><span></span></div>
+    <span class="spklab spklab--l" class:is-playing={playing === 'L' || playing === 'both'}>L</span>
+    <span class="spklab spklab--r" class:is-playing={playing === 'R' || playing === 'both'}>R</span>
     <div class="seat"><span>Your seat</span></div>
     <div class="ring"></div>
     {#if way}

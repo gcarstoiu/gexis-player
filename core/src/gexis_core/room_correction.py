@@ -18,6 +18,11 @@ KEY = "_room_correction"
 
 #: The speakers, as the screens and the store name them.
 CHANNELS = ("L", "R")
+#: **Both speakers together** (George, 2026-11-05): swept at each position
+#: in the run and in the check, as heard; shown, never corrected - the cuts
+#: are each speaker's.
+BOTH = "both"
+SWEPT = CHANNELS + (BOTH,)
 #: Where a run measures (George, 2026-11-05: three, over the five first
 #: drawn - the head and 40 cm to either side). A measurement keeps its own
 #: number, so one made at five still reads as five.
@@ -78,7 +83,8 @@ class Speaker:
         before = _floats(value.get("before") or [])
         n = len(before)
         target = _floats(value.get("target") or [], n)
-        after = _floats(value.get("after") or [], n)
+        # None for both speakers when the check was skipped.
+        after = _floats(value.get("after") or [], n if value.get("after") else None)
         positions = tuple(_floats(p, n) for p in value.get("positions") or [])
         return cls(tuple(cuts[:8]), before, target, after, positions)
 
@@ -98,7 +104,7 @@ class Measurement:
     each speaker's part."""
     date: str
     checked: bool
-    speakers: dict = field(default_factory=dict)     # "L"/"R" -> Speaker
+    speakers: dict = field(default_factory=dict)     # "L"/"R"/"both" -> Speaker
     positions: int = POSITIONS
     #: Positions the check found further from the target, as (n, dB).
     worse: tuple[tuple[int, float], ...] = ()
@@ -114,6 +120,8 @@ class Measurement:
         if not isinstance(date, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date):
             raise TypeError
         speakers = {k: Speaker.from_dict(value["speakers"][k]) for k in CHANNELS}
+        if isinstance(value["speakers"].get(BOTH), dict):
+            speakers[BOTH] = Speaker.from_dict(value["speakers"][BOTH])
         worse = tuple((int(n), float(db)) for n, db in value.get("worse") or [])
         return cls(date, bool(value.get("checked", False)), speakers,
                    int(value.get("positions", POSITIONS)), worse)
@@ -127,7 +135,7 @@ class Measurement:
         return not any(self.cuts(c) for c in CHANNELS)
 
     def peaks_down(self) -> float:
-        return max((s.peaks_down() for s in self.speakers.values()), default=0.0)
+        return max((self.speakers[c].peaks_down() for c in CHANNELS if c in self.speakers), default=0.0)
 
 
 @dataclass(frozen=True)

@@ -21,7 +21,9 @@
   let w = $state(300);
   let h = $state(200);
   const big = $derived(surface !== 'phone');
-  const after = $derived(kind && speaker ? speaker.after : null);
+  //: Both speakers have no after until the check measures them.
+  const after = $derived(kind && speaker?.after?.length ? speaker.after : null);
+  const shown = $derived(after ? kind : '');
   const d = $derived(speaker ? {
     gap: after ? between(freqs, speaker.before, after, w, h, span) : '',
     pos: speaker.positions.map((p) => path(freqs, p, w, h, span)).join(''),
@@ -45,7 +47,7 @@
     {:else if which === 'target'}
       <path d="M2 5h{big ? 23 : 19}" class="l-target" />
     {:else}
-      <path d="M1 5h{big ? 25 : 21}" class="l-after" class:is-expected={kind === 'expected'} />
+      <path d="M1 5h{big ? 25 : 21}" class="l-after" class:is-expected={shown === 'expected'} />
     {/if}
   </svg>
 {/snippet}
@@ -73,7 +75,7 @@
           <path d={d.pos} class="l-pos" />
           <path d={d.target} class="l-target" />
           <path d={d.before} class="l-before" />
-          {#if d.after}<path d={d.after} class="l-after" class:is-expected={kind === 'expected'} />{/if}
+          {#if d.after}<path d={d.after} class="l-after" class:is-expected={shown === 'expected'} />{/if}
         </svg>
       {/if}
     </div>
@@ -82,7 +84,7 @@
         <span class="key">{@render sample('before')}Before</span>
         <span class="key">{@render sample('pos')}Positions</span>
         <span class="key">{@render sample('target')}Target</span>
-        {#if kind}<span class="key">{@render sample('after')}{kind === 'expected' ? 'Expected' : 'After'}</span>{/if}
+        {#if shown}<span class="key">{@render sample('after')}{shown === 'expected' ? 'Expected' : 'After'}</span>{/if}
       </div>
     {/if}
   </div>
@@ -99,8 +101,8 @@
       <span class="key">{@render sample('before')}Before, average of {count}</span>
       <span class="key">{@render sample('pos')}Each position</span>
       <span class="key">{@render sample('target')}Target</span>
-      {#if kind === 'measured'}<span class="key">{@render sample('after')}After, measured</span>{/if}
-      {#if kind === 'expected'}<span class="key">{@render sample('after')}After, expected</span>{/if}
+      {#if shown === 'measured'}<span class="key">{@render sample('after')}After, measured</span>{/if}
+      {#if shown === 'expected'}<span class="key">{@render sample('after')}After, expected</span>{/if}
       {#if surface === 'phone'}<span class="key"><span class="hatch"></span>Above 250 Hz, left alone</span>{/if}
     </div>
   {/if}

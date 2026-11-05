@@ -98,21 +98,27 @@ class Audio:
         return self.offset
 
     async def play(self, signal, channel, tail_s=1.1):
+        """`channel`: a speaker, a tuple of them (a sweep through both), or
+        None (the level step's noise, which the left speaker stands for)."""
         self.plays.append((channel, self.position))
-        seed = (channel or 0) * 100 + self.position
         if channel is not None:
             self.sweeps += 1
         burst = (0.5, -20) if (channel is not None and self.sweeps in self.bursts) else None
-        modes = self.modes
-        recording = record(signal, seed=seed, modes=modes, noise_db=self.noise_db, burst=burst, tail_s=tail_s,
-                           gain=self.gain)
-        if self.stage is not None and channel is not None:
-            # The stage's cuts, as CamillaDSP would play them.
-            cuts = [rd.Cut(f, g, q) for f, g, q in self.stage[channel]]
-            n = 1 << int(math.ceil(math.log2(len(recording))))
-            spec = np.fft.rfft(recording, n)
-            f = np.fft.rfftfreq(n, 1 / rd.FS)
-            spec *= 10 ** (rd.cuts_db(cuts, np.maximum(f, 1e-3)) / 20)
-            recording = np.fft.irfft(spec, n)[: len(recording)]
+        speakers = (0,) if channel is None else (channel,) if isinstance(channel, int) else tuple(channel)
+        recording = None
+        for k, c in enumerate(speakers):
+            # The room's noise and a thump once, however many speakers play.
+            part = record(signal, seed=c * 100 + self.position, modes=self.modes,
+                          noise_db=self.noise_db if k == 0 else -300.0, burst=burst if k == 0 else None,
+                          tail_s=tail_s, gain=self.gain)
+            if self.stage is not None and channel is not None:
+                # The stage's cuts, as CamillaDSP would play them.
+                cuts = [rd.Cut(f, g, q) for f, g, q in self.stage[c]]
+                n = 1 << int(math.ceil(math.log2(len(part))))
+                spec = np.fft.rfft(part, n)
+                f = np.fft.rfftfreq(n, 1 / rd.FS)
+                spec *= 10 ** (rd.cuts_db(cuts, np.maximum(f, 1e-3)) / 20)
+                part = np.fft.irfft(spec, n)[: len(part)]
+            recording = part if recording is None else recording + part
         await asyncio.sleep(0)
         return recording

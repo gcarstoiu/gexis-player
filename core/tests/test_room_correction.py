@@ -14,6 +14,18 @@ def speaker(cuts=((42.0, -4.0, 8.6), (86.0, -8.0, 5.7))):
                    after=flat, positions=(flat,) * 5)
 
 
+def test_both_speakers_are_kept_and_an_older_measurement_reads_without():
+    flat = tuple([0.0] * N)
+    both = rc.Speaker(before=flat, target=flat, positions=(flat,) * 3)
+    m = rc.Measurement("2026-11-05", False, {"L": speaker(), "R": speaker(), rc.BOTH: both}, 3)
+    again = rc.Measurement.from_dict(m.as_dict())
+    assert again.speakers[rc.BOTH].after == () and again.speakers[rc.BOTH].cuts == ()
+    assert again.positions == 3 and not again.nothing_to_cut
+    older = m.as_dict()
+    del older["speakers"][rc.BOTH]
+    assert rc.BOTH not in rc.Measurement.from_dict(older).speakers
+
+
 def measurement(checked=True, cuts=((42.0, -4.0, 8.6), (86.0, -8.0, 5.7))):
     return Measurement("2026-11-05", checked, {"L": speaker(cuts), "R": speaker(cuts)})
 

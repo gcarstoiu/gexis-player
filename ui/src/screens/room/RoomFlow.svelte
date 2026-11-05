@@ -10,7 +10,7 @@
   2026-11-05): the 90° file from miniDSP's page, chosen here.
 -->
 <script>
-  import { chartSpan, countWord, cutFreq, cutGain, cutRows, cutsHeading, dips, dipsLine, giveCalibration, MOVES, outputShort,
+  import { BOTH, chartSpan, countWord, cutFreq, cutGain, cutRows, cutsHeading, sideName, sides, dips, dipsLine, giveCalibration, MOVES, outputShort,
     peaksDown, POSITIONS,
     runRoom, worseLine } from '../../lib/room.svelte.js';
   import RoomChart from './RoomChart.svelte';
@@ -158,9 +158,9 @@
       out.push({ kind: 'warn', name: 'An update is installing', sub: 'Measure once it has finished.' });
     } else {
       out.push({ kind: 'wait', name: 'A quiet room',
-        sub: playing?.dsd ? 'About three minutes. DSD is playing: it stops when you start.'
-          : playing?.source ? `About three minutes. ${playing.source} is playing: it stops when you start.`
-            : 'About three minutes, music stops' });
+        sub: playing?.dsd ? 'About four minutes. DSD is playing: it stops when you start.'
+          : playing?.source ? `About four minutes. ${playing.source} is playing: it stops when you start.`
+            : 'About four minutes, music stops' });
     }
     return out;
   });
@@ -194,6 +194,7 @@
   }[screenName] ?? '');
   const tail = $derived.by(() => {
     if (screenName === 'place') return { text: `Music stops now, on every source.${full?.screen ? " The player's screen shows that it is measuring." : ''}`, ink: 'quiet' };
+    if (screenName === 'correction' && ch === BOTH) return { text: 'The two together, as you hear them. Check it measures them with the correction on.', ink: 'quiet' };
     if (screenName === 'correction') return { text: dipsLine(dips(speaker, freqs)), ink: 'quiet' };
     if (screenName === 'nothing') return { text: "Your room's bass is already near the target, so there is nothing worth cutting. Room correction stays off.", ink: 'body' };
     if (screenName === 'result' && !run?.expected) return { text: worseLine(pending?.worse), ink: 'ink' };
@@ -230,16 +231,18 @@
   });
   const back = () => (full?.measured ? onpage?.() : onback?.());
 
-  //: A speaker's row while a position is measured (R16-R18).
+  //: A row while a position is measured (R16-R18): each speaker, then both.
+  const SWEPT = ['L', 'R', BOTH];
   function speakerRow(k) {
     const now = run?.speaker;
-    const doneK = now === 'R' && k === 'L';
+    const doneK = SWEPT.indexOf(now) > SWEPT.indexOf(k);
     const nowK = now === k;
     const noise = nowK && run?.noise;
     return {
-      name: k === 'L' ? 'Left speaker' : 'Right speaker',
+      name: { L: 'Left speaker', R: 'Right speaker', both: 'Both speakers' }[k],
       kind: doneK ? 'ok' : nowK ? (noise ? 'warn' : 'playing') : 'wait',
-      sub: doneK ? 'Two sweeps, they agree' : nowK ? (noise ? 'A noise spoiled this sweep. Measuring it again.' : `Playing · sweep ${run.sweep || 1} of 2`) : 'Two sweeps, after the left',
+      sub: doneK ? 'Two sweeps, they agree' : nowK ? (noise ? 'A noise spoiled this sweep. Measuring it again.' : `Playing · sweep ${run.sweep || 1} of 2`)
+        : k === BOTH ? 'Two sweeps together, after the right' : 'Two sweeps, after the left',
       amber: noise,
     };
   }
@@ -342,12 +345,12 @@
       {:else if screenName === 'move' && !counting}
         <div class="after">{moveText(n)}</div>
       {:else if screenName === 'checking'}
-        <div class="after">The same {countWord(count)} positions again, about a minute more.</div>
+        <div class="after">The same {countWord(count)} positions again, about three minutes more.</div>
       {/if}
 
       {#if screenName === 'measure'}
         <div class="card speakers">
-          {#each ['L', 'R'] as k, i (k)}
+          {#each SWEPT as k, i (k)}
             {@const s = speakerRow(k)}
             <div class="check" class:check--rule={i > 0}>
               {@render mark(s.kind)}
@@ -358,7 +361,7 @@
             </div>
           {/each}
         </div>
-        <div class="note">Nothing to do while it runs, about 25 seconds a position.</div>
+        <div class="note">Nothing to do while it runs, about 45 seconds a position.</div>
       {/if}
 
       {#if counting}
@@ -375,8 +378,8 @@
 
       {#if ['correction', 'nothing', 'result'].includes(screenName) && pending}
         <div class="segs" role="group" aria-label="Speaker">
-          {#each ['L', 'R'] as k (k)}
-            <button type="button" class="segbtn" class:is-sel={ch === k} aria-pressed={ch === k} onclick={() => (ch = k)}>{k === 'L' ? 'Left' : 'Right'}</button>
+          {#each sides(pending.chart) as k (k)}
+            <button type="button" class="segbtn" class:is-sel={ch === k} aria-pressed={ch === k} onclick={() => (ch = k)}>{sideName(k)}</button>
           {/each}
         </div>
         <div class="card chartcard">
@@ -385,7 +388,7 @@
         </div>
       {/if}
 
-      {#if screenName === 'correction' && pending}
+      {#if screenName === 'correction' && pending && ch !== BOTH}
         {@const list = cutRows(pending.cuts?.[ch])}
         <div class="card cuts">
           <div class="cuts__head"><span>{ch === 'L' ? 'Left' : 'Right'} speaker · {list.length} {list.length === 1 ? 'cut' : 'cuts'}</span><span class="rule"></span></div>
