@@ -945,3 +945,37 @@ is silent or production differs, confirmed by George (2026-10-28):
   slider jumped back (ADR-0166 B13). The phone's note says so: *The group
   slider moves each player the same share of its way up or down, so a
   louder room stays louder.*
+
+## Room correction (Phase 29, 2026-11-05)
+
+Built from `source/29` (ADR-0175, George's answers of 2026-11-05). Production
+wins under the additions, as the design asks; what the build decided where
+the drawing differs, or says nothing:
+
+- **[G]** **The check waits for a tap at each position**, as the run does
+  (George): the run's *Move it to position n* screen, with *Skip* beside
+  *Measure here*; the first is *Move it back to position 1*, *Back where your
+  head was*. The drawing walked the check's positions by itself.
+- **[G]** **The calibration file is given from the phone** (decision 4 as
+  changed, George): the drawing's typed serial and *Download* become *Its
+  calibration file* with *miniDSP's page* and *Choose the file*, and *Choose
+  another file* under a calibration in use. The UMIK-1 does not say its
+  serial over USB, so the microphone row shows the serial once a file gives
+  it. The drawing's *downloading* state is *Reading the file…*.
+- **[S]** The sheet's address is the one a phone types, with the port
+  (`<name>.local:8090`); the drawing's has none, which a phone would not open.
+- **[S]** On the 1280-wide bar the result's line sits under its heading: the
+  bar keeps its control column at the right, so beside it the line was cut
+  to nothing.
+- **[S]** The phone's *Room* control sits in production's volume row beside
+  the EQ button, at its height (56); under 380 px wide it is the glyph alone.
+- **[S]** The panel's and the bar's run screen use the existing deep veil;
+  the drawing's centred one is not a token.
+- **[S]** New words the drawing has no state for, to be confirmed: the
+  panel's run line while the phone is waited on (*Waiting for the phone*);
+  a result with a worse position (*Position 3 is 1.4 dB further from the
+  target than before.*); unequal cuts (*Three cuts on the left, four on the
+  right*); a correction with no dip (*Only cuts: nothing is raised, as more
+  power does not fill a dip.*); a player in a group (*In a group · Leave the
+  group to measure the room.*) or updating (*An update is installing ·
+  Measure once it has finished.*).

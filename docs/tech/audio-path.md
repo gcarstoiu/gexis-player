@@ -65,7 +65,7 @@ refused rather than converted, because nothing in the chain is a `plug`
 | `pcm.output` | `type meter` over `hw:sndrpihifiberry`, with the peppyalsa scope | go-librespot, bluealsa-aplay, and (through `default`) Plexamp |
 | `pcm.output_wait` | The same chain, but the slave is opened with `nonblock 0` so a busy DAC makes the open *wait* instead of failing (ADR-0095) | squeezelite only |
 | `gexis_softvol`, `gexis_softvol_wait` | **With Volume on Software (ADR-0124, ADR-0127):** `meter → copy → softvol → card`; on HDMI `meter → copy → softvol → plug → card` (the meter there since 2026-10-07, Finding 116; HDMI on Fixed is `plug → card` with no meter). One control for both, `Gexis Playback Volume` (`Gexis` to amixer), -90..0 dB in 0.25 dB steps; at 0 dB it passes every sample unchanged (Finding 115). Before any renderer starts, `gexis-softvol-restore.service` (ADR-0140) makes the control and writes the saved level, so a renderer resuming after a power cut never plays through it at the 0 dB ALSA makes it with; the core makes it again at start and sets the same level (`softvol_boot.start_level`), parks the card's own control at 0 dB only after that level reads back, and gives the card the level back when Hardware is chosen again. On every change of output the core closes its mixer handles and frees libasound's cached configuration (`volume.forget_mixers`): a running process otherwise keeps resolving `output` to the card it first saw | every renderer, through `output` / `output_wait` |
-| `gexis_eq_out` | **With the equaliser on (ADR-0162):** what CamillaDSP plays to - the rest of the output's chain: `hw:` the card, `plug → card` on HDMI, `gexis_softvol → card` on Software. `pcm.output` and `pcm.output_wait` then end on the loopback, `hw:Loopback,0,0` (see [The equaliser](#the-equaliser)) | CamillaDSP |
+| `gexis_eq_out` | **With the equaliser or room correction on (ADR-0162, ADR-0175):** what CamillaDSP plays to - the rest of the output's chain: `hw:` the card, `plug → card` on HDMI, `gexis_softvol → card` on Software. `pcm.output` and `pcm.output_wait` then end on the loopback, `hw:Loopback,0,0` (see [The equaliser](#the-equaliser)) | CamillaDSP |
 | `ctl.output` | The DAC's control interface, so `amixer -D output` and the core reach the hardware mixer by name | gexis-core |
 | `pcm_scope.peppyalsa` | Level and 30-band spectrum analysis, written to FIFOs in `/run/gexis` | loaded inside whichever renderer has the device open |
 
@@ -652,6 +652,59 @@ The state is kept in the settings database (`_equaliser`): for each output,
 by its card id, `on`, the setting (`sel`, `from`) and the bands; and the
 owner's list. `/state` carries it as `equaliser`; the routes are in
 [api.md](api.md).
+
+## Room correction for the bass
+
+ADR-0175. **It shares the equaliser's stage**: the loopback and CamillaDSP
+are in the path when either is on for the output in use (`outputs.eq_in_path`
+asks both), and with both off nothing below exists - bit-perfect, as before.
+
+```text
+hw:Loopback,1,0 → CamillaDSP (headroom fader, ten bands, then eight cuts on the left and eight on the right) → gexis_eq_out → card
+```
+
+- **The cuts** are Peaking filters, eight slots for each speaker
+  (`room_l_1`…`room_r_8`, a `Filter` step on channel 0 and one on channel 1,
+  after the bands). All sixteen are in the pipeline whenever the stage runs,
+  at 0 dB when unused, so switching room correction on or off while the
+  equaliser is on, *Hear it without* (the cuts at 0 dB) and a new
+  measurement are each a `PatchConfig`, heard at once; with the equaliser
+  off, switching it on or off reopens the output as the equaliser's switch
+  does. Cuts need no headroom. Native DSD goes past it with the equaliser.
+- **The measurement** (`room_run.py`) holds the device as an update does
+  (arbitration's `frozen`, then `stop_active`): nothing can play until it
+  ends. It brings the stage into the path if it was not, with the bands flat
+  and the cuts at 0 dB - the room as it is - sets the output to its maximum
+  level (100 % of *Maximum volume*; Fixed stays fixed), and puts both back
+  at the end. Its signals are played into `output`, as a renderer's music is
+  (`aplay`, S32_LE, 48 kHz, one speaker at a time), and recorded from the
+  UMIK-1 (`arecord` through `plughw`, mono 48 kHz), found by its USB
+  identity `2752:0007` and its capture volume set to the full.
+- **The level step**: band-limited pink noise from −54 dBFS in 3 dB steps
+  until the microphone reads about 75 dB SPL (its calibration's sensitivity
+  line read as REW does: the RMS level at 94 dB SPL at full capture volume),
+  never above −12 dBFS, and only while the reading follows the steps (eight
+  steps that do not move it end it as *too quiet*).
+- **The sweeps**: a logarithmic sweep from 10 Hz to 1 kHz, 5 s, at the
+  level found; the room's response is the recording's spectrum over the
+  sweep's, windowed to a second from the arrival, the calibration file
+  subtracted, smoothed to 1/6 octave on a 1/24-octave grid from 15 to 500 Hz
+  (`room_dsp.py`, numpy). Two sweeps per speaker and position that differ by
+  more than 1.5 dB below 250 Hz are repeated, up to six.
+- **The design** (`room_dsp.design`): the five positions' power average; the
+  target - +3 dB below about 80 Hz - on the average's level an octave above
+  250 Hz; a cut fitted to each peak above it in turn (up to eight, 12 dB at
+  most, Q 1 to 15, 20-250 Hz), then all fitted together by damped least
+  squares with dips and everything above 250 Hz left as they are; a cut that
+  leaves any position more than 1 dB further from the target is made smaller.
+  The check measures the five positions again through the stage with the
+  cuts on.
+
+The state is kept in the settings database (`_room_correction`): for each
+output `on`, `without` and the last measurement (its cuts and curves); and
+each microphone's calibration by its serial, the last given in use. `/state`
+carries a summary as `room`; the curves and a measurement in progress are
+`GET /room-correction` ([api.md](api.md)).
 
 ## Multiroom: a group of players
 

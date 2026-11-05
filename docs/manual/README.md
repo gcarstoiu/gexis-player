@@ -139,7 +139,9 @@ louder than its *Starting volume*.
 Under the volume sits the **equaliser**: the setting in use (*Rock ·
 preset*), its switch, and the settings as a row of buttons to change to -
 the presets, then your own. **Edit** opens the whole equaliser (see
-[The equaliser](#the-equaliser)).
+[The equaliser](#the-equaliser)). Under it, once the room has been measured,
+**room correction**: *On* and *Without* one tap apart, to compare, and when it
+is off, **Open** goes to its page (see [Room correction](#room-correction)).
 
 Between them, when other Gexis players are on the network, **Other players**
 and **Add players**, to play the same music on them; grouped, the volume is
@@ -611,6 +613,11 @@ to the level. **Edit bands in Settings** opens the whole equaliser, where on
 the phone each band is a row, a slider sideways from 0. Swipe it down, or tap
 above it, to close it.
 
+Beside it, once the room has been measured, the **Room** button: a tap
+switches room correction between *On* and *Without* (amber), to compare;
+when it is off it opens room correction's page. Room correction is measured
+from the phone: see [Room correction](#room-correction).
+
 ### Settings on the phone
 
 ![Phone: Settings](images/phone-settings.webp)
@@ -642,7 +649,9 @@ the equaliser's button and the volume. It stays until it is closed - tap
 below it, or push it back up - or the visualiser takes over or Home opens.
 The equaliser's button names the setting in use; tapped, it opens a second
 band under the first with the switch, the settings to change to and
-**Edit**. Beside it, with other Gexis players on the network, the **Group**
+**Edit**. Beside it, once the room has been measured, **Room · On**: a tap
+switches between *On* and *Without*, to compare; *Room · Off* opens room
+correction's page. Then, with other Gexis players on the network, the **Group**
 button: its band adds players to play the same music, and grouped it holds
 each player's own level, Leave and Undo group (section 6).
 
@@ -731,6 +740,7 @@ player into your Plex account).
 | Maximum volume | The loudest the player will go, on any input. At 80, 100 % on every control means that level. Hidden with Volume on *Fixed*. |
 | Volume curve | How the slider's travel maps to loudness. *Cubic* (half travel is −15.5 dB) is the usual shape; *Linear* puts half travel at −30 dB. |
 | Equaliser | Opens the equaliser, for the output in use; the row says what it uses (*Rock*, *Custom*) or *Off*. See below. |
+| Room correction | Opens room correction, for the output in use; the row says *On · measured 3 November*, *Without*, *Off* or *Not measured yet*. See below. |
 
 #### The equaliser
 
@@ -769,6 +779,67 @@ which output it is setting.
 
 Every source plays through it - Lyrion, Spotify, AirPlay, Bluetooth, Plexamp and Roon -
 and the visualiser shows the music as it arrives, before the equaliser.
+
+#### Room correction
+
+![Room correction](images/panel-room-correction.webp)
+
+The player measures the room with a USB measurement microphone at your seat,
+and cuts the peaks the room adds to the bass, below 250 Hz. **Only cuts**: a
+dip stays as it is, since more power does not fill it. The aim is a gentle
+rise below about 80 Hz (+3 dB), not flat. **Each output keeps its own**, as
+with the equaliser.
+
+**What it needs**: a miniDSP **UMIK-1**, plugged into one of the player's USB
+ports, and its **90° calibration file** from miniDSP's page, which asks for
+the serial on the microphone's label. Other microphones are not supported
+yet.
+
+**Measuring is done from the phone**, which you hold at the seat while you
+move the microphone; the player's screen shows that it is measuring, with
+nothing to press. On the player's screen, *Measure from your phone* (or
+*Measure again*) shows a code that opens this page on a phone.
+
+1. *Settings → Audio → Room correction* lists what is needed: the
+   microphone, its calibration and a quiet room. The first time, **Choose
+   the file** takes the 90° file (*miniDSP's page* is where to get it); a
+   0° file is refused. **Measure**: what is playing stops, on every source,
+   and nothing can play until the measurement ends.
+2. Put the microphone where your head is, on a stand at ear height,
+   pointing at the ceiling, and tap **Start**.
+3. Soft noise gets louder until the microphone hears about 75 dB, never
+   above the output's *Maximum volume*. If it cannot get there, turn the
+   amplifier up a little and tap **Try again**.
+4. Each speaker plays two sweeps on its own, about 25 seconds a position.
+   Then move the microphone where the phone shows - five positions within
+   about half a metre of your head - step back and tap **Measure here**;
+   three seconds later the sweeps play. It never moves on without the tap.
+   A sweep spoiled by a noise (a door, a voice) is measured again.
+5. The correction: the cuts for each speaker, and a chart of before (the
+   average of the five positions), each position, the target and the
+   expected after. **Check it** measures the five positions again with the
+   correction on, a tap at each again, about a minute more; **Skip** keeps
+   it as worked out, marked *Not checked*.
+6. **Keep it** switches room correction on; **Discard** leaves the output as
+   it was. **Cancel**, at any step, leaves it as it was too, and so does
+   ten minutes without a tap. A room whose bass is already near the target
+   has nothing to cut, and room correction stays off.
+
+On its page:
+
+- **On or off.** Off, the correction is taken out; with the equaliser also
+  off, the sound is untouched, bit-perfect. With the equaliser off,
+  switching it on or off reopens the output, so what is playing stops.
+- **Hear it without** (*A/B*): the cuts at 0 dB, to compare, heard at once,
+  and amber while set. It stays where you put it, after a restart too, until
+  switched back.
+- **The chart**, for the left and the right speaker: before, each position,
+  the target (dotted) and after - measured, or dashed and *expected* when the
+  check was skipped. Above 250 Hz is left alone.
+- **Measure again** replaces the measurement once the new one is kept.
+- **DSD** plays untouched: room correction stands aside while a DSD track
+  plays natively, and is back for the next PCM track.
+- A player in a group measures once it has left the group.
 
 ### Display — *Screen and idle*
 

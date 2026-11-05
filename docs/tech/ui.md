@@ -282,6 +282,22 @@ flowchart TD
   Pan --> PP[PanelPointer]
 ```
 
+### Room correction (ADR-0175)
+
+`screens/room/`, from `design/source/29`: `RoomCorrection.svelte` is
+Settings → Audio → Room correction on the panel, the bars and the phone (on
+the panel and bars *Measure again* opens a sheet with a QR code to the phone
+page at `#room`, which opens it there); `RoomFlow.svelte` is the phone's
+measurement, from *Before* to *Keep it*, showing the run the core holds
+(`room.run` on `/state`), so a page opened mid-run picks it up; `RoomRun.svelte`
+covers the panel and the bars while it runs, display only;
+`RoomChart.svelte` and `RoomSeat.svelte` are the chart and the seat drawing;
+`RoomQuick.svelte` is the *Room* control in the volume drawer, the bar's tray
+and the phone's volume row. The summary comes from `/state`'s `room`
+(`lib/room.svelte.js`), the curves from `GET /room-correction`, read again
+whenever the summary moves. The design's colours are `--rc-*` in
+`styles/tokens.css`, recoloured for each theme by `scripts/themes.mjs`.
+
 ### The D-pad (ADR-0161)
 
 `lib/dpad.js`, started by `App.svelte` on the panel only, answers a
