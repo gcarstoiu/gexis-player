@@ -405,6 +405,15 @@
         "marks": "N",
         "note": "Ten bands, the presets and your own settings, kept for each output. Off, the sound is untouched (bit-perfect).",
         "default": "Off"
+      },
+      {
+        "key": "room_correction",
+        "type": "readonly",
+        "kind": "room",
+        "label": "Room correction",
+        "marks": "N",
+        "note": "Room correction sits beside the equaliser and is kept for each output, as the equaliser is.",
+        "default": "Not measured yet"
       }
     ]
   },

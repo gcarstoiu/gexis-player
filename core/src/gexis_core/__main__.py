@@ -2774,6 +2774,9 @@ async def main() -> None:
         defaults={
             # ADR-0162: the Equaliser row says what is in use.
             "equaliser": lambda: equaliser.summary() if equaliser is not None else "Off",
+            # ADR-0175: the Room correction row says its state.
+            "room_correction": lambda: (room.summary() or {}).get("row", "Not measured yet")
+            if room is not None else "Not measured yet",
             "lms_server": lambda: f"{config.lms_host}:{config.lms_port}",
             # ADR-0141 D4: both HDMI ports, read when Settings is.
             "screen_port": lambda: _port_label(screen_apply.connector_now()),
