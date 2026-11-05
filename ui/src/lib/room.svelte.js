@@ -113,15 +113,21 @@ export function worseLine(worse) {
     : `Positions ${worse.map((w) => w[0]).join(', ')} are further from the target than before.`;
 }
 
+/** **Where a run measures**: three positions (George, 2026-11-05, over the
+ *  design's five). A measurement keeps its own number. */
+export const POSITIONS = 3;
+const COUNTS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight'];
+/** *three*, *five*: a number of positions in words. */
+export const countWord = (n) => COUNTS[n] ?? String(n);
+export const capitalised = (w) => w.charAt(0).toUpperCase() + w.slice(1);
+
 /** **Where to move the microphone** (the design's R19-R20). */
 export const MOVES = {
   2: 'About 40 cm to the left of where your head was',
   3: 'About 40 cm to the right of where your head was',
-  4: 'About 30 cm in front of where your head was, towards the speakers',
-  5: 'About 30 cm behind where your head was',
 };
-//: The seat drawing's five places in its 340 x 196 box (1 is the head).
-export const PLACES = [[170, 98], [122, 98], [218, 98], [170, 64], [170, 132]];
+//: The seat drawing's places in its 340 x 196 box (1 is the head).
+export const PLACES = [[170, 98], [122, 98], [218, 98]];
 
 /** The dips the correction leaves, for the correction's tail: the lowest
  *  points below the target under the limit, two at most, low to high. */
@@ -150,21 +156,34 @@ export function dipsLine(list) {
 export const FMIN = 15;
 export const FMAX = 300;
 //: x as a share of the width for a frequency; y as a share of the height for
-//: a level, ±15 dB.
+//: a level, ±`span` dB.
 export const fx = (f) => Math.log(f / FMIN) / Math.log(FMAX / FMIN);
-export const vy = (v) => (15 - Math.max(-15, Math.min(15, v))) / 30;
+export const vy = (v, span = 15) => (span - Math.max(-span, Math.min(span, v))) / (2 * span);
 
-export function path(freqs, curve, w, h) {
+/** **The chart's reach**: ±15 dB as the design draws it, wider in 5 dB
+ *  steps when a curve of either speaker goes past it, so a peak is never
+ *  cut flat by the chart's edge (sofapi, 2026-11-05: +18 dB at 45 Hz). */
+export function chartSpan(chart) {
+  let top = 0;
+  for (const s of Object.values(chart?.speakers ?? {})) {
+    for (const curve of [s.before, s.after, ...(s.positions ?? [])]) {
+      for (const v of curve ?? []) top = Math.max(top, Math.abs(v));
+    }
+  }
+  return Math.min(30, Math.max(15, Math.ceil(top / 5) * 5));
+}
+
+export function path(freqs, curve, w, h, span = 15) {
   let d = '';
-  for (let i = 0; i < freqs.length; i++) d += `${i ? 'L' : 'M'}${(fx(freqs[i]) * w).toFixed(1)},${(vy(curve[i]) * h).toFixed(1)}`;
+  for (let i = 0; i < freqs.length; i++) d += `${i ? 'L' : 'M'}${(fx(freqs[i]) * w).toFixed(1)},${(vy(curve[i], span) * h).toFixed(1)}`;
   return d;
 }
 
 /** The area between `a` and `b` where `a` is above: what the cuts take away. */
-export function between(freqs, a, b, w, h) {
+export function between(freqs, a, b, w, h, span = 15) {
   let d = '';
-  for (let i = 0; i < freqs.length; i++) d += `${i ? 'L' : 'M'}${(fx(freqs[i]) * w).toFixed(1)},${(vy(a[i]) * h).toFixed(1)}`;
-  for (let i = freqs.length - 1; i >= 0; i--) d += `L${(fx(freqs[i]) * w).toFixed(1)},${(vy(Math.min(a[i], b[i])) * h).toFixed(1)}`;
+  for (let i = 0; i < freqs.length; i++) d += `${i ? 'L' : 'M'}${(fx(freqs[i]) * w).toFixed(1)},${(vy(a[i], span) * h).toFixed(1)}`;
+  for (let i = freqs.length - 1; i >= 0; i--) d += `L${(fx(freqs[i]) * w).toFixed(1)},${(vy(Math.min(a[i], b[i]), span) * h).toFixed(1)}`;
   return `${d}Z`;
 }
 

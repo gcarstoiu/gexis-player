@@ -48,7 +48,10 @@ Q_MIN, Q_MAX = 1.0, 15.0
 PEAK_MIN_DB = 1.0
 #: A cut smaller than this is dropped rather than kept as nothing.
 CUT_MIN_DB = 0.5
-#: Item 6, criterion 2: no position made worse by more than this at a cut.
+#: Item 6, criterion 2: a position made worse by more than this at a cut
+#: counts against it; most positions against it hold it back (George,
+#: 2026-11-05: on sofapi one position of five held every cut at the room's
+#: main peak to 1-2 dB).
 WORSE_DB = 1.0
 #: Item 4: two sweeps of a position that differ by more than this somewhere
 #: below the limit were disturbed (a door, a voice), and are repeated. To be
@@ -314,10 +317,11 @@ def _refine(cuts: list[Cut], before, desired, grid, weight) -> list[Cut]:
 
 
 def _no_position_worse(cuts: list[Cut], positions, target, grid) -> list[Cut]:
-    """**No position made worse** (item 6, criterion 2): a cut that leaves
-    any one position more than `WORSE_DB` further from the target at its
-    frequency is made smaller until none is; one that comes to nothing is
-    dropped."""
+    """**Most positions not made worse** (item 6, criterion 2): a cut that
+    leaves more than half the positions more than `WORSE_DB` further from
+    the target at its frequency is made smaller until it does not; one that
+    comes to nothing is dropped. A single position in a dip the others do
+    not share is outvoted."""
     cuts = list(cuts)
     for _ in range(60):
         changed = False
@@ -325,11 +329,12 @@ def _no_position_worse(cuts: list[Cut], positions, target, grid) -> list[Cut]:
             at = np.array([cut.freq])
             t = float(np.interp(math.log(cut.freq), np.log(grid), target))
             total = float(cuts_db(cuts, at)[0])
-            worst = 0.0
+            worse = 0
             for pos in positions:
                 p = float(np.interp(math.log(cut.freq), np.log(grid), pos))
-                worst = max(worst, abs(p + total - t) - abs(p - t))
-            if worst > WORSE_DB:
+                if abs(p + total - t) - abs(p - t) > WORSE_DB:
+                    worse += 1
+            if worse * 2 > len(positions):
                 cuts[idx] = Cut(cut.freq, cut.gain * 0.8, cut.q)
                 changed = True
         cuts = [c for c in cuts if c.gain <= -CUT_MIN_DB]
@@ -348,7 +353,7 @@ def design(positions, grid=GRID) -> Design:
       eight;
     - then the cuts are fitted together, aiming the peaks at the target and
       leaving the dips and everything above the limit as they are;
-    - and a cut that would make any position worse is made smaller."""
+    - and a cut that would make most positions worse is made smaller."""
     grid = np.asarray(grid, dtype=float)
     positions = np.asarray(positions, dtype=float)
     before = power_average(positions)

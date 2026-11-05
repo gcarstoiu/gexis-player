@@ -808,20 +808,20 @@ nothing to press. On the player's screen, *Measure from your phone* (or
 2. Put the microphone where your head is, on a stand at ear height,
    pointing at the ceiling, and tap **Start**.
 3. The player listens to the quiet room, then soft noise gets louder until
-   the microphone hears it about 20 dB above the room's own noise - 50 to
-   60 dB at most, quieter than a conversation - never above the output's
-   *Maximum volume*. Only if it cannot reach 45 dB, turn the amplifier up a
-   little and tap **Try again**.
+   the microphone hears about 60 dB, the level of a conversation, never
+   above the output's *Maximum volume*. Only if it cannot reach 45 dB, turn
+   the amplifier up a little and tap **Try again**.
 4. Each speaker plays two sweeps on its own, about 25 seconds a position.
-   Then move the microphone where the phone shows - five positions within
-   about half a metre of your head - step back and tap **Measure here**;
-   three seconds later the sweeps play. It never moves on without the tap.
-   A sweep spoiled by a noise (a door, a voice) is measured again.
+   Then move the microphone where the phone shows - three positions: your
+   head, and about 40 cm to either side - step back and tap **Measure
+   here**; three seconds later the sweeps play. It never moves on without
+   the tap. A sweep spoiled by a noise (a door, a voice) is measured again.
 5. The correction: the cuts for each speaker, and a chart of before (the
-   average of the five positions), each position, the target and the
-   expected after. **Check it** measures the five positions again with the
-   correction on, a tap at each again, about a minute more; **Skip** keeps
-   it as worked out, marked *Not checked*.
+   average of the three positions), each position, the target and the
+   expected after. A peak is cut unless most positions would end further
+   from the target. **Check it** measures the three positions again with
+   the correction on, a tap at each again, about a minute more; **Skip**
+   keeps it as worked out, marked *Not checked*.
 6. **Keep it** switches room correction on; **Discard** leaves the output as
    it was. **Cancel**, at any step, leaves it as it was too, and so does
    ten minutes without a tap. A room whose bass is already near the target

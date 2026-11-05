@@ -18,7 +18,10 @@ KEY = "_room_correction"
 
 #: The speakers, as the screens and the store name them.
 CHANNELS = ("L", "R")
-POSITIONS = 5
+#: Where a run measures (George, 2026-11-05: three, over the five first
+#: drawn - the head and 40 cm to either side). A measurement keeps its own
+#: number, so one made at five still reads as five.
+POSITIONS = 3
 
 #: The grid the curves are kept on (`room_dsp.GRID`: 1/24 octave from
 #: 15 Hz), and how many of its points the chart draws (up to 300 Hz).

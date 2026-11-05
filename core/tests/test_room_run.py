@@ -70,7 +70,7 @@ class Rig:
         await self.run.start()
         await self.until("place")
         self.run.tap("start")
-        for n in range(2, 6):
+        for n in range(2, rc.POSITIONS + 1):
             await self.until("move", n)
             self.audio.position = n
             self.run.tap("next")
@@ -86,7 +86,7 @@ async def test_a_whole_run_kept():
     freqs = [f for f, _, _ in pending.cuts("L")]
     assert any(abs(f / 87 - 1) < 0.08 for f in freqs), freqs
     rig.run.tap("check")
-    for n in range(1, 6):
+    for n in range(1, rc.POSITIONS + 1):
         await rig.until("move", n, checking=True)
         rig.audio.position = n
         rig.run.tap("next")
@@ -162,33 +162,79 @@ async def _level_only(audio):
     return rig
 
 
-async def test_the_level_aims_20_db_above_the_rooms_noise():
-    """George, 2026-11-05: from the room's noise, not 75 dB."""
+def _reading_at(level, gain=1.0):
+    """What the made-up seat hears of the level step's noise at `level`."""
+    noise = rd.pink_noise(room_run.LEVEL_BURST_S) * 10 ** (level / 20)
+    rec = sim.record(noise, seed=1, gain=gain, noise_db=-200, tail_s=room_run.LEVEL_TAIL_S)
+    lo, hi = (int(t * rd.FS) for t in room_run.LEVEL_WINDOW_S)
+    return rd.band_level_db(rec[lo:hi]) + Audio().offset
+
+
+def _gain_for(spl_at_cap):
+    """The system's gain for a seat that hears `spl_at_cap` with the noise
+    at its cap."""
+    return 10 ** ((spl_at_cap - _reading_at(room_run.LEVEL_CAP_DBFS)) / 20)
+
+
+def _noise_levels(audio):
+    """The level step's noise as played, in dB of full scale."""
+    real = audio.play
+    levels = []
+
+    async def play(signal, channel, tail_s=1.1):
+        if channel is None and np.any(signal):
+            levels.append(20 * float(np.log10(np.sqrt(np.mean(np.square(signal))))))
+        return await real(signal, channel, tail_s)
+    audio.play = play
+    return levels
+
+
+async def test_the_level_aims_for_60_db():
+    """George, 2026-11-05: 60 dB in every room, over 75 and then 50."""
     rig = await _level_only(Audio(noise_db=-70))
     s = rig.run.state
-    assert room_run.AIM_MIN < s.aim_db < room_run.AIM_MAX
-    assert not s.too_quiet and abs(s.level_db - s.aim_db) <= room_run.AIM_WITHIN
+    assert s.aim_db == room_run.AIM_DB == 60
+    assert not s.too_quiet and abs(s.level_db - 60) <= room_run.AIM_WITHIN
     assert rig.run._level_dbfs <= room_run.LEVEL_CAP_DBFS
     rig.run.cancel()
     await rig.run.wait()
 
 
-async def test_a_quiet_room_aims_at_50_and_a_noisy_one_at_most_60():
-    """George, 2026-11-05: 60 at most."""
-    assert room_run.aim_for(20) == 50 and room_run.aim_for(35) == 55 and room_run.aim_for(50) == 60
-    rig = await _level_only(Audio())
-    assert rig.run.state.aim_db == 50
+async def test_past_the_noises_cap_the_sweeps_go_the_rest_of_the_way():
+    """sofapi as George sets it: 50 dB at -18 dBFS, so 56 at the noise's
+    cap; the sweeps are set the 4 dB further, the noise never is."""
+    audio = Audio(noise_db=-70, gain=_gain_for(56))
+    levels = _noise_levels(audio)
+    rig = await _level_only(audio)
+    s = rig.run.state
+    assert not s.too_quiet and abs(s.level_db - 60) <= room_run.AIM_WITHIN, s
+    assert room_run.LEVEL_CAP_DBFS < rig.run._level_dbfs <= room_run.SWEEP_CAP_DBFS
+    assert max(levels) <= room_run.LEVEL_CAP_DBFS + 0.1
     rig.run.cancel()
     await rig.run.wait()
 
 
+def test_a_sweep_at_its_cap_does_not_clip():
+    sweep = rd.log_sweep()
+    scale = 10 ** (room_run.SWEEP_CAP_DBFS / 20) / 10 ** (rd.band_level_db(sweep) / 20)
+    assert np.max(np.abs(sweep * scale)) < 0.9
+
+
 async def test_short_of_the_aim_it_is_taken_from_45_db():
-    """At the cap, a level short of the aim but over 45 dB and 15 dB over
-    the noise goes on: nobody is asked to turn the amplifier up for it."""
-    rig = await _level_only(Audio(noise_db=-70, gain=10 ** (-61 / 20)))
+    """At the sweeps' cap, a level short of the aim but over 45 dB and 15 dB
+    over the noise goes on: nobody is asked to turn the amplifier up for it."""
+    rig = await _level_only(Audio(noise_db=-70, gain=_gain_for(45)))
     s = rig.run.state
     assert not s.too_quiet, s
-    assert s.level_db < s.aim_db - room_run.AIM_WITHIN and s.level_db >= room_run.TAKE_MIN
+    assert room_run.TAKE_MIN <= s.level_db < s.aim_db - room_run.AIM_WITHIN
+    assert rig.run._level_dbfs == room_run.SWEEP_CAP_DBFS
+    rig.run.cancel()
+    await rig.run.wait()
+
+
+async def test_short_of_45_db_at_the_sweeps_cap_is_too_quiet():
+    rig = await _level_only(Audio(noise_db=-70, gain=_gain_for(35)))
+    assert rig.run.state.too_quiet
     rig.run.cancel()
     await rig.run.wait()
 
@@ -323,7 +369,7 @@ async def test_a_room_near_the_target_has_nothing_to_cut():
     await rig.run.start()
     await rig.until("place")
     rig.run.tap("start")
-    for n in range(2, 6):
+    for n in range(2, rc.POSITIONS + 1):
         await rig.until("move", n)
         rig.audio.position = n
         rig.run.tap("next")
@@ -337,7 +383,7 @@ async def test_progress_only_goes_up():
     rig = Rig()
     await rig.measure_all()
     rig.run.tap("check")
-    for n in range(1, 6):
+    for n in range(1, rc.POSITIONS + 1):
         await rig.until("move", n, checking=True)
         rig.audio.position = n
         rig.run.tap("next")

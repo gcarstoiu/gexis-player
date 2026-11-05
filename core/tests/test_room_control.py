@@ -83,7 +83,7 @@ class Rig:
         await self.control.start()
         await self.run_to("place")
         await self.control.tap("start")
-        for n in range(2, 6):
+        for n in range(2, rc.POSITIONS + 1):
             await self.run_to("move", n)
             self.audio.position = n
             await self.control.tap("next")
@@ -94,7 +94,7 @@ class Rig:
             await self.control.tap("skip")
         else:
             await self.control.tap("check")
-            for n in range(1, 6):
+            for n in range(1, rc.POSITIONS + 1):
                 await self.run_to("move", n, checking=True)
                 self.audio.position = n
                 await self.control.tap("next")
@@ -229,7 +229,7 @@ async def test_the_pending_measurement_is_shown_before_it_is_kept():
     await rig.control.start()
     await rig.run_to("place")
     await rig.control.tap("start")
-    for n in range(2, 6):
+    for n in range(2, rc.POSITIONS + 1):
         await rig.run_to("move", n)
         rig.audio.position = n
         await rig.control.tap("next")

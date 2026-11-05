@@ -10,7 +10,8 @@
   2026-11-05): the 90° file from miniDSP's page, chosen here.
 -->
 <script>
-  import { cutFreq, cutGain, cutsHeading, dips, dipsLine, giveCalibration, MOVES, outputShort, peaksDown,
+  import { chartSpan, countWord, cutFreq, cutGain, cutsHeading, dips, dipsLine, giveCalibration, MOVES, outputShort,
+    peaksDown, POSITIONS,
     runRoom, worseLine } from '../../lib/room.svelte.js';
   import RoomChart from './RoomChart.svelte';
   import RoomSeat from './RoomSeat.svelte';
@@ -58,6 +59,9 @@
   const pending = $derived(full?.pending ?? null);
   const speaker = $derived(pending?.chart?.speakers?.[ch] ?? null);
   const freqs = $derived(pending?.chart?.freqs ?? []);
+  const span = $derived(chartSpan(pending?.chart));
+  //: How many positions this run measures (an older core says nothing: five).
+  const count = $derived(run?.positions ?? (run ? 5 : POSITIONS));
   const tooQuiet = $derived(run?.step === 'level' && run.too_quiet);
 
   // ---- the buttons ---------------------------------------------------------------
@@ -154,9 +158,9 @@
       out.push({ kind: 'warn', name: 'An update is installing', sub: 'Measure once it has finished.' });
     } else {
       out.push({ kind: 'wait', name: 'A quiet room',
-        sub: playing?.dsd ? 'About five minutes. DSD is playing: it stops when you start.'
-          : playing?.source ? `About five minutes. ${playing.source} is playing: it stops when you start.`
-            : 'About five minutes, music stops' });
+        sub: playing?.dsd ? 'About three minutes. DSD is playing: it stops when you start.'
+          : playing?.source ? `About three minutes. ${playing.source} is playing: it stops when you start.`
+            : 'About three minutes, music stops' });
     }
     return out;
   });
@@ -172,7 +176,7 @@
         ? [`Only ${run.level_db ?? '—'} dB at the seat`, "At the player's maximum level. Turn the amplifier up a little and try again."]
         : ['Finding the level', run.aim_db == null ? 'Listening to the room first.'
           : `Soft noise, getting louder until the microphone hears about ${run.aim_db} dB.`];
-      case 'measure': return [`Position ${n} of 5`, ''];
+      case 'measure': return [`Position ${n} of ${count}`, ''];
       case 'move': return [checking && n === 1 ? 'Move it back to position 1' : `Move it to position ${n}`, ''];
       case 'correction': return [cutsHeading(pending?.cuts), ''];
       case 'nothing': return ['Nothing to cut', ''];
@@ -196,7 +200,8 @@
     if (screenName === 'result') return { text: 'The check was skipped: this is what the correction should do. Measure again to check it.', ink: 'body' };
     return null;
   });
-  const track = $derived([1, 2, 3, 4, 5].map((i) => ({ n: i, state: i < n ? 'done' : i === n ? 'now' : 'next' })));
+  const track = $derived(Array.from({ length: count }, (_, k) => k + 1)
+    .map((i) => ({ n: i, state: i < n ? 'done' : i === n ? 'now' : 'next' })));
   const showTracker = $derived(['measure', 'move', 'checking'].includes(screenName));
   const showSeat = $derived(['place', 'measure', 'move', 'checking'].includes(screenName));
   const done = $derived(run?.done ?? []);
@@ -269,7 +274,7 @@
       {#if showTracker}
         <div class="tracker">
           <div class="tracker__bar">{#each track as t (t.n)}<span class="seg seg--{t.state}"></span>{/each}</div>
-          <span class="tracker__text">{checking || screenName === 'checking' ? `Checking · position ${n} of 5` : `Position ${n} of 5`}</span>
+          <span class="tracker__text">{checking || screenName === 'checking' ? `Checking · position ${n} of ${count}` : `Position ${n} of ${count}`}</span>
         </div>
       {/if}
 
@@ -337,7 +342,7 @@
       {:else if screenName === 'move' && !counting}
         <div class="after">{moveText(n)}</div>
       {:else if screenName === 'checking'}
-        <div class="after">The same five positions again, about a minute more.</div>
+        <div class="after">The same {countWord(count)} positions again, about a minute more.</div>
       {/if}
 
       {#if screenName === 'measure'}
@@ -375,7 +380,7 @@
           {/each}
         </div>
         <div class="card chartcard">
-          <RoomChart surface="phone" {freqs} {speaker}
+          <RoomChart surface="phone" {freqs} {speaker} {span}
                      kind={screenName === 'nothing' ? '' : screenName === 'result' && !run?.expected ? 'measured' : 'expected'} />
         </div>
       {/if}

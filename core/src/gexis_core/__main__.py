@@ -4749,27 +4749,46 @@ async def main() -> None:
     #: otherwise leave the output at the run's maximum (sofapi, 2026-11-05:
     #: a core restarted mid-run left it at 100 %, not 44).
     ROOM_VOLUME_KEY = "_room_volume_before"
+    #: While a run holds the level up, the software level kept across
+    #: restarts stays the one before it, so a restart mid-run comes up there.
+    room_level_up = {"value": settings_store.get(ROOM_VOLUME_KEY) is not None}
 
     async def _room_take() -> None:
         await supervisor.stop_active()
 
     async def _room_loud() -> None:
+        """The output at its maximum for the run, **the DAC's own level kept
+        first** - not the percentage shown, which is the playing renderer's
+        own number while one is active (sofapi, 2026-11-05: two runs kept
+        100 and left the output at full level)."""
         volume = state_store.state.volume
         if volume is not None and settings_store.get(ROOM_VOLUME_KEY) is None:
-            settings_store.set(ROOM_VOLUME_KEY, {"percent": volume.percent, "muted": bool(volume.muted)})
+            settings_store.set(ROOM_VOLUME_KEY, {"raw": mute.audible_raw(volume.raw),
+                                                 "muted": bool(volume.muted)})
         if fixed_now["value"]:
             return
+        room_level_up["value"] = True
         if volume is not None and volume.muted:
             await set_mute(False)
-        await set_volume(100)
+        raw = slider_percent_to_raw(100)
+        logger.info("room: volume -> raw %s/%s for the measurement", raw, hardware_max())
+        # Through the bridge, not `set_volume`, which sends to the active
+        # renderer's own control while there is one.
+        await volume_bridge.write_hardware(raw)
 
     async def _room_quiet() -> None:
         was = settings_store.get(ROOM_VOLUME_KEY)
-        if not isinstance(was, dict) or fixed_now["value"]:
-            settings_store.set(ROOM_VOLUME_KEY, None)
-            return
+        # Before the write, so the level put back is the one kept.
+        room_level_up["value"] = False
         try:
-            await set_volume(float(was.get("percent", 0)))
+            if not isinstance(was, dict) or fixed_now["value"]:
+                return
+            raw = was.get("raw")
+            if isinstance(raw, bool) or not isinstance(raw, int):
+                # Kept as a percentage, before 2026-11-05's fix.
+                raw = slider_percent_to_raw(float(was.get("percent", 0)))
+            logger.info("room: volume back to raw %s/%s", raw, hardware_max())
+            await volume_bridge.write_hardware(raw)
             if was.get("muted"):
                 await set_mute(True)
         finally:
@@ -4778,9 +4797,8 @@ async def main() -> None:
     async def _room_volume_after_restart() -> None:
         """A measurement cut short by a restart: the level it raised put
         back to the one before it."""
-        was = settings_store.get(ROOM_VOLUME_KEY)
-        if isinstance(was, dict):
-            logger.info("room: a measurement was cut short; the volume back to %s%%", was.get("percent"))
+        if isinstance(settings_store.get(ROOM_VOLUME_KEY), dict):
+            logger.info("room: a measurement was cut short; the level before it put back")
             await _room_quiet()
 
     async def _room_release() -> None:
@@ -4929,7 +4947,7 @@ async def main() -> None:
         level_save = {"task": None, "db": None}
 
         def _keep_software_level(state) -> None:
-            if not software_on["value"]:
+            if not software_on["value"] or room_level_up["value"]:
                 return
             db = state.volume.db if state.volume is not None else None
             if db is None or db == level_save["db"]:

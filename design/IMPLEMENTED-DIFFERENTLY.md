@@ -979,3 +979,17 @@ the drawing differs, or says nothing:
   power does not fill a dip.*); a player in a group (*In a group · Leave the
   group to measure the room.*) or updating (*An update is installing ·
   Measure once it has finished.*).
+- **[G]** **Three positions, not five** (George, after sofapi's first run):
+  the head and 40 cm to either side; the drawing's front and back places
+  are gone from the seat, the trackers count to three, *About three
+  minutes*, *Before, average of three*. A measurement made at five still
+  says five.
+- **[G]** **The level is about 60 dB** in every room (George): *Soft noise,
+  getting louder until the microphone hears about 60 dB*, its scale round
+  60 as the drawing's is round 75.
+- **[S]** **The chart's reach grows past ±15 dB** in 5 dB steps when a
+  curve of either speaker goes past it, the same for both tabs: sofapi's
+  room peaked at +18 dB, which the drawing's scale cut flat.
+- **[S]** **The page's heading is the speaker shown**: *Peaks down by up to
+  N dB* under the Left/Right tabs is that speaker's number; the drawing had
+  one number for both, which read as the right's when it was the left's.

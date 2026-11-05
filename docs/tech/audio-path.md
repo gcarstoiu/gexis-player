@@ -681,27 +681,32 @@ hw:Loopback,1,0 → CamillaDSP (headroom fader, ten bands, then eight cuts on th
   UMIK-1 (`arecord` through `plughw`, mono 48 kHz), found by its USB
   identity `2752:0007` and its capture volume set to the full.
 - **The level step**: the quiet room recorded first; then band-limited pink
-  noise from −54 dBFS in 3 dB steps until the microphone reads about 20 dB
-  above that noise, between 50 and 60 dB SPL (George, 2026-11-05; its
-  calibration's sensitivity line read as REW does: the RMS level at 94 dB
-  SPL at full capture volume), never above −12 dBFS. Short of the aim at
-  that ceiling, a level from 45 dB and 15 dB above the noise is taken; below,
-  *too quiet*. Once the noise is clearly heard, four steps that do not move
-  the reading end it.
+  noise from −54 dBFS in 3 dB steps until the microphone reads about 60 dB
+  SPL (George, 2026-11-05; its calibration's sensitivity line read as REW
+  does: the RMS level at 94 dB SPL at full capture volume). The noise goes
+  no higher than −12 dBFS, where its peaks come near full scale; short of
+  the aim there, with the microphone following it, the sweeps are set the
+  rest of the way from its last reading, up to −6 dBFS (their peaks about
+  4.5 dB over their level in the band). Short of the aim at that, a level
+  from 45 dB and 15 dB above the noise is taken; below, *too quiet*. Once
+  the noise is clearly heard, four steps that do not move the reading end
+  it.
 - **The sweeps**: a logarithmic sweep from 10 Hz to 1 kHz, 5 s, at the
   level found; the room's response is the recording's spectrum over the
   sweep's, windowed to a second from the arrival, the calibration file
   subtracted, smoothed to 1/6 octave on a 1/24-octave grid from 15 to 500 Hz
   (`room_dsp.py`, numpy). Two sweeps per speaker and position that differ by
   more than 1.5 dB below 250 Hz are repeated, up to six.
-- **The design** (`room_dsp.design`): the five positions' power average; the
+- **The design** (`room_dsp.design`): the three positions' power average
+  (the head and 40 cm to either side; a measurement keeps its own number); the
   target - +3 dB below about 80 Hz - on the average's level an octave above
   250 Hz; a cut fitted to each peak above it in turn (up to eight, 12 dB at
   most, Q 1 to 15, 20-250 Hz), then all fitted together by damped least
   squares with dips and everything above 250 Hz left as they are; a cut that
-  leaves any position more than 1 dB further from the target is made smaller.
-  The check measures the five positions again through the stage with the
-  cuts on.
+  leaves more than half the positions more than 1 dB further from the target
+  is made smaller (George, 2026-11-05: one position in a dip of its own held
+  sofapi's main peak to a 1 dB cut). The check measures the positions again
+  through the stage with the cuts on.
 
 The state is kept in the settings database (`_room_correction`): for each
 output `on`, `without` and the last measurement (its cuts and curves); and

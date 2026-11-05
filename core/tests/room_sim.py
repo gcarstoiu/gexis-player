@@ -65,7 +65,7 @@ def record(played, seed: int = 0, gain: float = 1.0, noise_db: float = -90.0, le
     return out
 
 
-def positions(n: int = 5, channel: int = 0, modes=MODES) -> list[int]:
+def positions(n: int = 3, channel: int = 0, modes=MODES) -> list[int]:
     """Seeds for `n` positions of one speaker."""
     return [channel * 100 + k + 1 for k in range(n)]
 

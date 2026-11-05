@@ -121,18 +121,36 @@ def test_no_position_is_made_worse():
     assert rd.worse_positions(d.positions, after, d.target, d.cuts) == []
 
 
-def test_a_cut_that_would_spoil_a_position_is_made_smaller():
-    """Position 5 has a dip where the others peak: the cut there would dig
-    it deeper, so it is held back."""
+def _dipped(*which):
+    """The positions, those in `which` (from 0) with a dip at 87 Hz, where
+    the others peak."""
     curves = [sim.curve(s) for s in sim.positions()]
     i = int(np.argmin(np.abs(rd.GRID - 87)))
-    curves[4][i - 4:i + 5] -= 18
-    d = rd.design(curves)
-    near = [c for c in d.cuts if abs(c.freq / 87 - 1) < 0.08]
-    free = [c for c in _design().cuts if abs(c.freq / 87 - 1) < 0.08]
-    assert not near or abs(near[0].gain) < abs(free[0].gain)
+    for k in which:
+        curves[k][i - 4:i + 5] -= 18
+    return curves
+
+
+def _cut_near(d, f=87):
+    return sum(c.gain for c in d.cuts if abs(c.freq / f - 1) < 0.08)
+
+
+def test_a_cut_that_would_spoil_most_positions_is_made_smaller():
+    """Two positions of three have a dip where the third peaks: the cut
+    there would dig them deeper, so it is held back."""
+    d = rd.design(_dipped(1, 2))
+    assert abs(_cut_near(d)) < abs(_cut_near(_design()))
     after = d.positions + rd.cuts_db(d.cuts, rd.GRID)
-    assert rd.worse_positions(d.positions, after, d.target, d.cuts) == []
+    assert len(rd.worse_positions(d.positions, after, d.target, d.cuts)) <= 1
+
+
+def test_one_position_in_a_dip_is_outvoted():
+    """George, 2026-11-05: on sofapi one position of five held the room's
+    main peak to a 1 dB cut. One position in a dip the others do not share
+    no longer holds a cut back."""
+    alone = rd.design(_dipped(2))
+    held = rd.design(_dipped(1, 2))
+    assert abs(_cut_near(alone)) > abs(_cut_near(held)) + 3
 
 
 def test_a_room_near_the_target_has_nothing_to_cut():

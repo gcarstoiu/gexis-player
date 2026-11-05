@@ -2,16 +2,19 @@
 <!--
   The panel and the bars while the room is measured (ADR-0175; design/source/29
   N08-N12, B05, B06, B08): display only - the run is followed on the phone.
-  What it is doing, a progress bar, the five positions, and that sources can
+  What it is doing, a progress bar, the positions, and that sources can
   play again when it ends.
 -->
 <script>
   let { run, bar = false } = $props();
 
+  //: An older core says nothing: five.
+  const count = $derived(run.positions ?? 5);
+
   const head = $derived(run.checking ? 'Checking the room' : 'Measuring the room');
   const speaker = (k) => (k === 'L' ? 'Left' : 'Right');
   const line = $derived.by(() => {
-    const at = `Position ${run.position} of 5`;
+    const at = `Position ${run.position} of ${count}`;
     switch (run.step) {
       case 'level': return 'Finding the level · soft noise, getting louder';
       case 'place':
@@ -23,7 +26,7 @@
     }
   });
   const pct = $derived(`${Math.round((run.progress ?? 0) * 100)}%`);
-  const track = $derived([1, 2, 3, 4, 5].map((i) => ({
+  const track = $derived(Array.from({ length: count }, (_, k) => k + 1).map((i) => ({
     n: i, state: i < run.position ? 'done' : i === run.position ? 'now' : 'next',
   })));
 </script>

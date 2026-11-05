@@ -1,9 +1,10 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <!--
   Room correction's chart (ADR-0175; design/source/29 §5): one speaker, 15 to
-  300 Hz on a log axis, ±15 dB about the target's level. Drawn in this order:
+  300 Hz on a log axis, ±15 dB about the target's level, or wider in 5 dB
+  steps when a curve goes past it (`span`, `chartSpan`). Drawn in this order:
   what the cuts take away, each position, the target (dotted), before (the
-  average of five) and after - measured solid, expected dashed. The lines
+  positions' average) and after - measured solid, expected dashed. The lines
   differ by weight and dash as well as colour, so it reads without colour.
 
   `surface`: the phone's card (200 tall, the legend under it), the panel's
@@ -11,22 +12,26 @@
   a column at the right).
 -->
 <script>
-  import { between, path, xAt } from '../../lib/room.svelte.js';
+  import { between, countWord, path, xAt } from '../../lib/room.svelte.js';
 
-  //: `kind`: 'measured', 'expected', or '' (before and the target only).
-  let { surface = 'phone', freqs = [], speaker = null, kind = 'measured' } = $props();
+  //: `kind`: 'measured', 'expected', or '' (before and the target only);
+  //: `span`: the chart's reach, ± dB, the same for both speakers.
+  let { surface = 'phone', freqs = [], speaker = null, kind = 'measured', span = 15 } = $props();
 
   let w = $state(300);
   let h = $state(200);
   const big = $derived(surface !== 'phone');
   const after = $derived(kind && speaker ? speaker.after : null);
   const d = $derived(speaker ? {
-    gap: after ? between(freqs, speaker.before, after, w, h) : '',
-    pos: speaker.positions.map((p) => path(freqs, p, w, h)).join(''),
-    target: path(freqs, speaker.target, w, h),
-    before: path(freqs, speaker.before, w, h),
-    after: after ? path(freqs, after, w, h) : '',
+    gap: after ? between(freqs, speaker.before, after, w, h, span) : '',
+    pos: speaker.positions.map((p) => path(freqs, p, w, h, span)).join(''),
+    target: path(freqs, speaker.target, w, h, span),
+    before: path(freqs, speaker.before, w, h, span),
+    after: after ? path(freqs, after, w, h, span) : '',
   } : null);
+  //: The ±10 and 0 lines' places on the reach.
+  const at = (v) => `${(((span - v) / (2 * span)) * 100).toFixed(2)}%`;
+  const count = $derived(countWord(speaker?.positions?.length ?? 0));
   const hz = $derived(surface === 'bar' ? [20, 50, 100] : surface === 'panel' ? [20, 30, 50, 100, 200] : [20, 50, 100, 200]);
   const grid = $derived(surface === 'panel' ? [20, 30, 50, 100, 200] : [20, 50, 100, 200]);
 </script>
@@ -49,13 +54,13 @@
   <div class="plotrow">
     <div class="ygut">
       {#if surface === 'panel'}<span class="ylab ylab--unit" style="top:0">dB</span>{/if}
-      <span class="ylab" style="top:16.67%">+10</span>
+      <span class="ylab" style="top:{at(10)}">+10</span>
       <span class="ylab ylab--zero" style="top:50%">0</span>
-      <span class="ylab" style="top:83.33%">−10</span>
+      <span class="ylab" style="top:{at(-10)}">−10</span>
     </div>
     <div class="plot" bind:clientWidth={w} bind:clientHeight={h}>
-      <div class="hline" style="top:16.67%"></div>
-      <div class="hline" style="top:83.33%"></div>
+      <div class="hline" style="top:{at(10)}"></div>
+      <div class="hline" style="top:{at(-10)}"></div>
       {#each grid as f (f)}
         <div class="vline" class:vline--faint={f === 30} style="left:{xAt(f)}"></div>
       {/each}
@@ -91,7 +96,7 @@
   </div>
   {#if surface !== 'bar'}
     <div class="legend">
-      <span class="key">{@render sample('before')}Before, average of five</span>
+      <span class="key">{@render sample('before')}Before, average of {count}</span>
       <span class="key">{@render sample('pos')}Each position</span>
       <span class="key">{@render sample('target')}Target</span>
       {#if kind === 'measured'}<span class="key">{@render sample('after')}After, measured</span>{/if}

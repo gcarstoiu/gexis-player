@@ -2,14 +2,14 @@
 <!--
   Where the microphone goes (ADR-0175; design/source/29, *The drawing*):
   top-down, the two speakers at the top, the seat low in the middle, a
-  dashed ring of about 50 cm round the head, and the five positions - the
+  dashed ring of about 50 cm round the head, and the three positions - the
   one in use lit, the ones done ticked. Moving to a new one, a dashed arrow
   from the head shows the way. The speaker playing is outlined.
 -->
 <script>
   import { PLACES } from '../../lib/room.svelte.js';
 
-  //: `active`: the position in use (1-5) or 0; `done`: those measured;
+  //: `active`: the position in use (from 1) or 0; `done`: those measured;
   //: `playing`: 'L', 'R' or null; `arrow`: draw the way from the head to `active`.
   let { active = 1, done = [], playing = null, arrow = false } = $props();
 
@@ -38,7 +38,7 @@
 </script>
 
 <div class="card">
-  <div class="box" role="img" aria-label={`Where the microphone goes: position ${active || 1} of 5 around your seat`}>
+  <div class="box" role="img" aria-label={`Where the microphone goes: position ${active || 1} of ${PLACES.length} around your seat`}>
     <div class="spk spk--l" class:is-playing={playing === 'L'}><span></span></div>
     <div class="spk spk--r" class:is-playing={playing === 'R'}><span></span></div>
     <span class="spklab spklab--l" class:is-playing={playing === 'L'}>L</span>

@@ -14099,7 +14099,7 @@
               "object",
               "null"
             ],
-            "description": "A measurement in progress: `step` (place, level, measure, move, countdown, correction, nothing, checking, result), `position` 1-5, `speaker` L or R, `sweep`, `noise`, `level_db`, `count`, `checking`, `progress` 0-1, `done`, `expected`, `too_quiet`."
+            "description": "A measurement in progress: `step` (place, level, measure, move, countdown, correction, nothing, checking, result), `position` from 1 to `positions` (how many the run measures, 3), `speaker` L or R, `sweep`, `noise`, `level_db`, `aim_db`, `count`, `checking`, `progress` 0-1, `done`, `expected`, `too_quiet`."
           },
           "ended": {
             "type": [

@@ -12,8 +12,8 @@
 <script>
   import { encode } from 'uqr';
   import { onDestroy } from 'svelte';
-  import { cutFreq, cutGain, outputPhrase, outputShort, peaksDown, room, RoomReader, setRoom, worseLine }
-    from '../../lib/room.svelte.js';
+  import { capitalised, chartSpan, countWord, cutFreq, cutGain, outputPhrase, outputShort, peaksDown, room,
+    RoomReader, setRoom, worseLine } from '../../lib/room.svelte.js';
   import { screen } from '../../lib/family.svelte.js';
   import RoomChart from './RoomChart.svelte';
   import RoomFlow from './RoomFlow.svelte';
@@ -79,7 +79,10 @@
   const notChecked = $derived(!!measured && !measured.checked);
   const cuts = $derived(full?.cuts?.[ch] ?? []);
   const cutsHead = $derived(`${ch === 'L' ? 'Left' : 'Right'} speaker · ${cuts.length} ${cuts.length === 1 ? 'cut' : 'cuts'}`);
-  const resultHead = $derived(peaksDown(measured?.peaks_down));
+  //: The speaker shown: its own number, not the larger of the two.
+  const resultHead = $derived(peaksDown(speaker?.peaks_down ?? measured?.peaks_down));
+  const span = $derived(chartSpan(chart));
+  const positionsWord = $derived(countWord(measured?.positions ?? 0));
   const resultLine = $derived(notChecked ? 'Expected, not checked. Measure again to check it.' : worseLine(measured?.worse));
   const abSub = $derived(!on ? 'Only while room correction is on.'
     : ab ? 'Now without: the cuts at 0 dB. Switch back to hear them.'
@@ -184,7 +187,7 @@
           <div class="card measuredcard">
             <div class="power__text">
               <div class="power__title">Measured</div>
-              <div class="power__note">{measured?.year} · five positions</div>
+              <div class="power__note">{measured?.year} · {positionsWord} positions</div>
             </div>
             {#if notChecked}<span class="flag">Not checked</span>{/if}
           </div>
@@ -194,7 +197,7 @@
               <div class="chartcard__title">{resultHead}</div>
               <div class="chartcard__line">{resultLine}</div>
             </div>
-            <RoomChart surface="phone" freqs={chart?.freqs ?? []} {speaker} {kind} />
+            <RoomChart surface="phone" freqs={chart?.freqs ?? []} {speaker} {kind} {span} />
           </div>
           <button type="button" class="again" onclick={() => (view = 'flow')}>Measure again</button>
           {#if error}<div class="error" role="status">{error}</div>{/if}
@@ -223,7 +226,7 @@
           <div class="mcard">
             <span class="mcard__text">
               <span class="mcard__title">{measured ? measured.year : 'Not measured yet'}</span>
-              <span class="mcard__sub">{measured ? 'Five positions' : 'Measure from your phone'}</span>
+              <span class="mcard__sub">{measured ? `${capitalised(positionsWord)} positions` : 'Measure from your phone'}</span>
             </span>
             {#if notChecked}<span class="flag flag--bar">Not checked</span>{/if}
           </div>
@@ -242,7 +245,7 @@
               {@render segs('bar')}
             </div>
             <div class="card chartcard chartcard--bar" class:is-dim={dsd || !on}>
-              <RoomChart surface="bar" freqs={chart?.freqs ?? []} {speaker} {kind} />
+              <RoomChart surface="bar" freqs={chart?.freqs ?? []} {speaker} {kind} {span} />
             </div>
           {:else}
             <div class="never never--bar">
@@ -273,7 +276,7 @@
               <div class="label"><span>Last measurement</span><span class="rule"></span></div>
               {#if measured}
                 <div class="lcard__when">
-                  <span><span class="lcard__date">{measured.year}</span><span class="lcard__pos">Five positions</span></span>
+                  <span><span class="lcard__date">{measured.year}</span><span class="lcard__pos">{capitalised(positionsWord)} positions</span></span>
                   {#if notChecked}<span class="flag flag--panel">Not checked</span>{/if}
                 </div>
                 <div class="lcard__cuts">
@@ -300,7 +303,7 @@
                 </div>
                 {@render segs('panel')}
               </div>
-              <RoomChart surface="panel" freqs={chart?.freqs ?? []} {speaker} {kind} />
+              <RoomChart surface="panel" freqs={chart?.freqs ?? []} {speaker} {kind} {span} />
             {:else}
               <div class="never">
                 <div class="never__title">Correct the bass your room adds</div>
