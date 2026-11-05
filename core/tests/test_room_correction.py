@@ -19,6 +19,7 @@ def measurement(checked=True, cuts=((42.0, -4.0, 8.6), (86.0, -8.0, 5.7))):
 
 
 CAL = """"Sens Factor =-1.378dB, AGain =18dB, SERNO: 7071234"
+"Auto-generated 90-degree calibration file"
 10.054	-2.4562
 """ + "\n".join(f"{10 * 1.02 ** k:.3f}\t{-0.01 * k:.4f}" for k in range(1, 400)) + "\n"
 
@@ -62,13 +63,14 @@ def test_the_stage_gets_the_cuts_or_nothing():
 
 def test_stored_and_read_back():
     room = Room().keep("DAC", measurement(checked=False)).set_without("DAC", True)
-    cal = rc.parse_calibration(CAL, "7071234", "2026-11-05")
+    cal = rc.parse_calibration(CAL, "2026-11-05")
     room = room.with_calibration(cal)
     again = Room.from_settings(room.to_settings())
     assert again.output("DAC").on and again.output("DAC").without
     assert again.output("DAC").measured.checked is False
     assert again.output("DAC").measured.cuts("R") == ((42.0, -4.0, 8.6), (86.0, -8.0, 5.7))
     assert again.microphones["7071234"].sens_db == -1.378
+    assert again.calibration().serial == "7071234" and again.calibration().gain_db == 18
 
 
 @pytest.mark.parametrize("bad", [None, "x", [], {"outputs": "x"}, {"outputs": {"DAC": {"on": True}}},
@@ -86,31 +88,35 @@ def test_a_boost_in_the_store_is_dropped():
 
 
 def test_a_calibration_file_is_read():
-    cal = rc.parse_calibration(CAL, "7071234", "2026-11-05")
+    cal = rc.parse_calibration(CAL, "2026-11-05", "7071234_90deg.txt")
+    assert cal.serial == "7071234" and cal.gain_db == 18 and cal.angle == 90
     assert cal.sens_db == -1.378 and cal.points[0] == (10.054, -2.4562)
     assert cal.points[-1][0] <= rc.KEEP_UP_TO
     assert cal.db_at(10.054) == -2.4562
     assert cal.db_at(5) == -2.4562 and cal.db_at(50000) == cal.points[-1][1], "held at its ends"
 
 
-@pytest.mark.parametrize("text", ["<html><body>Not found</body></html>", "", "10 1\n20 2\n",
-                                  '"Sens Factor =-1.3dB, SERNO: 7071234"\n100 1\n50 2\n'])
+@pytest.mark.parametrize("text", ["<p style=\"color:red;\">Unable to locate calibration data.</p>", "",
+                                  "10 1\n20 2\n", '"Sens Factor =-1.3dB, SERNO: 7071234"\n100 1\n50 2\n'])
 def test_anything_else_is_refused(text):
     with pytest.raises(RoomError, match="not a calibration file"):
-        rc.parse_calibration(text, "7071234", "2026-11-05")
+        rc.parse_calibration(text, "2026-11-05")
 
 
-def test_a_file_for_another_microphone_is_refused():
-    with pytest.raises(RoomError, match="for 707-1234, not 707-1235"):
-        rc.parse_calibration(CAL, "7071235", "2026-11-05")
+def test_the_0_degree_file_is_refused():
+    zero = CAL.replace('"Auto-generated 90-degree calibration file"\n', "")
+    with pytest.raises(RoomError, match="0° file"):
+        rc.parse_calibration(zero, "2026-11-05", "7071234.txt")
+    assert rc.parse_calibration(zero, "2026-11-05", "7071234_90deg.txt").angle == 90, "named as one"
 
 
-def test_the_serial_as_typed():
-    assert rc.clean_serial(" 707-1234 ") == "7071234"
+def test_a_file_that_names_no_microphone_is_refused():
+    with pytest.raises(RoomError, match="which microphone"):
+        rc.parse_calibration(CAL.replace(", SERNO: 7071234", ""), "2026-11-05")
+
+
+def test_the_serial_as_the_label_prints_it():
     assert rc.shown_serial("7071234") == "707-1234"
-    for bad in ("70-1234", "abc", "", None, "707-12345"):
-        with pytest.raises(RoomError):
-            rc.clean_serial(bad)
 
 
 def test_the_chart_up_to_300_hz():

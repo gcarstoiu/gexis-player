@@ -13,44 +13,9 @@ from gexis_core import room_run  # noqa: E402
 from gexis_core.room_run import Host, Run  # noqa: E402
 
 import room_sim as sim  # noqa: E402
+from room_sim import Audio  # noqa: E402
 
 CAL = rc.Calibration("7071234", -1.378, ((10.0, 0.0), (20000.0, 0.0)), "2026-11-05")
-
-
-class Audio:
-    """The microphone in a made-up room: where it is, how loud the system
-    plays, and a noise when asked for."""
-
-    def __init__(self, offset=120.0, modes=sim.MODES, bursts=()):
-        self.offset = offset
-        self.modes = modes
-        self.position = 1
-        self.plays = []
-        self.bursts = list(bursts)    # the n-th sweep (1-based) gets a thump
-        self.sweeps = 0
-        self.stage = None
-
-    def spl_offset(self, cal):
-        return self.offset
-
-    async def play(self, signal, channel):
-        self.plays.append((channel, self.position))
-        seed = (channel or 0) * 100 + self.position
-        if channel is not None:
-            self.sweeps += 1
-        burst = (0.5, -20) if (channel is not None and self.sweeps in self.bursts) else None
-        modes = self.modes
-        recording = sim.record(signal, seed=seed, modes=modes, noise_db=-110, burst=burst, tail_s=1.1)
-        if self.stage is not None and channel is not None:
-            # The stage's cuts, as CamillaDSP would play them.
-            cuts = [rd.Cut(f, g, q) for f, g, q in self.stage[channel]]
-            n = 1 << 20
-            spec = np.fft.rfft(recording, n)
-            f = np.fft.rfftfreq(n, 1 / rd.FS)
-            spec *= 10 ** (rd.cuts_db(cuts, np.maximum(f, 1e-3)) / 20)
-            recording = np.fft.irfft(spec, n)[: len(recording)]
-        await asyncio.sleep(0)
-        return recording
 
 
 class Rig:

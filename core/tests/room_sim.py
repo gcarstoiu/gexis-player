@@ -3,6 +3,8 @@ rolls off below 30 Hz, and modes - peaks and dips - that move a little from
 one position to the next and differ between the speakers."""
 import math
 
+import asyncio
+
 import numpy as np
 
 from gexis_core import room_dsp as rd
@@ -75,3 +77,39 @@ def curve(seed: int, modes=MODES, grid=rd.GRID) -> np.ndarray:
     f = np.fft.rfftfreq(n, 1 / fs)
     h = response(f, modes, seed)
     return rd.response_db(np.fft.irfft(h, n)[: int(rd.WINDOW_S * fs)], fs, grid)
+
+
+class Audio:
+    """The microphone in a made-up room: where it is, how loud the system
+    plays, and a noise when asked for."""
+
+    def __init__(self, offset=120.0, modes=MODES, bursts=()):
+        self.offset = offset
+        self.modes = modes
+        self.position = 1
+        self.plays = []
+        self.bursts = list(bursts)    # the n-th sweep (1-based) gets a thump
+        self.sweeps = 0
+        self.stage = None
+
+    def spl_offset(self, cal):
+        return self.offset
+
+    async def play(self, signal, channel):
+        self.plays.append((channel, self.position))
+        seed = (channel or 0) * 100 + self.position
+        if channel is not None:
+            self.sweeps += 1
+        burst = (0.5, -20) if (channel is not None and self.sweeps in self.bursts) else None
+        modes = self.modes
+        recording = record(signal, seed=seed, modes=modes, noise_db=-110, burst=burst, tail_s=1.1)
+        if self.stage is not None and channel is not None:
+            # The stage's cuts, as CamillaDSP would play them.
+            cuts = [rd.Cut(f, g, q) for f, g, q in self.stage[channel]]
+            n = 1 << int(math.ceil(math.log2(len(recording))))
+            spec = np.fft.rfft(recording, n)
+            f = np.fft.rfftfreq(n, 1 / rd.FS)
+            spec *= 10 ** (rd.cuts_db(cuts, np.maximum(f, 1e-3)) / 20)
+            recording = np.fft.irfft(spec, n)[: len(recording)]
+        await asyncio.sleep(0)
+        return recording

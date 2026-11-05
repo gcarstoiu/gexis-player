@@ -22,8 +22,9 @@ class Engine:
         self.calls = []
         self.dsd = False
 
-    async def configure(self, card, gains, restart=False):
+    async def configure(self, card, gains, restart=False, room=None):
         self.calls.append((card, tuple(gains), restart))
+        self.room = room
 
     def status(self):
         return {"running": bool(self.calls and self.calls[-1][0]), "dsd": self.dsd}
@@ -40,10 +41,15 @@ class Rig:
             self.reopened.append(reason)
             await self.control.sync(restart=True)
 
+        self.room = None          # room correction's cuts, or None when it is off
+        self.measuring = False
         self.control = EqualiserControl(self.store, self.engine, output=lambda: self.output,
                                         fixed=lambda: self.fixed, reopen=reopen,
                                         publish=self.published.append,
-                                        changed=lambda: self.changes.append(1))
+                                        changed=lambda: self.changes.append(1),
+                                        room_in_path=lambda card: self.room is not None or self.measuring,
+                                        room_stage=lambda card: self.room,
+                                        bypassed=lambda card: self.measuring)
 
 
 async def test_off_by_default_flat_and_bit_perfect():
@@ -207,3 +213,36 @@ async def test_the_screens_are_told_whether_and_up_to_where_it_is_given_back():
     rig.fixed = False
     snap = await rig.control.update({"sel": "flat"})
     assert snap["gives_back"] is False and snap["given_up_to"] is None
+
+
+# ---- ADR-0175: room correction shares the stage ----------------------------------------
+
+ROOM = (((87.0, -8.0, 5.6),), ((87.0, -6.0, 5.0),))
+
+
+async def test_room_correction_alone_keeps_the_stage_in_the_path_flat():
+    rig = Rig()
+    rig.room = ROOM
+    await rig.control.sync()
+    assert rig.engine.calls[-1] == ("sndrpihifiberry", eq.FLAT, False)
+    assert rig.engine.room == ROOM
+
+
+async def test_with_room_correction_on_the_equaliser_switches_without_reopening():
+    rig = Rig()
+    rig.room = ROOM
+    await rig.control.update({"on": True, "sel": "rock"})
+    await rig.control.update({"on": False})
+    assert rig.reopened == [], "the stage stays: only the bands change"
+    assert rig.engine.calls[-1] == ("sndrpihifiberry", eq.FLAT, False)
+
+
+async def test_while_the_room_is_measured_the_bands_are_flat():
+    rig = Rig()
+    await rig.control.update({"on": True, "sel": "rock"})
+    rig.measuring = True
+    await rig.control.sync()
+    assert rig.engine.calls[-1] == ("sndrpihifiberry", eq.FLAT, False)
+    rig.measuring = False
+    await rig.control.sync()
+    assert rig.engine.calls[-1][1] == eq.PRESET["rock"].gains

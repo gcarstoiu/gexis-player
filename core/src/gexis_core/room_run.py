@@ -158,8 +158,8 @@ class Run:
     # -- what the control calls ----------------------------------------------------
 
     async def start(self) -> None:
-        await self._host.take()
         try:
+            await self._host.take()
             await self._host.stage(None)
             await self._host.loud()
         except Exception:

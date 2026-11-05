@@ -142,17 +142,18 @@ class OutputRoom:
 
 @dataclass(frozen=True)
 class Calibration:
-    """**A microphone's calibration** (decision 4, item 9): the 90° file
-    from miniDSP for its serial, the sensitivity line and the points."""
+    """**A microphone's calibration** (decision 4 as changed, item 9): the
+    90° file from miniDSP, given by the owner - its serial, sensitivity line,
+    the gain it was made at, and the points."""
     serial: str
     sens_db: float
     points: tuple[tuple[float, float], ...]
     date: str
-    typed: bool = False
+    gain_db: float | None = None
     angle: int = 90
 
     def as_dict(self) -> dict:
-        return {"serial": self.serial, "sens_db": self.sens_db, "date": self.date, "typed": self.typed,
+        return {"serial": self.serial, "sens_db": self.sens_db, "date": self.date, "gain_db": self.gain_db,
                 "angle": self.angle, "points": [[round(f, 3), round(d, 3)] for f, d in self.points]}
 
     @classmethod
@@ -163,8 +164,9 @@ class Calibration:
         points = tuple(_floats(p, 2) for p in value["points"])
         if len(points) < 2:
             raise TypeError
+        gain = value.get("gain_db")
         return cls(serial, float(value["sens_db"]), points, str(value.get("date", "")),
-                   bool(value.get("typed", False)), int(value.get("angle", 90)))
+                   None if gain is None else float(gain), int(value.get("angle", 90)))
 
     def db_at(self, f: float) -> float:
         """The file's correction at `f`, interpolated on a log axis; held
@@ -186,19 +188,9 @@ class Calibration:
         return d0 + t * (d1 - d0)
 
 
-#: A UMIK-1's serial as its label shows it (700-1234) or the file names it
-#: (7001234).
+#: A UMIK-1's serial as the files name it (7001234; its label prints
+#: 700-1234).
 SERIAL = re.compile(r"\d{7}")
-
-
-def clean_serial(text) -> str:
-    """The serial typed or read, as the files name it: seven digits."""
-    if not isinstance(text, str):
-        raise RoomError("Type the serial on the microphone's label.")
-    digits = re.sub(r"[\s-]", "", text)
-    if not SERIAL.fullmatch(digits):
-        raise RoomError("The serial is seven digits, as on the label: 700-1234.")
-    return digits
 
 
 def shown_serial(serial: str) -> str:
@@ -208,48 +200,66 @@ def shown_serial(serial: str) -> str:
 
 _SENS = re.compile(r"Sens\s*Factor\s*=\s*([-+]?\d*\.?\d+)\s*dB", re.IGNORECASE)
 _SERNO = re.compile(r"SERNO:\s*(\d+)", re.IGNORECASE)
+_AGAIN = re.compile(r"AGain\s*=\s*(-?\d+(?:\.\d+)?)\s*dB", re.IGNORECASE)
 _POINT = re.compile(r"^\s*([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)[\s,;]+([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)")
 #: The points kept: the bass and well above it; the file goes to 20 kHz.
 KEEP_UP_TO = 2000.0
 
 
-def parse_calibration(text: str, serial: str, date: str, typed: bool = False) -> Calibration:
-    """**A calibration file checked as one** (item 9): a sensitivity line,
-    then frequency and dB columns, rising, covering the bass. Anything else
-    is refused - a web page or an error in its place included."""
+def parse_calibration(text: str, date: str, name: str | None = None) -> Calibration:
+    """**A calibration file checked as one** (item 9): a sensitivity line
+    naming the microphone, then frequency and dB columns, rising, covering
+    the bass; the 90° one (its second line or its name says so). Anything
+    else is refused - a web page or an error saved in its place included."""
+    not_one = "That is not a calibration file from miniDSP."
     if not isinstance(text, str) or len(text) > 400_000:
-        raise RoomError("That is not a calibration file.")
-    sens = None
+        raise RoomError(not_one)
+    sens = serial = gain = None
+    ninety = bool(name and re.search(r"_90deg", name, re.IGNORECASE))
     points: list[tuple[float, float]] = []
     for line in text.splitlines():
+        if "90-degree" in line.lower() or "90 degree" in line.lower():
+            ninety = True
         if sens is None:
             m = _SENS.search(line)
             if m:
                 sens = float(m.group(1))
                 found = _SERNO.search(line)
-                if found and found.group(1) != serial:
-                    raise RoomError(f"That file is for {shown_serial(found.group(1))}, not {shown_serial(serial)}.")
+                serial = found.group(1) if found else None
+                g = _AGAIN.search(line)
+                gain = float(g.group(1)) if g else None
                 continue
         m = _POINT.match(line)
         if m:
             f, d = float(m.group(1)), float(m.group(2))
             if not (math.isfinite(f) and math.isfinite(d)) or f <= 0 or abs(d) > 40:
-                raise RoomError("That is not a calibration file.")
+                raise RoomError(not_one)
             if points and f <= points[-1][0]:
-                raise RoomError("That is not a calibration file.")
+                raise RoomError(not_one)
             if f <= KEEP_UP_TO:
                 points.append((f, d))
-    if sens is None or abs(sens) > 20:
-        raise RoomError("That is not a calibration file.")
+    if sens is None or abs(sens) > 40:
+        raise RoomError(not_one)
     if len(points) < 10 or points[0][0] > 20 or points[-1][0] < 500:
-        raise RoomError("That is not a calibration file.")
-    return Calibration(serial, sens, tuple(points), date, typed)
+        raise RoomError(not_one)
+    if serial is None or not SERIAL.fullmatch(serial):
+        raise RoomError("That file does not say which microphone it is for.")
+    if not ninety:
+        raise RoomError("That is the 0° file. Choose the 90° one: its name ends in _90deg.")
+    return Calibration(serial, sens, tuple(points), date, gain)
 
 
 @dataclass(frozen=True)
 class Room:
     outputs: dict = field(default_factory=dict)       # card -> OutputRoom
     microphones: dict = field(default_factory=dict)   # serial -> Calibration
+    #: The calibration in use: the last given. The UMIK-1 does not say which
+    #: unit is plugged in, so it is taken to be that one until another file
+    #: is given.
+    current: str | None = None
+
+    def calibration(self) -> Calibration | None:
+        return self.microphones.get(self.current) if self.current else None
 
     def output(self, card: str) -> OutputRoom:
         return self.outputs.get(card, OutputRoom())
@@ -284,7 +294,7 @@ class Room:
     def with_calibration(self, cal: Calibration) -> Room:
         microphones = dict(self.microphones)
         microphones[cal.serial] = cal
-        return replace(self, microphones=microphones)
+        return replace(self, microphones=microphones, current=cal.serial)
 
     # -- what the stage plays --
 
@@ -311,7 +321,8 @@ class Room:
 
     def to_settings(self) -> dict:
         return {"outputs": {k: v.as_dict() for k, v in sorted(self.outputs.items())},
-                "microphones": {k: v.as_dict() for k, v in sorted(self.microphones.items())}}
+                "microphones": {k: v.as_dict() for k, v in sorted(self.microphones.items())},
+                "current": self.current}
 
     @classmethod
     def from_settings(cls, value) -> Room:
@@ -343,7 +354,8 @@ class Room:
                 continue
             if cal.serial == k:
                 microphones[k] = cal
-        return cls(outputs, microphones)
+        current = value.get("current")
+        return cls(outputs, microphones, current if current in microphones else None)
 
 
 def chart(measurement: Measurement | None, expected: bool | None = None) -> dict | None:
