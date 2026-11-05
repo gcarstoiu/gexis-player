@@ -148,6 +148,7 @@ class StateServer:
         dashboard_page=None,
         panel_input=None,
         equaliser=None,
+        room=None,
         library=None,
         artistinfo=None,
         notes=None,
@@ -234,6 +235,8 @@ class StateServer:
         self._panel_input = panel_input
         #: ADR-0162: the equaliser (`eq_control.EqualiserControl`).
         self._equaliser = equaliser
+        #: ADR-0175: room correction (`room_control.RoomControl`).
+        self._room = room
         #: ADR-0166: multiroom (`multiroom.Multiroom`).
         self._multiroom = multiroom
         #: ADR-0136: the other players on the network, for the phone's switcher.
@@ -1799,6 +1802,52 @@ class StateServer:
     async def _handle_equaliser_delete(self, request: web.Request) -> web.Response:
         key = request.match_info["key"]
         return await self._equaliser_call(lambda: self._equaliser.delete(key))
+
+    # ---- ADR-0175: room correction ------------------------------------------------
+
+    async def _room_call(self, call) -> web.Response:
+        """One of room correction's operations; a refusal is a 400 with the
+        sentence for the person."""
+        from gexis_core.room_correction import RoomError
+        if self._room is None:
+            return web.json_response({"error": "room correction is not wired up"}, status=503)
+        try:
+            return web.json_response(await call())
+        except RoomError as exc:
+            return web.json_response({"error": str(exc)}, status=400)
+
+    async def _handle_room(self, request: web.Request) -> web.Response:
+        """Room correction for the output in use, its microphone and chart."""
+        if self._room is None:
+            return web.json_response({"error": "room correction is not wired up"}, status=503)
+        snapshot = self._room.snapshot()
+        if snapshot is None:
+            return web.json_response({"error": "there is no output"}, status=409)
+        return web.json_response(snapshot)
+
+    async def _handle_room_set(self, request: web.Request) -> web.Response:
+        body = await self._json_body(request)
+        if body is None:
+            return web.json_response({"error": "expected a JSON object"}, status=400)
+        return await self._room_call(lambda: self._room.update(body))
+
+    async def _handle_room_calibration(self, request: web.Request) -> web.Response:
+        """The 90° calibration file, as the phone read it (decision 4 as
+        changed, George 2026-11-05)."""
+        body = await self._json_body(request)
+        if body is None or not isinstance(body.get("text"), str):
+            return web.json_response({"error": 'body must be {"text": ..., "name": ...}'}, status=400)
+        return await self._room_call(lambda: self._room.calibration(body["text"], body.get("name")))
+
+    async def _handle_room_run(self, request: web.Request) -> web.Response:
+        """`measure` begins a run; the rest are the phone's buttons in it."""
+        body = await self._json_body(request)
+        if body is None or not isinstance(body.get("action"), str):
+            return web.json_response({"error": 'body must be {"action": ...}'}, status=400)
+        action = body["action"]
+        if action == "measure":
+            return await self._room_call(self._room.start)
+        return await self._room_call(lambda: self._room.tap(action))
 
     async def _handle_idle_request(self, request: web.Request) -> web.Response:
         """**ADR-0101: the phone's idle-screen toggle.** Attention first, as a
@@ -3563,6 +3612,10 @@ class StateServer:
         app.router.add_post("/equaliser/settings", self._handle_equaliser_save)
         app.router.add_put("/equaliser/settings/{key}", self._handle_equaliser_rename)
         app.router.add_delete("/equaliser/settings/{key}", self._handle_equaliser_delete)
+        app.router.add_get("/room-correction", self._handle_room)
+        app.router.add_put("/room-correction", self._handle_room_set)
+        app.router.add_post("/room-correction/calibration", self._handle_room_calibration)
+        app.router.add_post("/room-correction/run", self._handle_room_run)
         app.router.add_post("/peppy/{action}", self._handle_peppy)
         app.router.add_get("/settings", self._handle_settings)
         app.router.add_get("/notices/{name}", self._handle_notice)

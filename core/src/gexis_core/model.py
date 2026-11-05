@@ -332,6 +332,10 @@ class PlaybackState:
     #: ADR-0162: the equaliser for the output in use, as `eq_control.snapshot`
     #: gives it; None with no output.
     equaliser: dict | None = None
+    #: ADR-0175: room correction for the output in use, as
+    #: `room_control.summary` gives it - its switches, the last measurement's
+    #: date and a run in progress; the curves are on `/room-correction`.
+    room: dict | None = None
     #: **ADR-0166: the group this player is in**, as `group.view` gives it -
     #: the members with their levels, the leader, what plays - or None.
     group: dict | None = None
@@ -389,5 +393,6 @@ class PlaybackState:
             "personalise": self.personalise,
             "resetting": self.resetting,
             "equaliser": dict(self.equaliser) if self.equaliser else None,
+            "room": dict(self.room) if self.room else None,
             "group": dict(self.group) if self.group else None,
         }

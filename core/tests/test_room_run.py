@@ -281,3 +281,16 @@ async def test_progress_only_goes_up():
     values = [s.progress for s in rig.states]
     assert values == sorted(values) and values[-1] == 1.0
     await rig.run.cancel()
+
+
+async def test_skip_while_the_check_sweeps():
+    rig = Rig()
+    await rig.measure_all()
+    rig.run.tap("check")
+    await rig.until("move", 1, checking=True)
+    rig.run.tap("next")
+    await rig.until("checking", 1)
+    rig.run.tap("skip")
+    state = await rig.until("result")
+    assert state.expected
+    await rig.run.cancel()

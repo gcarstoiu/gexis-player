@@ -66,6 +66,10 @@ class Cancelled(Exception):
     pass
 
 
+class _Skipped(Exception):
+    """*Skip* pressed while the check sweeps."""
+
+
 @dataclass(frozen=True)
 class RunState:
     """What every screen shows of a run (the design's *State*)."""
@@ -250,11 +254,14 @@ class Run:
             return "discarded"
         await self._host.stage(self._cuts())
         skipped = False
-        for n in range(1, rc.POSITIONS + 1):
-            if await self._move(n, checking=True) == "skip":
-                skipped = True
-                break
-            await self._measure(n, checking=True)
+        try:
+            for n in range(1, rc.POSITIONS + 1):
+                if await self._move(n, checking=True) == "skip":
+                    skipped = True
+                    break
+                await self._measure(n, checking=True)
+        except _Skipped:
+            skipped = True
         self._result(skipped)
         self._set(RunState("result", position=rc.POSITIONS, progress=1.0, expected=skipped, done=all_done,
                            level_db=self.state.level_db))
@@ -357,6 +364,8 @@ class Run:
                                    checking=checking, done=done, level_db=self.state.level_db,
                                    progress=_progress(step, n, channel, min(k, SWEEPS), checking)))
                 curves.append(await self._curve(channel))
+                if checking and self._skip_sent():
+                    raise _Skipped()
                 if len(curves) < SWEEPS:
                     continue
                 pair = self._closest(curves)
@@ -366,6 +375,15 @@ class Run:
                 logger.info("room: position %d, %s: two sweeps disagree by %.1f dB, again",
                             n, channel, dsp.agree_db(curves[-2], curves[-1]))
             (self._checked if checking else self._positions)[channel].append(dsp.power_average(list(pair)))
+
+    def _skip_sent(self) -> bool:
+        """Whether *Skip* came while the check swept (the design: Skip on
+        every check screen); any other tap then is dropped, as it would be
+        ignored."""
+        found = False
+        while not self._taps.empty():
+            found = self._taps.get_nowait() == "skip" or found
+        return found
 
     def _closest(self, curves):
         best = None
