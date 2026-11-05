@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-11-04 (on R2D2).
+Last updated: 2026-11-05 (on R2D2).
 
 ## Start here
 
@@ -74,17 +74,24 @@ them to the Plugins page's list (`plugin_store.ADDED`).
 
 **In progress: Phase 29**, room correction for the bass
 (`ph-room-correction`, worktree `~/projects/gexis-player-room-correction`,
-from `next` at 1.13.0). ADR-0175 accepted (George, 2026-11-03, decisions
-1-6): cuts only, below 250 Hz, towards a gentle rise below 80 Hz, in the
-equaliser's CamillaDSP stage; five positions, each channel alone, measured
-again after; the UMIK-1 only, its calibration downloaded from miniDSP by the
-serial (the address and whether the microphone gives its serial over USB
-not yet verified). George has a UMIK-1. Its settings are in ADR-0022's
-inventory. The phone's flow settled with George from a clickable mock-up
-(2026-11-04: a tap and a countdown at each position, the check can be
-skipped, A/B a saved switch); the brief for Claude Design is
-`design/briefs/29-room-correction.md`, with the mock-up beside it, for
-George to hand over.
+pushed; previews on GitHub). ADR-0175: cuts only, below 250 Hz, towards a
+gentle rise below 80 Hz, in the equaliser's stage; five positions, each
+speaker alone, a tap and a 3 s countdown at each, the check (Skip allowed)
+waiting for the tap too, a 10-minute timeout; A/B a saved switch; the UMIK-1
+only, **its 90° file given from the phone** (decision 4 changed 2026-11-05:
+miniDSP has no API, its terms forbid automated tools, and the microphone
+gives no serial over USB). Claude Design's design is `design/source/29`
+(George kept its proposals and new copy). **Built and tested on mocks**:
+`room_dsp` (numpy), `room_correction`, `room_run`, `room_mic`,
+`room_control`, the stage's 16 cut slots, the routes, the screens
+(`ui/src/screens/room/`), the manual, FAQ, technical guide, hardware page
+and README; layouts checked with made-up data (`~/projects/scratch/ph29/harness`).
+**Not yet on a player**: a measurement through the speakers (George's UMIK-1
+is on sofapi, a USB-C unit; read only its own entry and a quiet room's
+level), the level against a meter, two sweeps' agreement in a quiet room,
+the stage's cost, the A/B bit-exactness. **Copy to confirm** with George:
+the lines the design has no state for (`design/IMPLEMENTED-DIFFERENTLY.md`,
+Phase 29).
 
 **Open, small:** a preview's download still holds the skin packs (1.1 of
 1.2 GB) though `release.yml` excludes them; `gen_personalise.py` out of step since Phase 23;
