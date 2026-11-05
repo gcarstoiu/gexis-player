@@ -181,9 +181,24 @@ curves; three questions it raised, then one that followed):
 
 The brief for Claude Design: `design/briefs/29-room-correction.md`.
 
+**The design** (Claude Design, 2026-11-05, `design/source/29/`), and
+George's answers on it (2026-11-05):
+- **The check waits for a tap at each position**, as the run does, with its
+  countdown; Skip on every check screen. The design drew it walking the
+  positions by itself, which George's flow decision rules out.
+- **A run waiting for a tap is cancelled after 10 minutes**, the output left
+  as it was; a sweep under way always finishes. The panel and the bars stay
+  display-only while it measures.
+- **Its proposals kept as drawn**: the panel's *Measure from your phone*
+  sheet with a QR code and the player's address; the *Room* control (On and
+  Without one tap; *Off* opens the page; none on an output never measured;
+  dimmed and inert while DSD plays); *Hear it without* in its own card,
+  tagged A/B and amber (the theme's warn colour) wherever *Without* shows;
+  and its new copy, verbatim.
+
 ## Settings (ADR-0022)
 
-Appended to the inventory 2026-11-03 and 2026-11-04, confirmed by George:
+Appended to the inventory 2026-11-03 to 2026-11-05, confirmed by George:
 - **[N]** Room correction on and off, for each output.
 - **[N]** The measurement and its design, for each output (internal).
 - **[N]** A microphone's calibration, downloaded by its serial.
@@ -192,6 +207,7 @@ Appended to the inventory 2026-11-03 and 2026-11-04, confirmed by George:
 - **[H]** Five positions, eight cuts of up to 12 dB, 75 dB SPL.
 - **[N]** A/B, with or without, for each output (2026-11-04).
 - **[H]** A 3-second countdown at each position (2026-11-04).
+- **[H]** A run waiting for a tap is cancelled after 10 minutes (2026-11-05).
 
 ## Measured before it is called done
 
