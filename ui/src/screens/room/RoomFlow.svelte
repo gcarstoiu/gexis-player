@@ -814,7 +814,7 @@
   .track {
     position: relative;
     height: 12px;
-    border-radius: 6px;
+    border-radius: var(--r-6);
     background: var(--rc-run-track);
   }
   .track__fill {
@@ -822,7 +822,7 @@
     left: 0;
     top: 0;
     bottom: 0;
-    border-radius: 6px;
+    border-radius: var(--r-6);
     background: var(--accent-lms);
     transition: width 300ms ease;
   }
@@ -895,7 +895,7 @@
   .progress {
     position: relative;
     height: 10px;
-    border-radius: 5px;
+    border-radius: var(--r-5);
     background: var(--rc-run-track);
     flex-shrink: 0;
   }
@@ -904,7 +904,7 @@
     left: 0;
     top: 0;
     bottom: 0;
-    border-radius: 5px;
+    border-radius: var(--r-5);
     background: var(--accent-lms);
     transition: width 300ms ease;
   }

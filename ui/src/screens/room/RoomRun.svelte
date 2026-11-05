@@ -142,7 +142,7 @@
   .bar {
     position: relative;
     height: 12px;
-    border-radius: 6px;
+    border-radius: var(--r-6);
     background: var(--rc-run-track);
   }
   .bar__fill {
@@ -150,7 +150,7 @@
     left: 0;
     top: 0;
     bottom: 0;
-    border-radius: 6px;
+    border-radius: var(--r-6);
     background: var(--accent-lms);
     transition: width 300ms ease;
   }
