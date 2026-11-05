@@ -232,6 +232,36 @@ Appended to the inventory 2026-11-03 to 2026-11-05, confirmed by George:
 - **[H]** A 3-second countdown at each position (2026-11-04).
 - **[H]** A run waiting for a tap is cancelled after 10 minutes (2026-11-05).
 
+## While building
+
+On `ph-room-correction`, 2026-11-05; what differs from the proposal above:
+
+- **The cuts follow the bands** in the stage, not before them (item 1): a
+  `Filter` step for each speaker after the equaliser's; inside CamillaDSP's
+  64-bit pipeline the order changes nothing. All sixteen slots are in the
+  pipeline whenever the stage runs.
+- **The level step** raises the noise digitally from −54 dBFS, never above
+  −12 dBFS, with the output at 100 % of its *Maximum volume* for the run
+  (Fixed stays fixed) and put back after - so "never above the output's
+  maximum level" holds by construction. The noise is raised only while the
+  microphone follows it: eight steps that do not move its reading stop the
+  run as *too quiet* (an unplugged or covered microphone does not make it
+  louder).
+- **A player in a group** does not measure (it plays into the group's
+  loopback, and the others would play the sweeps): *Leave the group to
+  measure the room.*
+- **A run waiting for a tap** - Start, Measure here, Check it, Keep it, Try
+  again - is cancelled after 10 minutes; a sweep under way finishes. Cancel
+  stops at once.
+- **The sensitivity** read as REW reads it (94 dB SPL minus the file's
+  sensitivity line, at full capture volume): on sofapi a quiet room read
+  −48 dBFS RMS, unweighted - 47 dB SPL that way, 77 dB the other reading,
+  so the first fits a quiet room. Still to check against a calibrator, or
+  another meter.
+- **Two sweeps agree** within 1.5 dB from 20 to 250 Hz (1/6 octave), up to
+  six tried; a made-up thump of −20 dBFS below 300 Hz spoils one by 2-3 dB.
+  To be checked against the microphone's own repeats in a quiet room.
+
 ## Measured before it is called done
 
 - DEVELOPMENT.md's acceptance 1-4.
