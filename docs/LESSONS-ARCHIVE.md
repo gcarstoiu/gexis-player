@@ -1782,3 +1782,21 @@ silent step included - a measurement waiting for a tap (`room.run` on the
 core's `/state` or `GET /room-correction`), an update, a pairing; read the
 core's state as well as the cards before an install or a restart.
 
+**93. A restore passed on the line that logged it** (2026-11-05, Phase 29,
+sofapi). After Lesson 92 a run kept the level from before it in the store
+(`_room_volume_before`, as the percentage shown) and put it back at the next
+start. Tested at 12:36 with a run cut short by a restart: the start-up logged
+*a measurement was cut short; the volume back to 44%* and *volume -> 44%
+(raw 287/360)*, `run` was none, and George was told the case passed. Nothing
+read the level back afterwards. At 12:37 George started a run and cancelled
+it: its putting back set *100%*, so it had saved 100 as the level before; at
+16:45 his full run did the same, and the output stayed at 100 % until
+Spotify's start limit took it to 60 % when he next played. Found reading the
+log for his run's results. The likely cause, from the code: the percentage
+shown is the active renderer's own number while one is active, and the run
+saved that, not the DAC's level; the fix keeps the DAC's raw level and puts
+it back through the volume bridge (to be confirmed on sofapi by reading the
+level back). **Rule:** a fix that puts something back is checked by reading
+it back from the device, and again after the next ordinary use of the same
+path - here the next run's own saved level - not by the line that logs the
+write.

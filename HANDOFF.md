@@ -75,8 +75,9 @@ them to the Plugins page's list (`plugin_store.ADDED`).
 **In progress: Phase 29**, room correction for the bass
 (`ph-room-correction`, worktree `~/projects/gexis-player-room-correction`,
 pushed; previews on GitHub). ADR-0175: cuts only, below 250 Hz, towards a
-gentle rise below 80 Hz, in the equaliser's stage; five positions, each
-speaker alone, a tap and a 3 s countdown at each, the check (Skip allowed)
+gentle rise below 80 Hz, in the equaliser's stage; three positions (George,
+2026-11-05, over five; most of them decide a cut, not any one), 60 dB at the
+seat, each speaker alone, a tap and a 3 s countdown at each, the check (Skip allowed)
 waiting for the tap too, a 10-minute timeout; A/B a saved switch; the UMIK-1
 only, **its 90° file given from the phone** (decision 4 changed 2026-11-05:
 miniDSP has no API, its terms forbid automated tools, and the microphone
@@ -86,10 +87,13 @@ gives no serial over USB). Claude Design's design is `design/source/29`
 `room_control`, the stage's 16 cut slots, the routes, the screens
 (`ui/src/screens/room/`), the manual, FAQ, technical guide, hardware page
 and README; layouts checked with made-up data (`~/projects/scratch/ph29/harness`).
-**Not yet on a player**: a measurement through the speakers (George's UMIK-1
-is on sofapi, a USB-C unit; read only its own entry and a quiet room's
-level), the level against a meter, two sweeps' agreement in a quiet room,
-the stage's cost, the A/B bit-exactness. **Copy to confirm** with George:
+**On sofapi** (George's UMIK-1, a USB-C unit): George's first full run
+(2026-11-05, five positions at 50 dB) gave the three decisions above, and
+showed the output left at 100 % after a run - the level before kept as the
+shown percentage (fixed on the branch: the DAC's own level, put back through
+the bridge; to check on sofapi by reading the level back, Lesson 93).
+**Not yet:** the fixed run on sofapi, the level against a meter, two sweeps'
+agreement at 60 dB, the stage's cost, the A/B bit-exactness. **Copy to confirm** with George:
 the lines the design has no state for (`design/IMPLEMENTED-DIFFERENTLY.md`,
 Phase 29).
 

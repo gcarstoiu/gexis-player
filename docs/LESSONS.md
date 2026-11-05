@@ -493,6 +493,14 @@ is anything a person has started that is not finished, a silent step
 included: a measurement (`room.run`), an update, a pairing - read the
 core's state, not only the cards.
 
+**93. A restore passed on the line that logged it** (2026-11-05, Phase 29).
+The fix for Lesson 92 was tested on sofapi by a run cut short by a restart;
+the start-up logged *the volume back to 44%*, and the case was reported as
+passed. A minute later George's next run saved 100 % as the level before it
+and put the output back at 100 %, and so did his next. A restore is checked
+by reading the level back from the device, and again after the next
+ordinary use of the same path - not by the line that logs the write.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target, the check quietly

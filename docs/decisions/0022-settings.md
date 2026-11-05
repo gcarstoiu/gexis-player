@@ -639,7 +639,7 @@ Confirmed by George, 2026-11-03 (the A/B and countdown rows 2026-11-04, the time
 | Microphone calibration | [N] | The 90° file from miniDSP, given by the owner (George, 2026-11-05; downloaded by the player until then), kept for each microphone by its serial |
 | Correction target | [H] | A gentle rise below about 80 Hz (+3 dB) |
 | Bass limit | [H] | 250 Hz |
-| Measurement | [H] | Five positions; up to eight cuts per channel of at most 12 dB; sweeps about 20 dB over the room's noise, 50 to 60 dB SPL (George, 2026-11-05; 75 dB SPL until then) |
+| Measurement | [H] | Three positions (George, 2026-11-05; five until then); up to eight cuts per channel of at most 12 dB; sweeps at 60 dB SPL (George, 2026-11-05; 75 dB SPL, then 50 to 60 from the room's noise, until then) |
 | Room correction A/B | [N] | With or without, kept for each output and in backups (George, 2026-11-04); *without* keeps the stage in the path with the cuts at 0 dB, *off* takes it out |
 | Measurement countdown | [H] | 3 s after the tap at each position, before its sweeps |
 | Measurement timeout | [H] | A run waiting for a tap is cancelled after 10 minutes, the output left as it was (George, 2026-11-05) |

@@ -219,6 +219,23 @@ ceiling is reached short of the aim. **Measure answers at once and Cancel is
 instant** (George): the run shows *place* while the player is prepared
 behind it; Cancel stops the sound at once, and the player is put back after.
 
+**After sofapi's first full run** (George, 2026-11-05, three decisions on its
+chart: the left speaker's main peak at 45 Hz cut by 2 dB, the right's by 1):
+- **Most positions decide a cut** (item 6, criterion 2 changed): a cut is
+  held back only when more than half the positions would end more than 1 dB
+  further from the target, over any one position doing so and over the
+  average alone. On sofapi position 4 read 14-15 dB under the other four at
+  45-47 Hz on both speakers, already at or under the target, and held both
+  cuts back; with most positions deciding they are 12 and 11 dB.
+- **Three positions** (item 5): the head and 40 cm to either side, over five
+  and over the head alone - about 3 minutes instead of 5½, two of three
+  still deciding a cut. The cost: the target's level rests on fewer places
+  (on sofapi three instead of five moved it by 2 to 3.5 dB).
+- **60 dB in every room** (item 4), the most allowed, over 50 to 60 from the
+  room's noise and over 55: at 50 dB (−18 dBFS) sofapi's run swept 12 times
+  more than the two a position needs, and one position's left speaker never
+  had two sweeps agree in six.
+
 **What else the microphone is** (research, 2026-11-05, sources kept outside
 the repository): USB `2752:0007`, product *Umik-1  Gain: 18dB* (ALSA's card
 id `U18dB`); 24-bit at 48 kHz only (`S24_3LE`), stereo on older units and
@@ -239,8 +256,9 @@ Appended to the inventory 2026-11-03 to 2026-11-05, confirmed by George:
   2026-11-05).
 - **[H]** The target: a gentle rise below about 80 Hz (decision 1).
 - **[H]** The bass limit, 250 Hz (decision 3).
-- **[H]** Five positions, eight cuts of up to 12 dB; the level about 20 dB
-  over the room's noise, 50 to 60 dB SPL (George, 2026-11-05, over 75 dB).
+- **[H]** Three positions (George, 2026-11-05, over five), eight cuts of up
+  to 12 dB; the level 60 dB SPL (George, 2026-11-05, over 75 dB and over 50
+  to 60 from the room's noise).
 - **[N]** A/B, with or without, for each output (2026-11-04).
 - **[H]** A 3-second countdown at each position (2026-11-04).
 - **[H]** A run waiting for a tap is cancelled after 10 minutes (2026-11-05).
@@ -257,9 +275,18 @@ On `ph-room-correction`, 2026-11-05; what differs from the proposal above:
   −12 dBFS, with the output at 100 % of its *Maximum volume* for the run
   (Fixed stays fixed) and put back after - so "never above the output's
   maximum level" holds by construction. The noise is raised only while the
-  microphone follows it: eight steps that do not move its reading stop the
+  microphone follows it: four steps that do not move its reading stop the
   run as *too quiet* (an unplugged or covered microphone does not make it
-  louder).
+  louder). For 60 dB (George) the sweeps go further than the noise, whose
+  peaks are near full scale at −12 dBFS: set from its last reading, the
+  chain being linear, up to −6 dBFS, where a sweep's peaks are at about
+  −1.5 dBFS.
+- **The level before a run is the DAC's own** (its raw level, kept in the
+  store and put back through the volume bridge), not the percentage shown:
+  that is the playing renderer's own number while one is active. Kept as a
+  percentage, two runs on sofapi put the output back at 100 %. While a run
+  holds the level up, the software level kept across restarts stays the one
+  before it.
 - **A player in a group** does not measure (it plays into the group's
   loopback, and the others would play the sweeps): *Leave the group to
   measure the room.*
