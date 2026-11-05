@@ -1766,3 +1766,19 @@ the update done, dpkg clean.
 from an answer it did not expect, prints what it got, and says so when a
 state lasts longer than it should.
 
+**92. A device free because nothing sounded** (2026-11-05, Phase 29, sofapi).
+George was measuring the room with the second preview: at 12:16 he tapped
+*Measure* again, which takes the device, raises the output to 100 % and
+waits on *Place the microphone* for *Start* - silent. At 12:23 the third
+preview went on: the install was gated, as every install is, on no card
+playing (`/proc/asound/card*/pcm*p/sub*/status`), which it passed; the core
+restarted; the run, still waiting, was ended without its putting back, and
+the software volume came up at 0 dB - 100 % - rather than George's 44 %.
+Found in the next look at the log (two *volume -> 100%* lines and no
+*44%* after them), put back by hand, and the run made to keep the level from
+before it in the store so a restart puts it back (`_room_volume_before`).
+**Rule:** in use is anything a person has started and not finished, a
+silent step included - a measurement waiting for a tap (`room.run` on the
+core's `/state` or `GET /room-correction`), an update, a pairing; read the
+core's state as well as the cards before an install or a restart.
+

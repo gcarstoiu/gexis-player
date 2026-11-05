@@ -484,6 +484,15 @@ exits 3 for *inactive*, so a finished update looked like a reboot for 27
 minutes, until George asked. A watcher tells "no answer" from "an answer
 it did not like", and reports a state it has not seen for too long.
 
+**92. A device free because nothing sounded** (2026-11-05, Phase 29). Before
+installing a preview on sofapi the check was the one that gates every
+install - no card playing - while George's room measurement waited on its
+*Place* screen, silent, with the output raised to 100 %. The restart ended
+the run without putting the level back: 100 % instead of his 44 %. In use
+is anything a person has started that is not finished, a silent step
+included: a measurement (`room.run`), an update, a pairing - read the
+core's state, not only the cards.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target, the check quietly
