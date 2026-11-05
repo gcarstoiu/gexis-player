@@ -1,8 +1,10 @@
 # Brief for Claude Design — Room correction for the bass (Phase 29)
 
 Written 2026-11-04 for George to hand to Claude Design, with the rough
-mock-up of the flow that settled its steps with him (one HTML page, made-up
-curves; its order, steps and words are agreed, its look is not). Background,
+mock-up of the flow that settled its steps with him:
+[`29-room-correction-mockup.html`](29-room-correction-mockup.html), beside
+this brief (one HTML page, made-up curves; its order, steps and words are
+agreed, its look is not). Background,
 if you want it: [ADR-0175](../../docs/decisions/0175-room-correction-for-the-bass.md)
 (George's decisions of 2026-11-03 and 2026-11-04) and the equaliser's brief,
 [`20-equaliser.md`](20-equaliser.md), which this sits beside. What is built

@@ -1,0 +1,407 @@
+<title>Room Correction Flow</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700;6..12,800&display=swap">
+<style>
+/* Layout: a working sheet - the phone flow, clickable, beside the step list and
+   the decisions taken on it; below it the panel during a run and the states that
+   go wrong. The player's own look (Deep Teal), one dark world. */
+:root {
+  color-scheme: dark;
+  --desk: #0c1014;
+  --bg: #101a21;
+  --panel: #16232c;
+  --well: #1b2a34;
+  --ink: #e9eef2;
+  --ink-body: rgba(233, 238, 242, 0.82);
+  --ink-muted: rgba(233, 238, 242, 0.66);
+  --ink-quiet: rgba(233, 238, 242, 0.50);
+  --line: rgba(233, 238, 242, 0.10);
+  --fill: rgba(233, 238, 242, 0.07);
+  --accent: #7ed6bc;
+  --on-accent: #0d151c;
+  --before: #e0a758;
+  --bad: #ee7b70;
+  --ok: #7fd58e;
+  --font-ui: 'Nunito Sans', 'Avenir Next', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--desk); color: var(--ink); font-family: var(--font-ui);
+  font-size: 15px; line-height: 1.45;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 48px;
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 40px; }
+header h1 { font-size: 28px; font-weight: 800; margin: 0 0 6px; letter-spacing: -0.01em; text-wrap: balance; }
+header p { margin: 0; color: var(--ink-muted); max-width: 70ch; }
+.label { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-quiet); }
+h2.label { margin: 0 0 14px; }
+
+/* the flow */
+.flow { display: grid; grid-template-columns: 250px 390px minmax(0, 1fr); gap: 28px; align-items: start; }
+.steps { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; counter-reset: s; }
+.steps button {
+  width: 100%; text-align: left; background: none; border: 0; color: var(--ink-muted);
+  font: inherit; padding: 8px 10px; border-radius: 8px; cursor: pointer; display: flex; gap: 10px;
+}
+.steps button::before { counter-increment: s; content: counter(s); font-family: var(--font-mono); font-size: 12px; color: var(--ink-quiet); width: 18px; padding-top: 2px; }
+.steps button:hover { background: var(--fill); color: var(--ink); }
+.steps button[aria-current="step"] { background: var(--panel); color: var(--ink); }
+.steps button[aria-current="step"]::before { color: var(--accent); }
+.steps button:focus-visible, .btn:focus-visible, .seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.phone {
+  width: 390px; max-width: 100%; height: 780px; background: var(--bg); border-radius: 44px;
+  border: 1px solid var(--line); box-shadow: 0 30px 80px rgba(0,0,0,0.45);
+  display: flex; flex-direction: column; overflow: hidden; position: relative;
+}
+.phone .bar { display: flex; align-items: center; gap: 10px; padding: 22px 20px 10px; border-bottom: 1px solid var(--line); }
+.phone .bar .back { font-size: 22px; color: var(--accent); width: 20px; }
+.phone .bar .title { font-weight: 700; font-size: 17px; }
+.phone .bar .crumb { margin-left: auto; }
+.screen { flex: 1; overflow-y: auto; padding: 18px 20px 22px; display: flex; flex-direction: column; gap: 14px; }
+.screen p { margin: 0; color: var(--ink-body); }
+.screen h3 { margin: 4px 0 0; font-size: 22px; font-weight: 800; letter-spacing: -0.01em; text-wrap: balance; }
+.foot { padding: 14px 20px 26px; display: flex; gap: 10px; border-top: 1px solid var(--line); }
+.btn {
+  flex: 1; min-height: 48px; border-radius: 999px; border: 0; font: inherit; font-weight: 700; font-size: 16px;
+  cursor: pointer; background: var(--fill); color: var(--ink);
+}
+.btn.primary { background: var(--accent); color: var(--on-accent); }
+.btn.quiet { background: none; color: var(--ink-muted); flex: 0 0 auto; padding: 0 14px; }
+
+.group { background: var(--panel); border-radius: 16px; display: grid; }
+.row { display: flex; align-items: center; gap: 12px; padding: 13px 16px; min-height: 52px; }
+.row + .row { border-top: 1px solid var(--line); }
+.row .name { font-weight: 600; }
+.row .sub { display: block; font-size: 13px; color: var(--ink-quiet); font-weight: 400; }
+.row .val { margin-left: auto; color: var(--ink-muted); text-align: right; }
+.row .chev { color: var(--ink-quiet); }
+.row.hot { box-shadow: inset 0 0 0 2px var(--accent); border-radius: 16px; }
+.switch { margin-left: auto; width: 46px; height: 28px; border-radius: 999px; background: var(--fill); position: relative; flex: 0 0 auto; }
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: var(--ink-quiet); }
+.switch.on { background: var(--accent); }
+.switch.on::after { left: 21px; background: var(--on-accent); }
+.tick { color: var(--ok); font-weight: 800; width: 18px; }
+.wait { color: var(--ink-quiet); width: 18px; }
+.cross { color: var(--bad); font-weight: 800; width: 18px; }
+
+.meter { height: 10px; border-radius: 999px; background: var(--fill); overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
+.big { font-size: 44px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.big small { font-size: 17px; font-weight: 600; color: var(--ink-muted); letter-spacing: 0; }
+.note { font-size: 13px; color: var(--ink-quiet); }
+
+.seg { display: inline-flex; background: var(--fill); border-radius: 999px; padding: 3px; align-self: flex-start; }
+.seg button { border: 0; background: none; color: var(--ink-muted); font: inherit; font-weight: 600; padding: 6px 14px; border-radius: 999px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--panel); color: var(--ink); }
+
+.chart { background: var(--panel); border-radius: 16px; padding: 10px 8px 6px; }
+.chart svg { display: block; width: 100%; height: auto; }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--ink-muted); padding: 4px 8px 2px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 16px; height: 0; border-top: 2px solid; display: inline-block; }
+.cuts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 14px; font-family: var(--font-mono); font-size: 13px; color: var(--ink-body); font-variant-numeric: tabular-nums; }
+
+.room { background: var(--panel); border-radius: 16px; padding: 8px; }
+.room svg { display: block; width: 100%; height: auto; }
+
+/* notes beside the phone */
+.notes { display: grid; gap: 16px; min-width: 0; }
+.notes .card { background: var(--bg); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; }
+.notes h4 { margin: 0 0 6px; font-size: 16px; }
+.notes p, .notes li { color: var(--ink-body); margin: 0; }
+.notes ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 4px; }
+.notes .ask { border-color: rgba(224, 167, 88, 0.45); }
+.notes .ask h4 { color: var(--before); }
+.notes .decided { border-color: rgba(126, 214, 188, 0.45); }
+.notes .decided h4 { color: var(--accent); }
+.switch[role="switch"], .pill[role="switch"] { cursor: pointer; }
+.count { font-family: var(--font-mono); font-size: 44px; font-weight: 600; color: var(--accent); text-align: center; }
+.flag { display: inline-block; justify-self: start; width: fit-content; border-radius: 999px; padding: 3px 10px; font-size: 13px; font-weight: 700; background: rgba(224, 167, 88, 0.16); color: var(--before); }
+
+/* the panel */
+.panelwrap { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 28px; align-items: start; }
+.panel-frame { aspect-ratio: 16 / 10; max-width: 100%; background: var(--bg); border-radius: 18px; border: 10px solid #05080a; position: relative; overflow: hidden; display: grid; place-items: center; }
+.panel-frame .inner { text-align: center; display: grid; gap: 14px; justify-items: center; padding: 6%; width: 100%; }
+.panel-frame .mark { font-family: var(--font-mono); letter-spacing: 0.2em; font-size: clamp(10px, 1.2vw, 13px); color: var(--accent); text-transform: uppercase; }
+.panel-frame .head { font-size: clamp(22px, 3.6vw, 44px); font-weight: 800; letter-spacing: -0.015em; }
+.panel-frame .sub { color: var(--ink-muted); font-size: clamp(13px, 1.6vw, 19px); }
+.panel-frame .meter { width: 60%; height: 8px; }
+.drawer { background: var(--panel); border-radius: 16px; padding: 16px; display: grid; gap: 12px; }
+.drawer .vol { display: flex; align-items: center; gap: 12px; }
+.drawer .vol .meter { flex: 1; height: 8px; }
+.pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.pill { border-radius: 999px; padding: 6px 12px; background: var(--fill); font-weight: 600; font-size: 14px; }
+.pill.on { background: rgba(126, 214, 188, 0.16); color: var(--accent); }
+
+/* states that go wrong */
+.errs { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+.err { background: var(--bg); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; display: grid; gap: 6px; }
+.err .t { font-weight: 700; }
+.err p { margin: 0; color: var(--ink-body); font-size: 14px; }
+.err .what { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--bad); }
+
+@media (max-width: 1080px) {
+  .flow { grid-template-columns: minmax(0, 1fr) 390px; }
+  .notes { grid-column: 1 / -1; }
+}
+@media (max-width: 720px) {
+  .flow, .panelwrap { grid-template-columns: minmax(0, 1fr); }
+  .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .phone { height: auto; min-height: 700px; margin: 0 auto; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .screen { animation: in 180ms ease-out; }
+  @keyframes in { from { opacity: 0.4; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="label">Phase 29 · ADR-0175 · rough mock-up</div>
+    <h1>Room correction, on the phone</h1>
+    <p>The flow to settle before Claude Design draws it. Tap the steps or the buttons on the phone. Every curve is made up from an invented room, not measured; the microphone serial is an example. Green notes are decided (4 November).</p>
+  </header>
+
+  <section>
+    <h2 class="label">The flow</h2>
+    <div class="flow">
+      <ol class="steps" id="steps"></ol>
+      <div class="phone" aria-live="polite">
+        <div class="bar"><span class="back" id="back" aria-hidden="true">‹</span><span class="title" id="ptitle"></span><span class="crumb label" id="crumb"></span></div>
+        <div class="screen" id="screen"></div>
+        <div class="foot" id="foot"></div>
+      </div>
+      <div class="notes" id="notes"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="label">The panel while it runs, and the volume drawer after</h2>
+    <div class="panelwrap">
+      <div class="panel-frame">
+        <div class="inner">
+          <div class="mark">Room correction</div>
+          <div class="head">Measuring the room</div>
+          <div class="sub">Please keep quiet · Position 2 of 5 · Right speaker</div>
+          <div class="meter"><i style="width: 34%"></i></div>
+          <div class="sub" style="font-size: clamp(11px, 1.3vw, 15px)">Follow it on the phone. Sources can play again when it ends.</div>
+        </div>
+      </div>
+      <div class="drawer">
+        <div class="label">Volume drawer, panel</div>
+        <div class="vol"><span>Volume</span><div class="meter"><i style="width: 56%"></i></div><span style="font-variant-numeric: tabular-nums">56</span></div>
+        <div class="pills"><span class="pill on">Equaliser · Rock</span><span class="pill on" id="roompill" role="switch" aria-checked="true" tabindex="0">Room · On</span></div>
+        <p class="note" style="margin:0">A tap on <b>Room</b> is the A/B: it switches between with and without at once, no restart, and stays where it is put, as on the phone.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="label">When something is wrong</h2>
+    <div class="errs">
+      <div class="err"><span class="what">No microphone</span><span class="t">Plug in the UMIK-1</span><p>Into one of the player's USB ports. It is found by itself.</p></div>
+      <div class="err"><span class="what">No calibration</span><span class="t">miniDSP has no file for 707-1234</span><p>Check the serial on the microphone's label and type it here.</p></div>
+      <div class="err"><span class="what">Too quiet</span><span class="t">Only 63 dB at the seat</span><p>At the player's maximum level. Turn the amplifier up a little and try again.</p></div>
+      <div class="err"><span class="what">Noise</span><span class="t">A noise spoiled this sweep</span><p>Measuring position 3 again. Keep the room quiet for a few seconds.</p></div>
+      <div class="err"><span class="what">DSD</span><span class="t">DSD plays untouched</span><p>Room correction stands aside while native DSD plays, as the equaliser does.</p></div>
+      <div class="err"><span class="what">Another source</span><span class="t">Measuring stops the music</span><p>Spotify was playing. It stops while the room is measured; nothing can take over until it ends.</p></div>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  // --- an invented room: modes as peaks and dips on a log-frequency axis ---
+  const F = []; for (let i = 0; i <= 120; i++) F.push(15 * Math.pow(300 / 15, i / 120));
+  const bump = (f, f0, g, w) => g * Math.exp(-Math.pow(Math.log2(f / f0) * w, 2));
+  const MODES = [[42, 8, 5], [65, -8, 9], [87, 10, 6], [110, -5, 7], [126, 4, 6], [170, 6, 6], [215, 3, 5]];
+  const CUTS = [[42, -6.5, 5], [87, -8, 6], [126, -3, 6], [170, -5, 6]];
+  const target = f => 3 / (1 + Math.pow(f / 70, 4));
+  function rng(seed) { let s = seed; return () => (s = (s * 16807) % 2147483647) / 2147483647; }
+  function room(seed) {
+    const r = rng(seed);
+    const m = MODES.map(([f0, g, w]) => [f0 * (1 + (r() - 0.5) * 0.06), g * (g < 0 ? 0.4 + r() * 1.2 : 0.8 + r() * 0.4), w]);
+    const roll = f => (f < 28 ? -18 * Math.log2(28 / f) : 0);
+    return F.map(f => roll(f) + 1.2 + m.reduce((a, [f0, g, w]) => a + bump(f, f0, g, w), 0));
+  }
+  const cut = curve => curve.map((v, i) => v + CUTS.reduce((a, [f0, g, w]) => a + bump(F[i], f0, g, w), 0));
+  const avg = curves => F.map((_, i) => 10 * Math.log10(curves.reduce((a, c) => a + Math.pow(10, c[i] / 10), 0) / curves.length));
+  const CH = { L: [11, 23, 37, 41, 53], R: [61, 73, 87, 91, 103] };
+  const rooms = {}; for (const k of ['L', 'R']) rooms[k] = CH[k].map(room);
+
+  function chart(ch, mode) {
+    const W = 350, H = 200, l = 30, r = 8, t = 10, b = 24;
+    const x = f => l + (W - l - r) * Math.log(f / 15) / Math.log(300 / 15);
+    const y = v => t + (H - t - b) * (15 - v) / 30;
+    const path = c => c.map((v, i) => `${i ? 'L' : 'M'}${x(F[i]).toFixed(1)},${y(Math.max(-15, Math.min(15, v))).toFixed(1)}`).join('');
+    const pos = rooms[ch], before = avg(pos);
+    const jitter = rng(ch === 'L' ? 5 : 9);
+    const after = avg(pos.map(cut)).map(v => v + (mode === 'measured' ? (jitter() - 0.5) * 1.2 : 0));
+    let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Bass response before and after, ${ch === 'L' ? 'left' : 'right'} speaker (example curves)">`;
+    for (const v of [-10, 0, 10]) s += `<line x1="${l}" x2="${W - r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1" fill="none"/><text x="${l - 6}" y="${y(v) + 4}" fill="var(--ink-quiet)" font-size="10" text-anchor="end" font-family="IBM Plex Mono, monospace">${v > 0 ? '+' + v : v}</text>`;
+    for (const f of [20, 50, 100, 200]) s += `<line x1="${x(f)}" x2="${x(f)}" y1="${t}" y2="${H - b}" stroke="var(--line)" stroke-width="1" fill="none"/><text x="${x(f)}" y="${H - 8}" fill="var(--ink-quiet)" font-size="10" text-anchor="middle" font-family="IBM Plex Mono, monospace">${f}</text>`;
+    s += `<rect x="${x(250)}" y="${t}" width="${W - r - x(250)}" height="${H - t - b}" fill="rgba(233,238,242,0.04)"/><text x="${x(250) + 3}" y="${t + 11}" fill="var(--ink-quiet)" font-size="9" font-family="IBM Plex Mono, monospace">250</text>`;
+    for (const c of pos) s += `<path d="${path(c)}" stroke="rgba(224,167,88,0.22)" stroke-width="1" fill="none"/>`;
+    s += `<path d="${path(F.map(target))}" stroke="var(--ink-muted)" stroke-width="1.5" stroke-dasharray="4 4" fill="none"/>`;
+    s += `<path d="${path(before)}" stroke="var(--before)" stroke-width="2.2" fill="none"/>`;
+    if (mode) s += `<path d="${path(after)}" stroke="var(--accent)" stroke-width="2.4" fill="none"/>`;
+    s += `<text x="${W - r}" y="${H - 8}" fill="var(--ink-quiet)" font-size="9" text-anchor="end" font-family="IBM Plex Mono, monospace">Hz</text></svg>`;
+    return s;
+  }
+  const legend = mode => `<div class="legend"><span><i style="border-color:var(--before)"></i>Before, average</span><span><i style="border-color:rgba(224,167,88,0.4)"></i>Each position</span><span><i style="border-color:var(--ink-muted);border-top-style:dashed"></i>Target</span>${mode ? `<span><i style="border-color:var(--accent)"></i>${mode === 'measured' ? 'After, measured' : 'After, expected'}</span>` : ''}</div>`;
+
+  function seat(active, done) {
+    // top-down: the seat, the head's place and four around it within half a metre
+    const P = [[175, 92], [125, 92], [225, 92], [175, 52], [175, 132]];
+    let s = `<svg viewBox="0 0 350 190" role="img" aria-label="Where the microphone goes: five positions around the seat">`;
+    s += `<rect x="70" y="118" width="210" height="58" rx="18" fill="rgba(233,238,242,0.06)" stroke="var(--line)"/>`;
+    s += `<text x="175" y="166" fill="var(--ink-quiet)" font-size="11" text-anchor="middle" font-family="Nunito Sans, sans-serif">Your seat</text>`;
+    s += `<rect x="40" y="6" width="22" height="30" rx="4" fill="var(--well)" stroke="var(--line)"/><rect x="288" y="6" width="22" height="30" rx="4" fill="var(--well)" stroke="var(--line)"/>`;
+    s += `<text x="51" y="50" fill="var(--ink-quiet)" font-size="10" text-anchor="middle" font-family="IBM Plex Mono, monospace">L</text><text x="299" y="50" fill="var(--ink-quiet)" font-size="10" text-anchor="middle" font-family="IBM Plex Mono, monospace">R</text>`;
+    s += `<circle cx="175" cy="92" r="50" fill="none" stroke="var(--line)" stroke-dasharray="3 4"/>`;
+    P.forEach(([cx, cy], i) => {
+      const isA = i === active, isD = done.includes(i);
+      s += `<circle cx="${cx}" cy="${cy}" r="${isA ? 13 : 10}" fill="${isA ? 'var(--accent)' : isD ? 'rgba(126,214,188,0.25)' : 'var(--well)'}" stroke="${isA ? 'var(--accent)' : 'var(--line)'}"/>`;
+      s += `<text x="${cx}" y="${cy + 4}" fill="${isA ? 'var(--on-accent)' : 'var(--ink-muted)'}" font-size="11" font-weight="700" text-anchor="middle" font-family="Nunito Sans, sans-serif">${isD && !isA ? '✓' : i + 1}</text>`;
+    });
+    s += `<text x="175" y="186" fill="var(--ink-quiet)" font-size="9" text-anchor="middle" font-family="IBM Plex Mono, monospace">about 50 cm around the head</text></svg>`;
+    return s;
+  }
+
+  let ch = 'L', ab = false;
+  const S = [
+    { name: 'Settings → Audio', title: 'Audio', crumb: 'Settings',
+      body: () => `<div class="label">Output</div>
+        <div class="group"><div class="row"><span class="name">Output<span class="sub">Where the sound goes</span></span><span class="val">HiFiBerry DAC2 HD</span><span class="chev">›</span></div>
+        <div class="row"><span class="name">Volume<span class="sub">The DAC's own control</span></span><span class="val">Hardware</span><span class="chev">›</span></div></div>
+        <div class="label">Sound</div>
+        <div class="group"><div class="row"><span class="name">Equaliser<span class="sub">For this output</span></span><span class="val">Rock</span><span class="chev">›</span></div>
+        <div class="row hot"><span class="name">Room correction<span class="sub">Not measured yet</span></span><span class="val">Off</span><span class="chev">›</span></div></div>
+        <p class="note">Room correction sits beside the equaliser and is kept for each output, as the equaliser is.</p>`,
+      foot: () => btns(['Open Room correction', 'primary', 1]),
+      notes: ['Where it lives', 'Settings → Audio, under the equaliser, for the output chosen above. Same row on the panel and the phone; measuring itself only from the phone.'] },
+    { name: 'Room correction, before', title: 'Room correction', crumb: 'Audio',
+      body: () => `<h3>Correct the bass your room adds</h3>
+        <p>The player plays short sweeps through your speakers and listens with a measurement microphone at your seat. It then cuts the peaks the room makes below 250 Hz.</p>
+        <div class="group">
+          <div class="row"><span class="tick">✓</span><span class="name">Microphone<span class="sub">miniDSP UMIK-1 · 707-1234</span></span></div>
+          <div class="row"><span class="tick">✓</span><span class="name">Calibration<span class="sub">Downloaded from miniDSP · 90°</span></span></div>
+          <div class="row"><span class="wait">◌</span><span class="name">A quiet room<span class="sub">About five minutes, music stops</span></span></div>
+        </div>
+        <div class="group"><div class="row"><span class="name">Room correction<span class="sub">Measure first</span></span><span class="switch"></span></div></div>`,
+      foot: () => btns(['Measure', 'primary', 2]),
+      notes: ['Decision 4 at work', 'The calibration is fetched by the serial the microphone reports. If it does not report one, or miniDSP has no file, this row asks for the serial instead (see the states below).'] },
+    { name: 'Place the microphone', title: 'Measure the room', crumb: 'Step 1 of 4',
+      body: () => `<h3>Put the microphone where your head is</h3>
+        <div class="room">${seat(0, [])}</div>
+        <p>On a stand at ear height, pointing at the ceiling. Then keep the room quiet: the measurement plays loud sweeps for a few seconds at a time.</p>
+        <p class="note">Music stops now, on every source.</p>`,
+      foot: () => btns(['Cancel', 'quiet', 1], ['Start', 'primary', 3]),
+      notes: ['Five positions', 'The first is where the head is; it also sets the level. The other four are within about half a metre around it. Each speaker is measured on its own at each position.'] },
+    { name: 'Finding the level', title: 'Measure the room', crumb: 'Step 2 of 4',
+      body: () => `<h3>Finding the level</h3>
+        <p>Soft noise, getting louder until the microphone hears about 75 dB.</p>
+        <div class="big">71 <small>dB at the seat</small></div>
+        <div class="meter"><i style="width: 82%"></i></div>
+        <p class="note">Never above the maximum level set for this output.</p>`,
+      foot: () => btns(['Cancel', 'quiet', 1], ['Next', 'primary', 4]),
+      notes: ['Safety', 'The noise starts low and rises in steps; it never passes the output’s maximum level. A room or amplifier that cannot reach 75 dB stops here with the reason.'] },
+    { name: 'Measuring position 1', title: 'Measure the room', crumb: 'Step 3 of 4',
+      body: () => `<h3>Position 1 of 5</h3>
+        <div class="room">${seat(0, [])}</div>
+        <div class="group">
+          <div class="row"><span class="tick">✓</span><span class="name">Left speaker<span class="sub">Two sweeps, they agree</span></span></div>
+          <div class="row"><span class="wait">◌</span><span class="name">Right speaker<span class="sub">Sweep 1 of 2</span></span></div>
+        </div>
+        <div class="meter"><i style="width: 14%"></i></div>`,
+      foot: () => btns(['Cancel', 'quiet', 1], ['Next', 'primary', 5]),
+      notes: ['What the owner does', 'Nothing while it runs: about 25 seconds a position. The phone shows which speaker is playing; the panel shows that the room is being measured.'] },
+    { name: 'Move the microphone', title: 'Measure the room', crumb: 'Step 3 of 4',
+      body: () => `<h3>Move it to position 2</h3>
+        <div class="room">${seat(1, [0])}</div>
+        <p>About 40 cm to the left of where your head was, at the same height, still pointing at the ceiling. Step back, then tap <b>Measure here</b>.</p>
+        <div class="count">3</div>
+        <p class="note" style="text-align:center">After the tap: 3, 2, 1, then the sweeps.</p>`,
+      foot: () => btns(['Cancel', 'quiet', 1], ['Measure here', 'primary', 6]),
+      notes: ['Decided: a tap, then a countdown', 'It waits at each new position until the owner taps, then counts down 3 seconds so the room is quiet before the sweeps. It never carries on by itself.', 'decided'] },
+    { name: 'The correction', title: 'Measure the room', crumb: 'Step 4 of 4',
+      body: () => `<h3>Four cuts for each speaker</h3>
+        <div class="seg" role="group" aria-label="Speaker"><button type="button" data-ch="L" aria-pressed="${ch === 'L'}">Left</button><button type="button" data-ch="R" aria-pressed="${ch === 'R'}">Right</button></div>
+        <div class="chart">${chart(ch, 'expected')}${legend('expected')}</div>
+        <div class="cuts"><span>42 Hz  −6.5 dB</span><span>87 Hz  −8.0 dB</span><span>126 Hz −3.0 dB</span><span>170 Hz −5.0 dB</span></div>
+        <p class="note">Only cuts: the dips at 65 and 110 Hz stay, as more power does not fill them. The bass rise below 80 Hz is the target.</p>`,
+      foot: () => btns(['Discard', 'quiet', 1], ['Check it', 'primary', 7]),
+      notes: ['Decisions 1-3 at work', 'Cuts only, up to 250 Hz, towards a gentle rise below 80 Hz. The faint lines are the five positions; a cut that would make one of them worse is made smaller.'] },
+    { name: 'Checking', title: 'Measure the room', crumb: 'Checking',
+      body: () => `<h3>Checking, with the correction on</h3>
+        <div class="room">${seat(2, [0, 1])}</div>
+        <p>The same five positions again, about a minute more.</p>
+        <div class="meter"><i style="width: 46%"></i></div>`,
+      foot: () => btns(['Skip', 'quiet', 9], ['Next', 'primary', 8]),
+      notes: ['Decided: Skip is offered', 'The check measures the after at every position. Skip keeps the correction as designed; the result then shows the expected after, marked as not checked until the room is measured again.', 'decided'] },
+    { name: 'The result', title: 'Room correction', crumb: 'Audio',
+      body: () => `<h3>Peaks down by up to 8 dB</h3>
+        <div class="seg" role="group" aria-label="Speaker"><button type="button" data-ch="L" aria-pressed="${ch === 'L'}">Left</button><button type="button" data-ch="R" aria-pressed="${ch === 'R'}">Right</button></div>
+        <div class="chart">${chart(ch, 'measured')}${legend('measured')}</div>
+        <p>No position is worse than before.</p>`,
+      foot: () => btns(['Discard', 'quiet', 1], ['Keep it', 'primary', 10]),
+      notes: ['Keep or discard', 'Keep switches it on and stores the measurement for this output. Discard leaves the output as it was.'] },
+    { name: 'The result, not checked', title: 'Room correction', crumb: 'Audio',
+      body: () => `<h3>Peaks down by up to 8 dB, expected</h3>
+        <span class="flag">Not checked</span>
+        <div class="seg" role="group" aria-label="Speaker"><button type="button" data-ch="L" aria-pressed="${ch === 'L'}">Left</button><button type="button" data-ch="R" aria-pressed="${ch === 'R'}">Right</button></div>
+        <div class="chart">${chart(ch, 'expected')}${legend('expected')}</div>
+        <p>The check was skipped: this is what the correction should do. Measure again to check it.</p>`,
+      foot: () => btns(['Discard', 'quiet', 1], ['Keep it', 'primary', 10]),
+      notes: ['After Skip', 'The same choice, with the expected curve in place of the measured one. The Room correction page keeps the Not checked mark until the room is measured again.', 'decided'] },
+    { name: 'Room correction, on', title: 'Room correction', crumb: 'Audio',
+      body: () => `<div class="group">
+          <div class="row"><span class="name">Room correction<span class="sub">HiFiBerry DAC2 HD</span></span><span class="switch on"></span></div>
+          <div class="row"><span class="name">Hear it without<span class="sub">${ab ? 'Now without: the cuts at 0 dB' : 'A/B, stays where you put it'}</span></span><span class="switch${ab ? ' on' : ''}" id="abswitch" role="switch" aria-checked="${ab}" aria-label="Hear it without" tabindex="0"></span></div>
+          <div class="row"><span class="name">Measured<span class="sub">3 November, five positions</span></span><span class="chev">›</span></div>
+        </div>
+        <div class="seg" role="group" aria-label="Speaker"><button type="button" data-ch="L" aria-pressed="${ch === 'L'}">Left</button><button type="button" data-ch="R" aria-pressed="${ch === 'R'}">Right</button></div>
+        <div class="chart">${chart(ch, 'measured')}${legend('measured')}</div>`,
+      foot: () => btns(['Measure again', '', 2]),
+      notes: ['Decided: a switch that stays', 'Heard at once, no gap. It stays where it is put and is saved for this output like the on/off switch, kept in backups. Without keeps the stage in the path with the cuts at 0 dB; Off takes it out. The volume drawer shows Room · Without. Try the switch.', 'decided'] },
+  ];
+
+  function btns(...list) {
+    return list.map(([t, cls, to]) => `<button type="button" class="btn ${cls}" data-go="${to}">${t}</button>`).join('');
+  }
+  let at = 0;
+  const $ = id => document.getElementById(id);
+  function draw() {
+    const s = S[at];
+    $('ptitle').textContent = s.title; $('crumb').textContent = s.crumb;
+    $('screen').innerHTML = s.body(); $('foot').innerHTML = s.foot();
+    const [h, p, kind] = s.notes;
+    $('notes').innerHTML = `<div class="card${kind ? ' ' + kind : ''}"><h4>${h}</h4><p>${p}</p></div>` + (at === 0 ? `<div class="card"><h4>What this mock-up is for</h4><ul><li>The order of the steps and what each one asks.</li><li>What the result shows, and how much of it.</li><li>The words. The look comes from Claude Design afterwards.</li></ul></div>` : '');
+    document.querySelectorAll('#steps button').forEach((b, i) => b.setAttribute('aria-current', i === at ? 'step' : 'false'));
+  }
+  $('steps').innerHTML = S.map((s, i) => `<li><button type="button" data-go="${i}">${s.name}</button></li>`).join('');
+  document.addEventListener('click', e => {
+    const g = e.target.closest('[data-go]'); if (g) { at = +g.dataset.go; draw(); return; }
+    const c = e.target.closest('[data-ch]'); if (c) { ch = c.dataset.ch; draw(); return; }
+    if (e.target.closest('#abswitch, #roompill')) toggleAB();
+  });
+  document.addEventListener('keydown', e => {
+    if ((e.key === ' ' || e.key === 'Enter') && e.target.closest('#abswitch, #roompill')) { e.preventDefault(); toggleAB(); }
+  });
+  function toggleAB() {
+    ab = !ab;
+    const pill = $('roompill');
+    pill.textContent = ab ? 'Room · Without' : 'Room · On';
+    pill.classList.toggle('on', !ab); pill.setAttribute('aria-checked', String(!ab));
+    if (S[at].name === 'Room correction, on') draw();
+  }
+  $('back').addEventListener('click', () => { if (at > 0) { at--; draw(); } });
+  draw();
+})();
+</script>
