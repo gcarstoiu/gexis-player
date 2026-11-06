@@ -1795,8 +1795,10 @@ Spotify's start limit took it to 60 % when he next played. Found reading the
 log for his run's results. The likely cause, from the code: the percentage
 shown is the active renderer's own number while one is active, and the run
 saved that, not the DAC's level; the fix keeps the DAC's raw level and puts
-it back through the volume bridge (to be confirmed on sofapi by reading the
-level back). **Rule:** a fix that puts something back is checked by reading
+it back through the volume bridge - confirmed on sofapi by reading the
+DAC's level back: a run cancelled, a run cut short by a restart and the next
+run each put back the level from before it (2026-11-05), and again on the
+next preview. **Rule:** a fix that puts something back is checked by reading
 it back from the device, and again after the next ordinary use of the same
 path - here the next run's own saved level - not by the line that logs the
 write.

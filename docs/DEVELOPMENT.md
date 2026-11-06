@@ -3750,10 +3750,12 @@ how.
 **Started 2026-11-03** (George), on `ph-room-correction`;
 [ADR-0175](decisions/0175-room-correction-for-the-bass.md) accepted the same
 day: cuts only below 250 Hz towards a gentle bass rise, in the equaliser's
-stage; five positions, measured again after; the UMIK-1, its calibration
-downloaded by the serial. The phone's flow settled with George from a
+stage; five positions (three from 2026-11-05, George), measured again
+after; the UMIK-1, its calibration downloaded by the serial (given from the
+phone since 2026-11-05). The phone's flow settled with George from a
 mock-up on 2026-11-04; design first: the brief is
-`design/briefs/29-room-correction.md`.
+`design/briefs/29-room-correction.md`. **On Testing with 1.14.0**
+(2026-11-06, George); the acceptance below still to be seen on a player.
 
 **ID:** `ph-room-correction` · numbered 29 on 2026-11-03, after Plexamp and Beszel to the catalogue (George); numbered 28 on 2026-11-02, after releases built on GitHub (George); numbered 27 on 2026-11-01, after the Roon plugin (George); numbered 26 on 2026-10-29, after the plugin catalogue and themes (George: it still cannot be auditioned); numbered 24 on 2026-10-27, after multiroom and AirPlay 2 (George: no room correction can be tried yet); numbered 22 on 2026-10-26; 21 from 2026-10-25, 20 from 2026-10-24, 19 from 2026-10-21 (18 from 2026-10-19, 16 from 2026-10-15, 15 from 2026-10-14).
 **Since 2026-10-25** it builds on Phase 20's filter stage (`ph-equaliser`):
