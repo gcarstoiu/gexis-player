@@ -17,6 +17,7 @@
   import ReleaseHistory from './ReleaseHistory.svelte';
   import NoteText from '../lib/NoteText.svelte';
   import Equaliser from './eq/Equaliser.svelte';
+  import RoomCorrection from './room/RoomCorrection.svelte';
   import { screen } from '../lib/family.svelte.js';
   import { theme } from '../lib/theme.js';
   import { tone } from '../lib/themeRule.js';
@@ -62,6 +63,8 @@
   let docKey = $state(null);
   //: ADR-0162: Audio -> Equaliser opens the equaliser's own page.
   let eqPage = $state(false);
+  //: ADR-0175: Audio -> Room correction opens its own page.
+  let roomPage = $state(false);
   let docPage = $state(null);
   let docError = $state(null);
   //: Which row the pane is showing. **Not the value**: tapping a row in the
@@ -1008,6 +1011,7 @@
       cat = group.id;
       drilled = group.id;
       if (row.kind === 'equaliser') eqPage = true;
+      else if (row.kind === 'room') roomPage = true;
       else openSheet(row);
     }
     onrowopened?.();
@@ -1217,6 +1221,10 @@
   function tap(row) {
     if (row.kind === 'equaliser') {
       eqPage = true;
+      return;
+    }
+    if (row.kind === 'room') {
+      roomPage = true;
       return;
     }
     // A read-only row is a disabled button - except an uploaded plugin's,
@@ -2381,10 +2389,10 @@
                   class="row"
                   class:row--add={r.kind === 'share'}
                   class:row--danger={r.danger}
-                  class:row--readonly={(r.type === 'readonly' && r.kind !== 'equaliser') || toggleBlocked(r)}
+                  class:row--readonly={(r.type === 'readonly' && r.kind !== 'equaliser' && r.kind !== 'room') || toggleBlocked(r)}
                   class:row--dl={!!r.component}
                   type="button"
-                  disabled={(r.type === 'readonly' && !r.uploaded && r.kind !== 'equaliser') || (toggleBlocked(r) && !r.uploaded)}
+                  disabled={(r.type === 'readonly' && !r.uploaded && r.kind !== 'equaliser' && r.kind !== 'room') || (toggleBlocked(r) && !r.uploaded)}
                   data-unwired={r.wired ? undefined : 'settings'}
                   onclick={() => tap(r)}
                 >
@@ -2402,6 +2410,9 @@
                       <!-- A plugin's version, and the program it runs (George, 2026-10-12). -->
                       {#if r.version}<span class="row__note row__version">{r.version}</span>{/if}
                       {#if toggleBlocked(r)}<span class="row__note">{r.unavailable.true}.</span>
+                      <!-- ADR-0175 (design/source/29 R01-R04): its state is its line,
+                           Without in the warn colour. -->
+                      {:else if r.kind === 'room'}<span class="row__note" class:row__note--amber={String(r.value ?? '').startsWith('Without')}>{r.value ?? 'Not measured yet'}</span>
                       {:else if r.kind === 'share'}<span class="row__note">Find a share on your network, or add one by its address.</span>
                       {:else if r.note && !opensItsOwn(r)}<span class="row__note"><NoteText text={r.note} links={false} /></span>{/if}
                       <!-- A row that opens its own sheet keeps its note for the
@@ -2475,7 +2486,7 @@
                            "Claimed"), in place of the value - a spent claim
                            token's dots say nothing. -->
                       <span class="row__value row__value--done"><span class="row__tick" aria-hidden="true">✓</span> {r.status.text}</span>
-                    {:else if r.type !== 'toggle' && !(r.type === 'readonly' && r.links?.length && r.value == null) && shown(r)}
+                    {:else if r.type !== 'toggle' && r.kind !== 'room' && !(r.type === 'readonly' && r.links?.length && r.value == null) && shown(r)}
                       <span class="row__value" class:is-pending={pending(r)}>{shown(r)}</span>
                     {/if}
                     {#if r.kind === 'usb-folder' && r.items?.length}
@@ -2753,6 +2764,9 @@
 
   {#if eqPage}
     <Equaliser surface={!onPanel() ? 'phone' : screen.family === 'bar' ? 'bar' : 'panel'} {flat} onback={() => (eqPage = false)} />
+  {/if}
+  {#if roomPage}
+    <RoomCorrection surface={!onPanel() ? 'phone' : screen.family === 'bar' ? 'bar' : 'panel'} {flat} onback={() => (roomPage = false)} />
   {/if}
 
   {#if picker}
@@ -4191,6 +4205,9 @@
   }
   .row__note--failed {
     color: var(--accent-warn);
+  }
+  .row__note--amber {
+    color: var(--rc-without);
   }
   .row__again {
     display: block;

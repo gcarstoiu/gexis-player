@@ -52,7 +52,7 @@ Spotify Premium, and Plexamp a Plex account, on Plex's terms.
 
 ## 💾 Download and install
 
-**Gexis Player 1.12.0** is the current release. You need a Raspberry Pi 4 and a
+**Gexis Player 1.13.0** is the current release. You need a Raspberry Pi 4 and a
 microSD card of 32 GB or more. A DAC gives the best sound (the
 [hardware list](docs/HARDWARE.md) says which are tested), but the Pi's own
 HDMI (to a sound bar or AV receiver) or headphone jack works too; an HDMI
@@ -203,7 +203,7 @@ or removed from Settings, with its progress shown in the switch itself.
 | | |
 |---|---|
 | 🔊 **Sources** | Spotify Connect · AirPlay 2 (Shairport Sync) · Lyrion (squeezelite) · Bluetooth (A2DP) · Plexamp · Roon (Roon Bridge) · plugins, your own or from the catalogue |
-| 🎚️ **Sound** | Bit-perfect, tested up to 24/192 on DAC boards and to 768 kHz on a USB DAC · native DSD on a DAC that takes it · hardware, software or fixed volume · a maximum level for every source · a starting volume Spotify never exceeds · a ten-band equaliser with presets and your own settings, for each output, off (and bit-perfect) until you switch it on |
+| 🎚️ **Sound** | Bit-perfect, tested up to 24/192 on DAC boards and to 768 kHz on a USB DAC · native DSD on a DAC that takes it · hardware, software or fixed volume · a maximum level for every source · a starting volume Spotify never exceeds · a ten-band equaliser with presets and your own settings, for each output, off (and bit-perfect) until you switch it on · room correction for the bass, measured from the phone with a UMIK-1 at five positions round your seat, cutting the peaks the room adds below 250 Hz, with an A/B to compare |
 | 🔀 **Handover** | One source at a time, never mixed · takeover in any direction · the previous source released before the next one plays |
 | 📡 **Multiroom** | Players joined into a group play the same music in sync, for every source · music started on any of them plays on all · each keeps its own level and equaliser, and an *All* slider moves them together · Lyrion's own sync for Lyrion, and Lyrion's synced players grouped too · groups last until undone, restarts included |
 | 🖼️ **Now playing** | Artwork · synced or plain lyrics · artist information and photos · the Lyrion queue |
@@ -285,10 +285,10 @@ Rough, and subject to change:
   and the phone. Roon, with the player as a Roon device and Roon's Now
   Playing on its screen. Releases built on GitHub, each with a record of
   its build. Plexamp and Beszel as plugins from the catalogue, updated
-  there.
-- 🔜 **Next:** room correction with a USB microphone, for the bass and then
-  the full range.
-- 🎨 **Later:** internet radio without a Lyrion server. With Plex switched on, your own Plex server fills in
+  there. Room correction for the bass, with a USB microphone.
+- 🔜 **Next:** room correction for the full range, and internet radio
+  without a Lyrion server.
+- 🎨 **Later:** with Plex switched on, your own Plex server fills in
   the artist and album information other sources leave out.
 - 💭 **Maybe:** the DAC's own filter and polarity options.
 

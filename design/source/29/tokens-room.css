@@ -1,0 +1,144 @@
+/* gexis — Phase 29 room correction tokens. Default theme (Deep Teal).
+   New names only; everything else on these screens uses design/tokens.css. */
+:root {
+  --rc-before: #f2a48f;                         /* before, average of five: solid line; the cut values */
+  --rc-after: #7ed6bc;                          /* after, measured (solid) or expected (dashed) */
+  --rc-target: rgba(233,238,242,0.82);          /* target: dotted line */
+  --rc-position: rgba(233,238,242,0.2);         /* each position: hairline */
+  --rc-cut-fill: rgba(242,164,143,0.16);        /* area the cuts take away, between before and after */
+  --rc-limit-hatch: rgba(233,238,242,0.12);     /* above 250 Hz: 135deg hatch, 1px every 6px (panel 7px) */
+  --rc-limit-edge: rgba(233,238,242,0.4);       /* 1px dashed edge at 250 Hz */
+  --rc-grid: rgba(233,238,242,0.07);            /* gridlines at +10, -10 dB and 20/50/100/200 Hz */
+  --rc-zero: rgba(233,238,242,0.26);            /* the 0 dB line */
+  --rc-without: #e0a758;                        /* Hear it without when set; "Without" wherever shown; Not checked */
+  --rc-without-fill: rgba(224,167,88,0.1);      /* A/B card ground when set */
+  --rc-without-line: rgba(224,167,88,0.5);      /* A/B card border when set */
+  --rc-without-switch: rgba(224,167,88,0.3);    /* A/B switch track when set (border 0.55, knob --rc-without) */
+  --rc-flag-fill: rgba(224,167,88,0.14);        /* Not checked flag ground (border 0.4) */
+  --rc-run-track: rgba(233,238,242,0.12);       /* progress and level tracks */
+  --rc-stroke-before: 2.25px;  --rc-stroke-before-lg: 2.75px;
+  --rc-stroke-after: 3.25px;   --rc-stroke-after-lg: 4px;
+  --rc-stroke-target: 2px;     --rc-stroke-target-lg: 2.5px;
+  --rc-dash-expected: 7 5;     --rc-dash-expected-lg: 8 6;
+  --rc-dash-target: 0.5 5;     --rc-dash-target-lg: 0.5 6;  /* with round caps */
+}
+
+/* Bauhaus */
+:root[data-theme="bauhaus"] {
+  --rc-before: #d1261c;
+  --rc-after: #1a47c4;
+  --rc-target: rgba(20,20,20,0.883);
+  --rc-position: rgba(20,20,20,0.22);
+  --rc-cut-fill: rgba(209,38,28,0.176);
+  --rc-limit-hatch: rgba(20,20,20,0.132);
+  --rc-limit-edge: rgba(20,20,20,0.44);
+  --rc-grid: rgba(20,20,20,0.077);
+  --rc-zero: rgba(20,20,20,0.286);
+  --rc-without: #964800;
+  --rc-without-fill: rgba(150,72,0,0.1);
+  --rc-without-line: rgba(150,72,0,0.5);
+  --rc-without-switch: rgba(150,72,0,0.3);
+  --rc-flag-fill: rgba(150,72,0,0.14);
+  --rc-run-track: rgba(20,20,20,0.132);
+  --rc-stroke-before: 2.25px;  --rc-stroke-before-lg: 2.75px;
+  --rc-stroke-after: 3.25px;   --rc-stroke-after-lg: 4px;
+  --rc-stroke-target: 2px;     --rc-stroke-target-lg: 2.5px;
+  --rc-dash-expected: 7 5;     --rc-dash-expected-lg: 8 6;
+  --rc-dash-target: 0.5 5;     --rc-dash-target-lg: 0.5 6;
+}
+
+/* Sage */
+:root[data-theme="sage"] {
+  --rc-before: #a8401f;
+  --rc-after: #245a3d;
+  --rc-target: rgba(27,36,30,0.883);
+  --rc-position: rgba(27,36,30,0.22);
+  --rc-cut-fill: rgba(168,64,31,0.176);
+  --rc-limit-hatch: rgba(27,36,30,0.132);
+  --rc-limit-edge: rgba(27,36,30,0.44);
+  --rc-grid: rgba(27,36,30,0.077);
+  --rc-zero: rgba(27,36,30,0.286);
+  --rc-without: #8a4a00;
+  --rc-without-fill: rgba(138,74,0,0.1);
+  --rc-without-line: rgba(138,74,0,0.5);
+  --rc-without-switch: rgba(138,74,0,0.3);
+  --rc-flag-fill: rgba(138,74,0,0.14);
+  --rc-run-track: rgba(27,36,30,0.132);
+  --rc-stroke-before: 2.25px;  --rc-stroke-before-lg: 2.75px;
+  --rc-stroke-after: 3.25px;   --rc-stroke-after-lg: 4px;
+  --rc-stroke-target: 2px;     --rc-stroke-target-lg: 2.5px;
+  --rc-dash-expected: 7 5;     --rc-dash-expected-lg: 8 6;
+  --rc-dash-target: 0.5 5;     --rc-dash-target-lg: 0.5 6;
+}
+
+/* Velvet */
+:root[data-theme="velvet"] {
+  --rc-before: #f2939a;
+  --rc-after: #d9b45c;
+  --rc-target: rgba(242,224,210,0.82);
+  --rc-position: rgba(242,224,210,0.2);
+  --rc-cut-fill: rgba(242,147,154,0.16);
+  --rc-limit-hatch: rgba(242,224,210,0.12);
+  --rc-limit-edge: rgba(242,224,210,0.4);
+  --rc-grid: rgba(242,224,210,0.07);
+  --rc-zero: rgba(242,224,210,0.26);
+  --rc-without: #ff9a55;
+  --rc-without-fill: rgba(255,154,85,0.1);
+  --rc-without-line: rgba(255,154,85,0.5);
+  --rc-without-switch: rgba(255,154,85,0.3);
+  --rc-flag-fill: rgba(255,154,85,0.14);
+  --rc-run-track: rgba(242,224,210,0.12);
+  --rc-stroke-before: 2.25px;  --rc-stroke-before-lg: 2.75px;
+  --rc-stroke-after: 3.25px;   --rc-stroke-after-lg: 4px;
+  --rc-stroke-target: 2px;     --rc-stroke-target-lg: 2.5px;
+  --rc-dash-expected: 7 5;     --rc-dash-expected-lg: 8 6;
+  --rc-dash-target: 0.5 5;     --rc-dash-target-lg: 0.5 6;
+}
+
+/* Ink */
+:root[data-theme="ink"] {
+  --rc-before: #ff8fa8;
+  --rc-after: #7fc8ff;
+  --rc-target: rgba(230,236,247,0.82);
+  --rc-position: rgba(230,236,247,0.2);
+  --rc-cut-fill: rgba(255,143,168,0.16);
+  --rc-limit-hatch: rgba(230,236,247,0.12);
+  --rc-limit-edge: rgba(230,236,247,0.4);
+  --rc-grid: rgba(230,236,247,0.07);
+  --rc-zero: rgba(230,236,247,0.26);
+  --rc-without: #ffc24d;
+  --rc-without-fill: rgba(255,194,77,0.1);
+  --rc-without-line: rgba(255,194,77,0.5);
+  --rc-without-switch: rgba(255,194,77,0.3);
+  --rc-flag-fill: rgba(255,194,77,0.14);
+  --rc-run-track: rgba(230,236,247,0.12);
+  --rc-stroke-before: 2.25px;  --rc-stroke-before-lg: 2.75px;
+  --rc-stroke-after: 3.25px;   --rc-stroke-after-lg: 4px;
+  --rc-stroke-target: 2px;     --rc-stroke-target-lg: 2.5px;
+  --rc-dash-expected: 7 5;     --rc-dash-expected-lg: 8 6;
+  --rc-dash-target: 0.5 5;     --rc-dash-target-lg: 0.5 6;
+}
+
+/* Gauge */
+:root[data-theme="gauge"] {
+  --rc-before: #ffd21f;
+  --rc-after: #3fd3e6;
+  --rc-target: rgba(231,233,228,0.82);
+  --rc-position: rgba(231,233,228,0.2);
+  --rc-cut-fill: rgba(255,210,31,0.16);
+  --rc-limit-hatch: rgba(231,233,228,0.12);
+  --rc-limit-edge: rgba(231,233,228,0.4);
+  --rc-grid: rgba(231,233,228,0.07);
+  --rc-zero: rgba(231,233,228,0.26);
+  --rc-without: #ff7a2e;
+  --rc-without-fill: rgba(255,122,46,0.1);
+  --rc-without-line: rgba(255,122,46,0.5);
+  --rc-without-switch: rgba(255,122,46,0.3);
+  --rc-flag-fill: rgba(255,122,46,0.14);
+  --rc-run-track: rgba(231,233,228,0.12);
+  --rc-stroke-before: 2.25px;  --rc-stroke-before-lg: 2.75px;
+  --rc-stroke-after: 3.25px;   --rc-stroke-after-lg: 4px;
+  --rc-stroke-target: 2px;     --rc-stroke-target-lg: 2.5px;
+  --rc-dash-expected: 7 5;     --rc-dash-expected-lg: 8 6;
+  --rc-dash-target: 0.5 5;     --rc-dash-target-lg: 0.5 6;
+}

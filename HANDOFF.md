@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-11-03 (on R2D2).
+Last updated: 2026-11-05 (on R2D2).
 
 ## Start here
 
@@ -20,16 +20,14 @@ and the ideas as Must / Should / Could. It follows `docs/DEVELOPMENT.md`'s
 phases; change it when a phase opens, closes or moves, and show George first. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Testing: 1.12.1** (2026-11-03, serial 64), the first release built on
-GitHub (run 41609042614; ADR-0173, *Built*): the build machinery, squeezelite,
-peppyalsa, nqptp and shairport-sync from source archives, `rpi-eeprom`
-28.36-1. Notes approved by George; signed on R2D2 with `publish.sh --sign`;
-every signature read back good. PR #94 merged by George (2026-11-03), with
-#93 (README: 1.12.0 is the current release).
+**Testing: 1.13.0** (2026-11-03, serial 65): Plexamp and Beszel from the
+catalogue (Phase 28). Built by run 41718806895 (`verify-image.sh` all checks
+passed), signed on R2D2, read back good against the shipped key; Stable not
+moved. Notes approved by George; release PR #95 merged 2026-11-04.
 
 **Stable: 1.12.0** (2026-11-02, serial 13): Roon (Phase 26) and three
 fixes, on 1.11.0 (themes; left a pre-release). Its image, the last built on
-R2D2: `image/deploy/2026-11-02-gexis-player-v1.12.0.img`. The two
+R2D2, was deleted 2026-11-04 (George). The two
 measurements are still owed (to-dos `ph22-measure`, `eq-measure`).
 
 **R2D2's `/` fills up**: Docker's
@@ -50,70 +48,56 @@ with *Keep* off (ADR-0147, ADR-0169); George's phone test of the dialogs
 (`~/projects/scratch/dpad`, `ph24`, `ph26/sources`, `ph26/blog`) build from
 `~/projects/gexis-player-next` unless `WT` names another worktree.
 
-**Phases 25 (themes) and 26 (Roon) closed 2026-11-02** (George: satisfied
-with Roon, nothing more measured; one release with everything). Roon's
-plugin is `gcarstoiu/gexis-roon` (local `~/projects/gexis-roon`), 0.2.1
-released with its asset and pinned in `packaging/roon/pins.sh`; Roon's
-extension through Debian's `python3-roonapi`. **Left open** (ADR-0172,
-*Built*): Roon took the output back eight seconds after Lyrion took it, the
-cause not established (0.2.1 logs the pause's answer and the loopback's
-states); not measured: bit-perfect, rates above 44.1 kHz, a group, the
-plugin off and on, Roon Bridge's own update. **In progress:** Phase 27, releases built on GitHub
-(`ph-github-builds`, added by George 2026-11-02; ADR-0173 accepted, decisions
-1-3), released in 1.12.1 (2026-11-03; its branch merged and deleted). Done
-(Finding 140): the trial; the `inputs`
-mirror (a pre-release, 152 files listed in `packaging/inputs.tsv`, uploaded
-from R2D2 with `packaging/inputs.sh publish`); the four cloned sources from
-pinned archives (new revisions); earlier releases read from GitHub
-(`packaging/release/published.py`); `sign.sh`, `publish.sh --upload` and
-`--sign`; `.github/workflows/release.yml`, whose whole chain ran unsigned on
-the branch in 19 minutes; 1.12.1 built, uploaded, attested and signed that
-way; sofapi updated itself to it. **Left:** a card flashed from 1.12.1's image
-(criterion 4, George); then R2D2's pi-gen container and build images removed
-(decision 3). Check a
-workflow parses before pushing it (`~/projects/ha-venv/bin/python` has PyYAML):
-a `: ` in a one-line `run:` failed one push. **Started 2026-11-03:** Phase
-28, Plexamp and Beszel as catalogue plugins (`ph-catalogue-plugins`,
-ADR-0174 accepted: the plugin downloads Plexamp; players using them carried
-over; setup keeps offering Plexamp), on its branch and worktree
-`~/projects/gexis-player-catalogue-plugins`. Done: the sandbox gives catalogue
-plugins `HOME`, the device name, a renderer's restart allowance, the connected
-status and the page link; Beszel out of the release (`gexis-player`
-conflicts with its packages) and carried over (`carry_over.py`);
-`gcarstoiu/gexis-beszel` v0.21.1-1 public, listed (gexis-plugins #13, #14,
-George, admin merge for the tools change), catalogue serial 6. Previewed on
-sofapi 2026-11-03 (in `~/preview-ph28`): its agent came back from the catalogue
-and reached its hub, the hub's data moved, the `beszel` user deleted - after a
-fix: the old agent kept running, as our packages never stopped it on removal;
-the carry-over now stops the old unit first. **Plexamp** (2026-11-03):
-`gexis-plexamp` out of the release, its store, claim record and fetched
-software carried into the plugin's folder; setup's part 2 installs it from
-the catalogue (`POST /personalise/install`). `gcarstoiu/gexis-plexamp` v0.5.0
-released (the plugin downloads Plexamp from its pin and runs it as its
-child); gexis-plugins #15, #16 merged by George; catalogue serial 7.
-Previewed on sofapi (`~/preview-ph28c`, branch at `f76baf31`): carried over
-claimed, installed from the catalogue, switched on, no second download -
-after a fix: systemd mounts the plugin's state folder `noexec`, so Plexamp's
-native module failed to load; both sandbox units now set `ExecPaths=` for
-it. George played and took it over on sofapi (2026-11-03): back 2.2 s after
-the kill, idle, still claimed; at most 165 MB and 40 tasks (ADR-0174).
-**Found then:** a backup takes the plugin's whole folder, so Plexamp's
-software and its engine's cache (`~/Library/Caches`, 158 MB within the hour)
-would go into every backup. Fixed: backups leave a plugin's `.cache` out
-(branch `0dfcb857`), gexis-plexamp 0.5.1 keeps both there (gexis-plugins
-#17, George; catalogue serial 8); the carry-over moves pi's caches too, and
-a reset clears what 1.12.x left in pi's home. On sofapi (`~/preview-ph28d`,
-branch at `389574e2`): 0.5.1 started signed in without downloading again; a
-backup is 1.07 MB again. The preview's first build failed on a flaky
-`| grep -q` under `pipefail` in `inputs.sh` (BUILD-TRAPS); that and three
-more like it fixed on the branch. **Owed:** Plexamp played once on 0.5.1
-(its engine's cache now through a link); George's look at the Plugins page;
-then, agreed with George: a card from 1.12.1's image
-(`image/deploy/2026-11-03-gexis-player-v1.12.1.img.xz`, also Phase 27's
-flash), set up without Plexamp or Beszel, updated to the preview (nothing
+**Roon** (Phase 26, closed): `gcarstoiu/gexis-roon` (local
+`~/projects/gexis-roon`) 0.2.1, pinned in `packaging/roon/pins.sh`. **Left
+open** (ADR-0172, *Built*): Roon took the output back eight seconds after
+Lyrion took it, the cause not established (0.2.1 logs the pause's answer
+and the loopback's states); not measured: bit-perfect, rates above 44.1 kHz,
+a group, the plugin off and on, Roon Bridge's own update.
+
+**Phase 27** (releases built on GitHub, ADR-0173) is in 1.12.1. **Left:** a
+card flashed from 1.12.1's image (criterion 4: the card below), then R2D2's
+pi-gen container (8.9 GB) and build images (2.9 GB) removed (decision 3).
+
+**Phase 28** (Plexamp and Beszel from the catalogue, ADR-0174) is in 1.13.0:
+`gcarstoiu/gexis-beszel` 0.21.1-1 and `gcarstoiu/gexis-plexamp` 0.5.1
+(gexis-plugins #13-#17, merged by George), catalogue serial 8; sofapi runs
+the branch's last preview (`~/preview-ph28d`) with both carried over.
+**Owed, on Testing:** Plexamp played once on 0.5.1 (its engine's cache now
+through a link) and George's look at the Plugins page, on sofapi; a card
+from `image/deploy/2026-11-03-gexis-player-v1.12.1.img.xz` (also Phase 27's)
+set up without Plexamp or Beszel, then updated to 1.13.0 (nothing
 installed, *Add plugins* lists them), then reset to factory settings for
-first use offering Plexamp from the catalogue. Then 29, room correction for
-the bass. **Open, small:** a preview's download still holds the skin packs (1.1 of
+first use offering Plexamp from the catalogue. **Not built:** ADR-0174's
+"found while reading" setup fix - part 2 switches ours on without adding
+them to the Plugins page's list (`plugin_store.ADDED`).
+
+**In progress: Phase 29**, room correction for the bass
+(`ph-room-correction`, worktree `~/projects/gexis-player-room-correction`,
+pushed; previews on GitHub). ADR-0175: cuts only, below 250 Hz, towards a
+gentle rise below 80 Hz, in the equaliser's stage; three positions (George,
+2026-11-05, over five; most of them decide a cut, not any one), 60 dB at the
+seat, each speaker alone, a tap and a 3 s countdown at each, the check (Skip allowed)
+waiting for the tap too, a 10-minute timeout; A/B a saved switch; the UMIK-1
+only, **its 90° file given from the phone** (decision 4 changed 2026-11-05:
+miniDSP has no API, its terms forbid automated tools, and the microphone
+gives no serial over USB). Claude Design's design is `design/source/29`
+(George kept its proposals and new copy). **Built and tested on mocks**:
+`room_dsp` (numpy), `room_correction`, `room_run`, `room_mic`,
+`room_control`, the stage's 16 cut slots, the routes, the screens
+(`ui/src/screens/room/`), the manual, FAQ, technical guide, hardware page
+and README; layouts checked with made-up data (`~/projects/scratch/ph29/harness`).
+**On sofapi** (George's UMIK-1, a USB-C unit): George's first full run
+(2026-11-05, five positions at 50 dB) gave the three decisions above, and
+showed the output left at 100 % after a run - the level before kept as the
+shown percentage (fixed on the branch: the DAC's own level, put back through
+the bridge; to check on sofapi by reading the level back, Lesson 93).
+**Not yet:** the fixed run on sofapi, the level against a meter, two sweeps'
+agreement at 60 dB, the stage's cost, the A/B bit-exactness. **Copy to confirm** with George:
+the lines the design has no state for (`design/IMPLEMENTED-DIFFERENTLY.md`,
+Phase 29).
+
+**Open, small:** a preview's download still holds the skin packs (1.1 of
 1.2 GB) though `release.yml` excludes them; `gen_personalise.py` out of step since Phase 23;
 the mocked Settings → Display showed two *Screen port* rows
 (`screen_port`, `screen_port_info`), not yet looked at on a player.
@@ -137,12 +121,12 @@ player's.
 `GEXIS_RELEASE_GNUPGHOME=~/projects/gexis-release-key`; the scripts default
 to `~/.gnupg-gexis-release`, which no longer exists.
 
-**The players** (2026-11-03): sofapi on 1.12.1, updated by its own updater
-from Testing (with a reboot, its marker now cleared; the preview's packages
-removed); `rpi-eeprom-update` reports a bootloader update
+**The players** (2026-11-03): sofapi on Phase 28's last preview
+(`gexis-core` and `gexis-player` from `389574e2`, on 1.12.1, in
+`~/preview-ph28d`), Plexamp 0.5.1 and Beszel from the catalogue; `rpi-eeprom-update` reports a bootloader update
 available, not applied (not looked into). Roon's extension enabled in
 George's Roon; the other three last seen on 1.9.1 through their updaters
-(2026-10-29). All four on Testing, which offers 1.12.1. sofapi and the bar
+(2026-10-29). All four on Testing, which offers 1.13.0. sofapi and the bar
 grouped; AirPlay on at sofapi and guestpi. Each has its own Lyrion server.
 
 **The test venv imports the core from `~/projects/gexis-player-next`** (an
@@ -159,7 +143,8 @@ screen change may miss full-screen (the HMTECH 10.1"; to-do
 **Release build output lives in `~/projects/gexis-release-out`**: link it to
 `packaging/release/out` in the checkout `publish.sh` runs from (git-ignored;
 remove the link after). Since ADR-0173 `reuse.py` reads the published
-indexes, not these copies; whether to keep the folder is George's (4.8 GB).
+indexes, not these copies; George had the older releases' copies removed
+(2026-11-04), 1.13.0's kept.
 
 **Open:**
 - **Not checked:** iOS's handling of `interactive-widget` (the mini player
@@ -176,8 +161,8 @@ indexes, not these copies; whether to keep the folder is George's (4.8 GB).
 `~/projects/ha-venv`). **HACS's default list**: hacs/default#12691 waits for
 HACS's maintainers - do not ask them for a review (their template).
 
-After Phase 28: 29 (room correction for the bass) and 30-33 in order, each
-ADR first
+After Phase 29: 30 (room correction for the full range) and 31-33 in order,
+each ADR first
 (`docs/DEVELOPMENT.md`, the IDs there); MPD parked (ADR-0151). **Raspberry
 Pi Imager** (ADR-0159, a task): Imager's own list stays open as it is
 (George, 2026-10-24).
@@ -187,18 +172,16 @@ in Claude's memory, not here) holds the open items with their detail.
 
 **Routine clean-up** (`docs/ROUTINE-CLEANUP.md`, George 2026-10-12): after
 every merged release PR, otherwise weekly on Sunday evening. **Last run:
-2026-11-03, after 1.12.1.**
+2026-11-04, after 1.13.0.**
 
 ## Phases
 
 Closed: 0-21 and 24-26 (13 with letters a-f). Phases are numbered
-consecutively without letters, each with a stable ID (George, 2026-10-13);
-20 (the equaliser) and 21 (the phone remote) closed 2026-10-27 with 1.7.0,
-24 (the plugin catalogue) 2026-10-31 with 1.10.0, 25 (themes) and 26
-(Roon) 2026-11-02 with 1.11.0 and 1.12.0; 22 (multiroom) and 23 (AirPlay 2,
-limited testing) on Stable with work open; 27 (releases built on GitHub)
-in 1.12.1, a card still to flash; 28 (Plexamp and Beszel to the catalogue)
-started; next 29-30 (room correction), 31-33; MPD parked. `docs/DEVELOPMENT.md`
+consecutively without letters, each with a stable ID (George, 2026-10-13).
+On Stable with work open: 22 (multiroom), 23 (AirPlay 2, limited testing).
+27 (releases built on GitHub) in 1.12.1, a card still to flash; 28 (Plexamp
+and Beszel to the catalogue) in 1.13.0 on Testing; 29 (room correction for
+the bass) in progress; next 30, then 31-33; MPD parked. `docs/DEVELOPMENT.md`
 holds each phase's acceptance criteria.
 
 ## Machines

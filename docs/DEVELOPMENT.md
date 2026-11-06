@@ -3709,7 +3709,8 @@ packs) is read from GitHub.
 ### Phase 28 — Plexamp and Beszel as catalogue plugins
 
 **ID:** `ph-catalogue-plugins` · added 2026-11-03 as 28, before room
-correction (George).
+correction (George). **On Stable with 1.13.0** (2026-11-06, George; Testing
+from 2026-11-03); criterion 5 and first use on a fresh card still to be seen.
 
 **Added 2026-11-03** (George: Plexamp, and Beszel's agent and hub, out of the
 player, as standalone plugins). Today they are plugins shipped with the
@@ -3726,18 +3727,33 @@ how.
 1. **ADR-0174 accepted.** *Met 2026-11-03*: decisions 1-3 (the plugin
    downloads Plexamp; carried over; setup offers it as today).
 2. **Each in its own repository, released and listed** in the catalogue,
-   checked and signed as TV remote was.
+   checked and signed as TV remote was. *Met 2026-11-03*: `gexis-beszel`
+   0.21.1-1 and `gexis-plexamp` 0.5.1 (gexis-plugins #13-#17), serial 8.
 3. **Out of the image and the release**: the image holds none of them and
    `gexis-player` no longer pins them; what they need from Debian stays.
+   *Met 2026-11-03*: 1.13.0, `verify-image.sh` all checks passed.
 4. **A player using one keeps it** through the update that removes it from
    the release: the catalogue's version installed for it, its settings and
-   sign-in kept, playing or reporting as before.
+   sign-in kept, playing or reporting as before. *Met 2026-11-03* on sofapi:
+   Beszel reporting to its hub, Plexamp signed in, played and taken over by
+   George.
 5. **A player not using them sees no change** except where they are offered:
    *Add plugins* lists them from the catalogue, first use as it does today.
+   *To be seen on Testing*: a card from 1.12.1 set up without them, updated,
+   then reset for first use offering Plexamp.
 6. **Tried on a test player before the release**; the public documents
-   current.
+   current. *Met 2026-11-03*: previewed on sofapi; README, manual, FAQ,
+   technical guide and plugin manual updated.
 
 ### Phase 29 — Room correction for the bass, with a USB microphone
+
+**Started 2026-11-03** (George), on `ph-room-correction`;
+[ADR-0175](decisions/0175-room-correction-for-the-bass.md) accepted the same
+day: cuts only below 250 Hz towards a gentle bass rise, in the equaliser's
+stage; five positions, measured again after; the UMIK-1, its calibration
+downloaded by the serial. The phone's flow settled with George from a
+mock-up on 2026-11-04; design first: the brief is
+`design/briefs/29-room-correction.md`.
 
 **ID:** `ph-room-correction` · numbered 29 on 2026-11-03, after Plexamp and Beszel to the catalogue (George); numbered 28 on 2026-11-02, after releases built on GitHub (George); numbered 27 on 2026-11-01, after the Roon plugin (George); numbered 26 on 2026-10-29, after the plugin catalogue and themes (George: it still cannot be auditioned); numbered 24 on 2026-10-27, after multiroom and AirPlay 2 (George: no room correction can be tried yet); numbered 22 on 2026-10-26; 21 from 2026-10-25, 20 from 2026-10-24, 19 from 2026-10-21 (18 from 2026-10-19, 16 from 2026-10-15, 15 from 2026-10-14).
 **Since 2026-10-25** it builds on Phase 20's filter stage (`ph-equaliser`):

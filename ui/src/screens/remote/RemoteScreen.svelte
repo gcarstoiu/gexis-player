@@ -17,7 +17,7 @@
   import VolumeRow from './VolumeRow.svelte';
   import GroupMark from './GroupMark.svelte';
 
-  let { artwork = null, onartfailed, pad, onpad, padSwitch, socket, onok, ontap, onsay, oneq, ongroup, onmark } = $props();
+  let { artwork = null, onartfailed, pad, onpad, padSwitch, socket, onok, ontap, onsay, oneq, ongroup, onmark, onroom } = $props();
 
   const hasTrack = $derived(!!$active);
   const head = playhead(() => $metadata);
@@ -50,7 +50,7 @@
 
   <TouchArea {pad} {onpad} {padSwitch} {socket} {onok} {ontap} {onsay} />
   <QuickActions {onsay} />
-  <div class="volume"><VolumeRow {oneq} {ongroup} {onsay} /></div>
+  <div class="volume"><VolumeRow {oneq} {ongroup} {onsay} {onroom} /></div>
 </div>
 
 <style>

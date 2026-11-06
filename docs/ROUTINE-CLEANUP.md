@@ -26,7 +26,7 @@ Look before deleting; delete only what is listed here as safe.
 | GitHub branches (`git fetch --prune`, `git branch -r`) | `main`, `docs`, `next`, a phase's branch still being tested (`ph-…`), any with an open PR (`gh pr list`) | every one contained in `origin/main` (`git push origin --delete <b>`); one whose only extra commits change no files (`git diff $(git merge-base origin/main <b>) <b>` empty) goes too. Anything else: listed for George, not deleted |
 | `image/deploy/` | the newest released image and its `.info` | older images (each is rebuilt from its tag) and stray `build*.log` |
 | `packaging/out/` (both checkouts) | nothing needed | every `.deb` (rebuilt by the next build) |
-| `~/projects/gexis-release-out` | what `publish.sh --sign` writes there; the older releases until George decides (since ADR-0173 `reuse.py` reads the published indexes, not these copies) | nothing without George |
+| `~/projects/gexis-release-out` | what `publish.sh --sign` writes there (since ADR-0173 `reuse.py` reads the published indexes, not these copies; George had the older releases removed on 2026-11-04) | nothing without George |
 | `~/projects/gexis-build-cache/debs` | the skin packs and wallpapers (the build prunes replaced versions itself) | nothing |
 | pi-gen volumes | the warm stage trees | `make prune` only - **never `make clean`** (a cold build is ~40 min) |
 | Docker images | `pi-gen`, `gexis-deb-builder`, the Debian bases, anything a running container uses (`gexis-dev-*` is someone else's - leave it) | dangling images: `docker image prune -f` (not `-a`) |

@@ -32,6 +32,7 @@
   import { pull, bandDrag, TRAY_H, trayAsk } from './tray.svelte.js';
   import { equaliser } from '../../lib/equaliser.svelte.js';
   import EqQuick from '../eq/EqQuick.svelte';
+  import RoomQuick from '../room/RoomQuick.svelte';
   import GroupGlyph from '../../lib/GroupGlyph.svelte';
   import { dragStart, group, groupLevel, LevelSender, setGroupMute } from '../../lib/group.svelte.js';
   import BarAddBand from '../group/BarAddBand.svelte';
@@ -40,7 +41,7 @@
 
   //: `armsAt`: before this (performance.now()), a tray that came down by
   //: itself takes no touch on its level or mute (App.svelte, VOLUME_ARM_MS).
-  let { open, armsAt = 0, volume, active, onclose, onexternal, onactivity, onsettled, onhome, onvisualisation, ondashboard = null, onequaliser = null, rootless = false } = $props();
+  let { open, armsAt = 0, volume, active, onclose, onexternal, onactivity, onsettled, onhome, onvisualisation, ondashboard = null, onequaliser = null, onroom = null, rootless = false } = $props();
 
   //: ADR-0162 (design/source/20, Q06-Q09): the EQ button opens a second band
   //: under the first - the switch, the settings, the note and Edit. ADR-0166
@@ -76,6 +77,10 @@
   function goEqualiser() {
     onclose?.();
     onequaliser?.();
+  }
+  function goRoom() {
+    onclose?.();
+    onroom?.();
   }
 
   const press = pressing();
@@ -349,6 +354,8 @@
       <span class="eqbtn__name">{eqName}</span>
       <span class="eqbtn__chev" class:is-open={eqBand}></span>
     </button>
+    <!-- ADR-0175 (design/source/29, Q05-Q08): room correction's, after it. -->
+    <RoomQuick host="bartray" onopen={goRoom} />
   {/if}
   {#if groupOffered}
     <!-- ADR-0166: beside the equaliser's, built as it is. -->

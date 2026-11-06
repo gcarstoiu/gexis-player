@@ -299,3 +299,28 @@
   --remote-group-sheet-slider:  44px;     /* All; members 36 */
   --remote-group-name-col:      104px;
 }
+
+/* ---- Phase 29: room correction for the bass (2026-11-05) ------------------
+   From source/29/tokens-room.css; George kept the design's proposals. */
+:root {
+  --rc-before: #f2a48f;                         /* before, average of five: solid line; the cut values */
+  --rc-after: #7ed6bc;                          /* after, measured (solid) or expected (dashed) */
+  --rc-target: rgba(233,238,242,0.82);          /* target: dotted line */
+  --rc-position: rgba(233,238,242,0.2);         /* each position: hairline */
+  --rc-cut-fill: rgba(242,164,143,0.16);        /* area the cuts take away, between before and after */
+  --rc-limit-hatch: rgba(233,238,242,0.12);     /* above 250 Hz: 135deg hatch, 1px every 6px (panel 7px) */
+  --rc-limit-edge: rgba(233,238,242,0.4);       /* 1px dashed edge at 250 Hz */
+  --rc-grid: rgba(233,238,242,0.07);            /* gridlines at +10, -10 dB and 20/50/100/200 Hz */
+  --rc-zero: rgba(233,238,242,0.26);            /* the 0 dB line */
+  --rc-without: #e0a758;                        /* Hear it without when set; "Without" wherever shown; Not checked */
+  --rc-without-fill: rgba(224,167,88,0.1);      /* A/B card ground when set */
+  --rc-without-line: rgba(224,167,88,0.5);      /* A/B card border when set */
+  --rc-without-switch: rgba(224,167,88,0.3);    /* A/B switch track when set (border 0.55, knob --rc-without) */
+  --rc-flag-fill: rgba(224,167,88,0.14);        /* Not checked flag ground (border 0.4) */
+  --rc-run-track: rgba(233,238,242,0.12);       /* progress and level tracks */
+  --rc-stroke-before: 2.25px;  --rc-stroke-before-lg: 2.75px;
+  --rc-stroke-after: 3.25px;   --rc-stroke-after-lg: 4px;
+  --rc-stroke-target: 2px;     --rc-stroke-target-lg: 2.5px;
+  --rc-dash-expected: 7 5;     --rc-dash-expected-lg: 8 6;
+  --rc-dash-target: 0.5 5;     --rc-dash-target-lg: 0.5 6;  /* with round caps */
+}

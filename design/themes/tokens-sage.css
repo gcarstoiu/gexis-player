@@ -309,3 +309,28 @@
   --remote-group-sheet-slider:  44px;     /* All; members 36 */
   --remote-group-name-col:      104px;
 }
+
+/* ---- Phase 29: room correction for the bass (2026-11-05) ------------------
+   From source/29/tokens-room.css; George kept the design's proposals. */
+:root {
+  --rc-before: #a8401f;
+  --rc-after: #245a3d;
+  --rc-target: rgba(27,36,30,0.883);
+  --rc-position: rgba(27,36,30,0.22);
+  --rc-cut-fill: rgba(168,64,31,0.176);
+  --rc-limit-hatch: rgba(27,36,30,0.132);
+  --rc-limit-edge: rgba(27,36,30,0.44);
+  --rc-grid: rgba(27,36,30,0.077);
+  --rc-zero: rgba(27,36,30,0.286);
+  --rc-without: #8a4a00;
+  --rc-without-fill: rgba(138,74,0,0.1);
+  --rc-without-line: rgba(138,74,0,0.5);
+  --rc-without-switch: rgba(138,74,0,0.3);
+  --rc-flag-fill: rgba(138,74,0,0.14);
+  --rc-run-track: rgba(27,36,30,0.132);
+  --rc-stroke-before: 2.25px;  --rc-stroke-before-lg: 2.75px;
+  --rc-stroke-after: 3.25px;   --rc-stroke-after-lg: 4px;
+  --rc-stroke-target: 2px;     --rc-stroke-target-lg: 2.5px;
+  --rc-dash-expected: 7 5;     --rc-dash-expected-lg: 8 6;
+  --rc-dash-target: 0.5 5;     --rc-dash-target-lg: 0.5 6;
+}

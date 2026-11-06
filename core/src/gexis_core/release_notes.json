@@ -1,6 +1,10 @@
 {
  "_about": "Every release's notes, newest first, exactly as published and signed (ADR-0116). publish.sh reads a release's notes from here; Settings -> Change logs shows the last 10.",
  "releases": {
+  "1.14.0": {
+   "date": "2026-11-06",
+   "notes": "New\n• Room correction for the bass, in Settings → Audio: measured at the seat with a USB microphone, it cuts the peaks the room adds below 250 Hz, for each speaker.\n• Its chart shows each speaker and both together, before and after; Hear it without compares, and it can be switched off at any time.\n\nGood to know\n• It needs a miniDSP UMIK-1 and its 90° calibration file from miniDSP's page; the measurement is run from a phone, at three positions, in about seven minutes with its check.\n• The test sounds reach about 60 dB at the seat, about as loud as a conversation, and the volume goes back to where it was.\n• Only cuts: a dip in the bass stays as it is."
+  },
   "1.13.0": {
    "date": "2026-11-03",
    "notes": "New\n• Plexamp and Beszel come from the plugin catalogue, in Settings → Plugins → Add plugins, and their new versions are offered there without a player update.\n• A player that used them gets them from the catalogue with this update, signed in, with their settings and the hub's history.\n• A plugin from the catalogue shows its connection and a link to its own page in Settings, as the player's own do.\n\nFixed\n• A factory reset also removes Plexamp's caches.\n\nGood to know\n• Setup still offers Plexamp, and installs it from the catalogue when chosen.\n• A backup keeps a plugin's settings and sign-ins, not the software it downloads, which is fetched again after a restore.\n• Without a network at the update, they are installed once it is back."
