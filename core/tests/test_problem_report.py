@@ -18,7 +18,7 @@ JOURNAL = """\
 2026-10-07T08:12:50+02:00 livingroom python[812]: 2026-10-07 08:12:50,005 gexis_core.bluetooth_adapter_state INFO bluetooth: discoverable='Always'
 2026-10-07T08:12:51+02:00 livingroom systemd[1]: Unmounting mnt-gexis\\x2dshares-Nasbox\\x2dlocal\\x2dTunes\\x2d9a8b7c.mount - /mnt/gexis-shares/Nasbox-local-Tunes-9a8b7c...
 2026-10-07T08:12:52+02:00 livingroom bluealsa[893]: Adding new Stream End-Point: A4:5E:60:11:22:33: SRC: AAC
-2026-10-07T08:12:53+02:00 livingroom wpa_supplicant[700]: wlan0: CTRL-EVENT-CONNECTED - Connection to 9c:c7:a6:00:11:22 completed [id=0 id_str=]
+2026-10-07T08:12:53+02:00 livingroom wpa_supplicant[700]: wlan0: CTRL-EVENT-CONNECTED - Connection to 02:00:5e:10:20:30 completed [id=0 id_str=]
 2026-10-07T08:12:54+02:00 livingroom systemd[1]: Started gexis-core.service - Gexis Player core at 11:45:23, version 1.2.3.4.5.
 2026-10-07T08:12:56+02:00 livingroom go-librespot[2326]: time="2026-10-07T08:12:56+02:00" level=info msg="loaded track \\"Quiet Morning - 2012 Remaster\\" (paused: true)" uri="spotify:track:34xGLuxM0rkxhC"
 2026-10-07T08:12:57+02:00 livingroom go-librespot[2326]: time="2026-10-07T08:12:57+02:00" level=info msg="accepted zeroconf from Phone 9 Max" username="11*****97"
@@ -50,7 +50,7 @@ def scrubbed(text=JOURNAL, now_playing=("Blue Harbour Lights", "Nina Example")):
 def test_nothing_personal_is_left():
     _, out = scrubbed()
     for private in ("10.0.4.17", "10.0.4.23", "Nina", "Blue Harbour", "Kitchen Speaker", "3c:22:fb",
-                    "Smalltown", "52.12345", "Nasbox", "A4:5E:60", "9c:c7:a6", "livingroom",
+                    "Smalltown", "52.12345", "Nasbox", "A4:5E:60", "02:00:5e", "livingroom",
                     "Qx7b2Lk9", "cb3a1f2e", "musicfan", "Quiet Morning", "34xGLuxM", "Phone 9 Max",
                     "11*****97"):
         assert private not in out, private

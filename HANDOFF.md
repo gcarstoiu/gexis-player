@@ -24,15 +24,15 @@ phases; change it when a phase opens, closes or moves, and show George first. Hi
 (Phase 29), with the kernel 6.18.60 and Mesa 26.2.6 from the Raspberry Pi
 archive. Built by run 42261893617 (`verify-image.sh` all 151 checks passed,
 as 1.13.0), signed on R2D2; the channel, each part, the notes and the history
-read back good. Notes approved by George. **Release PR #96 for George to
-merge**; do not push `next` until its checks have finished. The API page's
+read back good. Notes approved by George; release PR #96 merged by George
+the same day. The API page's
 deploy timed out in GitHub Pages' queue and passed on a re-run.
 
 **Stable: 1.13.0** (promoted by George 2026-11-06, serial 14; on Testing
 since 2026-11-03, serial 65): Plexamp and Beszel from the catalogue (Phase
 28), on 1.12.1 (releases built on GitHub). Read back with a good signature;
 the image downloaded through README's link, its checksum and signature good.
-README names 1.13.0 (reaches `main` with #96). The two measurements are
+README names 1.13.0 (on `main` with #96). The two measurements are
 still owed (to-dos `ph22-measure`, `eq-measure`).
 
 **R2D2's `/` fills up**: Docker's
@@ -80,34 +80,21 @@ first use offering Plexamp from the catalogue. **Not built:** ADR-0174's
 them to the Plugins page's list (`plugin_store.ADDED`).
 
 **In progress: Phase 29**, room correction for the bass, **on Testing
-with 1.14.0** (2026-11-06, George; `ph-room-correction` merged into `next`,
-worktree `~/projects/gexis-player-room-correction`). ADR-0175: cuts only, below 250 Hz, towards a
-gentle rise below 80 Hz, in the equaliser's stage; three positions (George,
-2026-11-05, over five; most of them decide a cut, not any one), 60 dB at the
-seat, each speaker alone, a tap and a 3 s countdown at each, the check (Skip allowed)
-waiting for the tap too, a 10-minute timeout; A/B a saved switch; the UMIK-1
-only, **its 90° file given from the phone** (decision 4 changed 2026-11-05:
-miniDSP has no API, its terms forbid automated tools, and the microphone
-gives no serial over USB). Claude Design's design is `design/source/29`
-(George kept its proposals and new copy). **Built and tested on mocks**:
-`room_dsp` (numpy), `room_correction`, `room_run`, `room_mic`,
-`room_control`, the stage's 16 cut slots, the routes, the screens
-(`ui/src/screens/room/`), the manual, FAQ, technical guide, hardware page
-and README; layouts checked with made-up data (`~/projects/scratch/ph29/harness`).
-**On sofapi** (George's UMIK-1, a USB-C unit): George's first full run
-(2026-11-05, five positions at 50 dB) gave the three decisions above, and
-showed the output left at 100 % after a run - the level before kept as the
-shown percentage (fixed: the DAC's own level, put back through the bridge;
-read back from the DAC on sofapi after a cancel, a restart mid-run and the
-next run, Lesson 93). Then (George, 2026-11-05): cuts as deep as the target
-takes, stacked where one is not enough; both speakers swept together, shown
-as a third tab, never cut; boosts stay out (decision 2). sofapi holds the
-cuts recalculated from three of the first run's positions. **Not yet:** the
-cuts read from CamillaDSP while music plays (only readable then), a full run
-at three positions with both, the level against a meter, two sweeps'
-agreement at 60 dB, the stage's cost, the A/B bit-exactness. **Copy to confirm** with George:
-the lines the design has no state for (`design/IMPLEMENTED-DIFFERENTLY.md`,
-Phase 29).
+with 1.14.0** (2026-11-06, George; its branch merged and deleted - a fix goes
+on a branch from `next`). ADR-0175 as built: cuts only below 250 Hz towards a
+gentle rise below 80 Hz, in the equaliser's stage (16 cut slots), stacked as
+deep as the target takes; three positions, most of them deciding a cut; 60 dB
+at the seat; each speaker alone, then both together (shown as *Both*, never
+cut); the check with Skip; the UMIK-1 only, its 90° file given from the phone;
+the level before a run put back as the DAC's own (Lesson 93). Layouts are
+checked with made-up data in `~/projects/scratch/ph29/harness` (it builds from
+`-next`). sofapi has the git34 preview (the same code) and cuts recalculated
+from three of George's first run's positions; Testing offers it 1.14.0.
+**Not yet:** the cuts read from CamillaDSP while music plays (only readable
+then), a full run at three positions with both, the level against a meter,
+two sweeps' agreement at 60 dB, the stage's cost, the A/B bit-exactness.
+**Copy to confirm** with George: the lines the design has no state for
+(`design/IMPLEMENTED-DIFFERENTLY.md`, Phase 29).
 
 **Open, small:** a preview's download still holds the skin packs (1.1 of
 1.2 GB) though `release.yml` excludes them; `gen_personalise.py` out of step since Phase 23;
@@ -184,7 +171,7 @@ in Claude's memory, not here) holds the open items with their detail.
 
 **Routine clean-up** (`docs/ROUTINE-CLEANUP.md`, George 2026-10-12): after
 every merged release PR, otherwise weekly on Sunday evening. **Last run:
-2026-11-04, after 1.13.0.**
+2026-11-06, after 1.14.0.**
 
 ## Phases
 
