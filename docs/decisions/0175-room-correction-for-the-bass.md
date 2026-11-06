@@ -196,18 +196,130 @@ George's answers on it (2026-11-05):
   tagged A/B and amber (the theme's warn colour) wherever *Without* shows;
   and its new copy, verbatim.
 
+**Decision 4 changed** (George, 2026-11-05): **the owner gets the 90° file
+from miniDSP's page and gives it to the player**, over the player
+downloading it. Found while building: miniDSP has no API - the file comes
+from an undocumented script behind their page's form
+(`/scripts/umikcal/umik90.php/<serial>_90deg.txt`), behind Cloudflare, which
+refused a script's request; their website's terms forbid automated tools
+gathering data without written consent. **The UMIK-1 does not give its
+serial over USB** (its USB serial is a placeholder, as three projects report);
+the file's first line does (`"Sens Factor =-0.667dB, AGain =18dB, SERNO:
+7103946"`), so with the file the owner types nothing on the player.
+
+**The level** (George, 2026-11-05): **from the room's own noise** - the
+quiet room heard first, then about 20 dB above its noise in the bass,
+between 55 and 65 dB, and *too quiet* only below 55 dB - over 75 dB fixed
+(item 4) and over 65 or 60 dB fixed. The 75 dB was Claude's, carried from
+home-cinema calibration without a reason this player needs it; on sofapi's
+first run it took the amplifier turned up three times to reach, and George
+found it far too loud. **Then 60 at most** (George, the same day, after the
+second run): 50 to 60 dB from the room's noise, taken from 45 dB when the
+ceiling is reached short of the aim. **Measure answers at once and Cancel is
+instant** (George): the run shows *place* while the player is prepared
+behind it; Cancel stops the sound at once, and the player is put back after.
+
+**After sofapi's first full run** (George, 2026-11-05, three decisions on its
+chart: the left speaker's main peak at 45 Hz cut by 2 dB, the right's by 1):
+- **Most positions decide a cut** (item 6, criterion 2 changed): a cut is
+  held back only when more than half the positions would end more than 1 dB
+  further from the target, over any one position doing so and over the
+  average alone. On sofapi position 4 read 14-15 dB under the other four at
+  45-47 Hz on both speakers, already at or under the target, and held both
+  cuts back; with most positions deciding they are 12 and 11 dB.
+- **Three positions** (item 5): the head and 40 cm to either side, over five
+  and over the head alone - about 3 minutes instead of 5½, two of three
+  still deciding a cut. The cost: the target's level rests on fewer places
+  (on sofapi three instead of five moved it by 2 to 3.5 dB).
+- **60 dB in every room** (item 4), the most allowed, over 50 to 60 from the
+  room's noise and over 55: at 50 dB (−18 dBFS) sofapi's run swept 12 times
+  more than the two a position needs, and one position's left speaker never
+  had two sweeps agree in six.
+- **How deep** (item 6): as deep as bringing the peak to the target takes,
+  no cap at 12 dB in all - the aim is the target. Cuts stack where one is
+  not enough, each still up to 12 dB: redesigned from sofapi's positions
+  1-3, the left's 46 Hz peak takes two (15.4 dB together), and the stacked
+  design leaves 0.85 dB RMS above the target where one deeper cut leaves
+  1.26 (it loses the cut at 68 Hz). The screens list cuts at one frequency
+  as one line.
+- **Boosts**: decision 2 stands, none; George asked for their pros and cons
+  the same day (Claude's answer: cuts only). The one dip all three of
+  sofapi's positions share, the right's
+  at 85-113 Hz, is 8 to 18 dB deep and moves from place to place - a
+  cancellation - and option (b)'s +3 dB would lift it by about 2.
+- **Both speakers together** (item 4), swept at each position after each
+  alone, before in the run and after in the check, over the check only:
+  what is heard is the two adding at the seat, which neither alone shows,
+  and the store keeps levels, not the timing a sum would need. Shown as a
+  third tab, never designed from; 6 dB lower each, so no louder than one.
+  About 45 s more for the run and for the check.
+
+**What else the microphone is** (research, 2026-11-05, sources kept outside
+the repository): USB `2752:0007`, product *Umik-1  Gain: 18dB* (ALSA's card
+id `U18dB`); 24-bit at 48 kHz only (`S24_3LE`), stereo on older units and
+mono on newer; a capture volume. The 90° file is `<serial>_90deg.txt`, about
+615 points from 10 Hz to 20 kHz, the microphone's response (subtracted);
+miniDSP has changed files' sensitivity lines without renaming them. **The
+sensitivity's meaning is not published**: REW reads it as the RMS level at
+94 dB SPL at the capture's full volume, which this follows - so a level in
+dB SPL here is approximate (two readings of it differ by 6 dB) until checked
+against a calibrator.
+
 ## Settings (ADR-0022)
 
 Appended to the inventory 2026-11-03 to 2026-11-05, confirmed by George:
 - **[N]** Room correction on and off, for each output.
 - **[N]** The measurement and its design, for each output (internal).
-- **[N]** A microphone's calibration, downloaded by its serial.
+- **[N]** A microphone's calibration, by its serial (given as a file,
+  2026-11-05).
 - **[H]** The target: a gentle rise below about 80 Hz (decision 1).
 - **[H]** The bass limit, 250 Hz (decision 3).
-- **[H]** Five positions, eight cuts of up to 12 dB, 75 dB SPL.
+- **[H]** Three positions (George, 2026-11-05, over five), eight cuts of up
+  to 12 dB, stacked where a peak needs more (George, 2026-11-05); the level
+  60 dB SPL (George, 2026-11-05, over 75 dB and over 50
+  to 60 from the room's noise).
 - **[N]** A/B, with or without, for each output (2026-11-04).
 - **[H]** A 3-second countdown at each position (2026-11-04).
 - **[H]** A run waiting for a tap is cancelled after 10 minutes (2026-11-05).
+
+## While building
+
+On `ph-room-correction`, 2026-11-05; what differs from the proposal above:
+
+- **The cuts follow the bands** in the stage, not before them (item 1): a
+  `Filter` step for each speaker after the equaliser's; inside CamillaDSP's
+  64-bit pipeline the order changes nothing. All sixteen slots are in the
+  pipeline whenever the stage runs.
+- **The level step** raises the noise digitally from −54 dBFS, never above
+  −12 dBFS, with the output at 100 % of its *Maximum volume* for the run
+  (Fixed stays fixed) and put back after - so "never above the output's
+  maximum level" holds by construction. The noise is raised only while the
+  microphone follows it: four steps that do not move its reading stop the
+  run as *too quiet* (an unplugged or covered microphone does not make it
+  louder). For 60 dB (George) the sweeps go further than the noise, whose
+  peaks are near full scale at −12 dBFS: set from its last reading, the
+  chain being linear, up to −6 dBFS, where a sweep's peaks are at about
+  −1.5 dBFS.
+- **The level before a run is the DAC's own** (its raw level, kept in the
+  store and put back through the volume bridge), not the percentage shown:
+  that is the playing renderer's own number while one is active. Kept as a
+  percentage, two runs on sofapi put the output back at 100 %. While a run
+  holds the level up, the software level kept across restarts stays the one
+  before it.
+- **A player in a group** does not measure (it plays into the group's
+  loopback, and the others would play the sweeps): *Leave the group to
+  measure the room.*
+- **A run waiting for a tap** - Start, Measure here, Check it, Keep it, Try
+  again - is cancelled after 10 minutes; a sweep under way finishes. Cancel
+  stops at once.
+- **The sensitivity** read as REW reads it (94 dB SPL minus the file's
+  sensitivity line, at full capture volume): on sofapi a quiet room read
+  −48 dBFS RMS, unweighted - 47 dB SPL that way, 77 dB the other reading,
+  so the first fits a quiet room. Still to check against a calibrator, or
+  another meter.
+- **Two sweeps agree** within 1.5 dB from 20 to 250 Hz (1/6 octave), up to
+  six tried; a made-up thump of −20 dBFS below 300 Hz spoils one by 2-3 dB.
+  To be checked against the microphone's own repeats in a quiet room.
 
 ## Measured before it is called done
 
