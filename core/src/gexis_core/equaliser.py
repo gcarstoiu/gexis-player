@@ -360,11 +360,44 @@ def filter_name(band: int) -> str:
     return f"band_{BANDS[band]}"
 
 
-def camilla_config(rate: int, fmt: str, channels: int, gains, playback: str) -> dict:
+#: **Room correction's cuts** (ADR-0175 item 1): up to eight Peaking filters
+#: for each speaker, in the same stage. All sixteen are in the pipeline
+#: whenever it runs, at 0 dB when unused, off, or set to *Hear it without*,
+#: so switching or comparing changes gains, never the pipeline's shape (as
+#: the bands do).
+ROOM_SLOTS = 8
+#: An unused slot: a Peaking filter at 0 dB passes its input unchanged.
+ROOM_IDLE = (100.0, 0.0, 1.0)
+ROOM_CHANNELS = ("l", "r")
+
+
+def room_filter_name(channel: int, slot: int) -> str:
+    return f"room_{ROOM_CHANNELS[channel]}_{slot + 1}"
+
+
+def room_slots(cuts) -> tuple[tuple[float, float, float], ...]:
+    """One speaker's cuts as the stage's eight slots: (freq, gain, q) each,
+    the rest idle."""
+    out = []
+    for c in list(cuts or ())[:ROOM_SLOTS]:
+        freq, gain, q = (float(v) for v in c)
+        out.append((freq, min(gain, 0.0), q))
+    return tuple(out) + (ROOM_IDLE,) * (ROOM_SLOTS - len(out))
+
+
+def room_stage(room) -> tuple[tuple[tuple[float, float, float], ...], ...]:
+    """Both speakers' slots from `room`: None, or (left cuts, right cuts)."""
+    left, right = room if room is not None else ((), ())
+    return room_slots(left), room_slots(right)
+
+
+def camilla_config(rate: int, fmt: str, channels: int, gains, playback: str, room=None) -> dict:
     """**CamillaDSP's configuration for one stream**: captured from the
     loopback at the stream's own rate, format and channels (the renderer
     opened it first and set them), lowered on the headroom fader, then the
-    ten bands, played to `playback` (the rest of the output's chain).
+    ten bands, then room correction's cuts for each speaker (`room`: None,
+    or the left and right cuts as (freq, gain, q)), played to `playback`
+    (the rest of the output's chain).
 
     Rate adjust tunes the loopback's clock to the card's (*PCM Rate Shift*),
     which passes the samples through unchanged; `stop_on_inactive` lets the
@@ -378,6 +411,15 @@ def camilla_config(rate: int, fmt: str, channels: int, gains, playback: str) -> 
     for i, (centre, gain) in enumerate(zip(CENTRES, gains)):
         filters[filter_name(i)] = {"type": "Biquad",
                                    "parameters": {"type": "Peaking", "freq": centre, "gain": gain, "q": Q}}
+    pipeline = [{"type": "Filter", "names": ["headroom"] + [filter_name(i) for i in range(len(BANDS))]}]
+    for channel, slots in enumerate(room_stage(room)[:min(channels, len(ROOM_CHANNELS))]):
+        names = []
+        for slot, (freq, gain, q) in enumerate(slots):
+            name = room_filter_name(channel, slot)
+            filters[name] = {"type": "Biquad",
+                             "parameters": {"type": "Peaking", "freq": freq, "gain": gain, "q": q}}
+            names.append(name)
+        pipeline.append({"type": "Filter", "channels": [channel], "names": names})
     return {
         "title": "Gexis Player equaliser",
         "devices": {
@@ -389,5 +431,5 @@ def camilla_config(rate: int, fmt: str, channels: int, gains, playback: str) -> 
             "playback": {"type": "Alsa", "channels": channels, "device": playback},
         },
         "filters": filters,
-        "pipeline": [{"type": "Filter", "names": ["headroom"] + [filter_name(i) for i in range(len(BANDS))]}],
+        "pipeline": pipeline,
     }

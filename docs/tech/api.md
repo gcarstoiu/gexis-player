@@ -89,6 +89,22 @@ the bands as one of the owner's (up to ten); `PUT` and `DELETE
 sentence to show (*There is a setting called Rock already.*). A band or a
 setting is heard at once; `on` reopens the output.
 
+## Room correction
+
+ADR-0175, internal until Phase 29 closes. `GET /room-correction`: for the
+output in use, `on`, `without` (*Hear it without*), the last measurement
+(`measured`, with its `chart` - each speaker's `before`, `target`, `after`
+and five `positions` in dB about the target's level, `freqs` up to 300 Hz,
+`after_kind` measured or expected - and `cuts`), the `microphone` and its
+`calibration`, `can_measure` with `why_not`, and a measurement in progress
+(`run`, and its `pending` correction before *Keep it*). `/state` carries the
+summary as `room`. `PUT /room-correction` with `on` or `without`;
+`POST /room-correction/calibration {text, name}` gives the 90° file from
+miniDSP (checked, kept by its serial); `POST /room-correction/run {action}`
+begins a measurement (`measure`) and answers its steps (`start`, `next`,
+`check`, `skip`, `keep`, `discard`, `again`, `cancel`, `done`). A refusal is
+a 400 with the sentence to show (*Plug in the UMIK-1.*).
+
 ## Groups
 
 ADR-0166, *stable*. `GET /group` is this player's record and the view

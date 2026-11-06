@@ -17,11 +17,12 @@
   import { onDestroy } from 'svelte';
   import { fixedMute, fixedOutput, setMute, setVolume, volume } from '../../lib/state.js';
   import { equaliser } from '../../lib/equaliser.svelte.js';
+  import RoomQuick from '../room/RoomQuick.svelte';
   import { FILLED } from './icons.js';
   import GroupGlyph from '../../lib/GroupGlyph.svelte';
   import { LevelSender, dragStart, group, groupLevel, setGroupMute } from '../../lib/group.svelte.js';
 
-  let { oneq = () => {}, ongroup = () => {}, onsay = () => {} } = $props();
+  let { oneq = () => {}, ongroup = () => {}, onsay = () => {}, onroom = () => {} } = $props();
 
   const g = $derived($group);
   const groupFixed = $derived(!!g && !g.members.some((m) => m.reachable && !m.fixed && m.volume != null));
@@ -209,6 +210,8 @@
         <circle cx="6" cy="14" r="2.6" style="fill: var(--bg-panel)" /><circle cx="12" cy="8" r="2.6" style="fill: var(--bg-panel)" /><circle cx="18" cy="12" r="2.6" style="fill: var(--bg-panel)" />
       </svg>
     </button>
+    <!-- ADR-0175 (design/source/29, Q09-Q11): room correction's, after it. -->
+    <RoomQuick host="phone" onopen={onroom} />
   {/if}
 </div>
 

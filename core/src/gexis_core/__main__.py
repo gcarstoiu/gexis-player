@@ -97,6 +97,8 @@ from gexis_core.state import StateStore
 from gexis_core import announce, backups, bluealsa_volume, components, outputs, plugin_env, plugins, uploads
 from gexis_core import plugin_catalogue
 from gexis_core import eq_control
+from gexis_core import room_control as room_control_module
+from gexis_core import room_correction
 from gexis_core import group as group_module
 from gexis_core import multiroom as multiroom_module
 from gexis_core import snapcast
@@ -627,10 +629,16 @@ async def main() -> None:
     # ADR-0162: whether the equaliser is in the chain, read from the store by
     # every writer of output.conf - this start's included, so a player that
     # had it on comes up with it.
-    outputs.eq_in_path = lambda card: Equaliser.from_settings(
-        settings_store.get(eq_control.KEY)).output(card).on
+    # ADR-0175: room correction shares the stage - on for an output, or
+    # measuring there, it is in the chain as well.
+    outputs.eq_in_path = lambda card: (
+        Equaliser.from_settings(settings_store.get(eq_control.KEY)).output(card).on
+        or (room.in_path(card) if room is not None
+            else room_correction.Room.from_settings(settings_store.get(room_correction.KEY)).in_path(card)))
     #: The equaliser's controller, made once the rest it needs exists.
     equaliser = None
+    #: Room correction's (ADR-0175), the same.
+    room = None
     # ADR-0166: a player in a group plays into the group's loopback - and
     # comes up so after a restart, before the other members are heard from.
     group_chain = {"value": multiroom_module.read_chain() if group_module.read() else None}
@@ -1776,7 +1784,8 @@ async def main() -> None:
         enabled=lambda renderer_id: renderer_enabled(renderer_id),
         # ADR-0105 §4 step 4 (built 2026-10-07): from the moment the updater
         # stops playback until it is done, nothing takes the device.
-        frozen=lambda: _installing(),
+        # ADR-0175: nor while the room is measured.
+        frozen=lambda: _installing() or (room.frozen() if room is not None else None),
     )
 
     # ADR-0053's three channels. A renderer with a `set_volume` is driven
@@ -2765,6 +2774,9 @@ async def main() -> None:
         defaults={
             # ADR-0162: the Equaliser row says what is in use.
             "equaliser": lambda: equaliser.summary() if equaliser is not None else "Off",
+            # ADR-0175: the Room correction row says its state.
+            "room_correction": lambda: (room.summary() or {}).get("row", "Not measured yet")
+            if room is not None else "Not measured yet",
             "lms_server": lambda: f"{config.lms_host}:{config.lms_port}",
             # ADR-0141 D4: both HDMI ports, read when Settings is.
             "screen_port": lambda: _port_label(screen_apply.connector_now()),
@@ -4707,17 +4719,122 @@ async def main() -> None:
         await volume_bridge.give_back(
             eq_control.give_back_for(settings_store.get(eq_control.KEY), output, headroom))
 
-    equaliser_engine = EqEngine(on_change=lambda status: equaliser.publish() if equaliser is not None else None,
+    def _stage_changed(status: dict) -> None:
+        if equaliser is not None:
+            equaliser.publish()
+        if room is not None:
+            room.publish()
+
+    equaliser_engine = EqEngine(on_change=_stage_changed,
                                 give_back=_equaliser_gives_back)
     equaliser = eq_control.EqualiserControl(
         settings_store, equaliser_engine,
         output=lambda: _with_software(outputs.in_force(settings.value("output_device"))[0]),
         fixed=lambda: fixed_now["value"],
         reopen=_equaliser_reopen,
-        publish=state_store.set_equaliser,
+        # ADR-0175: room correction's summary follows the output in use,
+        # which the equaliser's sync is told of.
+        publish=lambda snapshot: (state_store.set_equaliser(snapshot), room.publish() if room is not None else None),
+        changed=state_store.bump_settings_revision,
+        room_in_path=lambda card: room is not None and room.in_path(card),
+        room_stage=lambda card: room.stage(card) if room is not None else None,
+        bypassed=lambda card: room is not None and room.eq_bypassed(card),
+    )
+
+    # ADR-0175: room correction - its controller, and what a measurement
+    # changes on the player: the device held, the volume at its maximum and
+    # back, the stage's path.
+    #: **The level before a measurement, kept in the store** until the run
+    #: puts it back: a restart, a crash or a power cut mid-run would
+    #: otherwise leave the output at the run's maximum (sofapi, 2026-11-05:
+    #: a core restarted mid-run left it at 100 %, not 44).
+    ROOM_VOLUME_KEY = "_room_volume_before"
+    #: While a run holds the level up, the software level kept across
+    #: restarts stays the one before it, so a restart mid-run comes up there.
+    room_level_up = {"value": settings_store.get(ROOM_VOLUME_KEY) is not None}
+
+    async def _room_take() -> None:
+        await supervisor.stop_active()
+
+    async def _room_loud() -> None:
+        """The output at its maximum for the run, **the DAC's own level kept
+        first** - not the percentage shown, which is the playing renderer's
+        own number while one is active (sofapi, 2026-11-05: two runs kept
+        100 and left the output at full level)."""
+        volume = state_store.state.volume
+        if volume is not None and settings_store.get(ROOM_VOLUME_KEY) is None:
+            settings_store.set(ROOM_VOLUME_KEY, {"raw": mute.audible_raw(volume.raw),
+                                                 "muted": bool(volume.muted)})
+        if fixed_now["value"]:
+            return
+        room_level_up["value"] = True
+        if volume is not None and volume.muted:
+            await set_mute(False)
+        raw = slider_percent_to_raw(100)
+        logger.info("room: volume -> raw %s/%s for the measurement", raw, hardware_max())
+        # Through the bridge, not `set_volume`, which sends to the active
+        # renderer's own control while there is one.
+        await volume_bridge.write_hardware(raw)
+
+    async def _room_quiet() -> None:
+        was = settings_store.get(ROOM_VOLUME_KEY)
+        # Before the write, so the level put back is the one kept.
+        room_level_up["value"] = False
+        try:
+            if not isinstance(was, dict) or fixed_now["value"]:
+                return
+            raw = was.get("raw")
+            if isinstance(raw, bool) or not isinstance(raw, int):
+                # Kept as a percentage, before 2026-11-05's fix.
+                raw = slider_percent_to_raw(float(was.get("percent", 0)))
+            logger.info("room: volume back to raw %s/%s", raw, hardware_max())
+            await volume_bridge.write_hardware(raw)
+            if was.get("muted"):
+                await set_mute(True)
+        finally:
+            settings_store.set(ROOM_VOLUME_KEY, None)
+
+    async def _room_volume_after_restart() -> None:
+        """A measurement cut short by a restart: the level it raised put
+        back to the one before it."""
+        if isinstance(settings_store.get(ROOM_VOLUME_KEY), dict):
+            logger.info("room: a measurement was cut short; the level before it put back")
+            await _room_quiet()
+
+    async def _room_release() -> None:
+        state_store.bump_settings_revision()
+
+    def _room_playing() -> dict | None:
+        """What a measurement would stop: the source playing, and whether it
+        is native DSD (the design's Before states)."""
+        active = supervisor.active
+        meta = state_store.state.metadata
+        if active is None or meta is None or meta.transport != "playing":
+            return None
+        name = next((s.get("name") for s in state_store.state.sources if s.get("id") == active), None)
+        dsd = bool((meta.sample_rate or 0) >= 2_822_400 or meta.bit_depth == 1)
+        return {"source": name, "dsd": dsd}
+
+    room = room_control_module.RoomControl(
+        settings_store,
+        output=lambda: _with_software(outputs.in_force(settings.value("output_device"))[0]),
+        kind=eq_control.kind_of,
+        reopen=_equaliser_reopen,
+        sync=lambda: equaliser.sync(),
+        take=_room_take, release=_room_release, loud=_room_loud, quiet=_room_quiet,
+        eq_on=lambda card: Equaliser.from_settings(settings_store.get(eq_control.KEY)).output(card).on,
+        dsd=lambda: bool(equaliser_engine.status().get("dsd")),
+        grouped=lambda: outputs.group_in_path() is not None,
+        busy=_installing,
+        screen=lambda: settings.value("headless") is not True,
+        playing=_room_playing,
+        address=lambda: f"{device_name.hostname()}.local:{config.state_port}",
+        publish=state_store.set_room,
         changed=state_store.bump_settings_revision,
     )
     asyncio.ensure_future(equaliser.sync())
+    asyncio.ensure_future(_room_volume_after_restart())
+    room.publish()
 
     # ADR-0167 T9: covers a plugin hands over as bytes, served by the
     # state server at /plugins/<id>/artwork/<key>.
@@ -4744,6 +4861,7 @@ async def main() -> None:
         dashboard_page=dashboard_page,
         panel_input=panel_input,
         equaliser=equaliser,
+        room=room,
         # Phase 7 (ADR-0038): the same server, and the same player, the
         # renderer adapter talks to.
         library=library,
@@ -4829,7 +4947,7 @@ async def main() -> None:
         level_save = {"task": None, "db": None}
 
         def _keep_software_level(state) -> None:
-            if not software_on["value"]:
+            if not software_on["value"] or room_level_up["value"]:
                 return
             db = state.volume.db if state.volume is not None else None
             if db is None or db == level_save["db"]:

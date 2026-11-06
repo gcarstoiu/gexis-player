@@ -259,10 +259,12 @@
             <RemoteScreen {artwork} onartfailed={(a) => (failedArt = a)} {pad} onpad={choosePad} padSwitch={padAllowed}
                           {socket} onok={beforeOk} ontap={beforeTap}
                           onsay={say} oneq={() => { eqOpen = true; stopTyping(); }}
-                          ongroup={() => { groupOpen = true; stopTyping(); }} onmark={openMenu} />
+                          ongroup={() => { groupOpen = true; stopTyping(); }} onmark={openMenu}
+                          onroom={() => toSettings('room_correction')} />
           {:else}
             <RemoteNoScreen {artwork} onartfailed={(a) => (failedArt = a)} onsay={say} oneq={() => (eqOpen = true)}
-                            ongroup={() => (groupOpen = true)} onmark={openMenu} />
+                            ongroup={() => (groupOpen = true)} onmark={openMenu}
+                            onroom={() => toSettings('room_correction')} />
           {/if}
         </div>
         <div class="page page--settings" inert={page !== 'settings'}>

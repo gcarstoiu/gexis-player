@@ -12,6 +12,10 @@ other change is heard at once, in the running CamillaDSP.
 
 **The volume gives the headroom back** (D3 as amended, George 2026-10-26):
 `give_back_for` says how much, on which control; the engine says when.
+
+**Room correction shares the stage** (ADR-0175 items 1-2): the stage is in
+the path when either is on, the engine is given its cuts as well, and while
+the room is measured the bands are flat.
 """
 from __future__ import annotations
 
@@ -65,7 +69,10 @@ class EqualiserControl:
                  fixed: Callable[[], bool],
                  reopen: Callable[[str], Awaitable[None]],
                  publish: Callable[[dict], None] = lambda snapshot: None,
-                 changed: Callable[[], None] = lambda: None):
+                 changed: Callable[[], None] = lambda: None,
+                 room_in_path: Callable[[str], bool] = lambda card: False,
+                 room_stage: Callable[[str], object] = lambda card: None,
+                 bypassed: Callable[[str], bool] = lambda card: False):
         self._store = store
         self._engine = engine
         self._output = output
@@ -73,6 +80,9 @@ class EqualiserControl:
         self._reopen = reopen
         self._publish = publish
         self._changed = changed
+        self._room_in_path = room_in_path
+        self._room_stage = room_stage
+        self._bypassed = bypassed
         self._lock = asyncio.Lock()
 
     # -- reading ---------------------------------------------------------------
@@ -171,7 +181,9 @@ class EqualiserControl:
                 if "gain" not in changes:
                     raise EqualiserError("A band needs its gain.")
                 new = new.set_band(card, changes["band"], changes["gain"])
-            switched = new.output(card).on != old.output(card).on
+            # With room correction in the path the stage stays: switching
+            # the equaliser is then a change of bands (ADR-0175).
+            switched = new.output(card).on != old.output(card).on and not self._room_in_path(card)
             await self._commit(new, card, reopen=(
                 ("the equaliser was switched on" if new.output(card).on else "the equaliser was switched off")
                 if switched else None))
@@ -205,9 +217,11 @@ class EqualiserControl:
         renderers start."""
         output = self._output()
         here = self.state().output(output.card) if output is not None else None
-        card = output.card if (output is not None and here.on) else None
+        card = output.card if (output is not None and (here.on or self._room_in_path(output.card))) else None
+        gains = here.gains if (here is not None and here.on and not self._bypassed(output.card)) else eq.FLAT
+        room = self._room_stage(output.card) if card is not None else None
         try:
-            await self._engine.configure(card, here.gains if here else eq.FLAT, restart=restart)
+            await self._engine.configure(card, gains, restart=restart, room=room)
         except Exception:  # noqa: BLE001 - a broken engine must not take the core down
             logger.exception("equaliser: the engine did not follow")
         self.publish()

@@ -270,3 +270,36 @@ async def test_suspended_the_engine_lets_go_of_the_loopback_and_comes_back(monke
     await rig.engine.configure("sndrpihifiberry", eq.FLAT, restart=True)
     assert rig.engine._watch is not None and rig.units[-1] == ("restart", eq_engine.UNIT)
     await rig.engine.suspend()
+
+
+# ---- ADR-0175: room correction in the same stage ------------------------------------
+
+ROOM = ([(42.0, -4.0, 8.6), (86.0, -8.0, 5.7)], [(87.0, -6.0, 5.0)])
+
+
+async def test_a_stream_starts_with_the_rooms_cuts(monkeypatch, tmp_path):
+    rig = Rig(monkeypatch, tmp_path)
+    await rig.engine.configure("sndrpihifiberry", eq.FLAT, room=ROOM)
+    rig.amixer = contents(rate=48000, fmt=10)
+    await rig.engine._look()
+    config = json.loads(next(a for n, a in rig.camilla.sent if n == "SetConfigJson"))
+    assert config["filters"]["room_l_2"]["parameters"]["gain"] == -8.0
+    assert config["filters"]["room_r_1"]["parameters"]["freq"] == 87.0
+
+
+async def test_hear_it_without_is_patched_at_once(monkeypatch, tmp_path):
+    """The A/B (ADR-0175): the cuts to 0 dB in the running CamillaDSP, and
+    back - no restart, nothing else sent."""
+    rig = Rig(monkeypatch, tmp_path)
+    await rig.engine.configure("sndrpihifiberry", eq.FLAT, room=ROOM)
+    rig.amixer = contents()
+    await rig.engine._look()
+    rig.camilla.sent.clear()
+    without = ([(f, 0.0, q) for f, _, q in ROOM[0]], [(f, 0.0, q) for f, _, q in ROOM[1]])
+    await rig.engine.configure("sndrpihifiberry", eq.FLAT, room=without)
+    await rig.settle()
+    assert rig.camilla.sent == [("PatchConfig", {"filters": {
+        "room_l_1": {"parameters": {"freq": 42.0, "gain": 0.0, "q": 8.6}},
+        "room_l_2": {"parameters": {"freq": 86.0, "gain": 0.0, "q": 5.7}},
+        "room_r_1": {"parameters": {"freq": 87.0, "gain": 0.0, "q": 5.0}}}})]
+    assert ("restart", eq_engine.UNIT) not in rig.units
