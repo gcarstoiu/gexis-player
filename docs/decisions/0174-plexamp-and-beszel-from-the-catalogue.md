@@ -1,6 +1,7 @@
 # ADR-0174 — Plexamp and Beszel from the catalogue
 
-**Status:** **Accepted** 2026-11-03 (George: decisions 1-3), Phase 28
+**Status:** **Built** 2026-11-03, in 1.13.0 (Testing serial 65; Stable serial 14,
+2026-11-06). **Accepted** 2026-11-03 (George: decisions 1-3), Phase 28
 (`ph-catalogue-plugins`). George decided the move on 2026-11-03: Plexamp, and
 Beszel's agent and hub, out of the player, as standalone plugins. How is
 Claude's proposal; three decisions are his.
