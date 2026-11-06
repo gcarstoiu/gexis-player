@@ -77,7 +77,7 @@ traps below are a local build's, kept for when GitHub is unavailable.
 - **GitHub caches `channels/<name>` for minutes after a publish**: verify the
   new file with `gh release download channels`, not the public URL. A new
   part's `InRelease` too (1.14.0): `--sign` asks for it first, and the 404
-  was served for about half a minute after the upload.
+  was served for a minute or two after the upload.
 - **The API page's deploy can time out in GitHub Pages' queue** (1.14.0,
   `deployment_queued` for ten minutes): the page built; `gh run rerun <id>
   --failed` deployed it. It is not one of `main`'s required checks.
