@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-11-05 (on R2D2).
+Last updated: 2026-11-06 (on R2D2).
 
 ## Start here
 
@@ -20,15 +20,20 @@ and the ideas as Must / Should / Could. It follows `docs/DEVELOPMENT.md`'s
 phases; change it when a phase opens, closes or moves, and show George first. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Testing: 1.13.0** (2026-11-03, serial 65): Plexamp and Beszel from the
-catalogue (Phase 28). Built by run 41718806895 (`verify-image.sh` all checks
-passed), signed on R2D2, read back good against the shipped key; Stable not
-moved. Notes approved by George; release PR #95 merged 2026-11-04.
+**Testing: 1.14.0** (2026-11-06, serial 66): room correction for the bass
+(Phase 29), with the kernel 6.18.60 and Mesa 26.2.6 from the Raspberry Pi
+archive. Built by run 42261893617 (`verify-image.sh` all 151 checks passed,
+as 1.13.0), signed on R2D2; the channel, each part, the notes and the history
+read back good. Notes approved by George. **Release PR #96 for George to
+merge**; do not push `next` until its checks have finished. The API page's
+deploy timed out in GitHub Pages' queue and passed on a re-run.
 
-**Stable: 1.12.0** (2026-11-02, serial 13): Roon (Phase 26) and three
-fixes, on 1.11.0 (themes; left a pre-release). Its image, the last built on
-R2D2, was deleted 2026-11-04 (George). The two
-measurements are still owed (to-dos `ph22-measure`, `eq-measure`).
+**Stable: 1.13.0** (promoted by George 2026-11-06, serial 14; on Testing
+since 2026-11-03, serial 65): Plexamp and Beszel from the catalogue (Phase
+28), on 1.12.1 (releases built on GitHub). Read back with a good signature;
+the image downloaded through README's link, its checksum and signature good.
+README names 1.13.0 (reaches `main` with #96). The two measurements are
+still owed (to-dos `ph22-measure`, `eq-measure`).
 
 **R2D2's `/` fills up**: Docker's
 containerd store keeps images on `/`, not in `/home/docker`, and pi-gen
@@ -55,15 +60,17 @@ Lyrion took it, the cause not established (0.2.1 logs the pause's answer
 and the loopback's states); not measured: bit-perfect, rates above 44.1 kHz,
 a group, the plugin off and on, Roon Bridge's own update.
 
-**Phase 27** (releases built on GitHub, ADR-0173) is in 1.12.1. **Left:** a
+**Phase 27** (releases built on GitHub, ADR-0173) is in 1.12.1, on Stable
+with 1.13.0. **Left:** a
 card flashed from 1.12.1's image (criterion 4: the card below), then R2D2's
 pi-gen container (8.9 GB) and build images (2.9 GB) removed (decision 3).
 
-**Phase 28** (Plexamp and Beszel from the catalogue, ADR-0174) is in 1.13.0:
+**Phase 28** (Plexamp and Beszel from the catalogue, ADR-0174) is on Stable
+with 1.13.0:
 `gcarstoiu/gexis-beszel` 0.21.1-1 and `gcarstoiu/gexis-plexamp` 0.5.1
 (gexis-plugins #13-#17, merged by George), catalogue serial 8; sofapi runs
 the branch's last preview (`~/preview-ph28d`) with both carried over.
-**Owed, on Testing:** Plexamp played once on 0.5.1 (its engine's cache now
+**Owed:** Plexamp played once on 0.5.1 (its engine's cache now
 through a link) and George's look at the Plugins page, on sofapi; a card
 from `image/deploy/2026-11-03-gexis-player-v1.12.1.img.xz` (also Phase 27's)
 set up without Plexamp or Beszel, then updated to 1.13.0 (nothing
@@ -72,9 +79,9 @@ first use offering Plexamp from the catalogue. **Not built:** ADR-0174's
 "found while reading" setup fix - part 2 switches ours on without adding
 them to the Plugins page's list (`plugin_store.ADDED`).
 
-**In progress: Phase 29**, room correction for the bass
-(`ph-room-correction`, worktree `~/projects/gexis-player-room-correction`,
-pushed; previews on GitHub). ADR-0175: cuts only, below 250 Hz, towards a
+**In progress: Phase 29**, room correction for the bass, **on Testing
+with 1.14.0** (2026-11-06, George; `ph-room-correction` merged into `next`,
+worktree `~/projects/gexis-player-room-correction`). ADR-0175: cuts only, below 250 Hz, towards a
 gentle rise below 80 Hz, in the equaliser's stage; three positions (George,
 2026-11-05, over five; most of them decide a cut, not any one), 60 dB at the
 seat, each speaker alone, a tap and a 3 s countdown at each, the check (Skip allowed)
@@ -90,9 +97,14 @@ and README; layouts checked with made-up data (`~/projects/scratch/ph29/harness`
 **On sofapi** (George's UMIK-1, a USB-C unit): George's first full run
 (2026-11-05, five positions at 50 dB) gave the three decisions above, and
 showed the output left at 100 % after a run - the level before kept as the
-shown percentage (fixed on the branch: the DAC's own level, put back through
-the bridge; to check on sofapi by reading the level back, Lesson 93).
-**Not yet:** the fixed run on sofapi, the level against a meter, two sweeps'
+shown percentage (fixed: the DAC's own level, put back through the bridge;
+read back from the DAC on sofapi after a cancel, a restart mid-run and the
+next run, Lesson 93). Then (George, 2026-11-05): cuts as deep as the target
+takes, stacked where one is not enough; both speakers swept together, shown
+as a third tab, never cut; boosts stay out (decision 2). sofapi holds the
+cuts recalculated from three of the first run's positions. **Not yet:** the
+cuts read from CamillaDSP while music plays (only readable then), a full run
+at three positions with both, the level against a meter, two sweeps'
 agreement at 60 dB, the stage's cost, the A/B bit-exactness. **Copy to confirm** with George:
 the lines the design has no state for (`design/IMPLEMENTED-DIFFERENTLY.md`,
 Phase 29).
@@ -121,12 +133,12 @@ player's.
 `GEXIS_RELEASE_GNUPGHOME=~/projects/gexis-release-key`; the scripts default
 to `~/.gnupg-gexis-release`, which no longer exists.
 
-**The players** (2026-11-03): sofapi on Phase 28's last preview
-(`gexis-core` and `gexis-player` from `389574e2`, on 1.12.1, in
-`~/preview-ph28d`), Plexamp 0.5.1 and Beszel from the catalogue; `rpi-eeprom-update` reports a bootloader update
+**The players** (2026-11-06): sofapi on Phase 29's last preview
+(`gexis-core`, `gexis-player` and `gexis-ui` 1.13.0+git34 from `0f566c6b`),
+Plexamp 0.5.1 and Beszel from the catalogue; `rpi-eeprom-update` reports a bootloader update
 available, not applied (not looked into). Roon's extension enabled in
 George's Roon; the other three last seen on 1.9.1 through their updaters
-(2026-10-29). All four on Testing, which offers 1.13.0. sofapi and the bar
+(2026-10-29). All four on Testing, which offers 1.14.0. sofapi and the bar
 grouped; AirPlay on at sofapi and guestpi. Each has its own Lyrion server.
 
 **The test venv imports the core from `~/projects/gexis-player-next`** (an
@@ -178,10 +190,10 @@ every merged release PR, otherwise weekly on Sunday evening. **Last run:
 
 Closed: 0-21 and 24-26 (13 with letters a-f). Phases are numbered
 consecutively without letters, each with a stable ID (George, 2026-10-13).
-On Stable with work open: 22 (multiroom), 23 (AirPlay 2, limited testing).
-27 (releases built on GitHub) in 1.12.1, a card still to flash; 28 (Plexamp
-and Beszel to the catalogue) in 1.13.0 on Testing; 29 (room correction for
-the bass) in progress; next 30, then 31-33; MPD parked. `docs/DEVELOPMENT.md`
+On Stable with work open: 22 (multiroom), 23 (AirPlay 2, limited testing),
+27 (releases built on GitHub; a card still to flash) and 28 (Plexamp and
+Beszel to the catalogue), both with 1.13.0. 29 (room correction for the
+bass) in progress, on Testing with 1.14.0; next 30, then 31-33; MPD parked. `docs/DEVELOPMENT.md`
 holds each phase's acceptance criteria.
 
 ## Machines

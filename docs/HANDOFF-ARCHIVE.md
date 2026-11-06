@@ -8658,3 +8658,16 @@ limited testing) on Stable with work open; 27 (releases built on GitHub)
 in 1.12.1, a card still to flash; 28 (Plexamp and Beszel to the catalogue)
 started; next 29-30 (room correction), 31-33; MPD parked. `docs/DEVELOPMENT.md`
 holds each phase's acceptance criteria.
+
+
+## From HANDOFF, 2026-11-06 (1.13.0 promoted to Stable, 1.14.0 on Testing)
+
+**Testing: 1.13.0** (2026-11-03, serial 65): Plexamp and Beszel from the
+catalogue (Phase 28). Built by run 41718806895 (`verify-image.sh` all checks
+passed), signed on R2D2, read back good against the shipped key; Stable not
+moved. Notes approved by George; release PR #95 merged 2026-11-04.
+
+**Stable: 1.12.0** (2026-11-02, serial 13): Roon (Phase 26) and three
+fixes, on 1.11.0 (themes; left a pre-release). Its image, the last built on
+R2D2, was deleted 2026-11-04 (George). The two
+measurements are still owed (to-dos `ph22-measure`, `eq-measure`).
