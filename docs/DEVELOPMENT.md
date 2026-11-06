@@ -3709,8 +3709,8 @@ packs) is read from GitHub.
 ### Phase 28 — Plexamp and Beszel as catalogue plugins
 
 **ID:** `ph-catalogue-plugins` · added 2026-11-03 as 28, before room
-correction (George). **In 1.13.0** (Testing, 2026-11-03); criterion 5 and
-first use on a fresh card still to be seen.
+correction (George). **On Stable with 1.13.0** (2026-11-06, George; Testing
+from 2026-11-03); criterion 5 and first use on a fresh card still to be seen.
 
 **Added 2026-11-03** (George: Plexamp, and Beszel's agent and hub, out of the
 player, as standalone plugins). Today they are plugins shipped with the
