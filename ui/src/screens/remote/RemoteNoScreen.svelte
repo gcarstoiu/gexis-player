@@ -18,7 +18,7 @@
   import GroupMark from './GroupMark.svelte';
   import { seek } from './commands.js';
 
-  let { artwork = null, onartfailed, onsay, oneq, ongroup, onmark } = $props();
+  let { artwork = null, onartfailed, onsay, oneq, ongroup, onmark, onroom } = $props();
 
   const hasTrack = $derived(!!$active);
   const head = playhead(() => $metadata);
@@ -104,7 +104,7 @@
   <!-- ADR-0166 (3a): the grouped mark, under the times, above the transport. -->
   <GroupMark onopen={onmark} gap={8} height={20} />
   <div class="transport"><RemoteTransport big /></div>
-  <div class="volume"><VolumeRow {oneq} {ongroup} {onsay} /></div>
+  <div class="volume"><VolumeRow {oneq} {ongroup} {onsay} {onroom} /></div>
 </div>
 
 <style>

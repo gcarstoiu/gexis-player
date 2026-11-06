@@ -31,6 +31,10 @@
       "description": "The equaliser: ten bands, the presets and the owner's own settings, for each output."
     },
     {
+      "name": "Room correction",
+      "description": "Room correction for the bass: a measurement with a USB microphone at the seat, and the cuts made from it, for each output."
+    },
+    {
       "name": "Playback",
       "description": "What plays: the live state, the sources, transport, volume, the players on the network."
     },
@@ -368,6 +372,224 @@
           },
           "503": {
             "description": "The equaliser is not wired up (a core without it): `the equaliser is not wired up`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/room-correction": {
+      "get": {
+        "operationId": "room_correction",
+        "x-gexis-stability": "internal",
+        "x-gexis-adr": [
+          "ADR-0175"
+        ],
+        "tags": [
+          "Room correction"
+        ],
+        "summary": "Room correction for the output in use",
+        "description": "Whether room correction is on for the output in use and whether *Hear it without* is set (the cuts at 0 dB, to compare), the last measurement with its chart (each speaker's average before, its five positions, the target and the after, measured or expected), the measurement microphone and its calibration, whether a measurement can start, and a measurement in progress with what it has worked out so far. Each output keeps its own. The summary of it is `room` on `/state`. Off with the equaliser also off, the output is bit-perfect.",
+        "responses": {
+          "200": {
+            "description": "Room correction.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoomCorrection"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "There is no output: `there is no output`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Room correction is not wired up (a core without it): `room correction is not wired up`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "room_correction_set",
+        "x-gexis-stability": "internal",
+        "x-gexis-adr": [
+          "ADR-0175"
+        ],
+        "tags": [
+          "Room correction"
+        ],
+        "summary": "Switch room correction, or Hear it without",
+        "description": "For the output in use: `on` switches it (with the equaliser off, the output is reopened - a moment of silence); `without` sets the cuts to 0 dB to compare, heard at once, and is kept like `on`. Only after a measurement; `without` only while on; neither while the room is being measured.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoomCorrectionSet"
+              },
+              "example": {
+                "without": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Changed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoomCorrection"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A request room correction refuses, with the sentence to show: not measured yet, not while on, while the room is being measured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Room correction is not wired up (a core without it): `room correction is not wired up`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/room-correction/calibration": {
+      "post": {
+        "operationId": "room_correction_calibration",
+        "x-gexis-stability": "internal",
+        "x-gexis-adr": [
+          "ADR-0175"
+        ],
+        "tags": [
+          "Room correction"
+        ],
+        "summary": "Give the measurement microphone's calibration file",
+        "description": "The text of the 90\u00b0 calibration file from miniDSP's page for the microphone, and the file's name. Checked as one - a sensitivity line naming the microphone's serial, then frequency and dB columns covering the bass - and kept by the serial; the last given is the one used.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoomCalibration"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Kept.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoomCorrection"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A request room correction refuses, with the sentence to show: not a calibration file, the 0\u00b0 one, no serial in it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Room correction is not wired up (a core without it): `room correction is not wired up`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/room-correction/run": {
+      "post": {
+        "operationId": "room_correction_run",
+        "x-gexis-stability": "internal",
+        "x-gexis-adr": [
+          "ADR-0175"
+        ],
+        "tags": [
+          "Room correction"
+        ],
+        "summary": "Measure the room, or answer a measurement's step",
+        "description": "`measure` begins a measurement on the output in use: what plays stops and nothing else can play until it ends. Then the phone's buttons: `start` (the microphone placed), `next` (*Measure here*, at each new position), `check` (*Check it*), `skip` (the check), `keep` (*Keep it*: stored and switched on), `discard`, `again` (*Try again*, after too quiet), `cancel` (at any step), and `done` once its end has been shown. A step waiting for a button for 10 minutes is cancelled. The steps are `room.run` on `/state`.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoomRun"
+              },
+              "example": {
+                "action": "next"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done; the run's state is in it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoomCorrection"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A request room correction refuses, with the sentence to show: no microphone, no calibration, in a group, an update installing, not being measured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Room correction is not wired up (a core without it): `room correction is not wired up`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1074,7 +1296,7 @@
           "Idle screen"
         ],
         "summary": "Get the next background picture for the idle or home screen",
-        "description": "One route for every background source: the background setting (`idle_background`, or `waiting_background` with `for=home`) decides whether the answer is one of the player's own pictures (ADR-0133), an artist picture from the library, a downloaded Pixabay picture, a picture put on the device, or none (Black). With `w` and `h`, each picture is also placed for that screen by what it shows (ADR-0120): `place` gives its vertical position and width, and a picture too big for the screen is passed over for the next, up to four times. A picture never repeats the one already on screen when there is another (ADR-0047 §2e). When the picture changes is the panel's to count; nothing in the core holds a timer. A source that cannot answer is a 200 with a reason in `error`.",
+        "description": "One route for every background source: the background setting (`idle_background`, or `waiting_background` with `for=home`) decides whether the answer is one of the player's own pictures (ADR-0133), an artist picture from the library, a downloaded Pixabay picture, a picture put on the device, or none (Black). With `w` and `h`, each picture is also placed for that screen by what it shows (ADR-0120): `place` gives its vertical position and width, and a picture too big for the screen is passed over for the next, up to four times. A picture never repeats the one already on screen when there is another (ADR-0047 \u00a72e). When the picture changes is the panel's to count; nothing in the core holds a timer. A source that cannot answer is a 200 with a reason in `error`.",
         "x-gexis-stability": "internal",
         "x-gexis-adr": [
           "ADR-0120",
@@ -1361,7 +1583,7 @@
           "Idle screen"
         ],
         "summary": "Get the forecast the idle screen draws",
-        "description": "The current conditions and the daily forecast for the `weather_location` setting, from Open-Meteo (ADR-0047 §2). Asked by the panel rather than pushed; the core keeps a forecast for fifteen minutes, so a redraw costs nothing and a setting change is picked up on the next ask. The `idle_forecast` setting chooses one day (`Today only`) or three (`3 days`). A refusal is a 200 with a reason in `error`, not an error status: weather switched off, no location set, a place that could not be found, or the forecast unavailable.",
+        "description": "The current conditions and the daily forecast for the `weather_location` setting, from Open-Meteo (ADR-0047 \u00a72). Asked by the panel rather than pushed; the core keeps a forecast for fifteen minutes, so a redraw costs nothing and a setting change is picked up on the next ask. The `idle_forecast` setting chooses one day (`Today only`) or three (`3 days`). A refusal is a 200 with a reason in `error`, not an error status: weather switched off, no location set, a place that could not be found, or the forecast unavailable.",
         "x-gexis-stability": "internal",
         "x-gexis-adr": [
           "ADR-0047"
@@ -1412,7 +1634,7 @@
                           "min": 6.8
                         }
                       ],
-                      "unit": "°C",
+                      "unit": "\u00b0C",
                       "wind_unit": "km/h",
                       "credit": {
                         "text": "Weather data by Open-Meteo.com",
@@ -1467,7 +1689,7 @@
           "Library"
         ],
         "summary": "Play, queue or add a library item to a playlist",
-        "description": "The one route for what a client does to the library (ADR-0038 §5): play an album, artist, track or playlist (in order, or shuffled), append it to the queue, or add its tracks to a library playlist; with kind `queue`, jump to, remove or clear queue positions. Lyrion powers the player on itself when loading (ADR-0038 §4). A 200 means the command was sent; what happened is read from /state (ADR-0037 §1).",
+        "description": "The one route for what a client does to the library (ADR-0038 \u00a75): play an album, artist, track or playlist (in order, or shuffled), append it to the queue, or add its tracks to a library playlist; with kind `queue`, jump to, remove or clear queue positions. Lyrion powers the player on itself when loading (ADR-0038 \u00a74). A 200 means the command was sent; what happened is read from /state (ADR-0037 \u00a71).",
         "requestBody": {
           "required": true,
           "description": "The item and the action.",
@@ -1555,7 +1777,7 @@
           "Library"
         ],
         "summary": "What the artist page shows below the discography",
-        "description": "Biography, picture, similar artists and the popular recordings this library holds, for the artist page (ADR-0038 §2). Lyrion's own plugin answers first from the id, then the key-free providers (Wikipedia, ListenBrainz, popular, fanart) fill what it leaves, keyed on the name (ADR-0040 §1). The picture is the artwork sweep's when it has one, then fanart's, then Lyrion's (ADR-0075). Without an id, Lyrion's plugin is not asked and popular is empty.",
+        "description": "Biography, picture, similar artists and the popular recordings this library holds, for the artist page (ADR-0038 \u00a72). Lyrion's own plugin answers first from the id, then the key-free providers (Wikipedia, ListenBrainz, popular, fanart) fill what it leaves, keyed on the name (ADR-0040 \u00a71). The picture is the artwork sweep's when it has one, then fanart's, then Lyrion's (ADR-0075). Without an id, Lyrion's plugin is not asked and popular is empty.",
         "parameters": [
           {
             "name": "name",
@@ -1626,7 +1848,7 @@
           "Library"
         ],
         "summary": "Photos for a batch of artists",
-        "description": "A photo URL per artist id, for the artists a screen is about to draw rather than the whole library (Finding 035). The artwork sweep's fanart portrait answers first and Lyrion's artist-information plugin only for the rest (ADR-0068, ADR-0059; ADR-0040 §1). An artist with neither is null.",
+        "description": "A photo URL per artist id, for the artists a screen is about to draw rather than the whole library (Finding 035). The artwork sweep's fanart portrait answers first and Lyrion's artist-information plugin only for the rest (ADR-0068, ADR-0059; ADR-0040 \u00a71). An artist with neither is null.",
         "parameters": [
           {
             "name": "ids",
@@ -1702,7 +1924,7 @@
           "Library"
         ],
         "summary": "Read a library list",
-        "description": "Reads only, for the designed screens: the core runs typed Lyrion queries and returns the fields the screens draw; the client never sends a Lyrion command (ADR-0038 §5). Lists are cached until Lyrion's lastscan changes. `counts` is the root's cards, `strip` the home strip in the shape the home_strip setting names, `new` the newest albums (ten), `artists` a page of album artists, `playlists` the library playlists (never a plugin's).",
+        "description": "Reads only, for the designed screens: the core runs typed Lyrion queries and returns the fields the screens draw; the client never sends a Lyrion command (ADR-0038 \u00a75). Lists are cached until Lyrion's lastscan changes. `counts` is the root's cards, `strip` the home strip in the shape the home_strip setting names, `new` the newest albums (ten), `artists` a page of album artists, `playlists` the library playlists (never a plugin's).",
         "parameters": [
           {
             "name": "what",
@@ -1790,7 +2012,7 @@
             }
           },
           "404": {
-            "description": "No such read (an unlisted combination of what/id/sub), or the album or playlist does not exist - a rescan renumbers every id (Finding 029 §4).",
+            "description": "No such read (an unlisted combination of what/id/sub), or the album or playlist does not exist - a rescan renumbers every id (Finding 029 \u00a74).",
             "content": {
               "application/json": {
                 "schema": {
@@ -1833,7 +2055,7 @@
           "Library"
         ],
         "summary": "Read one album or playlist",
-        "description": "Reads only, for the designed screens: the core runs typed Lyrion queries and returns the fields the screens draw; the client never sends a Lyrion command (ADR-0038 §5). Lists are cached until Lyrion's lastscan changes. `albums/{id}` is an album with its tracks in track order; `playlists/{id}` a page of a library playlist's tracks (offset/limit). An artist has no read of its own: use its sub-reads.",
+        "description": "Reads only, for the designed screens: the core runs typed Lyrion queries and returns the fields the screens draw; the client never sends a Lyrion command (ADR-0038 \u00a75). Lists are cached until Lyrion's lastscan changes. `albums/{id}` is an album with its tracks in track order; `playlists/{id}` a page of a library playlist's tracks (offset/limit). An artist has no read of its own: use its sub-reads.",
         "parameters": [
           {
             "name": "what",
@@ -1910,7 +2132,7 @@
             }
           },
           "404": {
-            "description": "No such read (an unlisted combination of what/id/sub), or the album or playlist does not exist - a rescan renumbers every id (Finding 029 §4).",
+            "description": "No such read (an unlisted combination of what/id/sub), or the album or playlist does not exist - a rescan renumbers every id (Finding 029 \u00a74).",
             "content": {
               "application/json": {
                 "schema": {
@@ -1953,7 +2175,7 @@
           "Library"
         ],
         "summary": "Read an artist's albums or genres",
-        "description": "Reads only, for the designed screens: the core runs typed Lyrion queries and returns the fields the screens draw; the client never sends a Lyrion command (ADR-0038 §5). Lists are cached until Lyrion's lastscan changes. `artists/{id}/albums` is the artist's discography, newest first (undated last, same year by title), each with Lyrion's release_type; `artists/{id}/genres` their genre names, without Lyrion's \"No Genre\". An unknown artist id answers an empty list, not 404.",
+        "description": "Reads only, for the designed screens: the core runs typed Lyrion queries and returns the fields the screens draw; the client never sends a Lyrion command (ADR-0038 \u00a75). Lists are cached until Lyrion's lastscan changes. `artists/{id}/albums` is the artist's discography, newest first (undated last, same year by title), each with Lyrion's release_type; `artists/{id}/genres` their genre names, without Lyrion's \"No Genre\". An unknown artist id answers an empty list, not 404.",
         "parameters": [
           {
             "name": "what",
@@ -3000,7 +3222,7 @@
           "Panel"
         ],
         "summary": "Report the panel's first painted frame",
-        "description": "The panel reports that it has drawn its first frame, which ends the boot animation (ADR-0043 §3). It is deliberately not tied to the kiosk service going active, which happens a second or two before anything is drawn. Always answers 200, whether or not there was a splash to drop; the core's own on-painted hook runs only for a request from loopback. No body is read.",
+        "description": "The panel reports that it has drawn its first frame, which ends the boot animation (ADR-0043 \u00a73). It is deliberately not tied to the kiosk service going active, which happens a second or two before anything is drawn. Always answers 200, whether or not there was a splash to drop; the core's own on-painted hook runs only for a request from loopback. No body is read.",
         "x-gexis-stability": "internal",
         "x-gexis-adr": [
           "ADR-0043"
@@ -3753,7 +3975,7 @@
           "Radio"
         ],
         "summary": "Browse one level of Lyrion's radio tree",
-        "description": "One level of Lyrion's radio tree, browsed by handle, never by command (ADR-0038 §5, ADR-0030). No handle is the root. Podcasts and items that ask for typed text (such as a search) are left out. Handles are opaque, bounded in number and not kept across restarts.",
+        "description": "One level of Lyrion's radio tree, browsed by handle, never by command (ADR-0038 \u00a75, ADR-0030). No handle is the root. Podcasts and items that ask for typed text (such as a search) are left out. Handles are opaque, bounded in number and not kept across restarts.",
         "parameters": [
           {
             "name": "at",
@@ -3820,7 +4042,7 @@
           "Radio"
         ],
         "summary": "Play or queue a radio station",
-        "description": "Plays a station, or adds it to the queue; only a handle this core issued for a station does anything (ADR-0038 §5). Where the station carries its own stream URL that is played directly.",
+        "description": "Plays a station, or adds it to the queue; only a handle this core issued for a station does anything (ADR-0038 \u00a75). Where the station carries its own stream URL that is played directly.",
         "requestBody": {
           "required": true,
           "description": "The station's handle and the action.",
@@ -3979,7 +4201,7 @@
           "Playback"
         ],
         "summary": "Pause Lyrion as the device goes down",
-        "description": "Called by the shutdown (gexis-park.service) so that nothing resumes by itself after a restart: the Lyrion player is paused, keeping its queue and position. With `?stop=all`, used before an update installs (ADR-0110 §4), whoever is playing is stopped first. Loopback only.",
+        "description": "Called by the shutdown (gexis-park.service) so that nothing resumes by itself after a restart: the Lyrion player is paused, keeping its queue and position. With `?stop=all`, used before an update installs (ADR-0110 \u00a74), whoever is playing is stopped first. Loopback only.",
         "parameters": [
           {
             "name": "stop",
@@ -4157,7 +4379,7 @@
           "Reports"
         ],
         "summary": "Get a pre-filled GitHub issue link for the report",
-        "description": "The problem's GitHub issue form, filled in with what happened, how often, the version, what was taken out and the log's last errors, kept under GitHub's length (ADR-0138 §3). The file is attached by hand.",
+        "description": "The problem's GitHub issue form, filled in with what happened, how often, the version, what was taken out and the log's last errors, kept under GitHub's length (ADR-0138 \u00a73). The file is attached by hand.",
         "responses": {
           "200": {
             "description": "The link.",
@@ -4193,7 +4415,7 @@
           "Reports"
         ],
         "summary": "Start preparing a problem report in the background",
-        "description": "Starts the problem report in the background; its checklist is ticked as it goes and read from `/report/status` (ADR-0138 §1). The file and the issue link follow once it is ready. A body that is not an object is treated as empty.",
+        "description": "Starts the problem report in the background; its checklist is ticked as it goes and read from `/report/status` (ADR-0138 \u00a71). The file and the issue link follow once it is ready. A body that is not an object is treated as empty.",
         "requestBody": {
           "required": false,
           "content": {
@@ -4249,7 +4471,7 @@
           "Reports"
         ],
         "summary": "Read how far the problem report has got",
-        "description": "The state of the report being prepared and its checklist (ADR-0138 §1); once ready, the file's name, size, contents and what was taken out. A ready report is dropped after an hour.",
+        "description": "The state of the report being prepared and its checklist (ADR-0138 \u00a71); once ready, the file's name, size, contents and what was taken out. A ready report is dropped after an hour.",
         "responses": {
           "200": {
             "description": "The state.",
@@ -4405,7 +4627,7 @@
           "Settings"
         ],
         "summary": "List every setting, grouped as the Settings screen shows them",
-        "description": "Answers every row of the settings registry (ADR-0035), including the ones the screen will not draw: each row carries `visible` and the panel only obeys it (ADR-0044 §6). Lists that are one cheap local read - paired Bluetooth devices, backups (ADR-0083), shares and USB folders (ADR-0115) - arrive with their items; the others carry `discover: true` and are fetched from `/settings/{key}/items`. The header's name, hostname and address come with it (ADR-0048 §5). Fetched again whenever the live state's settings revision moves.",
+        "description": "Answers every row of the settings registry (ADR-0035), including the ones the screen will not draw: each row carries `visible` and the panel only obeys it (ADR-0044 \u00a76). Lists that are one cheap local read - paired Bluetooth devices, backups (ADR-0083), shares and USB folders (ADR-0115) - arrive with their items; the others carry `discover: true` and are fetched from `/settings/{key}/items`. The header's name, hostname and address come with it (ADR-0048 \u00a75). Fetched again whenever the live state's settings revision moves.",
         "responses": {
           "200": {
             "description": "The settings.",
@@ -4629,7 +4851,7 @@
           "Settings"
         ],
         "summary": "List the items of a list row",
-        "description": "What a list row's sheet shows (ADR-0044 §1): a Wi-Fi scan, paired Bluetooth devices, the Lyrion servers found (this player's own first), the backups in the share - read every time (ADR-0083) - the music shares' servers announcing themselves (ADR-0115, kept a minute) or the USB drives and folders. A Wi-Fi list without NetworkManager answers no items and an `error`.",
+        "description": "What a list row's sheet shows (ADR-0044 \u00a71): a Wi-Fi scan, paired Bluetooth devices, the Lyrion servers found (this player's own first), the backups in the share - read every time (ADR-0083) - the music shares' servers announcing themselves (ADR-0115, kept a minute) or the USB drives and folders. A Wi-Fi list without NetworkManager answers no items and an `error`.",
         "parameters": [
           {
             "name": "key",
@@ -4884,7 +5106,7 @@
           "Setup"
         ],
         "summary": "The answers saved so far in setup, to resume from",
-        "description": "Part 1 of first use (ADR-0149) saves each step in the core as it is completed, so a page that reopens resumes from here (ADR-0104 §4). The Wi-Fi password is never returned, only has_password. Loading this also tells the panel that a phone reached the page (page_opened). Answers only while setup is running.",
+        "description": "Part 1 of first use (ADR-0149) saves each step in the core as it is completed, so a page that reopens resumes from here (ADR-0104 \u00a74). The Wi-Fi password is never returned, only has_password. Loading this also tells the panel that a phone reached the page (page_opened). Answers only while setup is running.",
         "parameters": [],
         "responses": {
           "200": {
@@ -4930,7 +5152,7 @@
           "Setup"
         ],
         "summary": "Save one or more setup answers",
-        "description": "Merges the given answers into those saved and answers all of them, as GET does (ADR-0104 §4). Every key is optional; an unknown key or a value of the wrong type refuses the whole request. A screen and headless are one choice (ADR-0109): a screen sets headless false, headless true drops the screen and the visualiser answer. Changing ssid or password clears the last join's error. Answers only while setup is running.",
+        "description": "Merges the given answers into those saved and answers all of them, as GET does (ADR-0104 \u00a74). Every key is optional; an unknown key or a value of the wrong type refuses the whole request. A screen and headless are one choice (ADR-0109): a screen sets headless false, headless true drops the screen and the visualiser answer. Changing ssid or password clears the last join's error. Answers only while setup is running.",
         "parameters": [],
         "responses": {
           "200": {
@@ -5134,7 +5356,7 @@
           "Setup"
         ],
         "summary": "Start applying the setup answers",
-        "description": "Starts applying setup's answers and answers at once with 202 (ADR-0104 §4): the settings first, then the Wi-Fi country from the time zone, then the network join, which loses the phone's page. With start restore, the uploaded backup is put back with what was changed in setup over it, then the player restarts (ADR-0131). A new player is then owed part 2 of first use (ADR-0149). A second call while applying answers keep_question false and starts nothing.",
+        "description": "Starts applying setup's answers and answers at once with 202 (ADR-0104 \u00a74): the settings first, then the Wi-Fi country from the time zone, then the network join, which loses the phone's page. With start restore, the uploaded backup is put back with what was changed in setup over it, then the player restarts (ADR-0131). A new player is then owed part 2 of first use (ADR-0149). A second call while applying answers keep_question false and starts nothing.",
         "parameters": [],
         "responses": {
           "202": {
@@ -5251,7 +5473,7 @@
           "Setup"
         ],
         "summary": "Each audio output and whether it has its own volume control",
-        "description": "For the Volume choice under the Output step: each output by its name as Settings lists it, and whether it has a hardware volume control of its own. Without one, Hardware volume cannot be chosen, as in Settings (ADR-0127 §2). Answers only while setup is running.",
+        "description": "For the Volume choice under the Output step: each output by its name as Settings lists it, and whether it has a hardware volume control of its own. Without one, Hardware volume cannot be chosen, as in Settings (ADR-0127 \u00a72). Answers only while setup is running.",
         "parameters": [],
         "responses": {
           "200": {
@@ -5400,7 +5622,7 @@
           "Setup"
         ],
         "summary": "Whether setup is needed and the setup network's state",
-        "description": "Answers ADR-0104 §5's inputs: whether this device needs setup and the state of the setup network (gexis-setup). The setup network's password is only ever included for a loopback caller (the panel, ADR-0035 §6); to any caller over the network it is always null. Without a setup network manager the answer is {\"needed\": false, \"network\": \"unmanaged\"}. Every /setup/ request from a phone also marks the setup page as in use.",
+        "description": "Answers ADR-0104 \u00a75's inputs: whether this device needs setup and the state of the setup network (gexis-setup). The setup network's password is only ever included for a loopback caller (the panel, ADR-0035 \u00a76); to any caller over the network it is always null. Without a setup network manager the answer is {\"needed\": false, \"network\": \"unmanaged\"}. Every /setup/ request from a phone also marks the setup page as in use.",
         "parameters": [],
         "responses": {
           "200": {
@@ -5614,7 +5836,7 @@
           "Panel"
         ],
         "summary": "Say whether the caller is the panel or a remote device",
-        "description": "Answers whether the request came from the panel or from another device. The panel always arrives on loopback (127.0.0.1 or ::1) and anything else is a phone or a computer on the LAN (ADR-0035 §6). The web UI asks once so the same page knows which surface it is drawing.",
+        "description": "Answers whether the request came from the panel or from another device. The panel always arrives on loopback (127.0.0.1 or ::1) and anything else is a phone or a computer on the LAN (ADR-0035 \u00a76). The web UI asks once so the same page knows which surface it is drawing.",
         "x-gexis-stability": "internal",
         "x-gexis-adr": [
           "ADR-0035"
@@ -5682,7 +5904,7 @@
           "Panel"
         ],
         "summary": "Open the touchpad relay WebSocket",
-        "description": "Upgrades to a WebSocket that lets a phone act as the panel's touchpad and keyboard (ADR-0121). A connection from loopback is the panel; any other is a phone (ADR-0035 §6). A phone may send move, tap, text, key, scroll and zoom messages, which the core relays unchanged to every connected panel; the panel may send over, focus, ring (the D-pad's ring is on a text field, ADR-0164) and untyped (a character the Home Assistant dashboard could not be given), relayed to every connected phone. Anything else, any non-text frame and any frame over 2048 bytes is dropped, and while the Phone touchpad setting (`phone_touchpad`) is off every relayed message is dropped too. A `{\"t\":\"ping\"}` from either side is always answered to the sender alone with `{\"t\":\"pong\"}`; when a phone disconnects, every panel is sent `{\"t\":\"gone\",\"phones\":<n>}`. The socket is separate from `/state`, which stays publish-only (ADR-0028); the server sends a WebSocket heartbeat every 20 seconds.",
+        "description": "Upgrades to a WebSocket that lets a phone act as the panel's touchpad and keyboard (ADR-0121). A connection from loopback is the panel; any other is a phone (ADR-0035 \u00a76). A phone may send move, tap, text, key, scroll and zoom messages, which the core relays unchanged to every connected panel; the panel may send over, focus, ring (the D-pad's ring is on a text field, ADR-0164) and untyped (a character the Home Assistant dashboard could not be given), relayed to every connected phone. Anything else, any non-text frame and any frame over 2048 bytes is dropped, and while the Phone touchpad setting (`phone_touchpad`) is off every relayed message is dropped too. A `{\"t\":\"ping\"}` from either side is always answered to the sender alone with `{\"t\":\"pong\"}`; when a phone disconnects, every panel is sent `{\"t\":\"gone\",\"phones\":<n>}`. The socket is separate from `/state`, which stays publish-only (ADR-0028); the server sends a WebSocket heartbeat every 20 seconds.",
         "x-gexis-stability": "internal",
         "x-gexis-adr": [
           "ADR-0121",
@@ -5727,7 +5949,7 @@
           "Playback"
         ],
         "summary": "Send a transport command to the active renderer",
-        "description": "Sends play, pause, next, previous, shuffle, repeat or seek to whichever renderer holds the device - never to a renderer by name, since a command to one that is not active would be an acquisition (ADR-0037 §1). The command must be declared by the active renderer and listed in the state's `controls.available` right now (ADR-0037 §2). `shuffle`, `repeat` and `seek` take a JSON body; the others take none. `seek` needs a known duration, and a position past it is the end (ADR-0164 C2). A 200 means the command was sent; its effect arrives on /state.",
+        "description": "Sends play, pause, next, previous, shuffle, repeat or seek to whichever renderer holds the device - never to a renderer by name, since a command to one that is not active would be an acquisition (ADR-0037 \u00a71). The command must be declared by the active renderer and listed in the state's `controls.available` right now (ADR-0037 \u00a72). `shuffle`, `repeat` and `seek` take a JSON body; the others take none. `seek` needs a known duration, and a position past it is the end (ADR-0164 C2). A 200 means the command was sent; its effect arrives on /state.",
         "parameters": [
           {
             "name": "command",
@@ -5978,7 +6200,7 @@
           "Panel"
         ],
         "summary": "Whether the Home Assistant dashboard is up, and whether it can be shown",
-        "description": "The dashboard set in `dashboard_url` (ADR-0156), checked as the idle page is: unconfigured, unreachable within 5 seconds, an HTTP error status, or headers that forbid framing make it not embeddable, and `message` says what to set and where - in Home Assistant, framing is *Send X-Frame-Options* off (Settings → System → Network; `use_x_frame_options: false` under `http` before 2026.10, Finding 132). The player changes nothing in Home Assistant. Asked by the panel each time it puts the dashboard up. Headers only: whether Home Assistant lets the player in without a login is not checked.",
+        "description": "The dashboard set in `dashboard_url` (ADR-0156), checked as the idle page is: unconfigured, unreachable within 5 seconds, an HTTP error status, or headers that forbid framing make it not embeddable, and `message` says what to set and where - in Home Assistant, framing is *Send X-Frame-Options* off (Settings \u2192 System \u2192 Network; `use_x_frame_options: false` under `http` before 2026.10, Finding 132). The player changes nothing in Home Assistant. Asked by the panel each time it puts the dashboard up. Headers only: whether Home Assistant lets the player in without a login is not checked.",
         "x-gexis-stability": "stable",
         "x-gexis-adr": [
           "ADR-0156"
@@ -5997,7 +6219,7 @@
                   "url": "http://homeassistant.local:8123/lovelace/0",
                   "embeddable": false,
                   "reason": "refuses framing",
-                  "message": "Home Assistant does not allow its pages to be shown inside another page. In Home Assistant, turn off Send X-Frame-Options (Settings → System → Network → HTTP server → More options), or set use_x_frame_options: false under http before version 2026.10."
+                  "message": "Home Assistant does not allow its pages to be shown inside another page. In Home Assistant, turn off Send X-Frame-Options (Settings \u2192 System \u2192 Network \u2192 HTTP server \u2192 More options), or set use_x_frame_options: false under http before version 2026.10."
                 }
               }
             }
@@ -7771,7 +7993,7 @@
           },
           "unit": {
             "type": "string",
-            "description": "Temperature unit as the provider gives it, e.g. `°C`."
+            "description": "Temperature unit as the provider gives it, e.g. `\u00b0C`."
           },
           "wind_unit": {
             "type": "string",
@@ -7865,7 +8087,7 @@
         }
       },
       "LibraryActionResult": {
-        "description": "What Lyrion reported. A 200 means the command was sent; what happened is read from /state (ADR-0037 §1).",
+        "description": "What Lyrion reported. A 200 means the command was sent; what happened is read from /state (ADR-0037 \u00a71).",
         "oneOf": [
           {
             "type": "object",
@@ -7895,7 +8117,7 @@
       },
       "LibraryAlbum": {
         "type": "object",
-        "description": "An album as the library screens draw it (library.py `_album`). Ids are Lyrion's own and are renumbered by a full rescan (Finding 029 §4).",
+        "description": "An album as the library screens draw it (library.py `_album`). Ids are Lyrion's own and are renumbered by a full rescan (Finding 029 \u00a74).",
         "required": [
           "id",
           "title",
@@ -7953,7 +8175,7 @@
               "string",
               "null"
             ],
-            "description": "Lyrion's own release type, taken as given (e.g. ALBUM, EP, COMPILATION), for grouping a discography (ADR-0038 §1a)."
+            "description": "Lyrion's own release type, taken as given (e.g. ALBUM, EP, COMPILATION), for grouping a discography (ADR-0038 \u00a71a)."
           },
           "artwork": {
             "type": [
@@ -8069,7 +8291,7 @@
       },
       "LibraryArtistPage": {
         "type": "object",
-        "description": "One page of album artists, in Lyrion's order (ADR-0038 §1a).",
+        "description": "One page of album artists, in Lyrion's order (ADR-0038 \u00a71a).",
         "required": [
           "count",
           "offset",
@@ -8170,7 +8392,7 @@
               "string",
               "null"
             ],
-            "description": "Where the biography came from, shown on screen as licences require (ADR-0040 §4), e.g. Lyrion or Wikipedia."
+            "description": "Where the biography came from, shown on screen as licences require (ADR-0040 \u00a74), e.g. Lyrion or Wikipedia."
           },
           "biography_url": {
             "type": [
@@ -8906,7 +9128,7 @@
           "summary": {
             "type": "string",
             "examples": [
-              "Connected · 1000 Mb/s · 192.0.2.10"
+              "Connected \u00b7 1000 Mb/s \u00b7 192.0.2.10"
             ],
             "description": "`No link`, or `Connected` with the speed and address."
           }
@@ -9041,7 +9263,7 @@
               [
                 [
                   "Signal",
-                  "-52 dBm · 78 %"
+                  "-52 dBm \u00b7 78 %"
                 ],
                 [
                   "Address",
@@ -9252,7 +9474,7 @@
         }
       },
       "PanelTouchpadGone": {
-        "description": "Sent by the core to every panel when a phone's touchpad socket closes, so the panel zooms back out (ADR-0121 §2).",
+        "description": "Sent by the core to every panel when a phone's touchpad socket closes, so the panel zooms back out (ADR-0121 \u00a72).",
         "type": "object",
         "required": [
           "t",
@@ -9604,7 +9826,7 @@
       },
       "PlaybackControls": {
         "type": "object",
-        "description": "The active renderer's transport commands that would work now, and its shuffle and repeat (ADR-0037 §2).",
+        "description": "The active renderer's transport commands that would work now, and its shuffle and repeat (ADR-0037 \u00a72).",
         "required": [
           "available",
           "shuffle",
@@ -9952,7 +10174,7 @@
       },
       "PlaybackQueue": {
         "type": "object",
-        "description": "The active renderer's queue (ADR-0038 §1). Lyrion only.",
+        "description": "The active renderer's queue (ADR-0038 \u00a71). Lyrion only.",
         "required": [
           "items",
           "index",
@@ -10774,7 +10996,7 @@
         }
       },
       "ReportsStatus": {
-        "description": "The problem report being prepared (ADR-0138 §1): its state and checklist, and once ready the file's name, size, contents and what was taken out. A ready report is kept an hour; after that, and before any, only `state: idle`.",
+        "description": "The problem report being prepared (ADR-0138 \u00a71): its state and checklist, and once ready the file's name, size, contents and what was taken out. A ready report is kept an hour; after that, and before any, only `state: idle`.",
         "type": "object",
         "required": [
           "state"
@@ -10971,7 +11193,7 @@
         }
       },
       "SettingsCondition": {
-        "description": "A row's `onlyWhen` (ADR-0044 §3): one `[key, value]` pair, or a list of pairs that must all hold. The value is a literal the key must hold, the string `*any*` (holds anything non-empty), `{\"not\": value}` (shown unless the key holds that value) or `{\"in\": [values]}` (shown while the key holds one of them). The core has already worked the answer out into the row's `visible`; this is for clients that want the rule.",
+        "description": "A row's `onlyWhen` (ADR-0044 \u00a73): one `[key, value]` pair, or a list of pairs that must all hold. The value is a literal the key must hold, the string `*any*` (holds anything non-empty), `{\"not\": value}` (shown unless the key holds that value) or `{\"in\": [values]}` (shown while the key holds one of them). The core has already worked the answer out into the row's `visible`; this is for clients that want the rule.",
         "oneOf": [
           {
             "type": "array",
@@ -11004,7 +11226,7 @@
         ]
       },
       "SettingsDevice": {
-        "description": "The Settings header (ADR-0048 §5): the stored name, and the system's own hostname and address - which disagree after a rename until the restart.",
+        "description": "The Settings header (ADR-0048 \u00a75): the stored name, and the system's own hostname and address - which disagree after a rename until the restart.",
         "type": "object",
         "required": [
           "name",
@@ -11405,7 +11627,7 @@
         }
       },
       "SettingsListItem": {
-        "description": "One item of a `list` row (ADR-0044 §1): a Wi-Fi network, a paired Bluetooth device, a Lyrion server, a backup, a music share or a USB folder. `name`, `meta`, `bars` and `state` are always there; the rest depend on the list.",
+        "description": "One item of a `list` row (ADR-0044 \u00a71): a Wi-Fi network, a paired Bluetooth device, a Lyrion server, a backup, a music share or a USB folder. `name`, `meta`, `bars` and `state` are always there; the rest depend on the list.",
         "type": "object",
         "required": [
           "name",
@@ -11426,7 +11648,7 @@
             ],
             "description": "The line under the name.",
             "examples": [
-              "Connected · 72 Mb/s"
+              "Connected \u00b7 72 Mb/s"
             ]
           },
           "bars": {
@@ -11592,7 +11814,7 @@
         }
       },
       "SettingsRow": {
-        "description": "One setting as `/settings` publishes it (ADR-0035, ADR-0044 §6): every registry field except `default`, with what the core works out added. The panel draws only rows with `visible: true`; a client that wants the whole inventory (ADR-0022) has it. Fields beyond the ones always present depend on the row's type and are present only when they apply.",
+        "description": "One setting as `/settings` publishes it (ADR-0035, ADR-0044 \u00a76): every registry field except `default`, with what the core works out added. The panel draws only rows with `visible: true`; a client that wants the whole inventory (ADR-0022) has it. Fields beyond the ones always present depend on the row's type and are present only when they apply.",
         "type": "object",
         "required": [
           "key",
@@ -11673,7 +11895,7 @@
               "screens",
               "boards"
             ],
-            "description": "The source the options are drawn from (ADR-0044 §4)."
+            "description": "The source the options are drawn from (ADR-0044 \u00a74)."
           },
           "optionLabels": {
             "type": "object",
@@ -11756,7 +11978,7 @@
                 }
               }
             ],
-            "description": "A warning shown before the change: about the row, or per option of a choice (ADR-0044 §2)."
+            "description": "A warning shown before the change: about the row, or per option of a choice (ADR-0044 \u00a72)."
           },
           "confirm": {
             "type": "string",
@@ -11937,7 +12159,7 @@
       },
       "SetupAnswers": {
         "type": "object",
-        "description": "The answers setup has saved so far, which a page resumes from (ADR-0104 §4). Only the keys answered are present, plus has_password. The Wi-Fi password itself is never returned.",
+        "description": "The answers setup has saved so far, which a page resumes from (ADR-0104 \u00a74). Only the keys answered are present, plus has_password. The Wi-Fi password itself is never returned.",
         "required": [
           "has_password"
         ],
@@ -12066,7 +12288,7 @@
               "restore",
               null
             ],
-            "description": "A new player or a restore from a backup (ADR-0131 §1)."
+            "description": "A new player or a restore from a backup (ADR-0131 \u00a71)."
           },
           "step": {
             "type": "string",
@@ -12218,7 +12440,7 @@
       },
       "SetupBackupReview": {
         "type": "object",
-        "description": "What an uploaded backup would bring (ADR-0131 §3-4), without anything put back yet.",
+        "description": "What an uploaded backup would bring (ADR-0131 \u00a73-4), without anything put back yet.",
         "properties": {
           "name": {
             "type": [
@@ -12456,11 +12678,11 @@
         "properties": {
           "option": {
             "type": "string",
-            "description": "Its name as Settings lists it; an unplugged one ends \" — nothing connected\"."
+            "description": "Its name as Settings lists it; an unplugged one ends \" \u2014 nothing connected\"."
           },
           "hardware": {
             "type": "boolean",
-            "description": "It has a volume control of its own, so Hardware volume can be chosen (ADR-0127 §2)."
+            "description": "It has a volume control of its own, so Hardware volume can be chosen (ADR-0127 \u00a72)."
           }
         }
       },
@@ -12650,7 +12872,7 @@
       },
       "SetupStatus": {
         "type": "object",
-        "description": "Whether setup is needed and the setup network's state (ADR-0104 §5). The setup network's password is never included for a caller over the network: password is null except for a loopback caller (the panel), and the /state broadcast never carries it. When no setup network manager runs, only needed (false) and network (\"unmanaged\") are present.",
+        "description": "Whether setup is needed and the setup network's state (ADR-0104 \u00a75). The setup network's password is never included for a caller over the network: password is null except for a loopback caller (the panel), and the /state broadcast never carries it. When no setup network manager runs, only needed (false) and network (\"unmanaged\") are present.",
         "required": [
           "needed",
           "network"
@@ -12852,7 +13074,7 @@
           },
           "meters": {
             "type": "boolean",
-            "description": "Whether the visualiser can have levels on this output (ADR-0055 §6)."
+            "description": "Whether the visualiser can have levels on this output (ADR-0055 \u00a76)."
           },
           "sources": {
             "type": "array",
@@ -12878,7 +13100,7 @@
                 "$ref": "#/components/schemas/PlaybackControls"
               }
             ],
-            "description": "What the active renderer can do right now (ADR-0037 §2), or null when nobody is active."
+            "description": "What the active renderer can do right now (ADR-0037 \u00a72), or null when nobody is active."
           },
           "queue": {
             "oneOf": [
@@ -12979,6 +13201,17 @@
               }
             ],
             "description": "The equaliser for the output in use (ADR-0162); null with no output."
+          },
+          "room": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/RoomCorrectionSummary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Room correction for the output in use (ADR-0175): the switches, the last measurement's date, a measurement in progress; null with no output."
           },
           "group": {
             "oneOf": [
@@ -13820,6 +14053,178 @@
             "description": "Those not yet agreed to."
           }
         }
+      },
+      "RoomCorrection": {
+        "type": "object",
+        "description": "Room correction for the output in use (ADR-0175).",
+        "required": [
+          "output",
+          "on",
+          "without",
+          "measured",
+          "row",
+          "dsd",
+          "run",
+          "ended"
+        ],
+        "properties": {
+          "output": {
+            "type": "object",
+            "description": "The output, as the equaliser's names it."
+          },
+          "on": {
+            "type": "boolean"
+          },
+          "without": {
+            "type": "boolean",
+            "description": "*Hear it without*: the cuts at 0 dB, the stage still in the path."
+          },
+          "measured": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "The last measurement: `date`, `day`, `checked` (false when its check was skipped); in full also `year`, `positions`, `peaks_down` and `worse`."
+          },
+          "row": {
+            "type": "string",
+            "description": "The Settings row's state: *Not measured yet*, *On \u00b7 measured 3 November*, *Without \u00b7 comparing, the cuts at 0 dB*, *Off*."
+          },
+          "dsd": {
+            "type": "boolean",
+            "description": "Native DSD plays, untouched: room correction stands aside."
+          },
+          "run": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "A measurement in progress: `step` (place, level, measure, move, countdown, correction, nothing, checking, result), `position` from 1 to `positions` (how many the run measures, 3), `speaker` L, R or both (the two together), `sweep`, `noise`, `level_db`, `aim_db`, `count`, `checking`, `progress` 0-1, `done`, `expected`, `too_quiet`."
+          },
+          "ended": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "How the last measurement ended (`how`: kept, discarded, done, cancelled, failed), until `done`."
+          },
+          "microphone": {
+            "type": "object",
+            "description": "`state` (found, other, absent), `name`, and the calibration in use: `serial` as the label prints it, `angle`, `date`."
+          },
+          "can_measure": {
+            "type": "boolean"
+          },
+          "why_not": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "running",
+              "microphone",
+              "calibration",
+              "grouped",
+              "busy",
+              null
+            ]
+          },
+          "chart": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Up to 300 Hz: `freqs`, `limit`, `after_kind` (measured or expected), and for L and R `before`, `target`, `after`, `positions`, `cuts`, `peaks_down` - dB relative to the target's level; `both`, the two speakers together as heard, the same with no cuts and `after` empty until the check measures it."
+          },
+          "cuts": {
+            "type": "object",
+            "description": "Each speaker's cuts: `freq` in Hz, `gain` in dB."
+          },
+          "pending": {
+            "type": "object",
+            "description": "While a measurement shows its correction or result: its chart and cuts, before *Keep it*."
+          },
+          "address": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "The player's page for a phone, opened at Room correction: `shown` as it is typed (`<name>.local:8090`), `url` with `#room`."
+          },
+          "playing": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "What a measurement would stop: `source` by name, and `dsd`."
+          }
+        }
+      },
+      "RoomCorrectionSet": {
+        "type": "object",
+        "additionalProperties": false,
+        "minProperties": 1,
+        "properties": {
+          "on": {
+            "type": "boolean"
+          },
+          "without": {
+            "type": "boolean"
+          }
+        }
+      },
+      "RoomCalibration": {
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "The file's text."
+          },
+          "name": {
+            "type": "string",
+            "description": "The file's name, which says whether it is the 90\u00b0 one."
+          }
+        }
+      },
+      "RoomRun": {
+        "type": "object",
+        "required": [
+          "action"
+        ],
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "measure",
+              "start",
+              "next",
+              "check",
+              "skip",
+              "keep",
+              "discard",
+              "again",
+              "cancel",
+              "done"
+            ]
+          }
+        }
+      },
+      "RoomCorrectionSummary": {
+        "type": "object",
+        "description": "The part of `RoomCorrection` every screen needs, on `/state`: everything but the microphone, the chart and the cuts.",
+        "required": [
+          "output",
+          "on",
+          "without",
+          "measured",
+          "row",
+          "dsd",
+          "run",
+          "ended"
+        ]
       }
     }
   }

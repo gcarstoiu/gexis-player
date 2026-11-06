@@ -6,6 +6,19 @@
 Every release of Gexis Player and its notes, newest first. The player
 shows the last 10 under Settings → System → Change logs.
 
+## 1.14.0 — 6 November 2026
+
+### New
+
+- Room correction for the bass, in Settings → Audio: measured at the seat with a USB microphone, it cuts the peaks the room adds below 250 Hz, for each speaker.
+- Its chart shows each speaker and both together, before and after; Hear it without compares, and it can be switched off at any time.
+
+### Good to know
+
+- It needs a miniDSP UMIK-1 and its 90° calibration file from miniDSP's page; the measurement is run from a phone, at three positions, in about seven minutes with its check.
+- The test sounds reach about 60 dB at the seat, about as loud as a conversation, and the volume goes back to where it was.
+- Only cuts: a dip in the bass stays as it is.
+
 ## 1.13.0 — 3 November 2026
 
 ### New

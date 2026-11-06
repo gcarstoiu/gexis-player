@@ -17,6 +17,9 @@
   import Settings from './screens/Settings.svelte';
   import PhoneRemote from './screens/remote/PhoneRemote.svelte';
   import Equaliser from './screens/eq/Equaliser.svelte';
+  import RoomCorrection from './screens/room/RoomCorrection.svelte';
+  import RoomRun from './screens/room/RoomRun.svelte';
+  import { room } from './lib/room.svelte.js';
   import SetupScreen from './screens/SetupScreen.svelte';
   import FirstUsePage from './screens/FirstUsePage.svelte';
   import { screen } from './lib/family.svelte.js';
@@ -496,10 +499,13 @@
   });
   //: ADR-0162: the equaliser's editor is open as a screen of its own (`openEqualiser`).
   let eqOpen = $state(false);
-  const libraryShown = $derived(libraryOpen && !settingsOpen && !waitingOpen && !eqOpen);
+  //: ADR-0175: room correction's page, the same way, from its Room control.
+  let roomOpen = $state(false);
+  const libraryShown = $derived(libraryOpen && !settingsOpen && !waitingOpen && !eqOpen && !roomOpen);
   function openLibraryHome() {
     closeVolume();
     eqOpen = false;
+    roomOpen = false;
     libraryArtist = null;
     libraryAlbum = null;
     libraryHome += 1;
@@ -540,6 +546,7 @@
   function openSettings() {
     closeVolume();
     eqOpen = false;
+    roomOpen = false;
     settingsOpen = true;
   }
 
@@ -550,12 +557,21 @@
   function openEqualiser() {
     closeVolume();
     settingsOpen = false;
+    roomOpen = false;
     eqOpen = true;
+  }
+  function openRoom() {
+    closeVolume();
+    settingsOpen = false;
+    eqOpen = false;
+    roomOpen = true;
   }
 
   //: ADR-0109, amended 2026-10-03: the answer to "a different screen is
   //: attached". Choose opens Settings on the Attached screen row.
-  let openRow = $state(null);
+  //: ADR-0175: a phone that opened `#room` (the panel's *Measure from your
+  //: phone*) opens on Room correction.
+  let openRow = $state(/(?:^#|&)room\b/.test(location.hash) ? 'room_correction' : null);
   async function answerNew(answer) {
     try {
       await answerNewScreen(answer);
@@ -899,6 +915,11 @@
       <Equaliser surface={screen.family === 'bar' ? 'bar' : 'panel'} onback={() => (eqOpen = false)}
         onhome={screen.family === 'bar' ? (lmsOff ? openSettings : openLibraryHome) : null} />
     </div>
+  {:else if roomOpen}
+    <div class="screen-layer">
+      <RoomCorrection surface={screen.family === 'bar' ? 'bar' : 'panel'} onback={() => (roomOpen = false)}
+        onhome={screen.family === 'bar' ? (lmsOff ? openSettings : openLibraryHome) : null} />
+    </div>
   {:else if waitingOpen}
     <div class="screen-layer">
       <WaitingHome availability={$availability} onsettings={openSettings} settings={$settingValues} reading={lyrionFirst} />
@@ -991,6 +1012,7 @@
       onvisualisation={showVisualisation}
       ondashboard={dashboardButton ? showDashboard : null}
       onequaliser={openEqualiser}
+      onroom={openRoom}
     />
   {:else if $volume || $fixedOutput}
     <VolumeDrawer
@@ -1003,6 +1025,7 @@
       onactivity={keepVolumeOpen}
       onsettled={armAutoHide}
       onequaliser={openEqualiser}
+      onroom={openRoom}
     />
   {/if}
 
@@ -1020,6 +1043,13 @@
 
   {#if shownHandoff && !dashboardUp}
     <HandoffScreen from={shownHandoff.from} to={shownHandoff.to} />
+  {/if}
+
+  <!-- ADR-0175: while the room is measured, the screen says so - over the
+       idle screen and the drawer, under an update's. Nothing on it to press:
+       the run is followed on the phone. -->
+  {#if $room?.run}
+    <RoomRun run={$room.run} bar={screen.family === 'bar'} />
   {/if}
 
   <!-- Last, and above everything (ADR-0045). A request that cannot be seen

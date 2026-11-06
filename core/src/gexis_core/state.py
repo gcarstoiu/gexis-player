@@ -76,6 +76,7 @@ class StateStore:
         self._personalise: str | None = None
         self._resetting = False
         self._equaliser: dict | None = None
+        self._room: dict | None = None
         #: ADR-0166: the group's view, and on a member the leader's playback
         #: (`set_mirror`).
         self._group: dict | None = None
@@ -146,6 +147,7 @@ class StateStore:
             personalise=self._personalise,
             resetting=self._resetting,
             equaliser=self._equaliser,
+            room=self._room,
             group=self._group,
         )
 
@@ -490,6 +492,14 @@ class StateStore:
         if snapshot == self._equaliser:
             return
         self._equaliser = snapshot
+        self._notify()
+
+    def set_room(self, summary: dict | None) -> None:
+        """ADR-0175: room correction changed - switched, compared, measured,
+        or a run's step."""
+        if summary == self._room:
+            return
+        self._room = summary
         self._notify()
 
     @property
