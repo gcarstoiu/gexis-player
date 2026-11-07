@@ -3837,14 +3837,16 @@ minority use. How a player with it on behaves when grouped is for the ADR.
 
 **Research started 2026-11-07** (George), before the ADR: what correcting
 above the bass is worth and how, the positions, and the time-domain part
-with its cost - whether that part comes in this phase is still open. Desk
-research done the same day:
+with its cost. Desk research done the same day:
 [Finding 141](findings/141-room-correction-above-the-bass-what-is-known.md).
+
+**The level and the timing kept apart** (George, 2026-11-07, after Finding
+141): this phase corrects the level only. The time-domain part is Phase 34
+(`ph-room-correction-time`), which may end without being built.
 
 **An ADR before anything is built.** It must settle: how many positions and
 where; the target curve and how it is chosen; how much correction above the
-bass, smoothed how; whether the time-domain part comes in this phase or a
-later one; what it costs a Pi 4 beside Phase 29's filter.
+bass, smoothed how; what it costs a Pi 4 beside Phase 29's filter.
 
 **Acceptance (draft):**
 
@@ -3969,6 +3971,33 @@ decided here.
    recorded in ADR-0118 first.
 3. Whether *Extended navigation* stays an option or becomes the default is
    his decision, recorded in ADR-0022's inventory.
+
+### Phase 34 — Room correction in time
+
+**ID:** `ph-room-correction-time` · added 2026-11-07 as 34, split from `ph-room-correction-full` (George).
+
+**Added 2026-11-07** (George, after
+[Finding 141](findings/141-room-correction-above-the-bass-what-is-known.md)).
+The time-domain part of room correction is what Dirac adds beyond the level:
+a mixed-phase design from several positions that corrects the timing of the
+sound at the seat (Finding 124's second tier). It is kept apart from Phase
+30, which corrects the level.
+
+**It may end without being built** (George). Finding 141 found no listening
+test that prefers it over level-only correction from several positions, and
+found that corrections inverting a response in detail were rated below none.
+Research comes first, and what it shows decides whether anything is built.
+
+**An ADR before anything is built**, if the research supports building. It
+must settle:
+- whether it is heard: a listening test of our own against Phase 30's
+  correction;
+- the design (DRC-FIR, OptiMIMO or our own) and its limit on pre-ringing;
+- the drift between the microphone's clock and the DAC's;
+- a filter for every sample rate, and its cost on a Pi 4;
+- the delay it adds, and grouped players.
+
+**Acceptance:** drafted with its ADR, if one is written.
 
 
 ### Parked
