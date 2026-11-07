@@ -178,3 +178,86 @@ async def test_the_switch_turned_off_takes_a_page_down_and_the_status_says_so():
         assert not page.shown and store.state.panel["page"]["closed"]["by"] == "off"
         assert store.state.panel["pages"] is False
         assert (await (await client.get("/player/status")).json())["pages"] is False
+
+
+# --- the amendment: one page kept loaded (K1-K8) ---------------------------
+
+def _setup_preload(check=None, **values):
+    store = StateStore({})
+    settings = _Settings(**values)
+    checked = []
+
+    async def ok(url):
+        checked.append(url)
+        return {"url": url, "embeddable": True, "reason": None}
+
+    page = Page(lambda state: store.set_panel(page=state),
+                available=lambda: settings.values["ha_pages"] is True and settings.values["headless"] is not True)
+    server = StateServer(store, settings=settings, page=page, page_check=check or ok, panel_token=TOKEN)
+    return store, page, server, checked
+
+
+@pytest.mark.asyncio
+async def test_a_page_to_keep_is_checked_and_its_address_given_to_the_panel_only():
+    store, page, server, checked = _setup_preload()
+    async with TestClient(TestServer(server.make_app())) as client:
+        r = await client.post("/panel/page/preload", json={"url": URL})
+        assert r.status == 200 and (await r.json())["preloaded"] is True and checked == [URL]
+        assert store.state.panel["page"]["preloaded"] is True and URL not in repr(store.state.panel)
+        anyone = await (await client.get("/panel/page")).json()
+        panel = await (await client.get("/panel/page", headers={panel_token.HEADER: TOKEN})).json()
+        assert "preload" not in anyone and anyone["preloaded"] is True
+        assert panel["preload"] == {"url": URL, "n": 1} and "url" not in panel
+
+
+@pytest.mark.asyncio
+async def test_a_show_of_the_page_kept_is_not_checked_again():
+    """K3: it shows at once - the check can take seconds."""
+    _, page, server, checked = _setup_preload()
+    async with TestClient(TestServer(server.make_app())) as client:
+        await client.post("/panel/page/preload", json={"url": URL})
+        assert (await client.post("/panel/page/show", json={"url": URL, "id": "door"})).status == 200
+        assert page.shown and checked == [URL]
+        await client.post("/panel/page/show", json={"url": URL + "/other"})
+        assert checked == [URL, URL + "/other"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("values, status", [
+    ({"ha_pages": False}, 403),
+    ({"headless": True}, 409),
+])
+async def test_keeping_a_page_is_the_switchs_but_clearing_it_is_always_allowed(values, status):
+    _, page, server, _ = _setup_preload(**values)
+    page.set_preload(URL)
+    async with TestClient(TestServer(server.make_app())) as client:
+        assert (await client.post("/panel/page/preload", json={"url": URL + "/x"})).status == status
+        assert page.preload == URL
+        r = await client.post("/panel/page/preload", json={"url": None})
+        assert r.status == 200 and page.preload is None
+
+
+@pytest.mark.asyncio
+async def test_a_page_to_keep_that_cannot_be_framed_or_a_bad_call_is_refused():
+    async def refuses(url):
+        return {"url": url, "embeddable": False, "reason": "refuses framing"}
+
+    _, page, server, _ = _setup_preload(check=refuses)
+    async with TestClient(TestServer(server.make_app())) as client:
+        r = await client.post("/panel/page/preload", json={"url": URL})
+        assert r.status == 422 and "Send X-Frame-Options" in (await r.json())["error"]
+        assert (await client.post("/panel/page/preload", json={})).status == 400
+        assert (await client.post("/panel/page/preload", json={"url": "ftp://x"})).status == 400
+        assert page.preload is None
+
+
+@pytest.mark.asyncio
+async def test_the_switch_turned_off_unloads_the_page_kept_and_on_loads_it_again():
+    """K5: the address stays for when it is turned back on."""
+    store, page, server, _ = _setup_preload()
+    async with TestClient(TestServer(server.make_app())) as client:
+        await client.post("/panel/page/preload", json={"url": URL})
+        await client.put("/settings/ha_pages", json={"value": False})
+        assert store.state.panel["page"]["preloaded"] is False and page.preload == URL
+        await client.put("/settings/ha_pages", json={"value": True})
+        assert store.state.panel["page"]["preloaded"] is True

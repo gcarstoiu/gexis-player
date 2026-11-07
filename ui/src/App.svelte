@@ -289,6 +289,8 @@
   //: on the panel only. The core says which and when; the page asks it for
   //: the address.
   const pageUp = $derived(surface === 'panel' && $panel.page?.shown === true);
+  // The amendment (K3): a page kept loaded, framed hidden until it is shown.
+  const pageKept = $derived(surface === 'panel' && $panel.page?.preloaded === true);
   const closePage = (by) => hidePage(by).catch(() => {});
   const showDashboard = () => requestDashboard(true).catch(() => {});
   const hideDashboard = () => requestDashboard(false).catch(() => {});
@@ -1057,10 +1059,11 @@
     <HandoffScreen from={shownHandoff.from} to={shownHandoff.to} />
   {/if}
 
-  {#if pageUp}
+  {#if pageUp || pageKept}
     <!-- ADR-0176: over the idle screen and the dashboard; a touch or a key
-         closes it, and what was there is under it still. -->
-    <PageScreen seq={$panel.page.seq} onclose={closePage} />
+         closes it, and what was there is under it still. Mounted, hidden,
+         while a page is kept loaded (K3). -->
+    <PageScreen shown={pageUp} seq={$panel.page.seq} onclose={closePage} />
   {/if}
 
   <!-- ADR-0175: while the room is measured, the screen says so - over the

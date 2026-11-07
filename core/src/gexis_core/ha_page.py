@@ -7,6 +7,11 @@ any D-pad key, its time limit, the heat (P8) and the owner's switch. What
 was there comes back: the panel's screens stay as they were under it, and
 the visualiser and standby are put back as they were (P5, P6).
 
+One page can be kept loaded and hidden (the amendment, K1-K8): Home
+Assistant gives its address, the panel frames it hidden from the start, and
+a show of that address only reveals it - a doorbell does not wait for Home
+Assistant to load. Every close hides it again.
+
 The side effects are the caller's - `prepare` before a page comes up over
 nothing, `restore` after the last one goes - so this keeps only who is up,
 until when, and why the last one went.
@@ -14,9 +19,12 @@ until when, and why the last one went.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
+import os
 import subprocess
 import time
+from pathlib import Path
 from typing import Awaitable, Callable
 from urllib.parse import urlsplit
 
@@ -43,6 +51,9 @@ HEAT_C = 80.0
 THROTTLED_NOW = 0x2 | 0x4 | 0x8
 HEAT_EVERY_S = 5.0
 ID_MAX = 64
+#: K1: the page kept loaded, saved so a restart loads it again - not in the
+#: settings, `/state` or a backup (P2: an address can carry a token).
+PRELOAD_PATH = Path("/var/lib/gexis-core/page-preload.json")
 
 
 class Refused(Exception):
@@ -62,10 +73,7 @@ def parse(body) -> tuple[str, str, int]:
     url = body.get("url")
     if not isinstance(url, str) or not url.strip():
         raise Refused(400, "url is required")
-    url = url.strip()
-    parts = urlsplit(url)
-    if parts.scheme not in ("http", "https") or not parts.netloc:
-        raise Refused(400, "url must be an http or https address")
+    url = _address(url)
     page_id = body.get("id", "page")
     if not isinstance(page_id, str) or not page_id.strip() or len(page_id.strip()) > ID_MAX:
         raise Refused(400, f"id must be text of 1 to {ID_MAX} characters")
@@ -73,6 +81,40 @@ def parse(body) -> tuple[str, str, int]:
     if isinstance(seconds, bool) or not isinstance(seconds, (int, float)) or not MIN_S <= seconds <= MAX_S:
         raise Refused(400, f"seconds must be from {MIN_S} to {MAX_S}")
     return url, page_id.strip(), int(seconds)
+
+
+def _address(url: str) -> str:
+    url = url.strip()
+    parts = urlsplit(url)
+    if parts.scheme not in ("http", "https") or not parts.netloc:
+        raise Refused(400, "url must be an http or https address")
+    return url
+
+
+def parse_preload(body) -> str | None:
+    """K1: `{"url": "..."}` keeps that page loaded; `{"url": null}` or `""`
+    clears it (None)."""
+    if not isinstance(body, dict) or "url" not in body:
+        raise Refused(400, 'body must be {"url": "..."}, or {"url": null} to clear it')
+    url = body["url"]
+    if url is None or (isinstance(url, str) and not url.strip()):
+        return None
+    if not isinstance(url, str):
+        raise Refused(400, "url must be an http or https address")
+    return _address(url)
+
+
+def _read_preload(path: Path | None) -> str | None:
+    if path is None:
+        return None
+    try:
+        url = json.loads(path.read_text()).get("url")
+    except (OSError, ValueError, AttributeError):
+        return None
+    try:
+        return _address(url) if isinstance(url, str) and url.strip() else None
+    except Refused:
+        return None
 
 
 #: What the caller is told when the page cannot be framed (P1), as the
@@ -121,21 +163,30 @@ async def _nothing_back(token: dict, back: bool) -> None:
 
 
 class Page:
-    """Up or not, which, until when, and why the last one went.
-    `publish(state)` tells the panel (`panel.page`)."""
+    """Up or not, which, until when, and why the last one went; and the page
+    kept loaded, if any. `publish(state)` tells the panel (`panel.page`);
+    `available()` is the owner's switch on a player with a screen."""
 
     def __init__(self, publish: Callable[[dict], None], *,
                  prepare: Callable[[], Awaitable[dict]] = _nothing,
                  restore: Callable[[dict, bool], Awaitable[None]] = _nothing_back,
                  heat: Callable[[], tuple[float | None, int | None]] | None = None,
                  clock: Callable[[], float] = time.time,
-                 heat_every: float = HEAT_EVERY_S) -> None:
+                 heat_every: float = HEAT_EVERY_S,
+                 available: Callable[[], bool] = lambda: True,
+                 preload_path: Path | None = None) -> None:
         self._publish = publish
         self._prepare = prepare
         self._restore = restore
         self._heat = heat
         self._clock = clock
         self._heat_every = heat_every
+        self._available = available
+        self._preload_path = preload_path
+        #: K1: the address kept loaded, and one more each time it is given
+        #: (the same address again loads it afresh).
+        self.preload: str | None = _read_preload(preload_path)
+        self.preload_n = 0
         self.shown = False
         self.id: str | None = None
         self.url: str | None = None
@@ -149,9 +200,34 @@ class Page:
         self._heat_task: asyncio.Task | None = None
         self._lock = asyncio.Lock()
 
+    @property
+    def preloaded(self) -> bool:
+        """K2: a page to keep loaded, and the switch on with a screen (K5)."""
+        return self.preload is not None and self._available()
+
     def state(self) -> dict:
         return {"shown": self.shown, "id": self.id, "until": self.until,
-                "seq": self.seq, "closed": self.closed}
+                "seq": self.seq, "closed": self.closed, "preloaded": self.preloaded}
+
+    def refresh(self) -> None:
+        """The switch or the screen changed: `preloaded` with it (K5)."""
+        self._publish(self.state())
+
+    def set_preload(self, url: str | None) -> None:
+        """K1: keep this page loaded, or none; saved for the next start. The
+        panel loads it afresh even at the same address."""
+        self.preload = url
+        self.preload_n += 1
+        self.seq += 1
+        if self._preload_path is not None:
+            try:
+                tmp = self._preload_path.with_suffix(".tmp")
+                tmp.write_text(json.dumps({"url": url}))
+                os.replace(tmp, self._preload_path)
+            except OSError:
+                logger.exception("page: the page kept loaded could not be saved")
+        self._publish(self.state())
+        logger.info("page: %s", "a page kept loaded" if url else "no page kept loaded")
 
     async def show(self, url: str, page_id: str, seconds: int) -> None:
         """Up, or the one up replaced; the same id again restarts its limit

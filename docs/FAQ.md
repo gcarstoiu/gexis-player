@@ -420,8 +420,10 @@ Yes, for a while, when *Pages from Home Assistant* is on in *Settings →
 Display*: Home Assistant's action *Show a page on the screen* puts any of its
 pages over whatever the screen shows, the music playing on, until a touch,
 a remote's key, its time or Home Assistant takes it down; then the screen
-is as it was. Live video is heavy for a Pi 4: show few cameras, in their
-small streams. It needs what the dashboard needs in Home Assistant - see the
+is as it was. Home Assistant can also keep one page loaded and hidden
+(*Keep a page loaded*), so that it shows at once when the doorbell rings.
+Live video is heavy for a Pi 4: show few cameras, in their small streams.
+It needs what the dashboard needs in Home Assistant - see the
 manual's *A page from Home Assistant*.
 
 **Can Home Assistant control the player?**

@@ -1695,8 +1695,12 @@ class StateServer:
         if self._page is None:
             return web.json_response({"error": "pages are not wired up"}, status=503)
         answer = {**self._page.state(), "pages": self._pages_on()}
-        if self._page.shown and self._from_panel(request):
-            answer["url"] = self._page.url
+        if self._from_panel(request):
+            if self._page.shown:
+                answer["url"] = self._page.url
+            # K3: the page to frame hidden; `n` changes when it is to be loaded afresh.
+            if self._page.preloaded:
+                answer["preload"] = {"url": self._page.preload, "n": self._page.preload_n}
         return web.json_response(answer)
 
     async def _handle_page_request(self, request: web.Request) -> web.Response:
@@ -1721,8 +1725,17 @@ class StateServer:
                     self._standby.used()
             hidden = await self._page.hide(by, page_id=page_id)
             return web.json_response({"hidden": hidden, **self._page.state()})
-        if action != "show":
+        if action not in ("show", "preload"):
             return web.json_response({"error": f"unknown action {action}"}, status=404)
+        if action == "preload":
+            try:
+                preload = ha_page.parse_preload(await self._json_body(request))
+            except ha_page.Refused as refused:
+                return web.json_response({"error": refused.message}, status=refused.status)
+            # Clearing it is always allowed: only keeping one is the switch's.
+            if preload is None:
+                self._page.set_preload(None)
+                return web.json_response(self._page.state())
         if self._setting_or_none("headless") is True:
             return web.json_response({"error": "this player has no screen"}, status=409)
         if self._setting_or_none("ha_pages") is not True:
@@ -1732,12 +1745,23 @@ class StateServer:
         # quiet while it records.
         if self._room is not None and self._room.running():
             return web.json_response({"error": "The room is being measured on this player."}, status=409)
+        if action == "preload":
+            # K1: checked as a show is, so the action fails with the reason.
+            if self._page_check is not None:
+                found = await self._page_check(preload)
+                if not found.get("embeddable"):
+                    return web.json_response({"error": ha_page.explain(found.get("reason")),
+                                              "reason": found.get("reason")}, status=422)
+            self._page.set_preload(preload)
+            return web.json_response(self._page.state())
         try:
             url, page_id, seconds = ha_page.parse(await self._json_body(request))
         except ha_page.Refused as refused:
             return web.json_response({"error": refused.message}, status=refused.status)
-        # The page already up at this address (a second ring) is not checked again.
-        if self._page_check is not None and not (self._page.shown and self._page.url == url):
+        # The page already up at this address (a second ring), or the one kept
+        # loaded (K3: it shows at once), is not checked again.
+        if self._page_check is not None and not (self._page.shown and self._page.url == url) \
+                and not (self._page.preloaded and self._page.preload == url):
             found = await self._page_check(url)
             if not found.get("embeddable"):
                 return web.json_response({"error": ha_page.explain(found.get("reason")),
@@ -3291,6 +3315,7 @@ class StateServer:
                 self._store.set_panel(pages=self._pages_on())
                 if not self._pages_on():
                     await self._page.hide(ha_page.OFF)
+                self._page.refresh()
             restarts = self._settings_restarts(key)
             if restarts == "core":
                 asyncio.ensure_future(self._restart_core_for(key))

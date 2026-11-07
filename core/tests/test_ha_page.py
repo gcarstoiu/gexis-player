@@ -5,7 +5,7 @@ import asyncio
 import pytest
 
 from gexis_core import ha_page
-from gexis_core.ha_page import Page, Refused, explain, parse, too_hot
+from gexis_core.ha_page import Page, Refused, explain, parse, parse_preload, too_hot
 
 URL = "http://ha.example:8123/home-security/tv"
 
@@ -65,7 +65,8 @@ async def test_up_then_down_prepares_once_and_puts_back_what_was_there():
     page, told, prepared, restored = _page()
     await page.show(URL, "cameras", 60)
     assert page.shown and page.id == "cameras" and page.until == 1060.0
-    assert told[-1] == {"shown": True, "id": "cameras", "until": 1060.0, "seq": 1, "closed": None}
+    assert told[-1] == {"shown": True, "id": "cameras", "until": 1060.0, "seq": 1, "closed": None,
+                        "preloaded": False}
     assert await page.hide("touch")
     assert told[-1]["shown"] is False and told[-1]["closed"] == {"id": "cameras", "by": "touch", "at": 1000.0}
     assert prepared == [True] and restored == [({"standby": True}, True)]
@@ -171,3 +172,72 @@ async def test_a_reading_that_fails_does_not_stop_the_watch():
         if not page.shown:
             break
     assert not page.shown and len(calls) >= 2
+
+
+# --- the amendment: one page kept loaded (K1-K8) ---------------------------
+
+def test_a_page_to_keep_is_an_http_address_and_null_or_empty_clears_it():
+    assert parse_preload({"url": f" {URL} "}) == URL
+    assert parse_preload({"url": None}) is None
+    assert parse_preload({"url": " "}) is None
+    for body in (None, {}, [], {"url": 3}, {"url": "ftp://ha.example/x"}, {"url": "ha.example/x"}):
+        with pytest.raises(Refused) as caught:
+            parse_preload(body)
+        assert caught.value.status == 400
+
+
+def test_the_page_kept_is_saved_and_read_again_at_the_next_start(tmp_path):
+    path = tmp_path / "page-preload.json"
+    page, told, _, _ = _page(preload_path=path)
+    assert page.preload is None and page.state()["preloaded"] is False
+    page.set_preload(URL)
+    assert told[-1]["preloaded"] is True and told[-1]["seq"] == 1
+    again, _, _, _ = _page(preload_path=path)
+    assert again.preload == URL and again.preloaded
+    again.set_preload(None)
+    assert _page(preload_path=path)[0].preload is None
+
+
+def test_a_damaged_file_keeps_nothing(tmp_path):
+    path = tmp_path / "page-preload.json"
+    for text in ("not json", "[]", '{"url": "ftp://x/y"}', '{"url": 3}'):
+        path.write_text(text)
+        assert _page(preload_path=path)[0].preload is None
+
+
+def test_the_same_address_again_is_loaded_afresh():
+    """K1: Home Assistant's way to renew it, after a crash the panel cannot see."""
+    page, told, _, _ = _page()
+    page.set_preload(URL)
+    n, seq = page.preload_n, page.seq
+    page.set_preload(URL)
+    assert page.preload_n == n + 1 and page.seq == seq + 1
+
+
+def test_it_is_preloaded_only_while_the_switch_is_on_with_a_screen():
+    """K5: off, it is unloaded; the address stays for when it is on again."""
+    on = [True]
+    page, told, _, _ = _page(available=lambda: on[0])
+    page.set_preload(URL)
+    assert page.preloaded
+    on[0] = False
+    page.refresh()
+    assert told[-1]["preloaded"] is False and page.preload == URL
+    on[0] = True
+    page.refresh()
+    assert told[-1]["preloaded"] is True
+
+
+async def test_closing_the_page_kept_leaves_it_kept():
+    """K4: every close only hides it."""
+    page, told, _, _ = _page()
+    page.set_preload(URL)
+    await page.show(URL, "cameras", 60)
+    assert await page.hide("touch")
+    assert page.preload == URL and told[-1]["preloaded"] is True and told[-1]["shown"] is False
+
+
+def test_the_address_kept_never_reaches_the_state():
+    page, told, _, _ = _page()
+    page.set_preload(URL)
+    assert URL not in repr(told) and URL not in repr(page.state())

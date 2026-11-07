@@ -473,6 +473,15 @@ on in *Settings → Display*, for each player.
   cameras, show few of them, in their small streams (640 × 360 rather than
   1280 × 720).
 
+- **A page kept loaded:** Home Assistant can give the player one page to
+  keep loaded and hidden (*Keep a page loaded*, `gexis.preload_page`), so
+  that showing it is at once - a doorbell does not wait for Home Assistant
+  to load. Shown, it is only revealed; gone, it is only hidden again. It
+  takes about 60-90 MB of memory and, idle, nothing measurable of the
+  processor; it is loaded again after a restart, and unloaded while the
+  switch is off. The page itself has to stop its own video while hidden:
+  it cannot tell it is hidden, so it goes by Home Assistant's state.
+
 Home Assistant needs the same two things as for the dashboard: to allow its
 pages to be shown inside another page, and to let the player in. A player
 whose dashboard shows can show its pages. A page that cannot be shown is
@@ -511,11 +520,12 @@ What Home Assistant gets:
   switched off); **and three buttons**: *Home*, *Now
   playing* and *Lyrics*, which open them on the screen (the last two while a
   source is active).
-- **On a player with a screen, pages**: two actions, *Show a page on the
+- **On a player with a screen, pages**: three actions, *Show a page on the
   screen* (`gexis.show_page`: the page's address, a name for it, and for how
-  long) and *Hide the page* (`gexis.hide_page`), and a binary sensor, *Page*,
-  on while one shows, its name and why the last one went among its
-  attributes; unavailable while *Pages from Home Assistant* is off on the
+  long), *Hide the page* (`gexis.hide_page`) and *Keep a page loaded*
+  (`gexis.preload_page`: the address, or none), and a binary sensor, *Page*,
+  on while one shows, its name, why the last one went and whether one is
+  kept loaded among its attributes; unavailable while *Pages from Home Assistant* is off on the
   player (*A page from Home Assistant*, above).
 - **On a player with a screen, a D-pad**: a remote, *D-pad*, whose commands
   `up`, `down`, `left`, `right`, `ok`, `back` and `home` move around the

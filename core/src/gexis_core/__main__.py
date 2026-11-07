@@ -79,7 +79,7 @@ from gexis_core.peppy_metadata import PeppyMetadataWriter, next_track
 from gexis_core.model import BLANK_METADATA, Queue, TrackMetadata
 from gexis_core import carry_over, connections, discovery, hardware_report, hardware_reports, personalise, settings_migrations, settling, updates, wired
 from gexis_core.dashboard import Dashboard, DashboardSchedule, explain as explain_dashboard
-from gexis_core.ha_page import Page as HaPage, read_heat
+from gexis_core.ha_page import PRELOAD_PATH as PAGE_PRELOAD_PATH, Page as HaPage, read_heat
 from gexis_core.panel_input import PanelInput
 from gexis_core import standby as standby_module
 from gexis_core.standby import Schedule, Standby
@@ -3600,10 +3600,13 @@ async def main() -> None:
         elif token.get("visualiser"):
             await peppy.request_async("show")
 
+    def _pages_on() -> bool:
+        return settings.value("ha_pages") is True and settings.value("headless") is not True
+
     ha_page = HaPage(lambda state: state_store.set_panel(page=state),
-                     prepare=_page_prepare, restore=_page_restore, heat=read_heat)
-    state_store.set_panel(page=ha_page.state(),
-                          pages=settings.value("ha_pages") is True and settings.value("headless") is not True)
+                     prepare=_page_prepare, restore=_page_restore, heat=read_heat,
+                     available=_pages_on, preload_path=PAGE_PRELOAD_PATH)
+    state_store.set_panel(page=ha_page.state(), pages=_pages_on())
     # ADR-0157: the phone's taps and typing made real over a framed page,
     # in the panel's session - the same one the visualiser's wlrctl reaches.
     panel_input = PanelInput(runtime_dir=config.peppy_runtime_dir,

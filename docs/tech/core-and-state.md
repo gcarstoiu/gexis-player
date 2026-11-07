@@ -799,6 +799,21 @@ key calls `hide?by=key`, and `data-dpad-cover` keeps the D-pad's ring off.
 The idle countdown and the takeover wait while it is up, and what it covers
 stops animating (`html.page-up`).
 
+**A page kept loaded** (the amendment, K1-K8). `POST /panel/page/preload`
+(`{url}`; `{url: null}` or `""` clears it, allowed with the switch off) is
+checked as a show is and saved in `/var/lib/gexis-core/page-preload.json`,
+outside the settings, `/state` and backups; `Page` reads it at start.
+`panel.page.preloaded` is true while an address is set, `ha_pages` is on
+and the player is not headless; the switch's write calls `Page.refresh`.
+`GET /panel/page` adds `preload: {url, n}` for the panel only, `n` one more
+each time the address is given (the same one again reloads it), and a show
+of that address skips the probe. The panel mounts `PageScreen` while
+`preloaded`, with the kept page in a frame of its own under `visibility:
+hidden` and the layer itself hidden and untouchable; a show of the kept
+address reveals that frame, any other loads a second frame over it, and
+every close hides it again (Finding 143: hidden it draws nothing and is not
+reloaded when shown, but still reads itself as visible).
+
 ## Other players on the network (ADR-0136)
 
 Each player announces `_gexis._tcp` on port 8090
