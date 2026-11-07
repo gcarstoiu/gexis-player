@@ -179,7 +179,11 @@ in the integration. Measured the same day, one run and no more (George):
 [Finding 142](docs/findings/142-a-live-camera-page-on-the-panel-while-music-plays.md) -
 seven cameras fit beside music at 44.1 kHz on the plain path, with half the
 DAC's margin, 1.6 cores more and 74 °C still rising. ADR-0176 accepted the
-same day (George); building on `ph-ha-page`, then a preview on sofapi.
+same day (George); built on `ph-ha-page` (worktree `~/projects/gexis-player-ph35`)
+and the integration's `ha-page` (0.6.0, from `main`; `multiroom` left as it
+is). Preview `1.14.0+git25.4b831af` on sofapi (2026-11-07 18:49, run
+42397583346); George's tests next, then the release (1.15.0) and the
+integration's 0.6.0 after it.
 
 Phases and their IDs: `docs/DEVELOPMENT.md`. MPD parked (ADR-0151). **Raspberry
 Pi Imager** (ADR-0159, a task): Imager's own list stays open as it is
