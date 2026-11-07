@@ -169,8 +169,16 @@ without being built. George's decisions the same day are in
 most 3 dB, *Bass* or *Full range*, in groups as the bass). The brief
 `design/briefs/30-room-correction-full.md` is George's to hand to Claude
 Design. Next: a full-range measurement of the room once sofapi is on 1.14.0,
-then the ADR
-(`docs/DEVELOPMENT.md`, the IDs there); MPD parked (ADR-0151). **Raspberry
+then the ADR.
+
+**Phase 35** (`ph-ha-page`, George 2026-11-07, now, while 30 waits): Home
+Assistant puts a page of its own on the screen for a while (live cameras)
+and takes it down. In the player, not a plugin; any touch closes it; a time
+limit, else 10 minutes; a switch for each player, off; show and hide actions
+in the integration. Next: a live camera page from Home Assistant on sofapi while music plays
+(figures only, no screenshots), once sofapi is on 1.14.0, then the ADR.
+
+Phases and their IDs: `docs/DEVELOPMENT.md`. MPD parked (ADR-0151). **Raspberry
 Pi Imager** (ADR-0159, a task): Imager's own list stays open as it is
 (George, 2026-10-24).
 
@@ -188,7 +196,7 @@ consecutively without letters, each with a stable ID (George, 2026-10-13).
 On Stable with work open: 22 (multiroom), 23 (AirPlay 2, limited testing),
 27 (releases built on GitHub; a card still to flash) and 28 (Plexamp and
 Beszel to the catalogue), both with 1.13.0. 29 (room correction for the
-bass) in progress, on Testing with 1.14.0; 30 in research (2026-11-07), then 31-34; MPD parked. `docs/DEVELOPMENT.md`
+bass) in progress, on Testing with 1.14.0; 30 in research (2026-11-07) and 35 beside it (2026-11-07), then 31-34; MPD parked. `docs/DEVELOPMENT.md`
 holds each phase's acceptance criteria.
 
 ## Machines
