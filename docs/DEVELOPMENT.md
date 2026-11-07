@@ -3831,6 +3831,16 @@ one point's response makes every other point worse. Later, the time-domain
 part Dirac adds (mixed-phase, multi-position design; Finding 124's second
 tier: DRC-FIR first, then our own design after the Dirac paper and Carini).
 
+**Grouped players** (George, 2026-11-07): the full-range correction does not
+support synced playing in a group - too many variables for what is likely a
+minority use. How a player with it on behaves when grouped is for the ADR.
+
+**Research started 2026-11-07** (George), before the ADR: what correcting
+above the bass is worth and how, the positions, and the time-domain part
+with its cost - whether that part comes in this phase is still open. Desk
+research done the same day:
+[Finding 141](findings/141-room-correction-above-the-bass-what-is-known.md).
+
 **An ADR before anything is built.** It must settle: how many positions and
 where; the target curve and how it is chosen; how much correction above the
 bass, smoothed how; whether the time-domain part comes in this phase or a
