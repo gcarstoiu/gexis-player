@@ -4029,6 +4029,64 @@ must settle:
 
 **Acceptance:** drafted with its ADR, if one is written.
 
+### Phase 35 — A page from Home Assistant on the screen
+
+**ID:** `ph-ha-page` · added 2026-11-07 as 35 (George).
+
+**Added 2026-11-07** (George, asked from the Home Assistant side). Home
+Assistant puts a page of its own on a player's screen for a while - live
+cameras when the doorbell rings, for example - and takes it down again. Today
+the only way is the dashboard (Phase 18, ADR-0156), which has one address in
+Settings, so such a page would replace the owner's dashboard.
+
+**What the repository shows** (2026-11-07):
+- A plugin cannot do it: plugins add no API routes and no `/state` fields,
+  and draw nothing on the panel (`docs/PLUGIN-CONTRACT.md`).
+- The dashboard has most of the parts: the page framed in the panel, the
+  check that Home Assistant allows framing, the login kept in the kiosk's
+  profile, Back on a remote taking it down, the standby API.
+- Missing: the address given in the call; a layer above the dashboard and
+  the idle screen; the visualiser put back afterwards (the dashboard takes it
+  down and nothing restores it); waking the screen, and standby again after.
+- Live video on the panel is not measured: the kiosk's Chromium has no
+  hardware video flags, and no finding covers video or WebRTC.
+
+**Decided before the ADR** (George, 2026-11-07; Claude's recommendations):
+- **In the player**, not as a plugin: a plugin would only pass the calls on
+  to what the player has to build anyway.
+- **Over everything**, as asked: the music, the idle screen, the dashboard
+  and the visualiser, the music playing on. Hiding it returns to exactly what
+  was there; a screen in standby wakes for it and goes back to standby.
+- **Any touch closes it**, through a layer over the page as on the idle
+  screen, and so does Back on any remote; Home Assistant sees it in `/state`.
+- **A time limit**: given in the call, else 10 minutes.
+- **A switch for each player, off by default** (Settings → Display); Home
+  Assistant reads it and offers the screen only where it is on.
+- **The Home Assistant integration** gets show and hide actions on the
+  player's media_player and the page shown as state; this changes ADR-0160
+  D3.
+- **A measurement before the ADR**: a live camera page from Home Assistant on sofapi while
+  music plays at 192 kHz with room correction; CPU, temperature and dropouts
+  only, no screenshots (George allowed it).
+- **Settings** for ADR-0022's inventory, appended with the ADR: [N] pages
+  from Home Assistant, for each player, off by default (George confirmed).
+
+**An ADR before anything is built.** It must settle: the API and the
+state's fields; the layer's place among the panel's and how the view before
+comes back; what the frame needs for live video; what live video costs a Pi
+4 while music plays, and what the player does when it is too much; a second
+page while one is shown.
+
+**Acceptance (draft):**
+
+1. Home Assistant shows a page on a player with the switch on, over whatever
+   is there, the music playing on; a screen in standby wakes for it.
+2. A touch, Back, the time limit or Home Assistant takes it down; the panel
+   returns to what it showed, standby included, and Home Assistant sees it.
+3. With the switch off the player refuses, and Home Assistant offers nothing.
+4. Live cameras while music plays at 192 kHz with room correction: no
+   dropouts - recorded as a finding.
+
 
 ### Parked
 
