@@ -175,8 +175,10 @@ then the ADR.
 Assistant puts a page of its own on the screen for a while (live cameras)
 and takes it down. In the player, not a plugin; any touch closes it; a time
 limit, else 10 minutes; a switch for each player, off; show and hide actions
-in the integration. Next: a live camera page from Home Assistant on sofapi while music plays
-(figures only, no screenshots), once sofapi is on 1.14.0, then the ADR.
+in the integration. Measured the same day, one run and no more (George):
+[Finding 142](docs/findings/142-a-live-camera-page-on-the-panel-while-music-plays.md) -
+seven cameras fit beside music at 44.1 kHz on the plain path, with half the
+DAC's margin, 1.6 cores more and 74 °C still rising. Next: the ADR.
 
 Phases and their IDs: `docs/DEVELOPMENT.md`. MPD parked (ADR-0151). **Raspberry
 Pi Imager** (ADR-0159, a task): Imager's own list stays open as it is

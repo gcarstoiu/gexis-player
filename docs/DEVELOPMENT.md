@@ -4068,8 +4068,18 @@ Settings, so such a page would replace the owner's dashboard.
 - **A measurement before the ADR**: a live camera page from Home Assistant on sofapi while
   music plays at 192 kHz with room correction; CPU, temperature and dropouts
   only, no screenshots (George allowed it).
-- **Settings** for ADR-0022's inventory, appended with the ADR: [N] pages
-  from Home Assistant, for each player, off by default (George confirmed).
+- **Settings** for ADR-0022's inventory, appended with the ADR (George
+  confirmed): [N] pages from Home Assistant, for each player, off by
+  default; [H] 10 minutes when the call gives no limit.
+
+**Measured 2026-11-07**
+([Finding 142](findings/142-a-live-camera-page-on-the-panel-while-music-plays.md)):
+one run, seven cameras for 5 minutes over music at 44.1 kHz on the plain
+path - no 192 kHz music was to hand, and with room correction not measured
+on sofapi George chose the plain path over the equaliser. No underrun at
+the DAC, but half its margin; about 1.6 cores more; 74 °C and still rising;
+H.264 decoded in software; 3-15 % of frames dropped and two streams nearly
+stopped. No more runs (George).
 
 **An ADR before anything is built.** It must settle: the API and the
 state's fields; the layer's place among the panel's and how the view before
