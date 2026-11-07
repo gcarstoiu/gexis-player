@@ -79,6 +79,9 @@ plus the dashboard and the visualiser):
   also two actions, `gexis.show_page` and `gexis.hide_page`, and a binary
   sensor *Page*, for a page of Home Assistant's own on the screen for a
   while. Still no settings: the switch that allows it stays the player's.
+  Amended again the same day (George, ADR-0176's amendment): a third
+  action, `gexis.preload_page`, gives the page the player keeps loaded and
+  hidden - Home Assistant's own address, not one of the player's settings.
 - While the socket is down the entities are unavailable, and it reconnects.
 
 **D4 — Its own public repository** (George, 2026-10-24):

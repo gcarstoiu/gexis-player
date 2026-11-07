@@ -654,3 +654,4 @@ Confirmed by George, 2026-11-07, [ADR-0176](0176-a-page-from-home-assistant-on-t
 | Page time limit | [H] | 10 minutes when the call gives none |
 | Longest time limit | [H] | 60 minutes a call may ask |
 | Page heat limit | [H] | 80 °C, or the firmware throttling: the page is taken down |
+| Page kept loaded | [N] | The address Home Assistant gives (`gexis.preload_page`), loaded and hidden so a show only reveals it; none until set; kept on the player, not shown in Settings (amendment, the same day) |

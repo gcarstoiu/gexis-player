@@ -4090,6 +4090,15 @@ down at 80 °C or throttling; at most 60 minutes a call; two actions and a
 binary sensor in the integration (ADR-0160 D3 amended). The settings are in
 ADR-0022.
 
+**Amended 2026-11-07** (George, from the Home Assistant side: a doorbell
+cannot wait for Home Assistant to load): one page kept loaded and hidden, so
+a show of it only reveals it - in 1.15.0, its address from Home Assistant
+(`gexis.preload_page`). Measured first
+([Finding 143](findings/143-a-home-assistant-page-kept-loaded-and-hidden.md)):
+about 60-90 MB, no processor that could be measured, nothing drawn while
+hidden, and the page still reads itself as visible. K1-K8 accepted as
+proposed; *Page kept loaded* [N] in ADR-0022.
+
 **Acceptance (draft):**
 
 1. Home Assistant shows a page on a player with the switch on, over whatever
