@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-11-06 (on R2D2).
+Last updated: 2026-11-07 (on R2D2).
 
 ## Start here
 
@@ -161,7 +161,10 @@ indexes, not these copies; George had the older releases' copies removed
 HACS's maintainers - do not ask them for a review (their template).
 
 After Phase 29: 30 (room correction for the full range) and 31-33 in order,
-each ADR first
+each ADR first. **Phase 30's research started 2026-11-07** (George): desk
+research in [Finding 141](docs/findings/141-room-correction-above-the-bass-what-is-known.md);
+grouped players not supported (George); the time-domain part in it or
+later still open, for George
 (`docs/DEVELOPMENT.md`, the IDs there); MPD parked (ADR-0151). **Raspberry
 Pi Imager** (ADR-0159, a task): Imager's own list stays open as it is
 (George, 2026-10-24).
