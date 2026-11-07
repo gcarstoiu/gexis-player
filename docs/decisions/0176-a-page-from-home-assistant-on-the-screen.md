@@ -1,7 +1,8 @@
 # ADR-0176 — A page from Home Assistant on the screen
 
-**Status:** **Proposed** 2026-11-07, Phase 35 (`ph-ha-page`). Decisions 1-7
-are George's (2026-11-07); *How* is Claude's proposal, for George to accept.
+**Status:** **Accepted** 2026-11-07 (George), Phase 35 (`ph-ha-page`).
+Decisions 1-7 are George's; *How* is Claude's proposal, accepted as a whole
+the same day, with P1's longest limit, P4, P5 and P8 chosen by George.
 **Builds on:** [ADR-0156](0156-home-assistant-dashboard-on-the-screen.md)
 (the dashboard, framed in the panel), [ADR-0160](0160-the-player-in-home-assistant.md)
 (the integration), [ADR-0135](0135-display-standby.md) (standby),
@@ -58,7 +59,8 @@ room correction's stage, fewer cameras and longer runs were not measured.
 file (ADR-0152):
 - `POST /panel/page/show` with `{"url": "...", "id": "...", "seconds": N}`.
   `url` is http or https; `id` is Home Assistant's name for the page
-  (default `page`); `seconds`, from 10 to 3600, is the limit (default 600).
+  (default `page`); `seconds`, from 10 to 3600, is the limit (default 600;
+  the longest, 60 minutes, George's choice over none and over 10 minutes).
   The core checks the address as it does the dashboard's (`idle_page.probe`)
   before showing it, and refuses with the reason when the page cannot be
   framed or does not answer, so the action fails in Home Assistant with a
@@ -91,7 +93,8 @@ storage partition, so a player whose dashboard shows has the page's too
 **P4 - Closing.**
 - A touch anywhere closes it; that touch does nothing else.
 - Any D-pad key closes it (`/panel/key`, before the key is pressed), as any
-  touch does - the remote's version of decision 3; the key is not passed on.
+  touch does - the remote's version of decision 3; the key is not passed on
+  (George, over Back only).
 - The page never takes the focus, so a USB keyboard stays the panel's.
 - The limit ends it; the switch turned off ends it.
 
@@ -106,7 +109,8 @@ taking it down shows what is there:
   for something - the visualiser, the dashboard, a view from the phone -
   takes the page down first (`closed.by: asked`); what comes by
   itself - the idle countdown, the visualiser's timeout, a standby time -
-  waits until it has gone.
+  waits until it has gone (George, over the page holding against everything
+  but a touch, a key, the limit and Home Assistant).
 
 **P6 - Standby.** A screen in standby wakes for the page (the API's wake,
 ADR-0135) and goes back to standby when the page goes, unless someone used
@@ -119,8 +123,9 @@ music's. A player in a group shows it alone.
 **P8 - When it is too much** (Finding 142: heat over the 10 minutes). The
 music comes first: if the processor reaches 80 °C - where the Pi 4's
 firmware starts slowing it - or the firmware reports it throttled, the core
-takes the page down (`closed.by: heat`) and logs it. The manual advises
-fewer cameras and the smaller streams for a player's screen.
+takes the page down (`closed.by: heat`) and logs it (George, over no guard).
+The manual advises fewer cameras and the smaller streams for a player's
+screen.
 
 **P9 - The integration** (its own repository, a minor version):
 - `gexis.show_page` (target: the player's media player; `url`, `id`,
@@ -154,17 +159,12 @@ sign-in and framing it shares with the dashboard, and the advice of P8.
 
 ## Settings (ADR-0022)
 
-Confirmed by George (2026-11-07), appended when this record is accepted:
+Confirmed by George (2026-11-07), appended to ADR-0022 the same day:
 
 | Setting | Mark | Notes |
 |---|---|---|
 | Pages from Home Assistant | [N] | On or off for each player, off by default; off refuses every page and closes one shown |
 | Page time limit | [H] | 10 minutes when the call gives none |
-
-Proposed, for George to confirm:
-
-| Setting | Mark | Notes |
-|---|---|---|
 | Longest time limit | [H] | 60 minutes a call may ask (P1) |
 | Page heat limit | [H] | 80 °C, or the firmware throttling (P8) |
 

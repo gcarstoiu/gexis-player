@@ -643,3 +643,14 @@ Confirmed by George, 2026-11-03 (the A/B and countdown rows 2026-11-04, the time
 | Room correction A/B | [N] | With or without, kept for each output and in backups (George, 2026-11-04); *without* keeps the stage in the path with the cuts at 0 dB, *off* takes it out |
 | Measurement countdown | [H] | 3 s after the tap at each position, before its sweeps |
 | Measurement timeout | [H] | A run waiting for a tap is cancelled after 10 minutes, the output left as it was (George, 2026-11-05) |
+
+### Appended 2026-11-07 — a page from Home Assistant on the screen
+
+Confirmed by George, 2026-11-07, [ADR-0176](0176-a-page-from-home-assistant-on-the-screen.md):
+
+| Setting | Mark | Notes |
+|---|---|---|
+| Pages from Home Assistant | [N] | On or off for each player, off by default; off refuses every page and closes one shown |
+| Page time limit | [H] | 10 minutes when the call gives none |
+| Longest time limit | [H] | 60 minutes a call may ask |
+| Page heat limit | [H] | 80 °C, or the firmware throttling: the page is taken down |
