@@ -235,6 +235,14 @@ dashboard loaded too (not asked).
 **Unverified:** a preloaded page beside music, and over hours; a 2 GB Pi;
 what a crashed hidden frame shows when revealed.
 
+**As built** (2026-11-07, `ph-ha-page` and the integration's `ha-page`):
+- `GET /panel/page` gives the panel `preload: {url, n}`, `n` one more each
+  time the address is given; `seq` goes up with it, so the panel fetches.
+- A page to keep is refused while the room is being measured (409), as a
+  show is.
+- The integration's action is named *Keep a page loaded*; the sensor's
+  attribute *Page kept loaded* (`preloaded`).
+
 ## Considered and not chosen
 
 - **As a plugin** (decision 1): a new plugin capability to draw on the panel,
