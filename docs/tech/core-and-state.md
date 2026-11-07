@@ -761,6 +761,44 @@ character the layout lacks is left out and the answer says so (`done: false`); t
 shows a note (`untyped`). The devices are made at the first use and given a
 second to settle.
 
+## A page from Home Assistant (ADR-0176)
+
+`ha_page.py`. `Page` holds whether a page is up, its `id`, its address,
+`until` and why the last one went, published as `panel.page = {shown, id,
+until, seq, closed: {id, by, at}}` - never the address, since `/state` is
+open to the network; `seq` goes up when the panel has a page to load. `POST
+/panel/page/show` (`{url, id = "page", seconds = 600}`, 10 to 3600) is
+refused while `ha_pages` is off (403), on a headless player or during a room
+measurement (409); the address goes through the idle page's probe first,
+and a page that cannot be framed is refused with `ha_page.explain`'s
+sentence (422). A show while one is up replaces it (`closed.by: replaced`);
+the same id again restarts its limit. `POST /panel/page/hide` (`{id}`
+optional; `?by=touch` or `?by=key` from the panel only) and `GET
+/panel/page`, which adds `url` for the panel only and `pages`, the switch.
+`/player/status` carries `pages`; `panel.pages` follows the switch, whose
+write takes a page down (`off`).
+
+Before the first page `__main__` wakes a screen in standby and minimises
+the visualiser (`peppy_screen.hide_async`), and after the last it puts both
+back as they were - standby with its old reason. A person's request takes
+the page down first and puts nothing back (`back=False`, P5): the
+visualiser's show, the dashboard's (asked), `/panel/idle`, `/panel/go`,
+`/panel/standby/on` and a room measurement's start. A touch, a key, the
+limit, the heat, the API's hide and the switch put back. While
+one is up the visualiser's timer and the standby schedule wait
+(`blocked`). Any `/panel/key` press takes it down and is not pressed. A
+watch every 5 s reads `/sys/class/thermal/thermal_zone0/temp` and `vcgencmd
+get_throttled` (bits 0x2, 0x4, 0x8) and takes it down at 80 °C or
+throttling (`heat`); the limit's own task ends it (`limit`).
+
+The panel draws it (`PageScreen.svelte`, z-index 30, over the idle screen
+and the dashboard, under setup, pairing and *Keep this screen?*): an
+`<iframe>` sandboxed as the idle page's, its address from `GET /panel/page`,
+under a layer that takes any touch and calls `hide?by=touch`; a keyboard's
+key calls `hide?by=key`, and `data-dpad-cover` keeps the D-pad's ring off.
+The idle countdown and the takeover wait while it is up, and what it covers
+stops animating (`html.page-up`).
+
 ## Other players on the network (ADR-0136)
 
 Each player announces `_gexis._tcp` on port 8090
