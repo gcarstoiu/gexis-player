@@ -163,8 +163,13 @@ HACS's maintainers - do not ask them for a review (their template).
 After Phase 29: 30 (room correction for the full range) and 31-34 in order,
 each ADR first. **Phase 30's research started 2026-11-07** (George): desk
 research in [Finding 141](docs/findings/141-room-correction-above-the-bass-what-is-known.md);
-grouped players not supported (George); the level only - the time-domain
-part is Phase 34 (George), which may end without being built
+the level only - the time-domain part is Phase 34 (George), which may end
+without being built. George's decisions the same day are in
+`docs/DEVELOPMENT.md` (the main seat, to 20 kHz, the speaker's own slope, at
+most 3 dB, *Bass* or *Full range*, in groups as the bass). The brief
+`design/briefs/30-room-correction-full.md` is George's to hand to Claude
+Design. Next: a full-range measurement of the room once sofapi is on 1.14.0,
+then the ADR
 (`docs/DEVELOPMENT.md`, the IDs there); MPD parked (ADR-0151). **Raspberry
 Pi Imager** (ADR-0159, a task): Imager's own list stays open as it is
 (George, 2026-10-24).

@@ -3833,7 +3833,9 @@ tier: DRC-FIR first, then our own design after the Dirac paper and Carini).
 
 **Grouped players** (George, 2026-11-07): the full-range correction does not
 support synced playing in a group - too many variables for what is likely a
-minority use. How a player with it on behaves when grouped is for the ADR.
+minority use. **Changed the same day** (George), once the time-domain part
+was split off: correcting the level adds no delay, like the bass's cuts, so
+it works in a group as the bass correction does.
 
 **Research started 2026-11-07** (George), before the ADR: what correcting
 above the bass is worth and how, the positions, and the time-domain part
@@ -3844,13 +3846,41 @@ with its cost. Desk research done the same day:
 141): this phase corrects the level only. The time-domain part is Phase 34
 (`ph-room-correction-time`), which may end without being built.
 
-**An ADR before anything is built.** It must settle: how many positions and
-where; the target curve and how it is chosen; how much correction above the
-bass, smoothed how; what it costs a Pi 4 beside Phase 29's filter.
+**Decided before the ADR** (George, 2026-11-07, on Finding 141; Claude's
+recommendations unless marked):
+- **The seat**: the main seat, from Phase 29's three positions with the sweeps
+  extended to 20 kHz - over the whole sofa from more fixed positions, and over
+  a microphone moved along it. This replaces the plan's *more positions across
+  the listening area* (2026-10-20).
+- **How far up**: the whole range, to 20 kHz (George, over about 5 kHz, which
+  Claude recommended, and over about 1 kHz).
+- **The target above the bass**: the speaker's own slope in the room - broad
+  bumps and dips taken out, the slope kept - over a fixed fall of about 1 dB
+  per octave and over a tilt the owner sets.
+- **How strong**: at most 3 dB up or down, broad filters only - over cuts only
+  and over 6 dB.
+- **Bass or full range**: the owner can keep the bass correction alone; one
+  switch as now, and a choice of how far it reaches.
+- **It starts at the full range** after a new measurement; a measurement
+  from before this phase stays at the bass until the room is measured again.
+- **A measurement of George's room over the full range before the ADR**: the
+  three positions and three more around the head, to see whether three are
+  enough; at 60 dB.
+- **Settings** for ADR-0022's inventory, appended with the ADR (George
+  confirmed): [N] Bass or Full range for each output; [H] up to 20 kHz;
+  [H] at most 3 dB up or down above the bass; [H] the speaker's own slope as
+  the target above the bass; [H] the same three positions.
+
+The brief for Claude Design: `design/briefs/30-room-correction-full.md`
+(2026-11-07).
+
+**An ADR before anything is built.** It must settle what is not decided
+above: the filters and their smoothing, how the two ranges join, and what it
+costs a Pi 4 beside Phase 29's filter.
 
 **Acceptance (draft):**
 
-1. A measurement over the listening area completes from the phone and shows
+1. A measurement at the listening seat completes from the phone and shows
    the response before and after, per position and averaged.
 2. The averaged response is measurably closer to the target than without,
    and no position is measurably worse - recorded as a finding.
