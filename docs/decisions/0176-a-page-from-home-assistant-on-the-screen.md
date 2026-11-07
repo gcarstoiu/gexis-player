@@ -142,6 +142,18 @@ FAQ, the technical guide (`core-and-state.md`), the OpenAPI file, README's
 feature list and the integration's README: what it does, the switch, the
 sign-in and framing it shares with the dashboard, and the advice of P8.
 
+**As built** (2026-11-07, `ph-ha-page`):
+- `panel.page` also carries `seq`, one more each time the panel has a page to
+  load (a new one, or the same id at a new address): the panel fetches the
+  address from `GET /panel/page`, which gives it to the panel only.
+- A show is refused too while the room is being measured (409): the
+  measurement takes the screen to say so and wants the processor quiet. A
+  measurement's start takes a page down, as a person's request.
+- A USB keyboard's key on the panel closes the page as a remote's does
+  (`hide?by=key`, the panel's word only, as `?by=touch` is).
+- The integration's actions are named *Show a page on the screen* and *Hide
+  the page*; its version is 0.6.0, and it needs the player's 1.15.0.
+
 ## Considered and not chosen
 
 - **As a plugin** (decision 1): a new plugin capability to draw on the panel,
