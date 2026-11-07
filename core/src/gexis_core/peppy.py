@@ -432,7 +432,7 @@ class PeppyController:
         self._timer.attention()
         self.refused = True
         if action == "show" and self._blocked():
-            logger.info("peppy: not showing - the screen is in standby")
+            logger.info("peppy: not showing - the screen is in standby or showing a page")
             return False
         if action == "show" and not self._has_levels():
             logger.info("peppy: not showing - this output feeds it no levels")

@@ -13,6 +13,7 @@
   import VolumeDrawer from './screens/VolumeDrawer.svelte';
   import HandoffScreen from './screens/HandoffScreen.svelte';
   import DashboardScreen from './screens/DashboardScreen.svelte';
+  import PageScreen from './screens/PageScreen.svelte';
   import PairingFrame from './screens/PairingFrame.svelte';
   import Settings from './screens/Settings.svelte';
   import PhoneRemote from './screens/remote/PhoneRemote.svelte';
@@ -37,7 +38,7 @@
   import { loadSettings, settingValues, settingsDevice } from './lib/settings.js';
   import { theme } from './lib/theme.js';
   import { loadLibraryRoot } from './lib/library.js';
-  import { reportTouch, showPeppy, reportPainted, reportShown, requestDashboard } from './lib/state.js';
+  import { reportTouch, showPeppy, reportPainted, reportShown, requestDashboard, hidePage } from './lib/state.js';
   import { components } from './lib/state.js';
   import { lyricsAsk, lyricsShown } from './lib/panelView.js';
   import { startDpad } from './lib/dpad.js';
@@ -102,9 +103,12 @@
   //: A computer's touchpad or wheel along a slider moves it, on every surface
   //: (George, 2026-10-28; lib/scrollSlide.js).
   $effect(() => startWheelSlides());
-  function onPointerDown() {
+  function onPointerDown(event) {
     touches++;
     if (surface !== 'panel') return;
+    // ADR-0176 P4: a touch on a page from Home Assistant only closes it,
+    // which the core counts as use; it is not attention for the visualiser.
+    if (event?.target?.closest?.('[data-ha-page]')) return;
     const now = Date.now();
     if (now - lastReported > 1000) {
       lastReported = now;
@@ -238,6 +242,9 @@
     // **ADR-0156: the dashboard stays until it is dismissed**, and nothing
     // counts down under it; dismissed, the countdown starts again here.
     if (dashboardUp) return;
+    // **ADR-0176 P5: nor under a page from Home Assistant**: what comes by
+    // itself waits until it has gone.
+    if (pageUp) return;
     const id = setTimeout(() => {
       // In the dashboard's times it stands where the idle screen would.
       if (dashboardTime) requestDashboard(true, 'schedule').catch(() => (idle = true));
@@ -278,6 +285,11 @@
       untrack(() => (idle = true));
     }
   });
+  //: **ADR-0176: a page from Home Assistant on the screen**, for a while,
+  //: on the panel only. The core says which and when; the page asks it for
+  //: the address.
+  const pageUp = $derived(surface === 'panel' && $panel.page?.shown === true);
+  const closePage = (by) => hidePage(by).catch(() => {});
   const showDashboard = () => requestDashboard(true).catch(() => {});
   const hideDashboard = () => requestDashboard(false).catch(() => {});
 
@@ -1041,8 +1053,14 @@
     <DashboardScreen ondismiss={hideDashboard} />
   {/if}
 
-  {#if shownHandoff && !dashboardUp}
+  {#if shownHandoff && !dashboardUp && !pageUp}
     <HandoffScreen from={shownHandoff.from} to={shownHandoff.to} />
+  {/if}
+
+  {#if pageUp}
+    <!-- ADR-0176: over the idle screen and the dashboard; a touch or a key
+         closes it, and what was there is under it still. -->
+    <PageScreen seq={$panel.page.seq} onclose={closePage} />
   {/if}
 
   <!-- ADR-0175: while the room is measured, the screen says so - over the

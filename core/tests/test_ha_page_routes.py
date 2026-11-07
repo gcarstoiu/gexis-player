@@ -1,0 +1,180 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""ADR-0176: the routes for a page from Home Assistant on the screen."""
+import pytest
+from aiohttp.test_utils import TestClient, TestServer
+
+from gexis_core import panel_token
+from gexis_core.ha_page import Page
+from gexis_core.settings_registry import UnknownSetting
+from gexis_core.state import StateStore
+from gexis_core.wsserver import StateServer
+
+URL = "http://ha.example:8123/home-security/tv"
+TOKEN = "t" * 32
+
+
+class _Settings:
+    def __init__(self, **values):
+        self.values = {"ha_pages": True, "headless": False, **values}
+
+    def value(self, key):
+        if key not in self.values:
+            raise UnknownSetting(key)
+        return self.values[key]
+
+    def set(self, key, value):
+        self.values[key] = value
+        return value
+
+    def row(self, key):
+        return {}
+
+
+class _Keys:
+    def __init__(self):
+        self.pressed = []
+
+    async def dpad(self, name):
+        self.pressed.append(name)
+        return True
+
+
+def _setup(check=None, **settings):
+    store = StateStore({})
+    restored = []
+
+    async def restore(token, back):
+        restored.append(back)
+
+    page = Page(lambda state: store.set_panel(page=state), restore=restore)
+
+    async def ok(url):
+        return {"url": url, "embeddable": True, "reason": None}
+
+    server = StateServer(store, settings=_Settings(**settings), page=page, page_check=check or ok,
+                         panel_input=_Keys())
+    return store, page, server, restored
+
+
+@pytest.mark.asyncio
+async def test_a_show_puts_it_up_without_the_address_in_the_state():
+    store, page, server, _ = _setup()
+    async with TestClient(TestServer(server.make_app())) as client:
+        r = await client.post("/panel/page/show", json={"url": URL, "id": "cameras", "seconds": 120})
+        assert r.status == 200 and (await r.json())["shown"] is True
+        assert store.state.panel["page"]["id"] == "cameras" and page.url == URL
+        assert URL not in repr(store.state.panel)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("settings, status", [
+    ({"ha_pages": False}, 403),
+    ({"ha_pages": None}, 403),
+    ({"headless": True}, 409),
+])
+async def test_the_switch_off_or_no_screen_refuses_a_show(settings, status):
+    _, page, server, _ = _setup(**settings)
+    async with TestClient(TestServer(server.make_app())) as client:
+        r = await client.post("/panel/page/show", json={"url": URL})
+        assert r.status == status and "error" in await r.json()
+        assert not page.shown
+
+
+@pytest.mark.asyncio
+async def test_a_bad_call_is_a_400_and_an_unknown_action_a_404():
+    _, page, server, _ = _setup()
+    async with TestClient(TestServer(server.make_app())) as client:
+        assert (await client.post("/panel/page/show", json={"url": "ftp://x"})).status == 400
+        assert (await client.post("/panel/page/show", data="nonsense")).status == 400
+        assert (await client.post("/panel/page/show", json={"url": URL, "seconds": 4000})).status == 400
+        assert (await client.post("/panel/page/raise", json={"url": URL})).status == 404
+        assert not page.shown
+
+
+@pytest.mark.asyncio
+async def test_a_page_that_cannot_be_framed_is_refused_with_its_sentence():
+    async def refuses(url):
+        return {"url": url, "embeddable": False, "reason": "refuses framing"}
+
+    _, page, server, _ = _setup(check=refuses)
+    async with TestClient(TestServer(server.make_app())) as client:
+        r = await client.post("/panel/page/show", json={"url": URL})
+        body = await r.json()
+        assert r.status == 422 and body["reason"] == "refuses framing"
+        assert "Send X-Frame-Options" in body["error"] and not page.shown
+
+
+@pytest.mark.asyncio
+async def test_the_address_is_given_to_the_panel_only():
+    store = StateStore({})
+    page = Page(lambda state: store.set_panel(page=state))
+
+    async def ok(url):
+        return {"url": url, "embeddable": True, "reason": None}
+
+    server = StateServer(store, settings=_Settings(), page=page, page_check=ok, panel_token=TOKEN)
+    async with TestClient(TestServer(server.make_app())) as client:
+        await client.post("/panel/page/show", json={"url": URL})
+        anyone = await (await client.get("/panel/page")).json()
+        panel = await (await client.get("/panel/page", headers={panel_token.HEADER: TOKEN})).json()
+        assert "url" not in anyone and anyone["shown"] is True and anyone["pages"] is True
+        assert panel["url"] == URL
+
+
+@pytest.mark.asyncio
+async def test_a_hide_with_an_id_closes_only_that_page_and_a_touch_is_the_panels_word():
+    store, page, server, restored = _setup()
+    async with TestClient(TestServer(server.make_app())) as client:
+        await client.post("/panel/page/show", json={"url": URL, "id": "cameras"})
+        r = await client.post("/panel/page/hide", json={"id": "doorbell"})
+        assert (await r.json())["hidden"] is False and page.shown
+        r = await client.post("/panel/page/hide?by=touch")
+        assert (await r.json())["hidden"] is True
+        assert store.state.panel["page"]["closed"]["by"] == "touch" and restored == [True]
+
+
+@pytest.mark.asyncio
+async def test_a_touch_from_anyone_but_the_panel_is_an_ordinary_hide():
+    store = StateStore({})
+    page = Page(lambda state: store.set_panel(page=state))
+    server = StateServer(store, settings=_Settings(), page=page, panel_token=TOKEN)
+    async with TestClient(TestServer(server.make_app())) as client:
+        await client.post("/panel/page/show", json={"url": URL})
+        await client.post("/panel/page/hide?by=touch")
+        assert store.state.panel["page"]["closed"]["by"] == "asked"
+
+
+@pytest.mark.asyncio
+async def test_any_key_closes_the_page_and_is_not_passed_on():
+    """P4 (George, 2026-11-07): the remote's version of any touch."""
+    store, page, server, _ = _setup()
+    async with TestClient(TestServer(server.make_app())) as client:
+        await client.post("/panel/page/show", json={"url": URL})
+        r = await client.post("/panel/key", json={"key": "down"})
+        assert await r.json() == {"key": "down", "page": "hidden"}
+        assert server._panel_input.pressed == [] and store.state.panel["page"]["closed"]["by"] == "key"
+        await client.post("/panel/key", json={"key": "down"})
+        assert server._panel_input.pressed == ["down"]
+
+
+@pytest.mark.asyncio
+async def test_a_persons_request_takes_the_page_down_without_putting_back():
+    """P5 (George, 2026-11-07): a person's request wins."""
+    store, page, server, restored = _setup()
+    async with TestClient(TestServer(server.make_app())) as client:
+        await client.post("/panel/page/show", json={"url": URL})
+        assert (await client.post("/panel/go/home")).status == 200
+        assert not page.shown and restored == [False]
+        assert store.state.panel["page"]["closed"]["by"] == "asked"
+
+
+@pytest.mark.asyncio
+async def test_the_switch_turned_off_takes_a_page_down_and_the_status_says_so():
+    store, page, server, _ = _setup()
+    async with TestClient(TestServer(server.make_app())) as client:
+        assert (await (await client.get("/player/status")).json())["pages"] is True
+        await client.post("/panel/page/show", json={"url": URL})
+        assert (await client.put("/settings/ha_pages", json={"value": False})).status == 200
+        assert not page.shown and store.state.panel["page"]["closed"]["by"] == "off"
+        assert store.state.panel["pages"] is False
+        assert (await (await client.get("/player/status")).json())["pages"] is False

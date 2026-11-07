@@ -45,7 +45,7 @@ from aiohttp import web
 from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
-from gexis_core import memo, own_wallpapers, panel_token, screen_apply, settling, updates
+from gexis_core import ha_page, memo, own_wallpapers, panel_token, screen_apply, settling, updates
 from gexis_core.players import Players, own_id, status_line
 from gexis_core.group import GroupError
 from gexis_core.wallpapers import SEARCH as PIXABAY_SEARCH
@@ -146,6 +146,8 @@ class StateServer:
         standby=None,
         dashboard=None,
         dashboard_page=None,
+        page=None,
+        page_check=None,
         panel_input=None,
         equaliser=None,
         room=None,
@@ -231,6 +233,10 @@ class StateServer:
         #: ADR-0156: the Home Assistant dashboard, and the check of its address.
         self._dashboard = dashboard
         self._dashboard_page = dashboard_page
+        #: ADR-0176: a page from Home Assistant on the screen
+        #: (`ha_page.Page`), and the check of its address (`idle_page.probe`).
+        self._page = page
+        self._page_check = page_check
         #: ADR-0157: real taps and typing on the panel, over a framed page.
         self._panel_input = panel_input
         #: ADR-0162: the equaliser (`eq_control.EqualiserControl`).
@@ -1468,6 +1474,8 @@ class StateServer:
                 # Home Assistant offers the idle screen only where the phone
                 # does: while it is switched on (ADR-0163).
                 "idle_screen": self._setting_or_none("idle_enabled") is True,
+                # ADR-0176 P2: where Home Assistant may put a page.
+                "pages": self._pages_on(),
                 **status_line(state, state.sources),
                 # ADR-0166: its group API, group, Lyrion and level.
                 **(self._multiroom.status() if self._multiroom is not None else {})}
@@ -1629,6 +1637,7 @@ class StateServer:
         if self._standby is None:
             return web.json_response({"error": "standby is not wired up"}, status=503)
         if action == "on":
+            await self._page_gives_way()
             await self._standby.sleep("asked")
         elif action == "off":
             await self._standby.wake("phone")
@@ -1656,6 +1665,8 @@ class StateServer:
             return web.json_response({"error": "the dashboard is not wired up"}, status=503)
         by = "schedule" if request.query.get("by") == "schedule" else "asked"
         if action == "show":
+            if by == "asked":
+                await self._page_gives_way()
             if by == "asked" and self._peppy is not None:
                 self._peppy.on_touch()
             self._dashboard.show(by)
@@ -1664,6 +1675,75 @@ class StateServer:
         else:
             return web.json_response({"error": f"unknown action {action}"}, status=404)
         return web.json_response({"shown": self._dashboard.shown, "by": self._dashboard.by})
+
+    def _pages_on(self) -> bool:
+        """ADR-0176 decision 5: the owner's switch, on a player with a screen."""
+        return (self._setting_or_none("ha_pages") is True
+                and self._setting_or_none("headless") is not True)
+
+    async def _page_gives_way(self) -> None:
+        """**ADR-0176 P5: a person's request wins.** Asking the panel for
+        something else takes the page down first, and leaves the visualiser
+        and standby to what was asked rather than putting back the old."""
+        if self._page is not None and self._page.shown:
+            await self._page.hide(ha_page.ASKED, back=False)
+
+    async def _handle_page(self, request: web.Request) -> web.Response:
+        """**ADR-0176: whether a page from Home Assistant is up.** Its
+        address only to the panel, which loads it: this route and the state's
+        socket are open on the network, and an address can carry a token (P2)."""
+        if self._page is None:
+            return web.json_response({"error": "pages are not wired up"}, status=503)
+        answer = {**self._page.state(), "pages": self._pages_on()}
+        if self._page.shown and self._from_panel(request):
+            answer["url"] = self._page.url
+        return web.json_response(answer)
+
+    async def _handle_page_request(self, request: web.Request) -> web.Response:
+        """**ADR-0176: a page up or down** - from Home Assistant (P1), or a
+        touch on it from the panel (`?by=touch`). A show's address is checked
+        as the dashboard's is and refused with the reason, so the action fails
+        in Home Assistant with a sentence rather than leaving this screen
+        blank."""
+        action = request.match_info["action"]
+        if self._page is None:
+            return web.json_response({"error": "pages are not wired up"}, status=503)
+        if action == "hide":
+            body = await self._json_body(request) or {}
+            page_id = body.get("id")
+            if page_id is not None and not isinstance(page_id, str):
+                return web.json_response({"error": "id must be text"}, status=400)
+            by = ha_page.ASKED
+            # A touch on it, or a keyboard's key: the panel's word only.
+            if request.query.get("by") in (ha_page.TOUCH, ha_page.KEY) and self._from_panel(request):
+                by = request.query["by"]
+                if self._standby is not None:
+                    self._standby.used()
+            hidden = await self._page.hide(by, page_id=page_id)
+            return web.json_response({"hidden": hidden, **self._page.state()})
+        if action != "show":
+            return web.json_response({"error": f"unknown action {action}"}, status=404)
+        if self._setting_or_none("headless") is True:
+            return web.json_response({"error": "this player has no screen"}, status=409)
+        if self._setting_or_none("ha_pages") is not True:
+            return web.json_response({"error": "Pages from Home Assistant are off on this player: "
+                                               "switch them on in Settings → Display."}, status=403)
+        # A measurement takes the screen to say so, and wants the processor
+        # quiet while it records.
+        if self._room is not None and self._room.running():
+            return web.json_response({"error": "The room is being measured on this player."}, status=409)
+        try:
+            url, page_id, seconds = ha_page.parse(await self._json_body(request))
+        except ha_page.Refused as refused:
+            return web.json_response({"error": refused.message}, status=refused.status)
+        # The page already up at this address (a second ring) is not checked again.
+        if self._page_check is not None and not (self._page.shown and self._page.url == url):
+            found = await self._page_check(url)
+            if not found.get("embeddable"):
+                return web.json_response({"error": ha_page.explain(found.get("reason")),
+                                          "reason": found.get("reason")}, status=422)
+        await self._page.show(url, page_id, seconds)
+        return web.json_response(self._page.state())
 
     async def _handle_panel_input(self, request: web.Request) -> web.Response:
         """**ADR-0157: the phone's tap or typing, made real.** The panel asks
@@ -1724,6 +1804,13 @@ class StateServer:
             return web.json_response({"error": "this player has no screen"}, status=409)
         if self._panel_input is None:
             return web.json_response({"error": "panel input is not wired up"}, status=503)
+        # ADR-0176 P4: any key closes a page from Home Assistant and does
+        # nothing else - the remote's version of any touch.
+        if self._page is not None and self._page.shown:
+            if self._standby is not None:
+                self._standby.used()
+            await self._page.hide(ha_page.KEY)
+            return web.json_response({"key": key, "page": "hidden"})
         woke = False
         if self._standby is not None:
             self._standby.used()
@@ -1846,6 +1933,7 @@ class StateServer:
             return web.json_response({"error": 'body must be {"action": ...}'}, status=400)
         action = body["action"]
         if action == "measure":
+            await self._page_gives_way()
             return await self._room_call(self._room.start)
         return await self._room_call(lambda: self._room.tap(action))
 
@@ -1858,6 +1946,7 @@ class StateServer:
         action = request.match_info["action"]
         if action not in ("show", "hide"):
             return web.json_response({"error": f"unknown action {action}"}, status=404)
+        await self._page_gives_way()
         if self._peppy is not None:
             self._peppy.on_touch()
         self._store.request_idle(action == "show")
@@ -1877,6 +1966,7 @@ class StateServer:
             return web.json_response({"error": f"unknown view {to}"}, status=404)
         if to != "home" and self._store.state.active is None:
             return web.json_response({"error": "nothing is playing"}, status=409)
+        await self._page_gives_way()
         if self._peppy is not None:
             self._peppy.on_touch()
         self._store.request_view(to)
@@ -2892,6 +2982,8 @@ class StateServer:
             return web.json_response({"error": "the Peppy screen is not wired up"}, status=503)
         if action not in ("show", "hide"):
             return web.json_response({"error": f"unknown action {action}"}, status=404)
+        if action == "show":
+            await self._page_gives_way()
         # Off the loop: raising or lowering waits on wlrctl (review, 2026-10-12).
         shown = await self._peppy.request_async(action)
         # **Only when it was tried and found no window** (ShelvesPi,
@@ -3195,6 +3287,10 @@ class StateServer:
         response = self._settings_call(lambda: {"key": key, "value": self._settings.set(key, value),
                                                 "revision": self._store.settings_revision})
         if response.status == 200 and self._settings_value(key) != before:
+            if key in ("ha_pages", "headless") and self._page is not None:
+                self._store.set_panel(pages=self._pages_on())
+                if not self._pages_on():
+                    await self._page.hide(ha_page.OFF)
             restarts = self._settings_restarts(key)
             if restarts == "core":
                 asyncio.ensure_future(self._restart_core_for(key))
@@ -3590,6 +3686,9 @@ class StateServer:
         app.router.add_post("/panel/standby/{action}", self._handle_standby)
         app.router.add_get("/panel/dashboard", self._handle_dashboard)
         app.router.add_post("/panel/dashboard/{action}", self._handle_dashboard_request)
+        # ADR-0176: a page from Home Assistant on the screen, for a while.
+        app.router.add_get("/panel/page", self._handle_page)
+        app.router.add_post("/panel/page/{action}", self._handle_page_request)
         app.router.add_post("/panel/input", self._handle_panel_input)
         app.router.add_get("/player/status", self._handle_player_status)
         app.router.add_get("/players", self._handle_players)

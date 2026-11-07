@@ -687,6 +687,14 @@
         ]
       },
       {
+        "key": "ha_pages",
+        "type": "toggle",
+        "label": "Pages from Home Assistant",
+        "marks": "N",
+        "note": "Home Assistant may put a page of its own on this screen for a while - cameras when the doorbell rings, for example. A touch or any remote key closes it. It needs what the dashboard needs in Home Assistant: see the manual.",
+        "default": false
+      },
+      {
         "type": "group",
         "label": "Touchpad",
         "accent": "#c8a2d8",

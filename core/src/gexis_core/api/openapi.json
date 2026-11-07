@@ -6314,6 +6314,190 @@
         }
       }
     },
+    "/panel/page": {
+      "get": {
+        "operationId": "page",
+        "tags": [
+          "Panel"
+        ],
+        "summary": "Whether a page from Home Assistant is on the screen",
+        "description": "The page Home Assistant put on the screen for a while (ADR-0176), as `panel.page` on `/state` says it, and whether this player allows pages (`pages`: the owner's *Pages from Home Assistant* switch, on a player with a screen). The address is given only to the panel, which loads it: an address can carry a token, and this route is open to the home network.",
+        "x-gexis-stability": "stable",
+        "x-gexis-adr": [
+          "ADR-0176"
+        ],
+        "responses": {
+          "200": {
+            "description": "Up or not, which, until when, and why the last one went.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PanelPage"
+                },
+                "example": {
+                  "shown": true,
+                  "id": "cameras",
+                  "until": 1762530000.0,
+                  "seq": 3,
+                  "closed": null,
+                  "pages": true
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Pages are not wired up in this core.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/panel/page/{action}": {
+      "post": {
+        "operationId": "page_request",
+        "tags": [
+          "Panel"
+        ],
+        "summary": "Put a page from Home Assistant on the screen for a while, or take it down",
+        "description": "**`show`** puts the page at `url` over whatever the screen shows - the music's screens, the idle screen, the dashboard, the visualiser - with the music playing on, for `seconds` (10 to 3600; 600 when left out), and wakes a screen in standby (ADR-0176). The address is checked first as the dashboard's is, and a page that cannot be framed or does not answer is refused with the sentence to show (422). A show while a page is up replaces it; the same `id` again starts its time again (a second ring). Refused while *Pages from Home Assistant* is off (403), on a player with no screen or while the room is being measured (409).\n\n**`hide`** takes it down, with `{\"id\"}` only that page. A touch on the screen, any D-pad key (`/panel/key`), the time limit, the heat (80 \u00b0C or the firmware throttling) and the switch turned off take it down too; `panel.page.closed` on `/state` says which. What was on the screen comes back - the visualiser and standby included - unless a person asked the panel for something else meanwhile, which takes the page down first.",
+        "x-gexis-stability": "stable",
+        "x-gexis-adr": [
+          "ADR-0176"
+        ],
+        "parameters": [
+          {
+            "name": "action",
+            "in": "path",
+            "required": true,
+            "description": "`show` puts the page up; `hide` takes it down.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "show",
+                "hide"
+              ]
+            }
+          },
+          {
+            "name": "by",
+            "in": "query",
+            "required": false,
+            "description": "`touch` or `key` when the panel reports a touch on the page or a keyboard's key; left out for anyone else. Honoured from the panel only.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "touch",
+                "key"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PanelPageRequest"
+              },
+              "example": {
+                "url": "http://homeassistant.local:8123/home-security/tv",
+                "id": "cameras",
+                "seconds": 120
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done: the page's state now (`hidden` too, for a hide: whether one went).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PanelPage"
+                },
+                "example": {
+                  "shown": true,
+                  "id": "cameras",
+                  "until": 1762530000.0,
+                  "seq": 3,
+                  "closed": null
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The body is wrong: `url` missing or not http(s), `id` not text of 1 to 64 characters, `seconds` outside 10 to 3600.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "*Pages from Home Assistant* is off on this player.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`action` is neither `show` nor `hide`: `unknown action <action>`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "This player has no screen, or the room is being measured on it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The page cannot be shown: `error` is the sentence, `reason` one of `unreachable`, `http <status>`, `refuses framing`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PanelPageRefused"
+                },
+                "example": {
+                  "error": "The page's address does not answer. Check it, and that Home Assistant is running.",
+                  "reason": "unreachable"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Pages are not wired up in this core.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/panel/input": {
       "post": {
         "operationId": "panel_input",
@@ -9985,7 +10169,7 @@
       },
       "PlaybackPanel": {
         "type": "object",
-        "description": "What the panel shows, for the phone's mini player (ADR-0101, as amended; ADR-0122, ADR-0135, ADR-0156).",
+        "description": "What the panel shows, for the phone's mini player (ADR-0101, as amended; ADR-0122, ADR-0135, ADR-0156, ADR-0176).",
         "properties": {
           "visualiser": {
             "type": "boolean",
@@ -10039,6 +10223,65 @@
           "dashboard_time": {
             "type": "boolean",
             "description": "Whether one of the dashboard's times is on now, so the panel shows it in place of the idle screen (ADR-0156)."
+          },
+          "page": {
+            "type": "object",
+            "description": "A page from Home Assistant on the screen (ADR-0176), as `GET /panel/page` gives it, without the address.",
+            "properties": {
+              "shown": {
+                "type": "boolean",
+                "description": "Whether a page is on the screen."
+              },
+              "id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Home Assistant's name for the page shown."
+              },
+              "until": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "When its time ends, in epoch seconds."
+              },
+              "seq": {
+                "type": "integer",
+                "description": "One more each time the panel has a page to load: a new one, or the same id at a new address."
+              },
+              "closed": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "description": "Why the last page went: `{id, by, at}`, `by` one of `touch`, `key`, `limit`, `asked`, `replaced`, `heat`, `off`; `at` in epoch seconds.",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "by": {
+                    "type": "string",
+                    "enum": [
+                      "touch",
+                      "key",
+                      "limit",
+                      "asked",
+                      "replaced",
+                      "heat",
+                      "off"
+                    ]
+                  },
+                  "at": {
+                    "type": "number"
+                  }
+                }
+              }
+            }
+          },
+          "pages": {
+            "type": "boolean",
+            "description": "Whether this player allows pages from Home Assistant: the owner's switch, on a player with a screen (ADR-0176)."
           }
         },
         "additionalProperties": true
@@ -10102,6 +10345,10 @@
           "idle_screen": {
             "type": "boolean",
             "description": "Whether the idle screen is switched on (`idle_enabled`), so Home Assistant offers it only then. Absent from players older than this field."
+          },
+          "pages": {
+            "type": "boolean",
+            "description": "Whether *Pages from Home Assistant* is on, on a player with a screen, so Home Assistant offers its pages only there (ADR-0176). Absent from players older than this field."
           },
           "transport": {
             "type": "string",
@@ -14225,6 +14472,119 @@
           "run",
           "ended"
         ]
+      },
+      "PanelPage": {
+        "type": "object",
+        "description": "A page from Home Assistant on the screen (ADR-0176). Never the address, but to the panel.",
+        "required": [
+          "shown",
+          "id",
+          "until",
+          "seq",
+          "closed"
+        ],
+        "properties": {
+          "shown": {
+            "type": "boolean",
+            "description": "Whether a page is on the screen."
+          },
+          "id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Home Assistant's name for the page shown."
+          },
+          "until": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "When its time ends, in epoch seconds."
+          },
+          "seq": {
+            "type": "integer",
+            "description": "One more each time the panel has a page to load: a new one, or the same id at a new address."
+          },
+          "closed": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Why the last page went: `{id, by, at}`, `by` one of `touch`, `key`, `limit`, `asked`, `replaced`, `heat`, `off`; `at` in epoch seconds.",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "by": {
+                "type": "string",
+                "enum": [
+                  "touch",
+                  "key",
+                  "limit",
+                  "asked",
+                  "replaced",
+                  "heat",
+                  "off"
+                ]
+              },
+              "at": {
+                "type": "number"
+              }
+            }
+          },
+          "pages": {
+            "type": "boolean",
+            "description": "Whether this player allows pages (GET only)."
+          },
+          "hidden": {
+            "type": "boolean",
+            "description": "Whether a page went (a hide only)."
+          },
+          "url": {
+            "type": "string",
+            "description": "The page's address: to the panel only, while one is up (GET only)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "PanelPageRequest": {
+        "type": "object",
+        "description": "`show`: the page and its time (ADR-0176 P1). `hide`: optionally which page.",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "The page's address, http or https. Required for `show`."
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "Home Assistant's name for the page; `page` when left out. For `hide`, only that page is taken down."
+          },
+          "seconds": {
+            "type": "number",
+            "minimum": 10,
+            "maximum": 3600,
+            "description": "How long it stays up; 600 when left out."
+          }
+        },
+        "additionalProperties": false
+      },
+      "PanelPageRefused": {
+        "type": "object",
+        "required": [
+          "error",
+          "reason"
+        ],
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
       }
     }
   }
