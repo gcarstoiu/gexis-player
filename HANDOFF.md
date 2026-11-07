@@ -160,11 +160,11 @@ indexes, not these copies; George had the older releases' copies removed
 `~/projects/ha-venv`). **HACS's default list**: hacs/default#12691 waits for
 HACS's maintainers - do not ask them for a review (their template).
 
-After Phase 29: 30 (room correction for the full range) and 31-33 in order,
+After Phase 29: 30 (room correction for the full range) and 31-34 in order,
 each ADR first. **Phase 30's research started 2026-11-07** (George): desk
 research in [Finding 141](docs/findings/141-room-correction-above-the-bass-what-is-known.md);
-grouped players not supported (George); the time-domain part in it or
-later still open, for George
+grouped players not supported (George); the level only - the time-domain
+part is Phase 34 (George), which may end without being built
 (`docs/DEVELOPMENT.md`, the IDs there); MPD parked (ADR-0151). **Raspberry
 Pi Imager** (ADR-0159, a task): Imager's own list stays open as it is
 (George, 2026-10-24).
@@ -183,7 +183,7 @@ consecutively without letters, each with a stable ID (George, 2026-10-13).
 On Stable with work open: 22 (multiroom), 23 (AirPlay 2, limited testing),
 27 (releases built on GitHub; a card still to flash) and 28 (Plexamp and
 Beszel to the catalogue), both with 1.13.0. 29 (room correction for the
-bass) in progress, on Testing with 1.14.0; next 30, then 31-33; MPD parked. `docs/DEVELOPMENT.md`
+bass) in progress, on Testing with 1.14.0; 30 in research (2026-11-07), then 31-34; MPD parked. `docs/DEVELOPMENT.md`
 holds each phase's acceptance criteria.
 
 ## Machines
