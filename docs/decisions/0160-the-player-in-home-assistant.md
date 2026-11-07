@@ -75,6 +75,10 @@ plus the dashboard and the visualiser):
   unavailable while no source is active, as the route refuses them.
 - Nothing else: no settings, updates, restart, reset, uploads, library
   browsing. The API being open (ADR-0028) is no reason to expose more.
+- **Amended 2026-11-07** (George, [ADR-0176](0176-a-page-from-home-assistant-on-the-screen.md)):
+  also two actions, `gexis.show_page` and `gexis.hide_page`, and a binary
+  sensor *Page*, for a page of Home Assistant's own on the screen for a
+  while. Still no settings: the switch that allows it stays the player's.
 - While the socket is down the entities are unavailable, and it reconnects.
 
 **D4 — Its own public repository** (George, 2026-10-24):

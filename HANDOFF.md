@@ -178,7 +178,8 @@ limit, else 10 minutes; a switch for each player, off; show and hide actions
 in the integration. Measured the same day, one run and no more (George):
 [Finding 142](docs/findings/142-a-live-camera-page-on-the-panel-while-music-plays.md) -
 seven cameras fit beside music at 44.1 kHz on the plain path, with half the
-DAC's margin, 1.6 cores more and 74 °C still rising. Next: the ADR.
+DAC's margin, 1.6 cores more and 74 °C still rising. ADR-0176 accepted the
+same day (George); building on `ph-ha-page`, then a preview on sofapi.
 
 Phases and their IDs: `docs/DEVELOPMENT.md`. MPD parked (ADR-0151). **Raspberry
 Pi Imager** (ADR-0159, a task): Imager's own list stays open as it is

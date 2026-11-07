@@ -4081,11 +4081,14 @@ the DAC, but half its margin; about 1.6 cores more; 74 °C and still rising;
 H.264 decoded in software; 3-15 % of frames dropped and two streams nearly
 stopped. No more runs (George).
 
-**An ADR before anything is built.** It must settle: the API and the
-state's fields; the layer's place among the panel's and how the view before
-comes back; what the frame needs for live video; what live video costs a Pi
-4 while music plays, and what the player does when it is too much; a second
-page while one is shown.
+**[ADR-0176](decisions/0176-a-page-from-home-assistant-on-the-screen.md)
+accepted 2026-11-07** (George): `POST /panel/page/show` and `/hide`, the
+page checked before it shows; `panel.page` in `/state` without the address;
+a layer above the idle screen and the dashboard with no chrome; any touch or
+D-pad key closes it; a person's request wins and the clock's waits; taken
+down at 80 °C or throttling; at most 60 minutes a call; two actions and a
+binary sensor in the integration (ADR-0160 D3 amended). The settings are in
+ADR-0022.
 
 **Acceptance (draft):**
 
