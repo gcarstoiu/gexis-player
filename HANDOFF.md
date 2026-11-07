@@ -182,8 +182,13 @@ DAC's margin, 1.6 cores more and 74 °C still rising. ADR-0176 accepted the
 same day (George); built on `ph-ha-page` (worktree `~/projects/gexis-player-ph35`)
 and the integration's `ha-page` (0.6.0, from `main`; `multiroom` left as it
 is). Preview `1.14.0+git25.4b831af` on sofapi (2026-11-07 18:49, run
-42397583346); George's tests next, then the release (1.15.0) and the
-integration's 0.6.0 after it.
+42397583346). Amended the same day (George, from the Home Assistant side):
+one page kept loaded and hidden, a show of it only revealing it, in 1.15.0;
+[Finding 143](docs/findings/143-a-home-assistant-page-kept-loaded-and-hidden.md)
+measured it first (60-90 MB, no processor measurable); K1-K8 accepted. Being
+built on the same branches; then a new preview for George's tests (paused
+after a touch closed the first page), the release (1.15.0) and the
+integration's 0.6.0.
 
 Phases and their IDs: `docs/DEVELOPMENT.md`. MPD parked (ADR-0151). **Raspberry
 Pi Imager** (ADR-0159, a task): Imager's own list stays open as it is

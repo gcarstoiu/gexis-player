@@ -3,6 +3,8 @@
 **Status:** **Accepted** 2026-11-07 (George), Phase 35 (`ph-ha-page`).
 Decisions 1-7 are George's; *How* is Claude's proposal, accepted as a whole
 the same day, with P1's longest limit, P4, P5 and P8 chosen by George.
+**Amendment** (a page kept loaded, decisions 8-10 and K1-K8) **accepted**
+2026-11-07 (George), as proposed.
 **Builds on:** [ADR-0156](0156-home-assistant-dashboard-on-the-screen.md)
 (the dashboard, framed in the panel), [ADR-0160](0160-the-player-in-home-assistant.md)
 (the integration), [ADR-0135](0135-display-standby.md) (standby),
@@ -153,6 +155,85 @@ sign-in and framing it shares with the dashboard, and the advice of P8.
   (`hide?by=key`, the panel's word only, as `?by=touch` is).
 - The integration's actions are named *Show a page on the screen* and *Hide
   the page*; its version is 0.6.0, and it needs the player's 1.15.0.
+
+## Amendment 2026-11-07 — a page kept loaded (accepted)
+
+**What was asked** (George, the same day, from the Home Assistant side): a
+doorbell cannot wait for Home Assistant to load. Keep one page loaded and
+hidden, so that showing it only reveals it, as the Home Assistant side
+already does on its other screens.
+
+**Decisions (George, 2026-11-07):**
+
+8. **In 1.15.0**, with the rest of this record.
+9. **Measured first** ([Finding 143](../findings/143-a-home-assistant-page-kept-loaded-and-hidden.md)):
+   about 60-90 MB, no processor that could be measured, nothing drawn
+   while hidden; the page still reads itself as visible.
+10. **The address comes from Home Assistant**, by an action, not from a
+    field in Settings.
+
+**How (Claude's proposal, accepted as proposed):**
+
+**K1 - The API.** `POST /panel/page/preload` with `{"url": "..."}` sets the
+page to keep loaded; `{"url": null}` or `""` clears it. Checked and refused
+as a show is (P1): the switch off (403), no screen (409), not http(s) (400),
+not framable (422). Sent again with the same address, it loads the page
+afresh: Home Assistant's way to renew it. The address is kept in
+`/var/lib/gexis-core/page-preload.json`, so it survives a restart; not in
+`/settings`, `/state` or a backup, for P2's reason (an address can carry a
+token). After a restore, Home Assistant sends it again.
+
+**K2 - The state.** `panel.page` gains `preloaded`: true while an address is
+set, the switch is on and there is a screen. `GET /panel/page` gives the
+panel the preloaded address beside the shown one, so the panel can tell a
+show of it; never on `/state`.
+
+**K3 - The layer.** While `preloaded`, the panel frames the page from the
+start in `PageScreen`, hidden with `visibility: hidden` (Finding 143: laid
+out at the screen's size, nothing drawn, no touch taken). A show of that
+address reveals the frame in place: no reload, no navigation, the touch
+layer over it as for any page. A show of another address loads it in a
+second frame over the preloaded one, as now; the preloaded one stays loaded
+underneath.
+
+**K4 - Hiding.** Every way a page goes (P4, P5, P8, `asked`, `replaced`)
+hides the preloaded page again and leaves it loaded. Nothing else changes:
+the limit, standby and the heat guard work as for any page.
+
+**K5 - When it is unloaded.** When Home Assistant clears it, when the switch
+is turned off (the address stays, and the page loads again when it is
+turned back on), or when the player goes headless. Not for standby, the heat
+guard or a room measurement: hidden, it draws nothing (Finding 143).
+
+**K6 - After a restart or a crash.** The core and the panel load it again
+from the saved address. A crash of the frame alone cannot be seen from the
+panel (another site's frame); Home Assistant sending the address again (K1)
+renews it.
+
+**K7 - What the page must do itself.** It reads itself as visible while
+hidden (Finding 143), so it has to stop its own work - streams, video - from
+Home Assistant's state. The manual and the integration's README say so.
+
+**K8 - The integration** (still 0.6.0, unreleased): a third action,
+`gexis.preload_page` (*Keep a page loaded*, `url`; empty or left out clears
+it), and the *Page* sensor gains `preloaded` (true or false), never the
+address. ADR-0160 D3 is amended again: three actions.
+
+**Settings (ADR-0022):** confirmed by George (2026-11-07), appended to
+ADR-0022 the same day:
+
+| Setting | Mark | Notes |
+|---|---|---|
+| Page kept loaded | [N] | The address Home Assistant gives (`gexis.preload_page`); none until set; kept on the player, not shown in Settings |
+
+**Not chosen:** a field in Settings (decision 10); telling the page it is
+hidden by `postMessage` (the Home Assistant side decides from its own state,
+and it would be a contract for every page); keeping the last page shown
+loaded (the first ring after a restart would still wait); keeping the
+dashboard loaded too (not asked).
+
+**Unverified:** a preloaded page beside music, and over hours; a 2 GB Pi;
+what a crashed hidden frame shows when revealed.
 
 ## Considered and not chosen
 
