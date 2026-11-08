@@ -78,6 +78,13 @@ traps below are a local build's, kept for when GitHub is unavailable.
   new file with `gh release download channels`, not the public URL. A new
   part's `InRelease` too (1.14.0): `--sign` asks for it first, and the 404
   was served for a minute or two after the upload.
+- **GitHub can slow or refuse downloads made without signing in** (1.15.0,
+  its incident *timeouts for some unauthenticated users*): the mirror and
+  the published indexes took 26 and 20 minutes instead of 1-2, and
+  `--sign` stopped at once on a 503 for `parts.plain`, which `gh` (signed in)
+  fetched at once. Nothing was signed; the script fetches as a player does,
+  so wait until a plain `curl` gets a 200, then sign. Players cannot update
+  meanwhile either.
 - **The API page's deploy can time out in GitHub Pages' queue** (1.14.0,
   `deployment_queued` for ten minutes): the page built; `gh run rerun <id>
   --failed` deployed it. It is not one of `main`'s required checks.
