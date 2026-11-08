@@ -447,6 +447,46 @@ Home Assistant's own header and side bar show unless the dashboard or the
 user's profile in Home Assistant hides them. On a bar (1480 × 320), a
 dashboard made for that shape reads best.
 
+### A page from Home Assistant
+
+Home Assistant can also put a **page of its own on the screen for a while**
+- the cameras when the doorbell rings, for example - without touching the
+dashboard set above. It is off until *Pages from Home Assistant* is switched
+on in *Settings → Display*, for each player.
+
+- **To bring it up:** Home Assistant's action *Show a page on the screen*
+  (`gexis.show_page`, with the integration below), or `POST
+  /panel/page/show` on the player. The page shows over whatever is on the
+  screen - Now Playing, the library, the idle screen, the dashboard or the
+  visualiser - and the music plays on. A screen in standby wakes for it.
+- **It goes** at a touch anywhere on the screen or any key on a remote, at
+  the end of its time (as long as Home Assistant asks, up to an hour; 10
+  minutes unless it says), when Home Assistant takes it down (*Hide the page*,
+  `gexis.hide_page`), or when the switch is turned off. Then what was there
+  comes back: the same screen, the visualiser if it was up, and standby if
+  the screen was off.
+- **Asking the player for something else** - the visualiser, the dashboard,
+  a view or *Screen off* from the phone - takes the page down first.
+- **When the player gets hot** (80 °C, or the Pi slowing itself), it takes
+  the page down: the music comes first. Live video takes much of a Pi 4's
+  processor, as the Pi 4 decodes it without its video hardware: for
+  cameras, show few of them, in their small streams (640 × 360 rather than
+  1280 × 720).
+
+- **A page kept loaded:** Home Assistant can give the player one page to
+  keep loaded and hidden (*Keep a page loaded*, `gexis.preload_page`), so
+  that showing it is at once - a doorbell does not wait for Home Assistant
+  to load. Shown, it is only revealed; gone, it is only hidden again. It
+  takes about 60-90 MB of memory and, idle, nothing measurable of the
+  processor; it is loaded again after a restart, and unloaded while the
+  switch is off. The page itself has to stop its own video while hidden:
+  it cannot tell it is hidden, so it goes by Home Assistant's state.
+
+Home Assistant needs the same two things as for the dashboard: to allow its
+pages to be shown inside another page, and to let the player in. A player
+whose dashboard shows can show its pages. A page that cannot be shown is
+refused, and Home Assistant's action says why.
+
 ### The player in Home Assistant
 
 Home Assistant can show each player as a media player and control it, with
@@ -480,6 +520,13 @@ What Home Assistant gets:
   switched off); **and three buttons**: *Home*, *Now
   playing* and *Lyrics*, which open them on the screen (the last two while a
   source is active).
+- **On a player with a screen, pages**: three actions, *Show a page on the
+  screen* (`gexis.show_page`: the page's address, a name for it, and for how
+  long), *Hide the page* (`gexis.hide_page`) and *Keep a page loaded*
+  (`gexis.preload_page`: the address, or none), and a binary sensor, *Page*,
+  on while one shows, its name, why the last one went and whether one is
+  kept loaded among its attributes; unavailable while *Pages from Home Assistant* is off on the
+  player (*A page from Home Assistant*, above).
 - **On a player with a screen, a D-pad**: a remote, *D-pad*, whose commands
   `up`, `down`, `left`, `right`, `ok`, `back` and `home` move around the
   screen (*Moving around with a D-pad or a keyboard*, below).
@@ -500,8 +547,8 @@ What Home Assistant gets:
 
 It needs Home Assistant 2026.3 or later and a player on 1.5.0 or later (the
 D-pad 1.6.0 or later; the equaliser, seeking and mute with Fixed volume
-1.7.0 or later, with the integration's 0.5.0); an older player is found and
-asked to update. With Home Assistant's own
+1.7.0 or later, with the integration's 0.5.0; pages 1.15.0 or later, with
+the integration's 0.6.0); an older player is found and asked to update. With Home Assistant's own
 *Lyrion Music Server* integration also set up, the player shows there too,
 as Lyrion's player.
 
@@ -529,6 +576,8 @@ The screen can be used without touching it: with Home Assistant's *D-pad*
   first press from Home Assistant only wakes the screen.
 - Over the Home Assistant dashboard, the keys go to Home Assistant's own
   page; Back from Home Assistant's *D-pad* takes the dashboard down.
+- Over a page from Home Assistant, any key takes the page down, and does
+  nothing else.
 - Setup and updates are done from the phone.
 
 ## 8. The phone page
@@ -863,6 +912,7 @@ On its page:
 | Home Assistant dashboard: Dashboard address | The address of the room's Home Assistant dashboard. Home Assistant has to allow it to be shown and let the player in - see [A Home Assistant dashboard](#a-home-assistant-dashboard). Empty, nothing of the dashboard shows. |
 | Home Assistant dashboard: Dashboard button | The button that puts it up: in the bar's pull-down controls, beside the visualiser on Now Playing, and on the phone page. On unless changed, once an address is set. |
 | Home Assistant dashboard: Dashboard instead of the idle screen, Dashboard times | At the times set - the same grid as the standby times - the dashboard comes up where the idle screen would. Off unless changed. |
+| Home Assistant dashboard: Pages from Home Assistant | Lets Home Assistant put a page of its own on the screen for a while - see [A page from Home Assistant](#a-page-from-home-assistant). Off unless changed; turned off, a page showing goes. |
 | Touchpad: Phone touchpad, Pointer speed, Pointer style | The phone's touchpad (section 8). |
 | Volume: Show volume when changed elsewhere | A phone's volume change opens the drawer; the panel's own changes do not. |
 | Volume: Volume drawer auto-hide | How long the drawer stays when a change from elsewhere opened it. |

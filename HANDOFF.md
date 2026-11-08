@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-11-05 (on R2D2).
+Last updated: 2026-11-08 (on R2D2).
 
 ## Start here
 
@@ -20,15 +20,20 @@ and the ideas as Must / Should / Could. It follows `docs/DEVELOPMENT.md`'s
 phases; change it when a phase opens, closes or moves, and show George first. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Testing: 1.13.0** (2026-11-03, serial 65): Plexamp and Beszel from the
-catalogue (Phase 28). Built by run 41718806895 (`verify-image.sh` all checks
-passed), signed on R2D2, read back good against the shipped key; Stable not
-moved. Notes approved by George; release PR #95 merged 2026-11-04.
+**Testing: 1.14.0** (2026-11-06, serial 66): room correction for the bass
+(Phase 29), with the kernel 6.18.60 and Mesa 26.2.6 from the Raspberry Pi
+archive. Built by run 42261893617 (`verify-image.sh` all 151 checks passed,
+as 1.13.0), signed on R2D2; the channel, each part, the notes and the history
+read back good. Notes approved by George; release PR #96 merged by George
+the same day. The API page's
+deploy timed out in GitHub Pages' queue and passed on a re-run.
 
-**Stable: 1.12.0** (2026-11-02, serial 13): Roon (Phase 26) and three
-fixes, on 1.11.0 (themes; left a pre-release). Its image, the last built on
-R2D2, was deleted 2026-11-04 (George). The two
-measurements are still owed (to-dos `ph22-measure`, `eq-measure`).
+**Stable: 1.13.0** (promoted by George 2026-11-06, serial 14; on Testing
+since 2026-11-03, serial 65): Plexamp and Beszel from the catalogue (Phase
+28), on 1.12.1 (releases built on GitHub). Read back with a good signature;
+the image downloaded through README's link, its checksum and signature good.
+README names 1.13.0 (on `main` with #96). The two measurements are
+still owed (to-dos `ph22-measure`, `eq-measure`).
 
 **R2D2's `/` fills up**: Docker's
 containerd store keeps images on `/`, not in `/home/docker`, and pi-gen
@@ -55,15 +60,17 @@ Lyrion took it, the cause not established (0.2.1 logs the pause's answer
 and the loopback's states); not measured: bit-perfect, rates above 44.1 kHz,
 a group, the plugin off and on, Roon Bridge's own update.
 
-**Phase 27** (releases built on GitHub, ADR-0173) is in 1.12.1. **Left:** a
+**Phase 27** (releases built on GitHub, ADR-0173) is in 1.12.1, on Stable
+with 1.13.0. **Left:** a
 card flashed from 1.12.1's image (criterion 4: the card below), then R2D2's
 pi-gen container (8.9 GB) and build images (2.9 GB) removed (decision 3).
 
-**Phase 28** (Plexamp and Beszel from the catalogue, ADR-0174) is in 1.13.0:
+**Phase 28** (Plexamp and Beszel from the catalogue, ADR-0174) is on Stable
+with 1.13.0:
 `gcarstoiu/gexis-beszel` 0.21.1-1 and `gcarstoiu/gexis-plexamp` 0.5.1
 (gexis-plugins #13-#17, merged by George), catalogue serial 8; sofapi runs
 the branch's last preview (`~/preview-ph28d`) with both carried over.
-**Owed, on Testing:** Plexamp played once on 0.5.1 (its engine's cache now
+**Owed:** Plexamp played once on 0.5.1 (its engine's cache now
 through a link) and George's look at the Plugins page, on sofapi; a card
 from `image/deploy/2026-11-03-gexis-player-v1.12.1.img.xz` (also Phase 27's)
 set up without Plexamp or Beszel, then updated to 1.13.0 (nothing
@@ -72,30 +79,22 @@ first use offering Plexamp from the catalogue. **Not built:** ADR-0174's
 "found while reading" setup fix - part 2 switches ours on without adding
 them to the Plugins page's list (`plugin_store.ADDED`).
 
-**In progress: Phase 29**, room correction for the bass
-(`ph-room-correction`, worktree `~/projects/gexis-player-room-correction`,
-pushed; previews on GitHub). ADR-0175: cuts only, below 250 Hz, towards a
-gentle rise below 80 Hz, in the equaliser's stage; three positions (George,
-2026-11-05, over five; most of them decide a cut, not any one), 60 dB at the
-seat, each speaker alone, a tap and a 3 s countdown at each, the check (Skip allowed)
-waiting for the tap too, a 10-minute timeout; A/B a saved switch; the UMIK-1
-only, **its 90° file given from the phone** (decision 4 changed 2026-11-05:
-miniDSP has no API, its terms forbid automated tools, and the microphone
-gives no serial over USB). Claude Design's design is `design/source/29`
-(George kept its proposals and new copy). **Built and tested on mocks**:
-`room_dsp` (numpy), `room_correction`, `room_run`, `room_mic`,
-`room_control`, the stage's 16 cut slots, the routes, the screens
-(`ui/src/screens/room/`), the manual, FAQ, technical guide, hardware page
-and README; layouts checked with made-up data (`~/projects/scratch/ph29/harness`).
-**On sofapi** (George's UMIK-1, a USB-C unit): George's first full run
-(2026-11-05, five positions at 50 dB) gave the three decisions above, and
-showed the output left at 100 % after a run - the level before kept as the
-shown percentage (fixed on the branch: the DAC's own level, put back through
-the bridge; to check on sofapi by reading the level back, Lesson 93).
-**Not yet:** the fixed run on sofapi, the level against a meter, two sweeps'
-agreement at 60 dB, the stage's cost, the A/B bit-exactness. **Copy to confirm** with George:
-the lines the design has no state for (`design/IMPLEMENTED-DIFFERENTLY.md`,
-Phase 29).
+**In progress: Phase 29**, room correction for the bass, **on Testing
+with 1.14.0** (2026-11-06, George; its branch merged and deleted - a fix goes
+on a branch from `next`). ADR-0175 as built: cuts only below 250 Hz towards a
+gentle rise below 80 Hz, in the equaliser's stage (16 cut slots), stacked as
+deep as the target takes; three positions, most of them deciding a cut; 60 dB
+at the seat; each speaker alone, then both together (shown as *Both*, never
+cut); the check with Skip; the UMIK-1 only, its 90° file given from the phone;
+the level before a run put back as the DAC's own (Lesson 93). Layouts are
+checked with made-up data in `~/projects/scratch/ph29/harness` (it builds from
+`-next`). sofapi has the git34 preview (the same code) and cuts recalculated
+from three of George's first run's positions; Testing offers it 1.14.0.
+**Not yet:** the cuts read from CamillaDSP while music plays (only readable
+then), a full run at three positions with both, the level against a meter,
+two sweeps' agreement at 60 dB, the stage's cost, the A/B bit-exactness.
+**Copy to confirm** with George: the lines the design has no state for
+(`design/IMPLEMENTED-DIFFERENTLY.md`, Phase 29).
 
 **Open, small:** a preview's download still holds the skin packs (1.1 of
 1.2 GB) though `release.yml` excludes them; `gen_personalise.py` out of step since Phase 23;
@@ -121,12 +120,12 @@ player's.
 `GEXIS_RELEASE_GNUPGHOME=~/projects/gexis-release-key`; the scripts default
 to `~/.gnupg-gexis-release`, which no longer exists.
 
-**The players** (2026-11-03): sofapi on Phase 28's last preview
-(`gexis-core` and `gexis-player` from `389574e2`, on 1.12.1, in
-`~/preview-ph28d`), Plexamp 0.5.1 and Beszel from the catalogue; `rpi-eeprom-update` reports a bootloader update
+**The players** (2026-11-06): sofapi on Phase 29's last preview
+(`gexis-core`, `gexis-player` and `gexis-ui` 1.13.0+git34 from `0f566c6b`),
+Plexamp 0.5.1 and Beszel from the catalogue; `rpi-eeprom-update` reports a bootloader update
 available, not applied (not looked into). Roon's extension enabled in
 George's Roon; the other three last seen on 1.9.1 through their updaters
-(2026-10-29). All four on Testing, which offers 1.13.0. sofapi and the bar
+(2026-10-29). All four on Testing, which offers 1.14.0. sofapi and the bar
 grouped; AirPlay on at sofapi and guestpi. Each has its own Lyrion server.
 
 **The test venv imports the core from `~/projects/gexis-player-next`** (an
@@ -161,9 +160,44 @@ indexes, not these copies; George had the older releases' copies removed
 `~/projects/ha-venv`). **HACS's default list**: hacs/default#12691 waits for
 HACS's maintainers - do not ask them for a review (their template).
 
-After Phase 29: 30 (room correction for the full range) and 31-33 in order,
-each ADR first
-(`docs/DEVELOPMENT.md`, the IDs there); MPD parked (ADR-0151). **Raspberry
+After Phase 29: 30 (room correction for the full range) and 31-34 in order,
+each ADR first. **Phase 30's research started 2026-11-07** (George): desk
+research in [Finding 141](docs/findings/141-room-correction-above-the-bass-what-is-known.md);
+the level only - the time-domain part is Phase 34 (George), which may end
+without being built. George's decisions the same day are in
+`docs/DEVELOPMENT.md` (the main seat, to 20 kHz, the speaker's own slope, at
+most 3 dB, *Bass* or *Full range*, in groups as the bass). The brief
+`design/briefs/30-room-correction-full.md` is George's to hand to Claude
+Design. Next: a full-range measurement of the room once sofapi is on 1.14.0,
+then the ADR.
+
+**Phase 35** (`ph-ha-page`, George 2026-11-07, now, while 30 waits): Home
+Assistant puts a page of its own on the screen for a while (live cameras)
+and takes it down. In the player, not a plugin; any touch closes it; a time
+limit, else 10 minutes; a switch for each player, off; show and hide actions
+in the integration. Measured the same day, one run and no more (George):
+[Finding 142](docs/findings/142-a-live-camera-page-on-the-panel-while-music-plays.md) -
+seven cameras fit beside music at 44.1 kHz on the plain path, with half the
+DAC's margin, 1.6 cores more and 74 °C still rising. ADR-0176 accepted the
+same day (George); built on `ph-ha-page` (worktree `~/projects/gexis-player-ph35`)
+and the integration's `ha-page` (0.6.0, from `main`; `multiroom` left as it
+is). Preview `1.14.0+git25.4b831af` on sofapi (2026-11-07 18:49, run
+42397583346). Amended the same day (George, from the Home Assistant side):
+one page kept loaded and hidden, a show of it only revealing it, in 1.15.0;
+[Finding 143](docs/findings/143-a-home-assistant-page-kept-loaded-and-hidden.md)
+measured it first (60-90 MB, no processor measurable); K1-K8 accepted and
+built (`8a5b7e49`; the integration's `39672fe`). **George's tests passed**
+on sofapi (2026-11-08, preview `1.14.0+git28.7174aad`): the page over the
+idle screen, now playing, the visualiser and the dashboard; closed by a
+touch, a D-pad key and its limit; standby woken and put back; a phone's
+request winning; the kept page shown at once. Two fixes came of them
+(`51879ad4`, `7174aad1`): what was under the page, or what a person asked
+for, goes up before the page goes - now playing had shown for the
+visualiser's raise. sofapi's kept page cleared, its test files removed.
+**Next (George's OK, 2026-11-08):** `ph-ha-page` into `next`, 1.15.0's notes
+for George, the release, then the integration's 0.6.0.
+
+Phases and their IDs: `docs/DEVELOPMENT.md`. MPD parked (ADR-0151). **Raspberry
 Pi Imager** (ADR-0159, a task): Imager's own list stays open as it is
 (George, 2026-10-24).
 
@@ -172,16 +206,16 @@ in Claude's memory, not here) holds the open items with their detail.
 
 **Routine clean-up** (`docs/ROUTINE-CLEANUP.md`, George 2026-10-12): after
 every merged release PR, otherwise weekly on Sunday evening. **Last run:
-2026-11-04, after 1.13.0.**
+2026-11-06, after 1.14.0.**
 
 ## Phases
 
 Closed: 0-21 and 24-26 (13 with letters a-f). Phases are numbered
 consecutively without letters, each with a stable ID (George, 2026-10-13).
-On Stable with work open: 22 (multiroom), 23 (AirPlay 2, limited testing).
-27 (releases built on GitHub) in 1.12.1, a card still to flash; 28 (Plexamp
-and Beszel to the catalogue) in 1.13.0 on Testing; 29 (room correction for
-the bass) in progress; next 30, then 31-33; MPD parked. `docs/DEVELOPMENT.md`
+On Stable with work open: 22 (multiroom), 23 (AirPlay 2, limited testing),
+27 (releases built on GitHub; a card still to flash) and 28 (Plexamp and
+Beszel to the catalogue), both with 1.13.0. 29 (room correction for the
+bass) in progress, on Testing with 1.14.0; 30 in research (2026-11-07) and 35 beside it (2026-11-07), then 31-34; MPD parked. `docs/DEVELOPMENT.md`
 holds each phase's acceptance criteria.
 
 ## Machines

@@ -3750,10 +3750,12 @@ how.
 **Started 2026-11-03** (George), on `ph-room-correction`;
 [ADR-0175](decisions/0175-room-correction-for-the-bass.md) accepted the same
 day: cuts only below 250 Hz towards a gentle bass rise, in the equaliser's
-stage; five positions, measured again after; the UMIK-1, its calibration
-downloaded by the serial. The phone's flow settled with George from a
+stage; five positions (three from 2026-11-05, George), measured again
+after; the UMIK-1, its calibration downloaded by the serial (given from the
+phone since 2026-11-05). The phone's flow settled with George from a
 mock-up on 2026-11-04; design first: the brief is
-`design/briefs/29-room-correction.md`.
+`design/briefs/29-room-correction.md`. **On Testing with 1.14.0**
+(2026-11-06, George); the acceptance below still to be seen on a player.
 
 **ID:** `ph-room-correction` · numbered 29 on 2026-11-03, after Plexamp and Beszel to the catalogue (George); numbered 28 on 2026-11-02, after releases built on GitHub (George); numbered 27 on 2026-11-01, after the Roon plugin (George); numbered 26 on 2026-10-29, after the plugin catalogue and themes (George: it still cannot be auditioned); numbered 24 on 2026-10-27, after multiroom and AirPlay 2 (George: no room correction can be tried yet); numbered 22 on 2026-10-26; 21 from 2026-10-25, 20 from 2026-10-24, 19 from 2026-10-21 (18 from 2026-10-19, 16 from 2026-10-15, 15 from 2026-10-14).
 **Since 2026-10-25** it builds on Phase 20's filter stage (`ph-equaliser`):
@@ -3829,14 +3831,56 @@ one point's response makes every other point worse. Later, the time-domain
 part Dirac adds (mixed-phase, multi-position design; Finding 124's second
 tier: DRC-FIR first, then our own design after the Dirac paper and Carini).
 
-**An ADR before anything is built.** It must settle: how many positions and
-where; the target curve and how it is chosen; how much correction above the
-bass, smoothed how; whether the time-domain part comes in this phase or a
-later one; what it costs a Pi 4 beside Phase 29's filter.
+**Grouped players** (George, 2026-11-07): the full-range correction does not
+support synced playing in a group - too many variables for what is likely a
+minority use. **Changed the same day** (George), once the time-domain part
+was split off: correcting the level adds no delay, like the bass's cuts, so
+it works in a group as the bass correction does.
+
+**Research started 2026-11-07** (George), before the ADR: what correcting
+above the bass is worth and how, the positions, and the time-domain part
+with its cost. Desk research done the same day:
+[Finding 141](findings/141-room-correction-above-the-bass-what-is-known.md).
+
+**The level and the timing kept apart** (George, 2026-11-07, after Finding
+141): this phase corrects the level only. The time-domain part is Phase 34
+(`ph-room-correction-time`), which may end without being built.
+
+**Decided before the ADR** (George, 2026-11-07, on Finding 141; Claude's
+recommendations unless marked):
+- **The seat**: the main seat, from Phase 29's three positions with the sweeps
+  extended to 20 kHz - over the whole sofa from more fixed positions, and over
+  a microphone moved along it. This replaces the plan's *more positions across
+  the listening area* (2026-10-20).
+- **How far up**: the whole range, to 20 kHz (George, over about 5 kHz, which
+  Claude recommended, and over about 1 kHz).
+- **The target above the bass**: the speaker's own slope in the room - broad
+  bumps and dips taken out, the slope kept - over a fixed fall of about 1 dB
+  per octave and over a tilt the owner sets.
+- **How strong**: at most 3 dB up or down, broad filters only - over cuts only
+  and over 6 dB.
+- **Bass or full range**: the owner can keep the bass correction alone; one
+  switch as now, and a choice of how far it reaches.
+- **It starts at the full range** after a new measurement; a measurement
+  from before this phase stays at the bass until the room is measured again.
+- **A measurement of George's room over the full range before the ADR**: the
+  three positions and three more around the head, to see whether three are
+  enough; at 60 dB.
+- **Settings** for ADR-0022's inventory, appended with the ADR (George
+  confirmed): [N] Bass or Full range for each output; [H] up to 20 kHz;
+  [H] at most 3 dB up or down above the bass; [H] the speaker's own slope as
+  the target above the bass; [H] the same three positions.
+
+The brief for Claude Design: `design/briefs/30-room-correction-full.md`
+(2026-11-07).
+
+**An ADR before anything is built.** It must settle what is not decided
+above: the filters and their smoothing, how the two ranges join, and what it
+costs a Pi 4 beside Phase 29's filter.
 
 **Acceptance (draft):**
 
-1. A measurement over the listening area completes from the phone and shows
+1. A measurement at the listening seat completes from the phone and shows
    the response before and after, per position and averaged.
 2. The averaged response is measurably closer to the target than without,
    and no position is measurably worse - recorded as a finding.
@@ -3957,6 +4001,113 @@ decided here.
    recorded in ADR-0118 first.
 3. Whether *Extended navigation* stays an option or becomes the default is
    his decision, recorded in ADR-0022's inventory.
+
+### Phase 34 — Room correction in time
+
+**ID:** `ph-room-correction-time` · added 2026-11-07 as 34, split from `ph-room-correction-full` (George).
+
+**Added 2026-11-07** (George, after
+[Finding 141](findings/141-room-correction-above-the-bass-what-is-known.md)).
+The time-domain part of room correction is what Dirac adds beyond the level:
+a mixed-phase design from several positions that corrects the timing of the
+sound at the seat (Finding 124's second tier). It is kept apart from Phase
+30, which corrects the level.
+
+**It may end without being built** (George). Finding 141 found no listening
+test that prefers it over level-only correction from several positions, and
+found that corrections inverting a response in detail were rated below none.
+Research comes first, and what it shows decides whether anything is built.
+
+**An ADR before anything is built**, if the research supports building. It
+must settle:
+- whether it is heard: a listening test of our own against Phase 30's
+  correction;
+- the design (DRC-FIR, OptiMIMO or our own) and its limit on pre-ringing;
+- the drift between the microphone's clock and the DAC's;
+- a filter for every sample rate, and its cost on a Pi 4;
+- the delay it adds, and grouped players.
+
+**Acceptance:** drafted with its ADR, if one is written.
+
+### Phase 35 — A page from Home Assistant on the screen
+
+**ID:** `ph-ha-page` · added 2026-11-07 as 35 (George).
+
+**Added 2026-11-07** (George, asked from the Home Assistant side). Home
+Assistant puts a page of its own on a player's screen for a while - live
+cameras when the doorbell rings, for example - and takes it down again. Today
+the only way is the dashboard (Phase 18, ADR-0156), which has one address in
+Settings, so such a page would replace the owner's dashboard.
+
+**What the repository shows** (2026-11-07):
+- A plugin cannot do it: plugins add no API routes and no `/state` fields,
+  and draw nothing on the panel (`docs/PLUGIN-CONTRACT.md`).
+- The dashboard has most of the parts: the page framed in the panel, the
+  check that Home Assistant allows framing, the login kept in the kiosk's
+  profile, Back on a remote taking it down, the standby API.
+- Missing: the address given in the call; a layer above the dashboard and
+  the idle screen; the visualiser put back afterwards (the dashboard takes it
+  down and nothing restores it); waking the screen, and standby again after.
+- Live video on the panel is not measured: the kiosk's Chromium has no
+  hardware video flags, and no finding covers video or WebRTC.
+
+**Decided before the ADR** (George, 2026-11-07; Claude's recommendations):
+- **In the player**, not as a plugin: a plugin would only pass the calls on
+  to what the player has to build anyway.
+- **Over everything**, as asked: the music, the idle screen, the dashboard
+  and the visualiser, the music playing on. Hiding it returns to exactly what
+  was there; a screen in standby wakes for it and goes back to standby.
+- **Any touch closes it**, through a layer over the page as on the idle
+  screen, and so does Back on any remote; Home Assistant sees it in `/state`.
+- **A time limit**: given in the call, else 10 minutes.
+- **A switch for each player, off by default** (Settings → Display); Home
+  Assistant reads it and offers the screen only where it is on.
+- **The Home Assistant integration** gets show and hide actions on the
+  player's media_player and the page shown as state; this changes ADR-0160
+  D3.
+- **A measurement before the ADR**: a live camera page from Home Assistant on sofapi while
+  music plays at 192 kHz with room correction; CPU, temperature and dropouts
+  only, no screenshots (George allowed it).
+- **Settings** for ADR-0022's inventory, appended with the ADR (George
+  confirmed): [N] pages from Home Assistant, for each player, off by
+  default; [H] 10 minutes when the call gives no limit.
+
+**Measured 2026-11-07**
+([Finding 142](findings/142-a-live-camera-page-on-the-panel-while-music-plays.md)):
+one run, seven cameras for 5 minutes over music at 44.1 kHz on the plain
+path - no 192 kHz music was to hand, and with room correction not measured
+on sofapi George chose the plain path over the equaliser. No underrun at
+the DAC, but half its margin; about 1.6 cores more; 74 °C and still rising;
+H.264 decoded in software; 3-15 % of frames dropped and two streams nearly
+stopped. No more runs (George).
+
+**[ADR-0176](decisions/0176-a-page-from-home-assistant-on-the-screen.md)
+accepted 2026-11-07** (George): `POST /panel/page/show` and `/hide`, the
+page checked before it shows; `panel.page` in `/state` without the address;
+a layer above the idle screen and the dashboard with no chrome; any touch or
+D-pad key closes it; a person's request wins and the clock's waits; taken
+down at 80 °C or throttling; at most 60 minutes a call; two actions and a
+binary sensor in the integration (ADR-0160 D3 amended). The settings are in
+ADR-0022.
+
+**Amended 2026-11-07** (George, from the Home Assistant side: a doorbell
+cannot wait for Home Assistant to load): one page kept loaded and hidden, so
+a show of it only reveals it - in 1.15.0, its address from Home Assistant
+(`gexis.preload_page`). Measured first
+([Finding 143](findings/143-a-home-assistant-page-kept-loaded-and-hidden.md)):
+about 60-90 MB, no processor that could be measured, nothing drawn while
+hidden, and the page still reads itself as visible. K1-K8 accepted as
+proposed; *Page kept loaded* [N] in ADR-0022.
+
+**Acceptance (draft):**
+
+1. Home Assistant shows a page on a player with the switch on, over whatever
+   is there, the music playing on; a screen in standby wakes for it.
+2. A touch, Back, the time limit or Home Assistant takes it down; the panel
+   returns to what it showed, standby included, and Home Assistant sees it.
+3. With the switch off the player refuses, and Home Assistant offers nothing.
+4. Live cameras while music plays at 192 kHz with room correction: no
+   dropouts - recorded as a finding.
 
 
 ### Parked

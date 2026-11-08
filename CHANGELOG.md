@@ -6,6 +6,20 @@
 Every release of Gexis Player and its notes, newest first. The player
 shows the last 10 under Settings → System → Change logs.
 
+## 1.15.0 — 8 November 2026
+
+### New
+
+- Pages from Home Assistant, in Settings → Display: Home Assistant can put a page of its own on the screen for a while, such as cameras when the doorbell rings, and take it down again.
+- A touch, any remote key or its time limit closes it, and what was on the screen comes back, the visualiser and standby included.
+- Home Assistant can keep one page loaded and hidden, so that it appears at once.
+
+### Good to know
+
+- Off until switched on, for each player. The actions come with the Gexis Player integration 0.6.0, and the page needs what the dashboard needs in Home Assistant.
+- A page stays up for ten minutes unless Home Assistant says otherwise, an hour at most, and is taken down if the player gets too hot.
+- A page kept loaded takes about 60-90 MB of memory.
+
 ## 1.14.0 — 6 November 2026
 
 ### New

@@ -8658,3 +8658,48 @@ limited testing) on Stable with work open; 27 (releases built on GitHub)
 in 1.12.1, a card still to flash; 28 (Plexamp and Beszel to the catalogue)
 started; next 29-30 (room correction), 31-33; MPD parked. `docs/DEVELOPMENT.md`
 holds each phase's acceptance criteria.
+
+
+## From HANDOFF, 2026-11-06 (1.13.0 promoted to Stable, 1.14.0 on Testing)
+
+**Testing: 1.13.0** (2026-11-03, serial 65): Plexamp and Beszel from the
+catalogue (Phase 28). Built by run 41718806895 (`verify-image.sh` all checks
+passed), signed on R2D2, read back good against the shipped key; Stable not
+moved. Notes approved by George; release PR #95 merged 2026-11-04.
+
+**Stable: 1.12.0** (2026-11-02, serial 13): Roon (Phase 26) and three
+fixes, on 1.11.0 (themes; left a pre-release). Its image, the last built on
+R2D2, was deleted 2026-11-04 (George). The two
+measurements are still owed (to-dos `ph22-measure`, `eq-measure`).
+
+## From HANDOFF, 2026-11-06 (Phase 29 on Testing; its branch merged and deleted)
+
+**In progress: Phase 29**, room correction for the bass, **on Testing
+with 1.14.0** (2026-11-06, George; `ph-room-correction` merged into `next`,
+worktree `~/projects/gexis-player-room-correction`). ADR-0175: cuts only, below 250 Hz, towards a
+gentle rise below 80 Hz, in the equaliser's stage; three positions (George,
+2026-11-05, over five; most of them decide a cut, not any one), 60 dB at the
+seat, each speaker alone, a tap and a 3 s countdown at each, the check (Skip allowed)
+waiting for the tap too, a 10-minute timeout; A/B a saved switch; the UMIK-1
+only, **its 90° file given from the phone** (decision 4 changed 2026-11-05:
+miniDSP has no API, its terms forbid automated tools, and the microphone
+gives no serial over USB). Claude Design's design is `design/source/29`
+(George kept its proposals and new copy). **Built and tested on mocks**:
+`room_dsp` (numpy), `room_correction`, `room_run`, `room_mic`,
+`room_control`, the stage's 16 cut slots, the routes, the screens
+(`ui/src/screens/room/`), the manual, FAQ, technical guide, hardware page
+and README; layouts checked with made-up data (`~/projects/scratch/ph29/harness`).
+**On sofapi** (George's UMIK-1, a USB-C unit): George's first full run
+(2026-11-05, five positions at 50 dB) gave the three decisions above, and
+showed the output left at 100 % after a run - the level before kept as the
+shown percentage (fixed: the DAC's own level, put back through the bridge;
+read back from the DAC on sofapi after a cancel, a restart mid-run and the
+next run, Lesson 93). Then (George, 2026-11-05): cuts as deep as the target
+takes, stacked where one is not enough; both speakers swept together, shown
+as a third tab, never cut; boosts stay out (decision 2). sofapi holds the
+cuts recalculated from three of the first run's positions. **Not yet:** the
+cuts read from CamillaDSP while music plays (only readable then), a full run
+at three positions with both, the level against a meter, two sweeps'
+agreement at 60 dB, the stage's cost, the A/B bit-exactness. **Copy to confirm** with George:
+the lines the design has no state for (`design/IMPLEMENTED-DIFFERENTLY.md`,
+Phase 29).

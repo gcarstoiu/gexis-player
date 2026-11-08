@@ -415,6 +415,17 @@ remote's trackpad and type on the phone's keyboard, or use a USB keyboard
 plugged into the player. Home Assistant then keeps the player signed
 in.
 
+**Can Home Assistant show its cameras on the player's screen?**
+Yes, for a while, when *Pages from Home Assistant* is on in *Settings →
+Display*: Home Assistant's action *Show a page on the screen* puts any of its
+pages over whatever the screen shows, the music playing on, until a touch,
+a remote's key, its time or Home Assistant takes it down; then the screen
+is as it was. Home Assistant can also keep one page loaded and hidden
+(*Keep a page loaded*), so that it shows at once when the doorbell rings.
+Live video is heavy for a Pi 4: show few cameras, in their small streams.
+It needs what the dashboard needs in Home Assistant - see the
+manual's *A page from Home Assistant*.
+
 **Can Home Assistant control the player?**
 Yes, with the *Gexis Player* integration, installed in Home Assistant through
 HACS from
@@ -423,7 +434,8 @@ Each player is found on the network and shows as a media player - what plays,
 with its artwork, the transport, volume and the source playing - with the
 equaliser's switch and setting, and, on a player with a screen, as switches
 for the screen, the dashboard, the visualiser and the idle screen, buttons
-for Home, Now Playing and Lyrics, and a D-pad that moves around the screen.
+for Home, Now Playing and Lyrics, a D-pad that moves around the screen, and
+actions that put a page of Home Assistant's on the screen for a while.
 A *Gexis Player* card for dashboards comes with it, laid out as the phone's
 remote: what plays and its controls, a switch between the players, the
 D-pad and the equaliser.

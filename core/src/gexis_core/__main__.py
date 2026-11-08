@@ -79,6 +79,7 @@ from gexis_core.peppy_metadata import PeppyMetadataWriter, next_track
 from gexis_core.model import BLANK_METADATA, Queue, TrackMetadata
 from gexis_core import carry_over, connections, discovery, hardware_report, hardware_reports, personalise, settings_migrations, settling, updates, wired
 from gexis_core.dashboard import Dashboard, DashboardSchedule, explain as explain_dashboard
+from gexis_core.ha_page import PRELOAD_PATH as PAGE_PRELOAD_PATH, Page as HaPage, read_heat
 from gexis_core.panel_input import PanelInput
 from gexis_core import standby as standby_module
 from gexis_core.standby import Schedule, Standby
@@ -1931,6 +1932,11 @@ async def main() -> None:
         found = await probe_idle_page(settings.value("dashboard_url") or "", idle_session)
         return {**found, "message": explain_dashboard(found.get("reason"))}
 
+    # ADR-0176 P1: a page from Home Assistant is checked the same way before
+    # it shows; the caller gets the sentence.
+    async def page_check(url: str) -> dict:
+        return await probe_idle_page(url, idle_session)
+
     # ADR-0047 §2a. Both share the idle screen's session: one screen, three
     # things it asks for, and a fourth connection pool would be a pool for
     # something that runs once every fifteen minutes.
@@ -2927,6 +2933,9 @@ async def main() -> None:
                # dashboard's check, the button by the panel, the times by
                # the dashboard's schedule each tick.
                "dashboard_url": None, "dashboard_button": None,
+               # ADR-0176: read by the page's route at each show; turned off,
+               # the write's handler takes a page down.
+               "ha_pages": None,
                "dashboard_schedule": None, "dashboard_times": None,
                # ADR-0118 B: read by the menus route and the panel's home.
                "lms_extended_nav": None,
@@ -3569,6 +3578,35 @@ async def main() -> None:
             asyncio.ensure_future(peppy_screen.hide_async())
 
     dashboard = Dashboard(publish=_dashboard_published)
+
+    # ADR-0176: a page from Home Assistant on the screen, for a while. It
+    # wakes a screen in standby and minimises the visualiser (not stopped,
+    # so it comes back at once), and puts both back when it goes - unless a
+    # person asked the panel for something else (P5, P6).
+    async def _page_prepare() -> dict:
+        token = {"standby": standby.off, "reason": standby.reason,
+                 "visualiser": peppy_screen.visible}
+        if standby.off:
+            await standby.wake("page")
+        if peppy_screen.visible:
+            await peppy_screen.hide_async()
+        return token
+
+    async def _page_restore(token: dict, back: bool) -> None:
+        if not back:
+            return
+        if token.get("standby"):
+            await standby.sleep(token.get("reason") or "asked")
+        elif token.get("visualiser"):
+            await peppy.request_async("show")
+
+    def _pages_on() -> bool:
+        return settings.value("ha_pages") is True and settings.value("headless") is not True
+
+    ha_page = HaPage(lambda state: state_store.set_panel(page=state),
+                     prepare=_page_prepare, restore=_page_restore, heat=read_heat,
+                     available=_pages_on, preload_path=PAGE_PRELOAD_PATH)
+    state_store.set_panel(page=ha_page.state(), pages=_pages_on())
     # ADR-0157: the phone's taps and typing made real over a framed page,
     # in the panel's session - the same one the visualiser's wlrctl reaches.
     panel_input = PanelInput(runtime_dir=config.peppy_runtime_dir,
@@ -3581,8 +3619,9 @@ async def main() -> None:
     standby_schedule = Schedule(
         standby, lambda key: settings.value(key),
         lambda: state_store.state.metadata.transport == "playing",
-        # Not over Keep this screen? (Finding 125 #17, 2026-10-14).
-        blocked=lambda: state_store.state.screen_confirm is not None)
+        # Not over Keep this screen? (Finding 125 #17, 2026-10-14), nor
+        # under a page from Home Assistant: it waits for the page (ADR-0176 P5).
+        blocked=lambda: state_store.state.screen_confirm is not None or ha_page.shown)
     peppy = PeppyController(
         peppy_screen,
         UnattendedPlayback(
@@ -3591,8 +3630,9 @@ async def main() -> None:
         ),
         # ADR-0055 §6: nothing raises a screen this output cannot feed.
         has_levels=lambda: state_store.state.meters,
-        # ADR-0135: nor one that is in standby.
-        blocked=lambda: standby.off,
+        # ADR-0135: nor one that is in standby; nor under a page from Home
+        # Assistant, which puts it back when it goes (ADR-0176 P5).
+        blocked=lambda: standby.off or ha_page.shown,
         # ADR-0156 as amended 2026-10-22: a show - asked for or the timer's -
         # takes the Home Assistant dashboard down and comes up in its place.
         before_show=lambda: dashboard.hide("visualiser"),
@@ -4859,6 +4899,8 @@ async def main() -> None:
         standby=standby,
         dashboard=dashboard,
         dashboard_page=dashboard_page,
+        page=ha_page,
+        page_check=page_check,
         panel_input=panel_input,
         equaliser=equaliser,
         room=room,

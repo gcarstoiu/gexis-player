@@ -1,6 +1,7 @@
 # ADR-0175 — Room correction for the bass
 
-**Status:** **Accepted** 2026-11-03 (George: decisions 1-6), Phase 29
+**Status:** **Built** 2026-11-06, in 1.14.0 (Testing serial 66). **Accepted**
+2026-11-03 (George: decisions 1-6), Phase 29
 (`ph-room-correction`). How is Claude's proposal; the decisions are George's.
 **Builds on:** [ADR-0162](0162-a-simple-equaliser.md) (the equaliser's filter
 stage) and [Finding 124](../findings/124-room-correction-what-open-source-offers.md)
