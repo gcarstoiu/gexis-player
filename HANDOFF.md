@@ -20,7 +20,19 @@ and the ideas as Must / Should / Could. It follows `docs/DEVELOPMENT.md`'s
 phases; change it when a phase opens, closes or moves, and show George first. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Testing: 1.14.0** (2026-11-06, serial 66): room correction for the bass
+**Testing: 1.15.0** (2026-11-08, serial 67): a page from Home Assistant on
+the screen (Phase 35), with zlib's Debian update. Built by run 42471673684
+(`verify-image.sh` all 151 checks passed, as 1.14.0); its downloads from the
+mirror and the published indexes took 26 and 20 minutes during GitHub's
+incident with unauthenticated downloads, and signing (on R2D2) waited until
+GitHub served the files again (a 503 first). The channel, each part, the
+notes and the history read back good. Notes approved by George; **release
+PR #97 open for George to merge** (every check passed). The integration's
+0.6.0 released the same day (its `main` fast-forwarded to `ha-page`, tag and
+release; notes approved by George); the Home Assistant session sent the
+final names and fields.
+
+**Before it, Testing: 1.14.0** (2026-11-06, serial 66): room correction for the bass
 (Phase 29), with the kernel 6.18.60 and Mesa 26.2.6 from the Raspberry Pi
 archive. Built by run 42261893617 (`verify-image.sh` all 151 checks passed,
 as 1.13.0), signed on R2D2; the channel, each part, the notes and the history
@@ -120,12 +132,13 @@ player's.
 `GEXIS_RELEASE_GNUPGHOME=~/projects/gexis-release-key`; the scripts default
 to `~/.gnupg-gexis-release`, which no longer exists.
 
-**The players** (2026-11-06): sofapi on Phase 29's last preview
-(`gexis-core`, `gexis-player` and `gexis-ui` 1.13.0+git34 from `0f566c6b`),
+**The players** (2026-11-08): sofapi on Phase 35's last preview
+(`gexis-core` and `gexis-player` 1.14.0+git28.7174aad, `gexis-ui`
+1.14.0+git26.8a5b7e4; no page kept loaded), Phase 29's cuts on it,
 Plexamp 0.5.1 and Beszel from the catalogue; `rpi-eeprom-update` reports a bootloader update
 available, not applied (not looked into). Roon's extension enabled in
 George's Roon; the other three last seen on 1.9.1 through their updaters
-(2026-10-29). All four on Testing, which offers 1.14.0. sofapi and the bar
+(2026-10-29). All four on Testing, which offers 1.15.0. sofapi and the bar
 grouped; AirPlay on at sofapi and guestpi. Each has its own Lyrion server.
 
 **The test venv imports the core from `~/projects/gexis-player-next`** (an
@@ -194,8 +207,9 @@ request winning; the kept page shown at once. Two fixes came of them
 (`51879ad4`, `7174aad1`): what was under the page, or what a person asked
 for, goes up before the page goes - now playing had shown for the
 visualiser's raise. sofapi's kept page cleared, its test files removed.
-**Next (George's OK, 2026-11-08):** `ph-ha-page` into `next`, 1.15.0's notes
-for George, the release, then the integration's 0.6.0.
+Merged into `next` with George's OK; **on Testing with 1.15.0** (above).
+After PR #97's merge: `ph-ha-page` and the integration's `ha-page` deleted,
+the worktree `~/projects/gexis-player-ph35` removed.
 
 Phases and their IDs: `docs/DEVELOPMENT.md`. MPD parked (ADR-0151). **Raspberry
 Pi Imager** (ADR-0159, a task): Imager's own list stays open as it is

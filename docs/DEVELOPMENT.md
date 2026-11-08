@@ -4099,6 +4099,16 @@ about 60-90 MB, no processor that could be measured, nothing drawn while
 hidden, and the page still reads itself as visible. K1-K8 accepted as
 proposed; *Page kept loaded* [N] in ADR-0022.
 
+**Tested 2026-11-08** (George, on sofapi): over the idle screen, now playing,
+the visualiser and the dashboard; closed by a touch, a D-pad key and its
+limit; standby woken and put back; a phone's request winning; the kept page
+shown at once. Two fixes came of it (what was under the page goes up before
+the page goes). **On Testing with 1.15.0** (2026-11-08, George; release PR
+#97), with the integration's 0.6.0. Not yet seen on a player: the heat
+take-down, a USB keyboard's key, one page replacing another, the switch
+turned off while a page is up; acceptance 4 (192 kHz with room correction)
+not measured.
+
 **Acceptance (draft):**
 
 1. Home Assistant shows a page on a player with the switch on, over whatever
