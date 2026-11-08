@@ -14,9 +14,9 @@ import room_sim as sim  # noqa: E402
 FIT = (rd.GRID >= rd.FIT_LO) & (rd.GRID <= rd.LIMIT)
 
 
-def test_the_grid_is_a_24th_of_an_octave_from_15_hz():
+def test_the_grid_is_a_24th_of_an_octave_from_15_hz_to_20_khz():
     assert rd.GRID[0] == 15
-    assert rd.GRID[-1] <= 500 < rd.GRID[-1] * 2 ** (1 / 24)
+    assert rd.GRID[-1] <= 20000 < rd.GRID[-1] * 2 ** (1 / 24)
     assert np.allclose(rd.GRID[1:] / rd.GRID[:-1], 2 ** (1 / 24))
 
 
@@ -26,17 +26,22 @@ def test_the_target_rises_3_db_below_80_hz():
     assert rd.target_db(250) < 0.02
 
 
-def test_the_sweep_is_five_seconds_and_never_clips():
+def test_the_sweep_is_eight_seconds_to_20_khz_and_never_clips():
+    """Phase 30: to 20 kHz, its time in each octave of the bass as Phase 29's
+    5 s to 1 kHz had it."""
     x = rd.log_sweep()
-    assert len(x) == 5 * rd.FS
+    assert len(x) == 8 * rd.FS and rd.SWEEP_HI == 20000
+    assert rd.SWEEP_S / math.log2(rd.SWEEP_HI / rd.SWEEP_LO) == pytest.approx(5 / math.log2(100), rel=0.05)
     assert np.max(np.abs(x)) <= 1
     assert abs(x[0]) < 1e-6 and abs(x[-1]) < 1e-3, "faded in and out"
 
 
 def test_a_recording_gives_the_rooms_curve():
+    """From the bass to the treble; the last sixth of an octave below 20 kHz
+    takes in where the sweep stops."""
     sweep = rd.log_sweep() * 0.1
     got = rd.response_db(rd.transfer(sim.record(sweep, seed=1, noise_db=-80), sweep))
-    inside = (rd.GRID >= 18) & (rd.GRID <= 450)
+    inside = (rd.GRID >= 18) & (rd.GRID <= 17000)
     assert np.max(np.abs(got - sim.curve(1))[inside]) < 0.5
 
 

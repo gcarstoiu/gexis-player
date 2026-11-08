@@ -179,6 +179,10 @@ class Calibration:
         return cls(serial, float(value["sens_db"]), points, str(value.get("date", "")),
                    None if gain is None else float(gain), int(value.get("angle", 90)))
 
+    @property
+    def full(self) -> bool:
+        return self.points[-1][0] >= FULL_FROM
+
     def db_at(self, f: float) -> float:
         """The file's correction at `f`, interpolated on a log axis; held
         at its ends."""
@@ -213,15 +217,18 @@ _SENS = re.compile(r"Sens\s*Factor\s*=\s*([-+]?\d*\.?\d+)\s*dB", re.IGNORECASE)
 _SERNO = re.compile(r"SERNO:\s*(\d+)", re.IGNORECASE)
 _AGAIN = re.compile(r"AGain\s*=\s*(-?\d+(?:\.\d+)?)\s*dB", re.IGNORECASE)
 _POINT = re.compile(r"^\s*([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)[\s,;]+([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)")
-#: The points kept: the bass and well above it; the file goes to 20 kHz.
-KEEP_UP_TO = 2000.0
+#: **A calibration for the full range** (Phase 30) reaches this far; the
+#: files go to 20 kHz. Phase 29 kept them to 2 kHz only, so one given
+#: before is asked for again (George, 2026-11-08: *Choose its file again*).
+FULL_FROM = 15000.0
 
 
 def parse_calibration(text: str, date: str, name: str | None = None) -> Calibration:
     """**A calibration file checked as one** (item 9): a sensitivity line
-    naming the microphone, then frequency and dB columns, rising, covering
-    the bass; the 90° one (its second line or its name says so). Anything
-    else is refused - a web page or an error saved in its place included."""
+    naming the microphone, then frequency and dB columns, rising, from the
+    bass to the treble, all kept; the 90° one (its second line or its name
+    says so). Anything else is refused - a web page or an error saved in its
+    place included."""
     not_one = "That is not a calibration file from miniDSP."
     if not isinstance(text, str) or len(text) > 400_000:
         raise RoomError(not_one)
@@ -247,11 +254,10 @@ def parse_calibration(text: str, date: str, name: str | None = None) -> Calibrat
                 raise RoomError(not_one)
             if points and f <= points[-1][0]:
                 raise RoomError(not_one)
-            if f <= KEEP_UP_TO:
-                points.append((f, d))
+            points.append((f, d))
     if sens is None or abs(sens) > 40:
         raise RoomError(not_one)
-    if len(points) < 10 or points[0][0] > 20 or points[-1][0] < 500:
+    if len(points) < 10 or points[0][0] > 20 or points[-1][0] < FULL_FROM:
         raise RoomError(not_one)
     if serial is None or not SERIAL.fullmatch(serial):
         raise RoomError("That file does not say which microphone it is for.")

@@ -5,7 +5,7 @@ import pytest
 from gexis_core import room_correction as rc
 from gexis_core.room_correction import Measurement, Room, RoomError, Speaker
 
-N = 122   # room_dsp.GRID's length
+N = 250   # room_dsp.GRID's length
 
 
 def speaker(cuts=((42.0, -4.0, 8.6), (86.0, -8.0, 5.7))):
@@ -103,7 +103,7 @@ def test_a_calibration_file_is_read():
     cal = rc.parse_calibration(CAL, "2026-11-05", "7071234_90deg.txt")
     assert cal.serial == "7071234" and cal.gain_db == 18 and cal.angle == 90
     assert cal.sens_db == -1.378 and cal.points[0] == (10.054, -2.4562)
-    assert cal.points[-1][0] <= rc.KEEP_UP_TO
+    assert cal.points[-1][0] > 20000 and cal.full, "the whole file kept"
     assert cal.db_at(10.054) == -2.4562
     assert cal.db_at(5) == -2.4562 and cal.db_at(50000) == cal.points[-1][1], "held at its ends"
 
@@ -120,6 +120,19 @@ def test_the_0_degree_file_is_refused():
     with pytest.raises(RoomError, match="0° file"):
         rc.parse_calibration(zero, "2026-11-05", "7071234.txt")
     assert rc.parse_calibration(zero, "2026-11-05", "7071234_90deg.txt").angle == 90, "named as one"
+
+
+def test_a_file_that_stops_short_of_the_treble_is_refused():
+    short = "\n".join(line for line in CAL.splitlines() if not line[:1].isdigit() or float(line.split()[0]) < 10000)
+    with pytest.raises(RoomError, match="not a calibration file"):
+        rc.parse_calibration(short, "2026-11-05", "7071234_90deg.txt")
+
+
+def test_a_calibration_kept_to_2_khz_is_not_for_the_full_range():
+    """Phase 29 kept the files to 2 kHz; Phase 30 measures to 20 kHz."""
+    kept = rc.parse_calibration(CAL, "2026-11-05", "7071234_90deg.txt").as_dict()
+    kept["points"] = [p for p in kept["points"] if p[0] <= 2000]
+    assert not rc.Calibration.from_dict(kept).full
 
 
 def test_a_file_that_names_no_microphone_is_refused():

@@ -56,14 +56,16 @@ TAKE_ABOVE_NOISE = 15.0
 NOISE_S = 1.5
 #: The level step: from this, in these steps - the signal's part; the volume
 #: is at the output's maximum (`host.loud`). The noise goes no higher than
-#: its cap, where its peaks come near full scale; the sweeps, whose peaks are
-#: about 4.5 dB over their level in the band, up to theirs, set from the
-#: noise's last reading as the chain is linear (George, 2026-11-05: 60 dB;
-#: sofapi reached 50 at -18 dBFS).
+#: its cap, where its peaks come near full scale; the sweeps further, set
+#: from the noise's last reading as the chain is linear (George, 2026-11-05:
+#: 60 dB; sofapi reached 50 at -18 dBFS), until their peaks reach
+#: `SWEEP_PEAK_DBFS` - the level in the band that is depends on how much of
+#: the sweep lies in it (`Run._sweep_cap`: -6 dBFS for Phase 29's to 1 kHz,
+#: about -8 for one to 20 kHz).
 LEVEL_START_DBFS = -54.0
 LEVEL_STEP_DB = 3.0
 LEVEL_CAP_DBFS = -12.0
-SWEEP_CAP_DBFS = -6.0
+SWEEP_PEAK_DBFS = -1.5
 LEVEL_BURST_S = 1.0
 #: Where in a burst's recording the level is read: from the lead's end and
 #: the chain's start to before the burst's fade - the noise alone.
@@ -174,6 +176,9 @@ class Run:
         self._today = today or (lambda: datetime.date.today().isoformat())
         self._dsp = dsp or room_dsp
         self._sweep_s = sweep_s or self._dsp.SWEEP_S
+        #: The most a sweep's level in the band may be: its peaks at
+        #: `SWEEP_PEAK_DBFS`.
+        self._sweep_cap = SWEEP_PEAK_DBFS + self._dsp.band_level_db(self._dsp.log_sweep(seconds=self._sweep_s))
         self._taps: asyncio.Queue = asyncio.Queue()
         self._task: asyncio.Task | None = None
         self.state = RunState("place")
@@ -398,7 +403,7 @@ class Run:
                 if heard and unheard == 0:
                     # The noise at its cap and the microphone following it:
                     # the sweeps the rest of the way, up to their own cap.
-                    sweep = min(SWEEP_CAP_DBFS, level + aim - spl)
+                    sweep = min(self._sweep_cap, level + aim - spl)
                     logger.info("room: %.0f dB at the seat at %.0f dBFS, the noise's most; the sweeps at %.0f",
                                 spl, level, sweep)
                     spl, level = spl + sweep - level, sweep

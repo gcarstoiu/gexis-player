@@ -138,8 +138,10 @@ class RoomControl:
         cal = self.state().calibration()
         out = {"state": status, "name": "miniDSP UMIK-1" if status == "found" else None,
                "gain_db": mic.gain_db if mic else None}
+        # `again`: kept by Phase 29 to 2 kHz only, so given again before a
+        # measurement (George, 2026-11-08).
         out["calibration"] = None if cal is None else {
-            "serial": rc.shown_serial(cal.serial), "angle": cal.angle, "date": cal.date}
+            "serial": rc.shown_serial(cal.serial), "angle": cal.angle, "date": cal.date, "again": not cal.full}
         return out
 
     def _row(self, here: rc.OutputRoom) -> str:
@@ -218,7 +220,7 @@ class RoomControl:
             return False, "running"
         if mic["state"] != "found":
             return False, "microphone"
-        if mic["calibration"] is None:
+        if mic["calibration"] is None or mic["calibration"]["again"]:
             return False, "calibration"
         if self._grouped():
             return False, "grouped"
@@ -294,7 +296,8 @@ class RoomControl:
                 raise RoomError({
                     "running": "The room is being measured already.",
                     "microphone": "Plug in the UMIK-1.",
-                    "calibration": "Give the player the microphone's calibration file first.",
+                    "calibration": "Choose the microphone's calibration file again: it is needed now for the full range."
+                    if mic_state["calibration"] else "Give the player the microphone's calibration file first.",
                     "grouped": "Leave the group to measure the room.",
                     "busy": "Not while an update installs.",
                 }[why])

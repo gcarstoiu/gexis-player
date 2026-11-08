@@ -148,6 +148,9 @@
       out.push({ kind: 'busy', name: 'Calibration', sub: 'Reading the file…' });
     } else if (!cal) {
       out.push({ kind: 'warn', name: 'Its calibration file', sub: "Get the 90° file for this microphone from miniDSP's page, then choose it here.", give: true });
+    } else if (cal.again) {
+      // Kept by Phase 29 to 2 kHz only (George, 2026-11-08).
+      out.push({ kind: 'warn', name: 'Choose its file again', sub: 'Needed now for the full range.', give: true });
     } else {
       out.push({ kind: 'ok', name: 'Calibration', sub: `From miniDSP for ${cal.serial} · ${cal.angle}°`, another: true });
     }

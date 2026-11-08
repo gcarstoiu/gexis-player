@@ -4,8 +4,9 @@ recording of it says about the room, the average of the positions, the
 target, and the cuts worked out from them.
 
 Pure numpy, no device: `room_run.py` plays and records, this works on the
-samples. Everything is in dB on one grid, 1/24 octave from 15 to 500 Hz
-(item 10), smoothed to 1/6 octave (item 5).
+samples. Everything is in dB on one grid, 1/24 octave from 15 Hz (item 10)
+to 20 kHz (Phase 30: the sweeps to 20 kHz, George 2026-11-07), smoothed to
+1/6 octave (item 5).
 
 **The cuts are Peaking filters** (item 1), the RBJ cookbook's, as
 CamillaDSP computes them (`equaliser.band_db` for one); a cut's response here
@@ -22,7 +23,7 @@ import numpy as np
 #: recorded at it.
 FS = 48000
 #: The band looked at, and the grid on it (item 10: 1/24 octave).
-F_LO, F_HI = 15.0, 500.0
+F_LO, F_HI = 15.0, 20000.0
 STEPS_PER_OCTAVE = 24
 GRID = F_LO * 2 ** (np.arange(int(STEPS_PER_OCTAVE * math.log2(F_HI / F_LO)) + 1) / STEPS_PER_OCTAVE)
 #: The bass limit (decision 3) and the lowest a cut is fitted from: below
@@ -32,8 +33,14 @@ FIT_LO = 20.0
 #: What the chart shows (the design: 15-300 Hz).
 CHART_HI = 300.0
 
-#: The sweep (item 4): logarithmic, 10 Hz to 1 kHz, about 5 s.
-SWEEP_LO, SWEEP_HI, SWEEP_S = 10.0, 1000.0, 5.0
+#: The sweep (item 4): logarithmic, 10 Hz to 20 kHz (Phase 30). 8 s keeps
+#: the bass's time in each octave, so its signal over the room's noise, as
+#: Phase 29's 5 s to 1 kHz had it (0.73 s an octave against 0.75); the time
+#: is settled after the measurement of George's room.
+SWEEP_LO, SWEEP_HI, SWEEP_S = 10.0, 20000.0, 8.0
+#: Where the level is read - the noise's and a sweep's alike: the bass, so
+#: about 60 dB at the seat means what it did in Phase 29.
+LEVEL_BAND = (20.0, 500.0)
 #: How much of the room's answer is kept: a second holds the bass's decay
 #: and resolves 1 Hz; the harmonics' copies land before the arrival and are
 #: left out with what comes before it.
@@ -145,7 +152,8 @@ def agree_db(a, b, grid=GRID, lo: float = FIT_LO, hi: float = LIMIT) -> float:
 # ---- the level -----------------------------------------------------------------------
 
 
-def pink_noise(seconds: float, fs: int = FS, lo: float = 20.0, hi: float = F_HI, seed: int = 0) -> np.ndarray:
+def pink_noise(seconds: float, fs: int = FS, lo: float = LEVEL_BAND[0], hi: float = LEVEL_BAND[1],
+               seed: int = 0) -> np.ndarray:
     """Pink noise in the band measured, at an RMS of 1 (the level is set by
     the caller), faded in and out."""
     n = int(round(seconds * fs))
@@ -164,7 +172,7 @@ def pink_noise(seconds: float, fs: int = FS, lo: float = 20.0, hi: float = F_HI,
     return x
 
 
-def band_level_db(x, fs: int = FS, lo: float = 20.0, hi: float = F_HI) -> float:
+def band_level_db(x, fs: int = FS, lo: float = LEVEL_BAND[0], hi: float = LEVEL_BAND[1]) -> float:
     """The RMS of `x` within the band, in dB of full scale (a full-scale
     sine reads -3)."""
     x = np.asarray(x, dtype=float)

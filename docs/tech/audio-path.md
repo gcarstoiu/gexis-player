@@ -686,16 +686,18 @@ hw:Loopback,1,0 → CamillaDSP (headroom fader, ten bands, then eight cuts on th
   does: the RMS level at 94 dB SPL at full capture volume). The noise goes
   no higher than −12 dBFS, where its peaks come near full scale; short of
   the aim there, with the microphone following it, the sweeps are set the
-  rest of the way from its last reading, up to −6 dBFS (their peaks about
-  4.5 dB over their level in the band). Short of the aim at that, a level
+  rest of the way from its last reading, until their peaks reach −1.5 dBFS
+  (about −8 dBFS in the band for a sweep to 20 kHz, which has less of itself
+  there than one to 1 kHz had). Short of the aim at that, a level
   from 45 dB and 15 dB above the noise is taken; below, *too quiet*. Once
   the noise is clearly heard, four steps that do not move the reading end
   it.
-- **The sweeps**: a logarithmic sweep from 10 Hz to 1 kHz, 5 s, at the
-  level found; the room's response is the recording's spectrum over the
-  sweep's, windowed to a second from the arrival, the calibration file
-  subtracted, smoothed to 1/6 octave on a 1/24-octave grid from 15 to 500 Hz
-  (`room_dsp.py`, numpy). Two sweeps per speaker and position that differ by
+- **The sweeps**: a logarithmic sweep from 10 Hz to 20 kHz (Phase 30), 8 s
+  so the bass keeps the time in each octave the 5 s to 1 kHz of Phase 29
+  gave it, at the level found; the room's response is the recording's
+  spectrum over the sweep's, windowed to a second from the arrival, the
+  calibration file subtracted, smoothed to 1/6 octave on a 1/24-octave grid
+  from 15 Hz to 20 kHz (`room_dsp.py`, numpy). Two sweeps per speaker and position that differ by
   more than 1.5 dB below 250 Hz are repeated, up to six. After each speaker
   alone, **both together** (George, 2026-11-05), 6 dB lower each so the two
   adding in the bass are no louder than one: shown as heard (`both` in the
@@ -714,7 +716,9 @@ hw:Loopback,1,0 → CamillaDSP (headroom fader, ten bands, then eight cuts on th
 
 The state is kept in the settings database (`_room_correction`): for each
 output `on`, `without` and the last measurement (its cuts and curves); and
-each microphone's calibration by its serial, the last given in use. `/state`
+each microphone's calibration by its serial, the last given in use - the
+whole file; one kept to 2 kHz before Phase 30 is asked for again
+(`calibration.again`). `/state`
 carries a summary as `room`; the curves and a measurement in progress are
 `GET /room-correction` ([api.md](api.md)).
 

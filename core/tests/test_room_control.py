@@ -121,11 +121,29 @@ async def test_never_measured():
 async def test_the_calibration_file_from_the_phone():
     rig = Rig()
     s = await rig.control.calibration(CAL, "7071234_90deg.txt")
-    assert s["microphone"]["calibration"] == {"serial": "707-1234", "angle": 90, "date": "2026-11-05"}
+    assert s["microphone"]["calibration"] == {"serial": "707-1234", "angle": 90, "date": "2026-11-05",
+                                              "again": False}
     assert s["can_measure"] is True
     with pytest.raises(RoomError, match="0° file"):
         await rig.control.calibration(CAL.replace('"Auto-generated 90-degree calibration file"\n', ""),
                                       "7071234.txt")
+
+
+async def test_a_calibration_kept_by_phase_29_is_asked_for_again():
+    """Kept to 2 kHz only, it is given again before the full range is
+    measured (George, 2026-11-08: *Choose its file again*)."""
+    rig = Rig()
+    await rig.control.calibration(CAL, "7071234_90deg.txt")
+    stored = rig.store.rows[rc.KEY]
+    stored["microphones"]["7071234"]["points"] = [p for p in stored["microphones"]["7071234"]["points"]
+                                                  if p[0] <= 2000]
+    s = rig.control.snapshot()
+    assert s["microphone"]["calibration"]["again"] is True and s["microphone"]["calibration"]["serial"] == "707-1234"
+    assert (s["can_measure"], s["why_not"]) == (False, "calibration")
+    with pytest.raises(RoomError, match="again"):
+        await rig.control.start()
+    s = await rig.control.calibration(CAL, "7071234_90deg.txt")
+    assert s["microphone"]["calibration"]["again"] is False and s["can_measure"] is True
 
 
 @pytest.mark.parametrize("mic, why", [("absent", "microphone"), ("other", "microphone")])

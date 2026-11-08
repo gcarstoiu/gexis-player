@@ -94,9 +94,10 @@ setting is heard at once; `on` reopens the output.
 ADR-0175, internal until Phase 29 closes. `GET /room-correction`: for the
 output in use, `on`, `without` (*Hear it without*), the last measurement
 (`measured`, with its `chart` - each speaker's `before`, `target`, `after`
-and five `positions` in dB about the target's level, `freqs` up to 300 Hz,
+and its `positions` in dB about the target's level, `freqs` up to 300 Hz,
 `after_kind` measured or expected - and `cuts`), the `microphone` and its
-`calibration`, `can_measure` with `why_not`, and a measurement in progress
+`calibration` (`again` while the one kept stops at 2 kHz, from before
+Phase 30), `can_measure` with `why_not`, and a measurement in progress
 (`run`, and its `pending` correction before *Keep it*). `/state` carries the
 summary as `room`. `PUT /room-correction` with `on` or `without`;
 `POST /room-correction/calibration {text, name}` gives the 90° file from

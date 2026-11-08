@@ -241,16 +241,31 @@ async def test_past_the_noises_cap_the_sweeps_go_the_rest_of_the_way():
     rig = await _level_only(audio)
     s = rig.run.state
     assert not s.too_quiet and abs(s.level_db - 60) <= room_run.AIM_WITHIN, s
-    assert room_run.LEVEL_CAP_DBFS < rig.run._level_dbfs <= room_run.SWEEP_CAP_DBFS
+    assert room_run.LEVEL_CAP_DBFS < rig.run._level_dbfs <= rig.run._sweep_cap
     assert max(levels) <= room_run.LEVEL_CAP_DBFS + 0.1
     rig.run.cancel()
     await rig.run.wait()
 
 
-def test_a_sweep_at_its_cap_does_not_clip():
-    sweep = rd.log_sweep()
-    scale = 10 ** (room_run.SWEEP_CAP_DBFS / 20) / 10 ** (rd.band_level_db(sweep) / 20)
-    assert np.max(np.abs(sweep * scale)) < 0.9
+async def test_a_sweep_at_its_cap_peaks_at_its_most():
+    """Phase 30: the cap is a sweep's peak. One to 20 kHz has less of itself
+    in the bass, where the level is read, than Phase 29's to 1 kHz: matched
+    there at -6 dBFS, its peaks would have reached +0.7."""
+    audio = Audio(noise_db=-70, gain=_gain_for(45))
+    peaks = []
+    play = audio.play
+
+    async def heard(signal, channel, tail_s=1.1):
+        if channel is not None:
+            peaks.append(float(np.max(np.abs(signal))))
+        return await play(signal, channel, tail_s)
+    audio.play = heard
+    rig = await _level_only(audio)
+    assert rig.run._level_dbfs == rig.run._sweep_cap
+    await rig.run._curve("L")
+    assert 20 * np.log10(peaks[-1]) == pytest.approx(room_run.SWEEP_PEAK_DBFS, abs=0.1)
+    rig.run.cancel()
+    await rig.run.wait()
 
 
 async def test_short_of_the_aim_it_is_taken_from_45_db():
@@ -260,7 +275,7 @@ async def test_short_of_the_aim_it_is_taken_from_45_db():
     s = rig.run.state
     assert not s.too_quiet, s
     assert room_run.TAKE_MIN <= s.level_db < s.aim_db - room_run.AIM_WITHIN
-    assert rig.run._level_dbfs == room_run.SWEEP_CAP_DBFS
+    assert rig.run._level_dbfs == rig.run._sweep_cap
     rig.run.cancel()
     await rig.run.wait()
 
