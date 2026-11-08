@@ -779,11 +779,13 @@ optional; `?by=touch` or `?by=key` from the panel only) and `GET
 write takes a page down (`off`).
 
 Before the first page `__main__` wakes a screen in standby and minimises
-the visualiser (`peppy_screen.hide_async`), and after the last it puts both
-back as they were - standby with its old reason. A person's request takes
-the page down first and puts nothing back (`back=False`, P5): the
-visualiser's show, the dashboard's (asked), `/panel/idle`, `/panel/go`,
-`/panel/standby/on` and a room measurement's start. A touch, a key, the
+the visualiser (`peppy_screen.hide_async`), and as the last one goes it puts
+both back as they were - standby with its old reason - before the panel is
+told, so the visualiser is raised over the page rather than after it. A
+person's request is done the same way, in the page's place, and puts
+nothing back (`hide(back=False, then=...)`, P5): the visualiser's show, the
+dashboard's (asked), `/panel/idle`, `/panel/go`, `/panel/standby/on` and a
+room measurement's start. A touch, a key, the
 limit, the heat, the API's hide and the switch put back. While
 one is up the visualiser's timer and the standby schedule wait
 (`blocked`). Any `/panel/key` press takes it down and is not pressed. A
