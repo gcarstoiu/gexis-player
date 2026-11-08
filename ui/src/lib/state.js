@@ -238,6 +238,10 @@ export const requestStandby = (off) => post(`/panel/standby/${off ? 'on' : 'off'
 export const panelInput = (input) => post('/panel/input', input);
 export const requestDashboard = (show, by) =>
   post(`/panel/dashboard/${show ? 'show' : 'hide'}${by === 'schedule' ? '?by=schedule' : ''}`);
+// ADR-0176: a page from Home Assistant taken down by a touch or a key on
+// the panel (`by`), which the core takes from the panel only.
+export const hidePage = (by) =>
+  post(`/panel/page/hide${by === 'touch' || by === 'key' ? `?by=${by}` : ''}`);
 // `{ idle }`, `{ lyrics }` or both: what the panel shows (ADR-0101).
 export const reportShown = (shown) => post('/panel/shown', shown);
 // ADR-0101 as amended 2026-10-05: 'home', 'now', 'lyrics', 'track' or
