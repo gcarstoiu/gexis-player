@@ -155,6 +155,11 @@ sign-in and framing it shares with the dashboard, and the advice of P8.
   (`hide?by=key`, the panel's word only, as `?by=touch` is).
 - The integration's actions are named *Show a page on the screen* and *Hide
   the page*; its version is 0.6.0, and it needs the player's 1.15.0.
+- What was under a page goes back before the panel is told the page is
+  down, and a person's request is done while the page still covers the
+  screen (2026-11-08, George's test on sofapi: now playing showed between a
+  page closed and the visualiser raised, the raise's quarter second; a
+  phone's request had the same order). Both passed his test after.
 
 ## Amendment 2026-11-07 — a page kept loaded (accepted)
 
