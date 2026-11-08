@@ -124,9 +124,8 @@ player's.
 `GEXIS_RELEASE_GNUPGHOME=~/projects/gexis-release-key`; the scripts default
 to `~/.gnupg-gexis-release`, which no longer exists.
 
-**The players** (2026-11-08): sofapi on Phase 35's last preview
-(`gexis-core` and `gexis-player` 1.14.0+git28.7174aad, `gexis-ui`
-1.14.0+git26.8a5b7e4; no page kept loaded), Phase 29's cuts on it,
+**The players** (2026-11-08): sofapi on 1.15.0 through its updater (George),
+*Pages from Home Assistant* on and no page kept loaded yet, Phase 29's cuts on it,
 Plexamp 0.5.1 and Beszel from the catalogue; `rpi-eeprom-update` reports a bootloader update
 available, not applied (not looked into). Roon's extension enabled in
 George's Roon; the other three last seen on 1.9.1 through their updaters
@@ -181,8 +180,8 @@ Findings 142-143) **on Testing with 1.15.0** (2026-11-08), with the
 integration's 0.6.0; its branches and worktree removed after PR #97. **Not
 yet on a player:** the heat take-down, a USB keyboard's key, one page
 replacing another, the switch turned off while a page is up; acceptance 4
-(192 kHz with room correction) not measured. The Home Assistant session
-wires sofapi's cameras once sofapi runs 1.15.0 and Home Assistant 0.6.0.
+(192 kHz with room correction) not measured. Both updated by George the
+same day; the Home Assistant session wires sofapi's cameras.
 
 Phases and their IDs: `docs/DEVELOPMENT.md`. MPD parked (ADR-0151). **Raspberry
 Pi Imager** (ADR-0159, a task): Imager's own list stays open as it is
