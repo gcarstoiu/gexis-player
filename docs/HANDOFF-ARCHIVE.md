@@ -8703,3 +8703,40 @@ at three positions with both, the level against a meter, two sweeps'
 agreement at 60 dB, the stage's cost, the A/B bit-exactness. **Copy to confirm** with George:
 the lines the design has no state for (`design/IMPLEMENTED-DIFFERENTLY.md`,
 Phase 29).
+
+## From HANDOFF, 2026-11-08 (1.15.0's release PR merged; Phase 35's branch merged and deleted)
+
+**Before it, Testing: 1.14.0** (2026-11-06, serial 66): room correction for the bass
+(Phase 29), with the kernel 6.18.60 and Mesa 26.2.6 from the Raspberry Pi
+archive. Built by run 42261893617 (`verify-image.sh` all 151 checks passed,
+as 1.13.0), signed on R2D2; the channel, each part, the notes and the history
+read back good. Notes approved by George; release PR #96 merged by George
+the same day. The API page's
+deploy timed out in GitHub Pages' queue and passed on a re-run.
+
+**Phase 35** (`ph-ha-page`, George 2026-11-07, now, while 30 waits): Home
+Assistant puts a page of its own on the screen for a while (live cameras)
+and takes it down. In the player, not a plugin; any touch closes it; a time
+limit, else 10 minutes; a switch for each player, off; show and hide actions
+in the integration. Measured the same day, one run and no more (George):
+[Finding 142](docs/findings/142-a-live-camera-page-on-the-panel-while-music-plays.md) -
+seven cameras fit beside music at 44.1 kHz on the plain path, with half the
+DAC's margin, 1.6 cores more and 74 °C still rising. ADR-0176 accepted the
+same day (George); built on `ph-ha-page` (worktree `~/projects/gexis-player-ph35`)
+and the integration's `ha-page` (0.6.0, from `main`; `multiroom` left as it
+is). Preview `1.14.0+git25.4b831af` on sofapi (2026-11-07 18:49, run
+42397583346). Amended the same day (George, from the Home Assistant side):
+one page kept loaded and hidden, a show of it only revealing it, in 1.15.0;
+[Finding 143](docs/findings/143-a-home-assistant-page-kept-loaded-and-hidden.md)
+measured it first (60-90 MB, no processor measurable); K1-K8 accepted and
+built (`8a5b7e49`; the integration's `39672fe`). **George's tests passed**
+on sofapi (2026-11-08, preview `1.14.0+git28.7174aad`): the page over the
+idle screen, now playing, the visualiser and the dashboard; closed by a
+touch, a D-pad key and its limit; standby woken and put back; a phone's
+request winning; the kept page shown at once. Two fixes came of them
+(`51879ad4`, `7174aad1`): what was under the page, or what a person asked
+for, goes up before the page goes - now playing had shown for the
+visualiser's raise. sofapi's kept page cleared, its test files removed.
+Merged into `next` with George's OK; **on Testing with 1.15.0** (above).
+After PR #97's merge: `ph-ha-page` and the integration's `ha-page` deleted,
+the worktree `~/projects/gexis-player-ph35` removed.
