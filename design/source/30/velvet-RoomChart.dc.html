@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Red+Hat+Mono:wght@400;500;600;700&display=swap" />
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,300..800&family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
+<script src="./room-data-30.js"></script>
+</helmet>
+<div style="width:100%;height:100%;display:flex;flex-direction:column;gap:10px;box-sizing:border-box;font-family:'Nunito Sans','Avenir Next','Segoe UI',system-ui,sans-serif;color:#f2e0d2;">
+  <sc-if value="{{ showHead }}" hint-placeholder-val="{{ true }}">
+    <div style="display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;flex-shrink:0;">
+      <sc-if value="{{ hasTitle }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:700;letter-spacing:-0.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:{{ titleFs }};">{{ title }}</div>
+          <div style="color:rgba(242,224,210,0.72);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:{{ lineFs }};">{{ line }}</div>
+        </div>
+      </sc-if>
+      <div style="display:flex;gap:4px;padding:3px;border-radius:14px;background:rgba(242,224,210,0.07);flex-shrink:0;">
+        <sc-for list="{{ tabs }}" as="g" hint-placeholder-count="3">
+          <div onClick="{{ g.onTap }}" style="border-radius:11px;box-sizing:border-box;display:flex;align-items:center;font-weight:700;cursor:pointer;white-space:nowrap;height:{{ tabH }};padding:0 {{ tabPad }};font-size:{{ tabFs }};background:{{ g.bg }};border:1px solid {{ g.line }};color:{{ g.ink }};">{{ g.name }}</div>
+        </sc-for>
+      </div>
+      <sc-if value="{{ isSwitch }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;gap:4px;padding:3px;border-radius:14px;background:rgba(242,224,210,0.07);flex-shrink:0;">
+          <sc-for list="{{ views }}" as="g" hint-placeholder-count="2">
+            <div onClick="{{ g.onTap }}" style="border-radius:11px;box-sizing:border-box;display:flex;align-items:center;font-weight:700;cursor:pointer;white-space:nowrap;height:{{ tabH }};padding:0 {{ tabPad }};font-size:{{ tabFs }};background:{{ g.bg }};border:1px solid {{ g.line }};color:{{ g.ink }};">{{ g.name }}</div>
+          </sc-for>
+        </div>
+      </sc-if>
+    </div>
+  </sc-if>
+  <div ref="{{ plotRef }}" style="position:relative;flex:1;min-height:0;">
+    <sc-for list="{{ panes }}" as="p" hint-placeholder-count="2">
+      <div style="position:absolute;display:flex;flex-direction:column;left:{{ p.l }};top:{{ p.t }};width:{{ p.w }};height:{{ p.h }};">
+        <div style="flex-shrink:0;display:flex;align-items:center;gap:8px;white-space:nowrap;overflow:hidden;font-family:'Red Hat Mono','Courier New',monospace;letter-spacing:0.12em;text-transform:uppercase;color:rgba(242,224,210,0.6);height:{{ capH }};font-size:{{ capFs }};">
+          <span>{{ p.cap }}</span><span style="letter-spacing:0.02em;text-transform:none;color:#f2e0d2;">{{ p.scale }}</span>
+        </div>
+        <div style="position:relative;flex:1;min-height:0;border-radius:8px;overflow:hidden;background:rgba(33,17,15,0.34);">
+          <sc-if value="{{ p.hasBand }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;top:0;bottom:0;right:0;background:rgba(217,180,92,0.07);left:{{ p.bandL }};"></div>
+          </sc-if>
+          <sc-for list="{{ p.xg }}" as="x" hint-placeholder-count="4">
+            <div style="position:absolute;top:0;bottom:0;width:1px;background:rgba(242,224,210,0.07);left:{{ x.left }};"></div>
+          </sc-for>
+          <sc-for list="{{ p.yg }}" as="y" hint-placeholder-count="3">
+            <div style="position:absolute;left:0;right:0;height:1px;top:{{ y.top }};background:{{ y.line }};"></div>
+            <span style="position:absolute;left:5px;transform:translateY(-118%);font-family:'Red Hat Mono','Courier New',monospace;line-height:1;top:{{ y.top }};font-size:{{ fsS }};color:{{ y.ink }};">{{ y.label }}</span>
+          </sc-for>
+          <sc-if value="{{ p.hasHatch }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;top:0;bottom:0;right:0;border-left:1px dashed rgba(242,224,210,0.4);background:repeating-linear-gradient(135deg,rgba(242,224,210,0.12) 0 1px,transparent 1px 6px);left:{{ p.hatchL }};"></div>
+          </sc-if>
+          <sc-if value="{{ p.hasMark }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;top:0;bottom:0;width:0;border-left:1px dashed rgba(242,224,210,0.4);left:{{ p.markL }};"></div>
+          </sc-if>
+          <svg viewBox="{{ p.vb }}" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;overflow:hidden;">
+            <path d="{{ p.cutD }}" fill="rgba(242,147,154,0.2)"></path>
+            <path d="{{ p.raiseD }}" fill="rgba(217,180,92,0.2)"></path>
+            <path d="{{ p.posD }}" fill="none" stroke="rgba(242,224,210,0.2)" stroke-width="{{ lw0 }}" stroke-linejoin="round"></path>
+            <path d="{{ p.targetD }}" fill="none" stroke="rgba(242,224,210,0.82)" stroke-width="{{ lw1 }}" stroke-dasharray="{{ dashT }}" stroke-linecap="round"></path>
+            <path d="{{ p.beforeD }}" fill="none" stroke="#f2939a" stroke-width="{{ lw2 }}" stroke-linejoin="round"></path>
+            <path d="{{ p.afterD }}" fill="none" stroke="#d9b45c" stroke-width="{{ lw3 }}" stroke-linejoin="round" stroke-dasharray="{{ afterDash }}"></path>
+          </svg>
+          <sc-if value="{{ p.hasNote }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;top:0;bottom:0;right:0;display:flex;align-items:center;justify-content:center;padding:0 8px;text-align:center;left:{{ p.noteL }};">
+              <span style="padding:5px 9px;border-radius:7px;background:rgba(21,10,11,0.9);line-height:1.3;text-wrap:balance;color:rgba(242,224,210,0.88);font-size:{{ fsN }};">{{ p.note }}</span>
+            </div>
+          </sc-if>
+        </div>
+        <div style="position:relative;flex-shrink:0;font-family:'Red Hat Mono','Courier New',monospace;height:{{ labH }};font-size:{{ fsS }};">
+          <sc-for list="{{ p.xl }}" as="x" hint-placeholder-count="4">
+            <span style="position:absolute;bottom:0;white-space:nowrap;line-height:1;left:{{ x.left }};transform:{{ x.tx }};color:{{ x.ink }};">{{ x.label }}</span>
+          </sc-for>
+        </div>
+      </div>
+    </sc-for>
+    <sc-if value="{{ isStrip }}" hint-placeholder-val="{{ false }}">
+      <svg viewBox="{{ plotVb }}" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;">
+        <path d="{{ connD }}" fill="none" stroke="rgba(217,180,92,0.55)" stroke-width="1" stroke-dasharray="3 3"></path>
+      </svg>
+    </sc-if>
+  </div>
+  <sc-if value="{{ showLegend }}" hint-placeholder-val="{{ true }}">
+    <div style="display:flex;flex-wrap:wrap;gap:6px 16px;flex-shrink:0;color:rgba(242,224,210,0.78);font-size:{{ legFs }};">
+      <sc-for list="{{ legend }}" as="l" hint-placeholder-count="5">
+        <span style="display:flex;align-items:center;gap:7px;white-space:nowrap;">
+          <svg width="22" height="10" viewBox="0 0 22 10" style="flex-shrink:0;"><rect x="0" y="0.5" width="22" height="9" rx="2" fill="{{ l.fill }}"></rect><path d="{{ l.d }}" fill="none" stroke="{{ l.stroke }}" stroke-width="{{ l.sw }}" stroke-dasharray="{{ l.dash }}" stroke-linecap="{{ l.cap }}"></path></svg>{{ l.name }}
+        </span>
+      </sc-for>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:412,&quot;height&quot;:340},&quot;variant&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;split&quot;,&quot;strip&quot;,&quot;switch&quot;],&quot;default&quot;:&quot;split&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;size&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;phone&quot;,&quot;panel&quot;,&quot;bar&quot;],&quot;default&quot;:&quot;phone&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;ch&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;L&quot;,&quot;R&quot;,&quot;B&quot;],&quot;default&quot;:&quot;L&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;reach&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;full&quot;,&quot;bass&quot;],&quot;default&quot;:&quot;full&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;kind&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;measured&quot;,&quot;expected&quot;,&quot;none&quot;],&quot;default&quot;:&quot;measured&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;set&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;normal&quot;,&quot;bassonly&quot;,&quot;flatabove&quot;,&quot;flatbass&quot;],&quot;default&quot;:&quot;normal&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;view&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;bass&quot;,&quot;above&quot;],&quot;default&quot;:&quot;bass&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;tabs&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;legend&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;title&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;line&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+// Phase 30 chart, full range. Props: variant split|strip|switch, size phone|panel|bar,
+// ch L|R|B, reach full|bass, kind measured|expected|none, set normal|bassonly|flatabove|flatbass,
+// view bass|above (switch), tabs, legend, title, line.
+const ACC = '#d9b45c', COR = '#f2939a';
+const SEL = { bg: 'rgba(217,180,92,0.16)', line: 'rgba(217,180,92,0.55)', ink: ACC };
+const REST = { bg: 'transparent', line: 'transparent', ink: 'rgba(242,224,210,0.78)' };
+const Z = {
+  phone: { fs: 11, fsN: 12, capFs: 11, cap: 22, lab: 17, tabH: '44px', tabPad: '15px', tabFs: '15px', titleFs: '18px', lineFs: '14px', lw: [1, 2, 2.25, 3.25], dashT: '0.5 5', dashA: '7 5', minPx: 34, gap: 8, leg: '13px' },
+  panel: { fs: 13, fsN: 14, capFs: 12, cap: 26, lab: 21, tabH: '50px', tabPad: '22px', tabFs: '17px', titleFs: '26px', lineFs: '16px', lw: [1.25, 2.5, 2.75, 4], dashT: '0.5 6', dashA: '8 6', minPx: 46, gap: 12, leg: '15px' },
+  bar: { fs: 13, fsN: 14, capFs: 12, cap: 24, lab: 19, tabH: '46px', tabPad: '18px', tabFs: '17px', titleFs: '24px', lineFs: '16px', lw: [1.25, 2.5, 2.75, 4], dashT: '0.5 6', dashA: '8 6', minPx: 46, gap: 12, leg: '14px' }
+};
+const TICKS = [100, 1000, 10000, 20, 50, 200, 500, 2000, 5000, 30];
+
+class Component extends DCLogic {
+  state = { W: 340, H: 220, ch: null, view: null };
+  componentDidMount() { this._t1 = setTimeout(() => this.measure(), 60); this._t2 = setTimeout(() => this.measure(), 700); this._onR = () => this.measure(); window.addEventListener('resize', this._onR); if (!window.RC30) this._w = setInterval(() => { if (window.RC30) { clearInterval(this._w); this.forceUpdate(); } }, 50); }
+  componentWillUnmount() { clearTimeout(this._t1); clearTimeout(this._t2); window.removeEventListener('resize', this._onR); clearInterval(this._w); if (this._ro) this._ro.disconnect(); }
+  measure() { const el = this._el; if (!el) return; const w = el.clientWidth, h = el.clientHeight; if (w && h && (Math.abs(w - this.state.W) > 0.5 || Math.abs(h - this.state.H) > 0.5)) this.setState({ W: w, H: h }); }
+  plotRef() {
+    if (!this._pr) this._pr = el => {
+      if (!el || el === this._el) return;
+      this._el = el;
+      if (this._ro) this._ro.disconnect();
+      const f = () => { const w = el.clientWidth, h = el.clientHeight; if (w && h && (Math.abs(w - this.state.W) > 0.5 || Math.abs(h - this.state.H) > 0.5)) this.setState({ W: w, H: h }); };
+      this._ro = new ResizeObserver(f); this._ro.observe(el); f();
+    };
+    return this._pr;
+  }
+  renderVals() {
+    const p = this.props, size = p.size || 'phone', z = Z[size] || Z.phone;
+    const variant = p.variant || 'split', reach = p.reach || 'full', kind = p.kind || 'measured', set = p.set || 'normal';
+    const ext = typeof p.onCh === 'function';
+    const ch = ext ? (p.ch || 'L') : (this.state.ch || p.ch || 'L'), view = this.state.view || p.view || 'bass';
+    const chip = (on, onTap, name) => { const st = on ? SEL : REST; return { name, bg: st.bg, line: st.line, ink: st.ink, onTap }; };
+    const tabs = [['L', 'Left'], ['R', 'Right'], ['B', 'Both']].map(([k, n]) => chip(ch === k, ext ? () => p.onCh(k) : () => this.setState({ ch: k }), n));
+    const views = [['bass', 'Bass'], ['above', 'Above the bass']].map(([k, n]) => chip(view === k, () => this.setState({ view: k }), n));
+    const base = {
+      tabs, views, isSwitch: variant === 'switch', isStrip: variant === 'strip', showHead: p.tabs !== false,
+      hasTitle: !!p.title, title: p.title || '', line: p.line || '', titleFs: z.titleFs, lineFs: z.lineFs,
+      tabH: z.tabH, tabPad: z.tabPad, tabFs: z.tabFs, capH: z.cap + 'px', capFs: z.capFs + 'px', labH: z.lab + 'px',
+      fsS: z.fs + 'px', fsN: z.fsN + 'px', lw0: z.lw[0], lw1: z.lw[1], lw2: z.lw[2], lw3: z.lw[3], dashT: z.dashT,
+      afterDash: kind === 'expected' ? z.dashA : 'none', plotRef: this.plotRef(), panes: [], legend: [],
+      showLegend: p.legend !== false, legFs: z.leg, plotVb: '0 0 1 1', connD: ''
+    };
+    if (!window.RC30) return base;
+    const R = window.RC30, d = R.data(ch, set, reach);
+    const W = this.state.W, H = this.state.H, br = d.bassRange;
+    let specs;
+    if (variant === 'split') {
+      const g = z.gap, fr = Math.log(250 / 15) / Math.log(20000 / 15), wl = Math.round((W - g) * fr);
+      specs = [{ x0: 15, x1: 250, yr: br, l: 0, t: 0, w: wl, h: H, cap: 'Bass', scale: '±' + br + ' dB' },
+        { x0: 250, x1: 20000, yr: 5, l: wl + g, t: 0, w: W - wl - g, h: H, cap: 'Above the bass', scale: '±5 dB' }];
+    } else if (variant === 'strip') {
+      const g = z.gap + 8, hm = Math.round((H - g) * 0.6);
+      specs = [{ x0: 15, x1: 20000, yr: br, l: 0, t: 0, w: W, h: hm, cap: 'Whole range', scale: '±' + br + ' dB', band: true },
+        { x0: 250, x1: 20000, yr: 5, l: 0, t: hm + g, w: W, h: H - hm - g, cap: 'Above the bass, closer', scale: '±5 dB' }];
+    } else {
+      specs = [view === 'bass' ? { x0: 15, x1: 300, yr: br, l: 0, t: 0, w: W, h: H, cap: '15 to 300 Hz', scale: '±' + br + ' dB' }
+        : { x0: 200, x1: 20000, yr: 5, l: 0, t: 0, w: W, h: H, cap: '200 Hz to 20 kHz', scale: '±5 dB' }];
+    }
+    const pct = v => (v * 100).toFixed(3) + '%';
+    const afterC = kind === 'none' ? null : kind === 'expected' ? d.expected : d.measured;
+    let anyRaise = false;
+    const panes = specs.map(sp => {
+      const s = { x0: sp.x0, x1: sp.x1, yr: sp.yr }, pw = sp.w, ph = Math.max(10, sp.h - z.cap - z.lab);
+      const fx = f => R.fx(f, s);
+      const yv = sp.yr >= 20 ? [20, 10, 0, -10, -20] : sp.yr >= 10 ? [10, 0, -10] : [3, 0, -3];
+      const yg = yv.map(v => ({ top: pct((sp.yr - v) / (2 * sp.yr)), label: v > 0 ? '+' + v : v < 0 ? '−' + (-v) : '0', line: v === 0 ? 'rgba(242,224,210,0.26)' : 'rgba(242,224,210,0.07)', ink: v === 0 ? 'rgba(242,224,210,0.88)' : 'rgba(242,224,210,0.6)' }));
+      const in250 = 250 > sp.x0 * 1.01 && 250 < sp.x1 / 1.01;
+      const acc = in250 ? [250] : [];
+      TICKS.forEach(f => { if (f <= sp.x0 * 1.06 || f >= sp.x1 / 1.06) return; const x = fx(f) * pw; if (x < 16 || x > pw - 26) return; if (acc.every(a => Math.abs(fx(a) * pw - x) >= z.minPx)) acc.push(f); });
+      acc.sort((a, b) => a - b);
+      const lab = f => (f >= 1000 ? f / 1000 + 'k' : String(f));
+      const xg = acc.filter(f => f !== 250).map(f => ({ left: pct(fx(f)) }));
+      const xl = acc.map(f => ({ left: pct(fx(f)), label: lab(f), tx: 'translateX(-50%)', ink: f === 250 ? 'rgba(242,224,210,0.88)' : 'rgba(242,224,210,0.6)' }));
+      if (sp.x0 === 250) xl.unshift({ left: '0%', label: '250', tx: 'none', ink: 'rgba(242,224,210,0.88)' });
+      if (sp.l + sp.w >= W - 1) xl.push({ left: '100%', label: 'Hz', tx: 'translateX(-100%)', ink: 'rgba(242,224,210,0.88)' });
+      const hasHatch = reach === 'bass' && sp.x1 > 262;
+      const hatchFrom = Math.max(250, sp.x0);
+      const hatchPx = (1 - fx(hatchFrom)) * pw;
+      const P = c => (c ? R.path(c, s, pw, ph) : '');
+      const raiseD = afterC ? R.fill(afterC, d.before, s, pw, ph) : '';
+      if (raiseD && sp.x1 > 300) anyRaise = true;
+      return {
+        l: sp.l + 'px', t: sp.t + 'px', w: sp.w + 'px', h: sp.h + 'px', cap: sp.cap, scale: sp.scale, xg, yg, xl,
+        hasHatch, hatchL: pct(fx(hatchFrom)), hasMark: in250 && !hasHatch, markL: pct(fx(250)),
+        hasBand: !!sp.band && reach === 'full' && set !== 'bassonly', bandL: pct(fx(250)),
+        vb: '0 0 ' + pw + ' ' + ph, posD: d.positions.map(P).join(''), targetD: P(d.target), beforeD: P(d.before),
+        afterD: afterC ? P(afterC) : '', cutD: afterC ? R.fill(d.before, afterC, s, pw, ph) : '', raiseD,
+        hasNote: hasHatch && hatchPx > 96, note: set === 'bassonly' ? 'Measured to 250 Hz only' : 'Left alone: Bass is chosen', noteL: pct(fx(hatchFrom))
+      };
+    });
+    let connD = '';
+    if (variant === 'strip') {
+      const a = specs[0], b = specs[1], x = R.fx(250, { x0: 15, x1: 20000 }) * W;
+      connD = `M${x.toFixed(1)},${a.h}L0.5,${b.t + z.cap}M${W - 0.5},${a.h}L${W - 0.5},${b.t + z.cap}`;
+    }
+    const legend = [
+      { name: size === 'phone' ? 'Before, average of three' : 'Before', d: 'M1 5h20', stroke: COR, sw: 2.25, dash: 'none', cap: 'butt', fill: 'none' },
+      { name: 'Each position', d: 'M1 3h20M1 7h20', stroke: 'rgba(242,224,210,0.32)', sw: 1, dash: 'none', cap: 'butt', fill: 'none' },
+      { name: 'Target', d: 'M2 5h19', stroke: 'rgba(242,224,210,0.82)', sw: 2, dash: '0.5 5', cap: 'round', fill: 'none' }
+    ];
+    if (afterC) {
+      legend.push({ name: kind === 'expected' ? 'After, expected' : 'After, measured', d: 'M1 5h21', stroke: ACC, sw: 3, dash: kind === 'expected' ? '7 5' : 'none', cap: 'butt', fill: 'none' });
+      legend.push({ name: 'Cut', d: '', stroke: 'none', sw: 0, dash: 'none', cap: 'butt', fill: 'rgba(242,147,154,0.4)' });
+      if (anyRaise) legend.push({ name: 'Raised', d: '', stroke: 'none', sw: 0, dash: 'none', cap: 'butt', fill: 'rgba(217,180,92,0.4)' });
+    }
+    return { ...base, panes, legend, connD, plotVb: '0 0 ' + W + ' ' + H };
+  }
+}
+</script>
+</body>
+</html>

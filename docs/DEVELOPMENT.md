@@ -3874,6 +3874,20 @@ recommendations unless marked):
 The brief for Claude Design: `design/briefs/30-room-correction-full.md`
 (2026-11-07).
 
+**The design** (Claude Design, 2026-11-08, `design/source/30/`; George's
+picks 1a, 1d, 1g and 1l), and George's answers on it the same day:
+- **The measurement first**, as decided on 2026-11-07: a preview with the
+  sweeps to 20 kHz, the curves and the calibration kept that far, the
+  correction still the bass's; George measures at the three positions and at
+  three more around the head; then the finding, the ADR and the rest of the
+  build as drawn.
+- **The sweeps' recordings kept for the analysis**, outside the repository,
+  deleted once the ADR is accepted (George).
+- **A calibration kept before this phase**, to 2 kHz only, is given again:
+  *Choose its file again* · *Needed now for the full range.* (George, over a
+  longer line saying why).
+- **The design's new words as drawn.**
+
 **An ADR before anything is built.** It must settle what is not decided
 above: the filters and their smoothing, how the two ranges join, and what it
 costs a Pi 4 beside Phase 29's filter.

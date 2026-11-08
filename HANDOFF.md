@@ -170,10 +170,14 @@ research in [Finding 141](docs/findings/141-room-correction-above-the-bass-what-
 the level only - the time-domain part is Phase 34 (George), which may end
 without being built. George's decisions the same day are in
 `docs/DEVELOPMENT.md` (the main seat, to 20 kHz, the speaker's own slope, at
-most 3 dB, *Bass* or *Full range*, in groups as the bass). The brief
-`design/briefs/30-room-correction-full.md` is George's to hand to Claude
-Design. Next: a full-range measurement of the room once sofapi is on 1.14.0,
-then the ADR.
+most 3 dB, *Bass* or *Full range*, in groups as the bass). **The design**
+arrived 2026-11-08 (`design/source/30/`; George's answers in
+`docs/DEVELOPMENT.md`). **Now: the measurement before the ADR** - branch
+`ph-room-correction-full` (worktree `~/projects/gexis-player-ph30`) sweeps
+to 20 kHz and asks for a calibration kept to 2 kHz again; a throwaway
+`ph30-research` on top keeps a run's recordings on the player for the
+analysis (never merged, deleted after). Then a finding, the ADR, and the
+build as drawn.
 
 **Phase 35** (a page from Home Assistant on the screen, ADR-0176 as amended;
 Findings 142-143) **on Testing with 1.15.0** (2026-11-08), with the

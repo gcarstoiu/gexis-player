@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,300..800&family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
+<style>
+html,body{margin:0;padding:0;height:100%;background:#dcd7cc;}a{color:#1a47c4;}a:hover{color:#123289;}[data-noscrollbar]::-webkit-scrollbar{display:none;}
+</style>
+<script src="./room-data-30.js"></script>
+</helmet>
+<div data-rc="root" style="position:relative;width:100%;height:100vh;overflow:hidden;font-family:'Nunito Sans','Avenir Next','Segoe UI',system-ui,sans-serif;color:#141414;background:#f2efe8;-webkit-tap-highlight-color:transparent;user-select:none;">
+
+  <sc-if value="{{ isPhone }}" hint-placeholder-val="{{ true }}">
+    <sc-if value="{{ weave }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;inset:-90px;background:repeating-linear-gradient(90deg,#e9e0cb 0 48px,#d8ceb7 48px 96px);filter:blur(70px);transform:scale(1.14);"></div></sc-if><sc-if value="{{ flatGround }}" hint-placeholder-val="{{ true }}"><div style="position:absolute;inset:0;background:radial-gradient(130% 105% at 20% 42%,#2a3f4d,#fbfaf6);"></div></sc-if>
+    <div style="position:absolute;inset:0;background:radial-gradient(130% 105% at 20% 42%,rgba(251,250,246,0.72),rgba(251,250,246,0.96));"></div>
+    <div style="position:relative;height:100%;display:flex;flex-direction:column;">
+      <div data-rc="header" style="flex-shrink:0;display:flex;align-items:center;gap:16px;box-sizing:border-box;border-bottom:1px solid rgba(20,20,20,0.099);padding:14px 18px;min-height:78px;">
+        <sc-if value="{{ hasBack }}" hint-placeholder-val="{{ true }}">
+          <div onClick="{{ goBack }}" style="width:56px;height:56px;border-radius:50%;background:rgba(20,20,20,0.077);display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;" style-active="transform:scale(0.95)">
+            <div style="width:13px;height:13px;border-left:3px solid #141414;border-bottom:3px solid #141414;transform:rotate(45deg);margin-left:10px;"></div>
+          </div>
+        </sc-if>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:23px;font-weight:700;letter-spacing:-0.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ title }}</div>
+          <div style="font-family:'Space Mono','Courier New',monospace;font-size:12px;letter-spacing:0.06em;color:rgba(20,20,20,0.74);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ crumb }}</div>
+        </div>
+      </div>
+
+      <div data-noscrollbar style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;box-sizing:border-box;padding:16px 16px 28px;display:flex;flex-direction:column;gap:12px;">
+
+        <sc-if value="{{ resumed }}" hint-placeholder-val="{{ false }}">
+          <div data-rc="resumed" style="flex-shrink:0;display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:9px;background:rgba(26,71,196,0.11);border:1px solid rgba(26,71,196,0.385);">
+            <span style="width:8px;height:8px;border-radius:50%;background:#1a47c4;flex-shrink:0;margin-top:6px;display:block;"></span>
+            <span style="font-size:14px;line-height:1.4;text-wrap:pretty;">Picked up where it is. The measuring went on while this page was closed.</span>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ showTracker }}" hint-placeholder-val="{{ false }}">
+          <div data-rc="tracker" style="flex-shrink:0;display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;gap:4px;">
+              <sc-for list="{{ track }}" as="t" hint-placeholder-count="3">
+                <span style="flex:1;height:4px;border-radius:2px;display:block;background:{{ t.bg }};"></span>
+              </sc-for>
+            </div>
+            <span style="font-family:'Space Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(20,20,20,0.74);">{{ trackText }}</span>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isAudio }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:12px;padding:4px 2px 0;">
+            <span style="font-family:'Space Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(20,20,20,0.74);">Output</span>
+            <span style="flex:1;height:1px;background:rgba(20,20,20,0.11);display:block;"></span>
+          </div>
+          <div style="flex-shrink:0;border-radius:11px;background:rgba(20,20,20,0.055);border:1px solid rgba(20,20,20,0.11);">
+            <div style="display:flex;align-items:center;gap:14px;min-height:72px;padding:12px 18px;box-sizing:border-box;">
+              <div style="flex:1;min-width:0;"><div style="font-size:18px;font-weight:600;">Output</div><div style="font-size:14px;color:rgba(20,20,20,0.74);margin-top:4px;">Where the sound goes</div></div>
+              <span style="font-family:'Space Mono','Courier New',monospace;font-size:13px;color:rgba(20,20,20,0.922);text-align:right;">HiFiBerry DAC2 HD</span>
+              <span style="width:10px;height:10px;border-right:2.5px solid rgba(20,20,20,0.462);border-top:2.5px solid rgba(20,20,20,0.462);transform:rotate(45deg);flex-shrink:0;display:block;"></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:14px;min-height:72px;padding:12px 18px;box-sizing:border-box;border-top:1px solid rgba(20,20,20,0.088);">
+              <div style="flex:1;min-width:0;"><div style="font-size:18px;font-weight:600;">Volume</div><div style="font-size:14px;color:rgba(20,20,20,0.74);margin-top:4px;">The DAC's own control</div></div>
+              <span style="font-family:'Space Mono','Courier New',monospace;font-size:13px;color:rgba(20,20,20,0.922);">Hardware</span>
+              <span style="width:10px;height:10px;border-right:2.5px solid rgba(20,20,20,0.462);border-top:2.5px solid rgba(20,20,20,0.462);transform:rotate(45deg);flex-shrink:0;display:block;"></span>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 2px 0;">
+            <span style="font-family:'Space Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(20,20,20,0.74);">Sound</span>
+            <span style="flex:1;height:1px;background:rgba(20,20,20,0.11);display:block;"></span>
+          </div>
+          <div style="flex-shrink:0;border-radius:11px;background:rgba(20,20,20,0.055);border:1px solid rgba(20,20,20,0.11);">
+            <div style="display:flex;align-items:center;gap:14px;min-height:72px;padding:12px 18px;box-sizing:border-box;">
+              <div style="flex:1;min-width:0;"><div style="font-size:18px;font-weight:600;">Equaliser</div><div style="font-size:14px;color:rgba(20,20,20,0.74);margin-top:4px;">For this output</div></div>
+              <span style="font-family:'Space Mono','Courier New',monospace;font-size:13px;color:rgba(20,20,20,0.922);">Rock</span>
+              <span style="width:10px;height:10px;border-right:2.5px solid rgba(20,20,20,0.462);border-top:2.5px solid rgba(20,20,20,0.462);transform:rotate(45deg);flex-shrink:0;display:block;"></span>
+            </div>
+            <div data-rc="audio-row" onClick="{{ openRoom }}" style="display:flex;align-items:center;gap:14px;min-height:72px;padding:12px 18px;box-sizing:border-box;border-top:1px solid rgba(20,20,20,0.088);cursor:pointer;">
+              <div style="flex:1;min-width:0;"><div style="font-size:18px;font-weight:600;">Room correction</div><div style="font-size:14px;margin-top:4px;color:{{ rowInk }};">{{ rowState }}</div></div>
+              <span style="width:10px;height:10px;border-right:2.5px solid rgba(20,20,20,0.462);border-top:2.5px solid rgba(20,20,20,0.462);transform:rotate(45deg);flex-shrink:0;display:block;"></span>
+            </div>
+          </div>
+          <div style="font-size:14px;line-height:1.45;color:rgba(20,20,20,0.74);padding:2px 4px;text-wrap:pretty;">Room correction sits beside the equaliser and is kept for each output, as the equaliser is.</div>
+        </sc-if>
+
+        <sc-if value="{{ hasHead }}" hint-placeholder-val="{{ true }}">
+          <div style="flex-shrink:0;display:flex;flex-direction:column;gap:10px;padding-top:2px;">
+            <div style="font-size:25px;font-weight:800;letter-spacing:-0.015em;line-height:1.15;text-wrap:balance;color:{{ headInk }};">{{ head }}</div>
+            <sc-if value="{{ notChecked }}" hint-placeholder-val="{{ false }}">
+              <span style="align-self:flex-start;height:28px;padding:0 10px;border-radius:6px;box-sizing:border-box;display:flex;align-items:center;font-family:'Space Mono','Courier New',monospace;font-size:12px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;background:rgba(150,72,0,0.14);border:1px solid rgba(150,72,0,0.4);color:#964800;">Not checked</span>
+            </sc-if>
+            <sc-if value="{{ hasLead }}" hint-placeholder-val="{{ false }}">
+              <div style="font-size:16px;line-height:1.45;color:rgba(20,20,20,0.857);text-wrap:pretty;">{{ lead }}</div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isBefore }}" hint-placeholder-val="{{ false }}">
+          <div data-rc="checks" style="flex-shrink:0;border-radius:11px;background:rgba(20,20,20,0.055);border:1px solid rgba(20,20,20,0.11);">
+            <sc-for list="{{ checks }}" as="c" hint-placeholder-count="3">
+              <div style="display:flex;align-items:flex-start;gap:14px;padding:16px 18px;box-sizing:border-box;border-top:{{ c.rule }};">
+                <span style="width:26px;height:26px;flex-shrink:0;position:relative;display:block;margin-top:-1px;">
+                  <span style="position:absolute;inset:0;border-radius:50%;background:rgba(26,71,196,0.176);display:{{ c.okDisplay }};"><span style="position:absolute;left:9px;top:5px;width:6px;height:11px;border-right:2.5px solid #1a47c4;border-bottom:2.5px solid #1a47c4;transform:rotate(45deg);display:block;"></span></span>
+                  <span style="position:absolute;inset:2px;border-radius:50%;border:2px dashed rgba(20,20,20,0.44);display:{{ c.waitDisplay }};"></span>
+                  <span style="position:absolute;inset:0;border-radius:50%;background:rgba(150,72,0,0.16);color:#964800;font-family:'Space Mono','Courier New',monospace;font-weight:700;font-size:14px;line-height:26px;text-align:center;display:{{ c.warnDisplay }};">!</span>
+                  <span style="position:absolute;inset:2px;border-radius:50%;border:2.5px solid rgba(26,71,196,0.22);border-top-color:#1a47c4;display:{{ c.busyDisplay }};"></span>
+                  <span style="position:absolute;inset:0;border-radius:50%;background:rgba(26,71,196,0.176);color:#1a47c4;display:{{ c.needDisplay }};"><svg viewBox="0 0 26 26" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 7v9M9 12.5l4 4 4-4M8 19h10"></path></svg></span>
+                </span>
+                <div style="flex:1;min-width:0;display:flex;flex-direction:column;">
+                  <div style="font-size:17px;font-weight:600;line-height:1.3;text-wrap:pretty;color:{{ c.ink }};">{{ c.name }}</div>
+                  <div style="font-size:14px;line-height:1.4;color:rgba(20,20,20,0.74);margin-top:3px;text-wrap:pretty;">{{ c.sub }}</div>
+                  <sc-if value="{{ c.hasActions }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;">
+                      <sc-for list="{{ c.actions }}" as="a" hint-placeholder-count="2">
+                        <div onClick="{{ a.onTap }}" style="height:44px;padding:0 16px;border-radius:9px;box-sizing:border-box;display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;white-space:nowrap;cursor:pointer;background:{{ a.bg }};border:1px solid {{ a.line }};color:{{ a.ink }};" style-active="transform:scale(0.95)">{{ a.label }}</div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="flex-shrink:0;display:flex;align-items:center;gap:18px;border-radius:11px;padding:14px 20px;box-sizing:border-box;background:rgba(20,20,20,0.055);border:1px solid rgba(20,20,20,0.11);opacity:0.5;">
+            <div style="flex:1;min-width:0;"><div style="font-size:18px;font-weight:600;">Room correction</div><div style="font-size:14px;color:rgba(20,20,20,0.74);margin-top:4px;">Measure first</div></div>
+            <span style="width:60px;height:34px;border-radius:13px;flex-shrink:0;position:relative;box-sizing:border-box;display:block;background:rgba(20,20,20,0.088);border:1px solid rgba(20,20,20,0.176);"><span style="position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;display:block;background:rgba(20,20,20,0.74);"></span></span>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isLevel }}" hint-placeholder-val="{{ false }}">
+          <div data-rc="level" style="flex-shrink:0;border-radius:14px;background:rgba(20,20,20,0.055);border:1px solid rgba(20,20,20,0.11);padding:20px 20px 18px;display:flex;flex-direction:column;gap:16px;">
+            <div style="display:flex;align-items:baseline;gap:10px;">
+              <span style="font-family:'Space Mono','Courier New',monospace;font-size:54px;font-weight:600;line-height:1;letter-spacing:-0.02em;color:{{ levelInk }};">{{ levelDb }}</span>
+              <span style="font-size:17px;font-weight:600;color:rgba(20,20,20,0.818);">dB at the seat</span>
+            </div>
+            <div style="position:relative;height:12px;border-radius:5px;background:rgba(20,20,20,0.132);">
+              <div style="position:absolute;left:0;top:0;bottom:0;border-radius:5px;width:{{ levelPct }};background:{{ levelInk }};"></div>
+              <div style="position:absolute;top:-6px;bottom:-6px;width:2px;margin-left:-1px;background:#141414;left:{{ goalPct }};"></div>
+            </div>
+            <div style="position:relative;height:14px;font-family:'Space Mono','Courier New',monospace;font-size:12px;color:rgba(20,20,20,0.74);white-space:nowrap;"><span style="position:absolute;left:0;">40</span><span style="position:absolute;transform:translateX(-50%);color:#141414;left:{{ goalPct }};">60 dB · the aim</span><span style="position:absolute;right:0;">75</span></div>
+          </div>
+          <div style="font-size:14px;line-height:1.45;color:rgba(20,20,20,0.74);padding:0 4px;text-wrap:pretty;">Never above the maximum level set for this output.</div>
+        </sc-if>
+
+        <sc-if value="{{ showDrawing }}" hint-placeholder-val="{{ false }}">
+          <div data-rc="room" style="flex-shrink:0;border-radius:14px;background:rgba(20,20,20,0.055);border:1px solid rgba(20,20,20,0.11);padding:12px;">
+            <div style="position:relative;width:100%;aspect-ratio:340 / 196;">
+              <div style="position:absolute;left:11.2%;top:5.1%;width:8.2%;height:18.4%;border-radius:4px;box-sizing:border-box;background:rgba(20,20,20,0.077);display:flex;align-items:center;justify-content:center;border:1.5px solid {{ spkL }};"><span style="width:52%;aspect-ratio:1;border-radius:50%;border:1.5px solid rgba(20,20,20,0.33);display:block;"></span></div>
+              <div style="position:absolute;left:80.6%;top:5.1%;width:8.2%;height:18.4%;border-radius:4px;box-sizing:border-box;background:rgba(20,20,20,0.077);display:flex;align-items:center;justify-content:center;border:1.5px solid {{ spkR }};"><span style="width:52%;aspect-ratio:1;border-radius:50%;border:1.5px solid rgba(20,20,20,0.33);display:block;"></span></div>
+              <span style="position:absolute;left:11.2%;width:8.2%;top:25.5%;text-align:center;font-family:'Space Mono','Courier New',monospace;font-size:11px;font-weight:600;color:{{ spkLInk }};">L</span>
+              <span style="position:absolute;left:80.6%;width:8.2%;top:25.5%;text-align:center;font-family:'Space Mono','Courier New',monospace;font-size:11px;font-weight:600;color:{{ spkRInk }};">R</span>
+              <div style="position:absolute;left:26%;top:52%;width:48%;height:44%;border-radius:14px;background:rgba(20,20,20,0.055);border:1px solid rgba(20,20,20,0.132);box-sizing:border-box;display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px;"><span style="font-size:11px;white-space:nowrap;color:rgba(20,20,20,0.74);">Your seat</span></div>
+              <svg viewBox="0 0 340 196" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;"><path d="{{ arrowD }}" fill="none" stroke="#1a47c4" stroke-width="2" stroke-dasharray="4 4" stroke-linecap="round"></path><path d="{{ arrowHead }}" fill="#1a47c4"></path></svg>
+              <sc-for list="{{ places }}" as="q" hint-placeholder-count="3">
+                <span style="position:absolute;border-radius:50%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;transform:translate(-50%,-50%);left:{{ q.left }};top:{{ q.top }};width:{{ q.size }};height:{{ q.size }};background:{{ q.bg }};border:2px solid {{ q.line }};color:{{ q.ink }};box-shadow:{{ q.glow }};">{{ q.label }}</span>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ hasAfter }}" hint-placeholder-val="{{ false }}">
+          <div style="font-size:16px;line-height:1.45;color:rgba(20,20,20,0.857);text-wrap:pretty;padding:0 2px;">{{ afterText }}</div>
+        </sc-if>
+
+        <sc-if value="{{ isMeasure }}" hint-placeholder-val="{{ false }}">
+          <div data-rc="speakers" style="flex-shrink:0;border-radius:11px;background:rgba(20,20,20,0.055);border:1px solid rgba(20,20,20,0.11);">
+            <sc-for list="{{ speakers }}" as="k" hint-placeholder-count="3">
+              <div style="display:flex;align-items:flex-start;gap:14px;padding:15px 18px;box-sizing:border-box;border-top:{{ k.rule }};">
+                <span style="width:26px;height:26px;flex-shrink:0;position:relative;display:block;margin-top:-1px;">
+                  <span style="position:absolute;inset:0;border-radius:50%;background:rgba(26,71,196,0.176);display:{{ k.okDisplay }};"><span style="position:absolute;left:9px;top:5px;width:6px;height:11px;border-right:2.5px solid #1a47c4;border-bottom:2.5px solid #1a47c4;transform:rotate(45deg);display:block;"></span></span>
+                  <span style="position:absolute;inset:2px;border-radius:50%;border:2px dashed rgba(20,20,20,0.44);display:{{ k.waitDisplay }};"></span>
+                  <span style="position:absolute;inset:0;border-radius:50%;background:rgba(150,72,0,0.16);color:#964800;font-family:'Space Mono','Courier New',monospace;font-weight:700;font-size:14px;line-height:26px;text-align:center;display:{{ k.warnDisplay }};">!</span>
+                  <span style="position:absolute;inset:0;border-radius:50%;background:#1a47c4;display:{{ k.busyDisplay }};"><span style="position:absolute;left:7px;top:7px;width:12px;height:12px;display:flex;align-items:center;justify-content:space-between;"><i style="width:2px;height:6px;border-radius:1px;background:#ffffff;display:block;"></i><i style="width:2px;height:12px;border-radius:1px;background:#ffffff;display:block;"></i><i style="width:2px;height:8px;border-radius:1px;background:#ffffff;display:block;"></i></span></span>
+                </span>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:17px;font-weight:600;">{{ k.name }}</div>
+                  <div style="font-size:14px;line-height:1.4;margin-top:3px;text-wrap:pretty;color:{{ k.subInk }};">{{ k.sub }}</div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="font-size:14px;line-height:1.45;color:rgba(20,20,20,0.74);padding:0 4px;text-wrap:pretty;">{{ measureNote }}</div>
+        </sc-if>
+
+        <sc-if value="{{ counting }}" hint-placeholder-val="{{ false }}">
+          <div data-rc="countdown" style="flex-shrink:0;display:flex;align-items:center;gap:18px;padding:14px 18px;border-radius:14px;background:rgba(26,71,196,0.088);border:1px solid rgba(26,71,196,0.385);">
+            <span style="width:72px;height:72px;border-radius:50%;box-sizing:border-box;border:3px solid #1a47c4;display:flex;align-items:center;justify-content:center;font-family:'Space Mono','Courier New',monospace;font-size:36px;font-weight:600;color:#1a47c4;flex-shrink:0;">{{ count }}</span>
+            <span style="font-size:16px;line-height:1.4;text-wrap:pretty;">Sweeps in {{ count }}. Stay where you are and keep quiet.</span>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isChecking }}" hint-placeholder-val="{{ false }}">
+          <div style="position:relative;height:10px;border-radius:4px;background:rgba(20,20,20,0.132);flex-shrink:0;"><div style="position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:#1a47c4;width:{{ checkPct }};"></div></div>
+        </sc-if>
+
+        <sc-if value="{{ isPage }}" hint-placeholder-val="{{ false }}">
+          <sc-if value="{{ dsd }}" hint-placeholder-val="{{ false }}">
+            <div data-rc="dsd" style="flex-shrink:0;display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:9px;background:rgba(20,20,20,0.066);border:1px solid rgba(20,20,20,0.154);">
+              <span style="flex-shrink:0;height:24px;padding:0 7px;border-radius:5px;border:1px solid rgba(20,20,20,0.33);display:flex;align-items:center;font-family:'Space Mono','Courier New',monospace;font-size:11px;font-weight:600;letter-spacing:0.1em;">DSD</span>
+              <span style="font-size:14px;line-height:1.4;text-wrap:pretty;">DSD plays untouched. Room correction stands aside for this track and is back for the next PCM one.</span>
+            </div>
+          </sc-if>
+          <div data-rc="power" style="flex-shrink:0;border-radius:11px;background:rgba(20,20,20,0.055);border:1px solid rgba(20,20,20,0.11);padding:14px 18px 16px;display:flex;flex-direction:column;gap:14px;">
+            <div onClick="{{ toggleOn }}" style="display:flex;align-items:center;gap:18px;cursor:pointer;">
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:18px;font-weight:600;">Room correction</div>
+                <div style="font-size:14px;line-height:1.36;color:rgba(20,20,20,0.74);margin-top:5px;text-wrap:pretty;">{{ powerNote }}</div>
+              </div>
+              <span style="width:60px;height:34px;border-radius:13px;flex-shrink:0;position:relative;box-sizing:border-box;display:block;transition:background 140ms ease;background:{{ togBg }};border:1px solid {{ togBorder }};"><span style="position:absolute;top:3px;width:26px;height:26px;border-radius:50%;display:block;transition:left 140ms ease;left:{{ knobLeft }};background:{{ knobBg }};"></span></span>
+            </div>
+            <div style="height:1px;background:rgba(20,20,20,0.088);"></div>
+            <span style="font-family:'Space Mono','Courier New',monospace;font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(20,20,20,0.74);">Reaches</span>
+            <div data-rc="reach" style="display:flex;gap:8px;transition:opacity 160ms ease;opacity:{{ reachOpacity }};pointer-events:{{ reachPointer }};">
+              <sc-for list="{{ reachChips }}" as="r" hint-placeholder-count="2">
+                <div onClick="{{ r.onTap }}" style="flex:1;min-width:0;min-height:64px;padding:10px 14px;border-radius:9px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;gap:4px;cursor:pointer;background:{{ r.bg }};border:{{ r.border }};" style-active="transform:scale(0.97)">
+                  <span style="font-size:16px;font-weight:700;white-space:nowrap;color:{{ r.ink }};">{{ r.name }}</span>
+                  <span style="font-family:'Space Mono','Courier New',monospace;font-size:12px;white-space:nowrap;color:{{ r.subInk }};">{{ r.sub }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <sc-if value="{{ bassOnly }}" hint-placeholder-val="{{ false }}">
+              <div style="font-size:14px;line-height:1.45;color:rgba(20,20,20,0.818);text-wrap:pretty;">This measurement covers the bass only. Measure again to reach the full range.</div>
+            </sc-if>
+          </div>
+          <div data-rc="ab" onClick="{{ toggleAb }}" style="flex-shrink:0;display:flex;align-items:center;gap:14px;border-radius:11px;padding:14px 18px;box-sizing:border-box;cursor:pointer;transition:opacity 160ms ease;background:{{ abBg }};border:1px solid {{ abLine }};opacity:{{ abOpacity }};pointer-events:{{ abPointer }};">
+            <span style="flex-shrink:0;height:26px;padding:0 7px;border-radius:5px;box-sizing:border-box;display:flex;align-items:center;font-family:'Space Mono','Courier New',monospace;font-size:12px;font-weight:700;letter-spacing:0.08em;border:1.5px solid {{ abTagLine }};color:{{ abTagInk }};">A/B</span>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:18px;font-weight:600;">Hear it without</div>
+              <div style="font-size:14px;line-height:1.36;margin-top:5px;text-wrap:pretty;color:{{ abSubInk }};">{{ abSub }}</div>
+            </div>
+            <span style="width:60px;height:34px;border-radius:13px;flex-shrink:0;position:relative;box-sizing:border-box;display:block;transition:background 140ms ease;background:{{ abTogBg }};border:1px solid {{ abTogLine }};"><span style="position:absolute;top:3px;width:26px;height:26px;border-radius:50%;display:block;transition:left 140ms ease;left:{{ abKnobLeft }};background:{{ abKnobBg }};"></span></span>
+          </div>
+          <div data-rc="measured" style="flex-shrink:0;display:flex;align-items:center;gap:14px;border-radius:11px;padding:14px 18px;box-sizing:border-box;background:rgba(20,20,20,0.055);border:1px solid rgba(20,20,20,0.11);">
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:18px;font-weight:600;">Measured</div>
+              <div style="font-size:14px;color:rgba(20,20,20,0.74);margin-top:5px;">{{ measuredLine }}</div>
+            </div>
+            <sc-if value="{{ notCheckedMark }}" hint-placeholder-val="{{ false }}">
+              <span style="flex-shrink:0;height:28px;padding:0 10px;border-radius:6px;box-sizing:border-box;display:flex;align-items:center;font-family:'Space Mono','Courier New',monospace;font-size:12px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;white-space:nowrap;background:rgba(150,72,0,0.14);border:1px solid rgba(150,72,0,0.4);color:#964800;">Not checked</span>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ hasChart }}" hint-placeholder-val="{{ false }}">
+          <div data-rc="chart" style="flex-shrink:0;border-radius:14px;background:rgba(20,20,20,0.055);border:1px solid rgba(20,20,20,0.11);padding:14px 12px 12px;display:flex;flex-direction:column;gap:10px;transition:opacity 160ms ease;opacity:{{ chartOpacity }};">
+            <sc-if value="{{ chartHeadShown }}" hint-placeholder-val="{{ true }}">
+              <div style="padding:0 4px;">
+                <div style="font-size:18px;font-weight:700;">{{ resultHead }}</div>
+                <div style="font-size:14px;line-height:1.4;color:rgba(20,20,20,0.818);margin-top:3px;text-wrap:pretty;">{{ resultLine }}</div>
+              </div>
+            </sc-if>
+            <dc-import name="bauhaus-RoomChart" variant="split" size="phone" ch="{{ ch }}" on-ch="{{ setCh }}" reach="{{ reach }}" set="{{ dset }}" kind="{{ kind }}" style="width:100%;height:{{ chartH }};" hint-size="100%,330px"></dc-import>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ showCuts }}" hint-placeholder-val="{{ false }}">
+          <div data-rc="cuts" style="flex-shrink:0;border-radius:11px;background:rgba(20,20,20,0.055);border:1px solid rgba(20,20,20,0.11);padding:14px 18px 16px;display:flex;flex-direction:column;gap:10px;">
+            <span style="font-size:17px;font-weight:700;">{{ cutsWho }}</span>
+            <sc-for list="{{ cutGroups }}" as="g" hint-placeholder-count="2">
+              <div style="display:flex;align-items:center;gap:12px;margin-top:{{ g.gapTop }};"><span style="font-family:'Space Mono','Courier New',monospace;font-size:12px;letter-spacing:0.16em;text-transform:uppercase;white-space:nowrap;color:rgba(20,20,20,0.74);">{{ g.name }}</span><span style="flex:1;height:1px;background:rgba(20,20,20,0.11);display:block;"></span><span style="font-size:13px;white-space:nowrap;color:rgba(20,20,20,0.74);">{{ g.kind }}</span></div>
+              <sc-if value="{{ g.hasRows }}" hint-placeholder-val="{{ true }}">
+                <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 18px;font-family:'Space Mono','Courier New',monospace;font-size:14px;font-variant-numeric:tabular-nums;">
+                  <sc-for list="{{ g.rows }}" as="u" hint-placeholder-count="4">
+                    <div style="display:flex;justify-content:space-between;gap:8px;white-space:nowrap;"><span style="color:rgba(20,20,20,0.857);">{{ u.f }}</span><span style="font-weight:600;color:{{ u.ink }};">{{ u.g }}</span></div>
+                  </sc-for>
+                </div>
+              </sc-if>
+              <sc-if value="{{ g.empty }}" hint-placeholder-val="{{ false }}">
+                <div style="font-size:15px;line-height:1.4;color:rgba(20,20,20,0.857);">{{ g.emptyText }}</div>
+              </sc-if>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ hasWarn }}" hint-placeholder-val="{{ false }}">
+          <div data-rc="worse" style="flex-shrink:0;display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:9px;background:rgba(150,72,0,0.1);border:1px solid rgba(150,72,0,0.4);">
+            <span style="width:22px;height:22px;border-radius:50%;flex-shrink:0;background:rgba(150,72,0,0.16);color:#964800;font-family:'Space Mono','Courier New',monospace;font-weight:700;font-size:12px;line-height:22px;text-align:center;display:block;">!</span>
+            <span style="font-size:15px;line-height:1.4;text-wrap:pretty;">{{ warnText }}</span>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ hasTail }}" hint-placeholder-val="{{ false }}">
+          <div style="font-size:15px;line-height:1.45;padding:0 4px;text-wrap:pretty;color:{{ tailInk }};">{{ tail }}</div>
+        </sc-if>
+
+        <sc-if value="{{ isPage }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ measureAgain }}" style="flex-shrink:0;height:52px;border-radius:11px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;white-space:nowrap;cursor:pointer;background:{{ againBg }};border:1px solid {{ againLine }};color:{{ againInk }};" style-active="transform:scale(0.97)">{{ againLabel }}</div>
+        </sc-if>
+      </div>
+
+      <sc-if value="{{ hasFoot }}" hint-placeholder-val="{{ false }}">
+        <div data-rc="foot" style="flex-shrink:0;display:flex;gap:10px;padding:12px 16px 22px;box-sizing:border-box;border-top:1px solid rgba(20,20,20,0.099);background:rgba(251,250,246,0.55);">
+          <sc-if value="{{ hasQuiet }}" hint-placeholder-val="{{ false }}">
+            <div onClick="{{ quietTap }}" style="height:52px;padding:0 20px;border-radius:11px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;white-space:nowrap;cursor:pointer;color:rgba(20,20,20,0.883);background:rgba(20,20,20,0.055);border:1px solid rgba(20,20,20,0.11);" style-active="transform:scale(0.95)">{{ quietLabel }}</div>
+          </sc-if>
+          <sc-if value="{{ hasSecond }}" hint-placeholder-val="{{ false }}">
+            <div onClick="{{ secondTap }}" style="flex:1;height:52px;padding:0 16px;border-radius:11px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;white-space:nowrap;cursor:pointer;background:rgba(20,20,20,0.088);border:1px solid rgba(20,20,20,0.176);" style-active="transform:scale(0.97)">{{ secondLabel }}</div>
+          </sc-if>
+          <sc-if value="{{ hasPrimary }}" hint-placeholder-val="{{ false }}">
+            <div onClick="{{ primaryTap }}" style="flex:1;height:52px;padding:0 16px;border-radius:11px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;white-space:nowrap;cursor:pointer;background:#1a47c4;color:#ffffff;opacity:{{ primaryOpacity }};pointer-events:{{ primaryPointer }};" style-active="transform:scale(0.97)">{{ primaryLabel }}</div>
+          </sc-if>
+        </div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isPanelPage }}" hint-placeholder-val="{{ false }}">
+    <sc-if value="{{ weave }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;inset:-90px;background:repeating-linear-gradient(90deg,#e9e0cb 0 48px,#d8ceb7 48px 96px);filter:blur(70px);transform:scale(1.14);"></div></sc-if><sc-if value="{{ flatGround }}" hint-placeholder-val="{{ true }}"><div style="position:absolute;inset:0;background:radial-gradient(130% 105% at 20% 42%,#2a3f4d,#fbfaf6);"></div></sc-if>
+    <div style="position:absolute;inset:0;background:radial-gradient(130% 105% at 20% 42%,rgba(251,250,246,0.72),rgba(251,250,246,0.96));"></div>
+    <div style="position:relative;height:100%;display:flex;flex-direction:column;">
+      <div data-rc="header" style="flex-shrink:0;display:flex;align-items:center;gap:18px;padding:0 36px;min-height:92px;border-bottom:1px solid rgba(20,20,20,0.099);">
+        <div style="width:56px;height:56px;border-radius:50%;background:rgba(20,20,20,0.077);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><div style="width:13px;height:13px;border-left:3px solid #141414;border-bottom:3px solid #141414;transform:rotate(45deg);margin-left:10px;"></div></div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:25px;font-weight:700;letter-spacing:-0.01em;white-space:nowrap;">Room correction</div>
+          <div style="font-family:'Space Mono','Courier New',monospace;font-size:12px;letter-spacing:0.06em;color:rgba(20,20,20,0.74);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Audio · for the DAC, HiFiBerry DAC2 HD · each output keeps its own</div>
+        </div>
+        <sc-if value="{{ dsd }}" hint-placeholder-val="{{ false }}">
+          <div data-rc="dsd" style="flex-shrink:0;display:flex;gap:10px;align-items:center;height:58px;padding:0 16px;border-radius:11px;box-sizing:border-box;background:rgba(20,20,20,0.066);border:1px solid rgba(20,20,20,0.154);">
+            <span style="flex-shrink:0;height:26px;padding:0 8px;border-radius:5px;box-sizing:border-box;border:1px solid rgba(20,20,20,0.33);display:flex;align-items:center;font-family:'Space Mono','Courier New',monospace;font-size:12px;font-weight:600;letter-spacing:0.1em;">DSD</span>
+            <span style="font-size:15px;white-space:nowrap;">Plays untouched. Room correction stands aside.</span>
+          </div>
+        </sc-if>
+        <div data-rc="power" onClick="{{ toggleOn }}" style="display:flex;align-items:center;gap:16px;height:58px;padding:0 14px 0 20px;border-radius:11px;background:rgba(20,20,20,0.055);border:1px solid rgba(20,20,20,0.11);box-sizing:border-box;cursor:pointer;flex-shrink:0;opacity:{{ powerOpacity }};pointer-events:{{ powerPointer }};">
+          <span style="font-family:'Space Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;white-space:nowrap;color:{{ powerInk }};">{{ powerText }}</span>
+          <span style="width:60px;height:34px;border-radius:13px;flex-shrink:0;position:relative;box-sizing:border-box;display:block;transition:background 140ms ease;background:{{ togBg }};border:1px solid {{ togBorder }};"><span style="position:absolute;top:3px;width:26px;height:26px;border-radius:50%;display:block;transition:left 140ms ease;left:{{ knobLeft }};background:{{ knobBg }};"></span></span>
+        </div>
+      </div>
+      <div style="flex:1;min-height:0;display:flex;gap:24px;padding:22px 36px 26px;box-sizing:border-box;">
+        <div style="width:340px;flex-shrink:0;display:flex;flex-direction:column;gap:12px;">
+          <sc-if value="{{ measured }}" hint-placeholder-val="{{ true }}">
+            <div data-rc="reach" style="display:flex;flex-direction:column;gap:10px;border-radius:15px;padding:16px 18px;box-sizing:border-box;background:rgba(20,20,20,0.055);border:1px solid rgba(20,20,20,0.11);">
+              <span style="font-family:'Space Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(20,20,20,0.74);">Reaches</span>
+              <div style="display:flex;gap:8px;transition:opacity 160ms ease;opacity:{{ reachOpacity }};pointer-events:{{ reachPointer }};">
+                <sc-for list="{{ reachChips }}" as="r" hint-placeholder-count="2">
+                  <div onClick="{{ r.onTap }}" style="flex:1;min-width:0;min-height:64px;padding:10px 14px;border-radius:9px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;gap:4px;cursor:pointer;background:{{ r.bg }};border:{{ r.border }};" style-active="transform:scale(0.97)">
+                    <span style="font-size:17px;font-weight:700;white-space:nowrap;color:{{ r.ink }};">{{ r.name }}</span>
+                    <span style="font-family:'Space Mono','Courier New',monospace;font-size:12px;white-space:nowrap;color:{{ r.subInk }};">{{ r.sub }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+          <div data-rc="ab" onClick="{{ toggleAb }}" style="display:flex;flex-direction:column;gap:10px;border-radius:15px;padding:16px 18px;box-sizing:border-box;cursor:pointer;transition:opacity 160ms ease;background:{{ abBg }};border:1px solid {{ abLine }};opacity:{{ abOpacity }};pointer-events:{{ abPointer }};">
+            <div style="display:flex;align-items:center;gap:14px;">
+              <span style="flex-shrink:0;height:30px;padding:0 9px;border-radius:6px;box-sizing:border-box;display:flex;align-items:center;font-family:'Space Mono','Courier New',monospace;font-size:12px;font-weight:700;letter-spacing:0.08em;border:1.5px solid {{ abTagLine }};color:{{ abTagInk }};">A/B</span>
+              <span style="flex:1;min-width:0;font-size:20px;font-weight:700;">Hear it without</span>
+              <span style="width:60px;height:34px;border-radius:13px;flex-shrink:0;position:relative;box-sizing:border-box;display:block;transition:background 140ms ease;background:{{ abTogBg }};border:1px solid {{ abTogLine }};"><span style="position:absolute;top:3px;width:26px;height:26px;border-radius:50%;display:block;transition:left 140ms ease;left:{{ abKnobLeft }};background:{{ abKnobBg }};"></span></span>
+            </div>
+            <div style="font-size:15px;line-height:1.4;text-wrap:pretty;color:{{ abSubInk }};">{{ abSub }}</div>
+          </div>
+          <div data-rc="measured" style="flex:1;min-height:0;display:flex;flex-direction:column;gap:10px;border-radius:15px;padding:16px 18px;box-sizing:border-box;background:rgba(20,20,20,0.055);border:1px solid rgba(20,20,20,0.11);overflow:hidden;">
+            <div style="display:flex;align-items:center;gap:12px;">
+              <span style="font-family:'Space Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;white-space:nowrap;color:rgba(20,20,20,0.74);">Last measurement</span>
+              <span style="flex:1;height:1px;background:rgba(20,20,20,0.11);display:block;"></span>
+            </div>
+            <sc-if value="{{ measured }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span style="flex:1;min-width:0;"><span style="display:block;font-size:19px;font-weight:700;white-space:nowrap;">{{ measuredDate }}</span><span style="display:block;font-size:14px;color:rgba(20,20,20,0.74);margin-top:2px;">{{ measuredSub }}</span></span>
+                <sc-if value="{{ notCheckedMark }}" hint-placeholder-val="{{ false }}"><span style="flex-shrink:0;height:28px;padding:0 9px;border-radius:6px;box-sizing:border-box;display:flex;align-items:center;font-family:'Space Mono','Courier New',monospace;font-size:11px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;white-space:nowrap;background:rgba(150,72,0,0.14);border:1px solid rgba(150,72,0,0.4);color:#964800;">Not checked</span></sc-if>
+              </div>
+              <span style="font-size:15px;font-weight:700;margin-top:2px;">{{ cutsWho }}</span>
+              <sc-for list="{{ cutGroups }}" as="g" hint-placeholder-count="2">
+                <div style="display:flex;align-items:center;gap:10px;margin-top:{{ g.gapTopSm }};"><span style="font-family:'Space Mono','Courier New',monospace;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;white-space:nowrap;color:rgba(20,20,20,0.74);">{{ g.name }}</span><span style="flex:1;height:1px;background:rgba(20,20,20,0.11);display:block;"></span><span style="font-size:12px;white-space:nowrap;color:rgba(20,20,20,0.74);">{{ g.kind }}</span></div>
+                <sc-if value="{{ g.hasRows }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 16px;font-family:'Space Mono','Courier New',monospace;font-size:13px;font-variant-numeric:tabular-nums;">
+                    <sc-for list="{{ g.rows }}" as="u" hint-placeholder-count="4">
+                      <div style="display:flex;justify-content:space-between;gap:6px;white-space:nowrap;"><span style="color:rgba(20,20,20,0.857);">{{ u.f }}</span><span style="font-weight:600;color:{{ u.ink }};">{{ u.g }}</span></div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ g.empty }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size:14px;line-height:1.4;color:rgba(20,20,20,0.857);text-wrap:pretty;">{{ g.emptyText }}</div>
+                </sc-if>
+              </sc-for>
+            </sc-if>
+            <sc-if value="{{ neverMeasured }}" hint-placeholder-val="{{ false }}">
+              <div style="font-size:20px;font-weight:700;">Not measured yet</div>
+            </sc-if>
+          </div>
+          <div onClick="{{ openSheet }}" style="height:58px;flex-shrink:0;border-radius:11px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:12px;font-size:17px;font-weight:700;white-space:nowrap;cursor:pointer;background:{{ againBg }};border:1px solid {{ againLine }};color:{{ againInk }};" style-active="transform:scale(0.97)">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="7" y="2.5" width="10" height="19" rx="2.5"></rect><path d="M11 18.5h2"></path></svg>{{ againLabelPanel }}
+          </div>
+        </div>
+        <div data-rc="chart" style="flex:1;min-width:0;display:flex;flex-direction:column;border-radius:17px;background:rgba(20,20,20,0.055);border:1px solid rgba(20,20,20,0.11);padding:20px 22px 16px;box-sizing:border-box;transition:opacity 160ms ease;opacity:{{ chartOpacity }};">
+          <sc-if value="{{ measured }}" hint-placeholder-val="{{ true }}">
+            <dc-import name="bauhaus-RoomChart" variant="split" size="panel" ch="{{ ch }}" on-ch="{{ setCh }}" reach="{{ reach }}" set="{{ dset }}" kind="{{ kind }}" title="{{ resultHead }}" line="{{ resultLine }}" style="width:100%;height:100%;" hint-size="100%,100%"></dc-import>
+          </sc-if>
+          <sc-if value="{{ neverMeasured }}" hint-placeholder-val="{{ false }}">
+            <div data-rc="never" style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:16px;padding:12px 24px;">
+              <div style="font-size:32px;font-weight:800;letter-spacing:-0.015em;line-height:1.15;text-wrap:balance;">Correct what your room adds to the sound</div>
+              <div style="font-size:18px;line-height:1.5;color:rgba(20,20,20,0.857);text-wrap:pretty;max-width:60ch;">{{ beforeLead }}</div>
+              <div style="font-size:18px;line-height:1.5;color:rgba(20,20,20,0.857);text-wrap:pretty;max-width:60ch;">You measure from the phone, which you hold at the seat while you move the microphone. This screen shows that it is running.</div>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+    <sc-if value="{{ sheet }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:rgba(242,239,232,0.62);"></div>
+      <div data-rc="sheet" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:720px;background:#fbfaf6;border-radius:17px;padding:30px 32px 28px;box-sizing:border-box;display:flex;gap:30px;box-shadow:0 34px 90px rgba(0,0,0,0.21);">
+        <div style="width:200px;height:200px;flex-shrink:0;border-radius:11px;background:#141414;position:relative;">
+          <span style="position:absolute;left:14px;top:14px;width:46px;height:46px;border:9px solid #ffffff;border-radius:5px;box-sizing:border-box;display:block;"></span>
+          <span style="position:absolute;right:14px;top:14px;width:46px;height:46px;border:9px solid #ffffff;border-radius:5px;box-sizing:border-box;display:block;"></span>
+          <span style="position:absolute;left:14px;bottom:14px;width:46px;height:46px;border:9px solid #ffffff;border-radius:5px;box-sizing:border-box;display:block;"></span>
+          <span style="position:absolute;left:72px;top:72px;right:14px;bottom:14px;background:repeating-linear-gradient(90deg,#ffffff 0 8px,transparent 8px 14px),repeating-linear-gradient(0deg,transparent 0 9px,#141414 9px 14px);display:block;"></span>
+        </div>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:12px;">
+          <div style="font-size:24px;font-weight:700;letter-spacing:-0.01em;">Measure from your phone</div>
+          <div style="font-size:16px;line-height:1.5;color:rgba(20,20,20,0.857);text-wrap:pretty;">You hold the phone at the seat while you move the microphone. Scan this, or open the player's page and go to Settings · Audio · Room correction.</div>
+          <div style="font-family:'Space Mono','Courier New',monospace;font-size:15px;color:#1a47c4;">gexis-living.local:8090</div>
+          <div style="flex:1;"></div>
+          <div style="display:flex;justify-content:flex-end;">
+            <div onClick="{{ closeSheet }}" style="height:58px;padding:0 28px;border-radius:11px;box-sizing:border-box;display:flex;align-items:center;font-size:17px;font-weight:600;cursor:pointer;background:rgba(20,20,20,0.077);border:1px solid rgba(20,20,20,0.154);" style-active="transform:scale(0.95)">Close</div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+  </sc-if>
+
+  <sc-if value="{{ isPanelRun }}" hint-placeholder-val="{{ false }}">
+    <sc-if value="{{ weave }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;inset:-90px;background:repeating-linear-gradient(90deg,#e9e0cb 0 48px,#d8ceb7 48px 96px);filter:blur(70px);transform:scale(1.14);"></div></sc-if><sc-if value="{{ flatGround }}" hint-placeholder-val="{{ true }}"><div style="position:absolute;inset:0;background:radial-gradient(130% 105% at 20% 42%,#2a3f4d,#fbfaf6);"></div></sc-if>
+    <div style="position:absolute;inset:0;background:rgba(251,250,246,0.9);"></div>
+    <div data-rc="run" style="position:relative;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:0 120px;box-sizing:border-box;text-align:center;">
+      <span style="font-family:'Space Mono','Courier New',monospace;font-size:14px;letter-spacing:0.22em;text-transform:uppercase;white-space:nowrap;color:#1a47c4;">Room correction</span>
+      <div style="font-size:64px;font-weight:800;letter-spacing:-0.02em;line-height:1.05;white-space:nowrap;">{{ runHead }}</div>
+      <div style="font-size:26px;font-weight:600;white-space:nowrap;color:rgba(20,20,20,0.883);">Please keep quiet throughout</div>
+      <div style="display:flex;flex-direction:column;gap:14px;width:640px;margin-top:18px;">
+        <div style="font-family:'Space Mono','Courier New',monospace;font-size:21px;letter-spacing:0.04em;white-space:nowrap;">{{ runLine }}</div>
+        <div style="position:relative;height:12px;border-radius:5px;background:rgba(20,20,20,0.132);"><div style="position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:#1a47c4;width:{{ runPct }};"></div></div>
+        <div style="display:flex;gap:6px;">
+          <sc-for list="{{ track }}" as="t" hint-placeholder-count="3">
+            <span style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;font-family:'Space Mono','Courier New',monospace;font-size:13px;color:{{ t.ink }};"><span style="width:100%;height:4px;border-radius:2px;display:block;background:{{ t.bg }};"></span>{{ t.n }}</span>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:10px;margin-top:22px;font-size:20px;color:rgba(20,20,20,0.818);">
+        <span style="white-space:nowrap;">The sweeps rise from a low rumble to a high whistle.</span>
+        <span style="display:flex;align-items:center;gap:12px;white-space:nowrap;"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="7" y="2.5" width="10" height="19" rx="2.5"></rect><path d="M11 18.5h2"></path></svg>Follow it on the phone. Sources can play again when it ends.</span>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isBarPage }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:#e1d7c1;"></div>
+    <div style="position:absolute;inset:0;background:radial-gradient(130% 105% at 20% 42%,rgba(251,250,246,0.62),rgba(251,250,246,0.93));"></div>
+    <div style="position:absolute;inset:0;display:flex;">
+      <div data-rc="header" style="width:220px;flex-shrink:0;display:flex;flex-direction:column;gap:12px;padding:28px 24px 24px;box-sizing:border-box;border-right:1px solid rgba(20,20,20,0.099);">
+        <div style="display:flex;gap:10px;">
+          <div style="width:60px;height:60px;border-radius:50%;background:rgba(20,20,20,0.077);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><div style="width:14px;height:14px;border-left:3px solid #141414;border-bottom:3px solid #141414;transform:rotate(45deg);margin-left:11px;"></div></div>
+          <div style="width:60px;height:60px;border-radius:50%;background:rgba(20,20,20,0.077);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span style="width:22px;height:22px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:3.5px;"><span style="border-radius:2px;background:rgba(20,20,20,0.922);display:block;"></span><span style="border-radius:2px;background:rgba(20,20,20,0.922);display:block;"></span><span style="border-radius:2px;background:rgba(20,20,20,0.922);display:block;"></span><span style="border-radius:2px;background:rgba(20,20,20,0.922);display:block;"></span></span></div>
+        </div>
+        <div style="font-size:26px;font-weight:700;letter-spacing:-0.01em;margin-top:8px;line-height:1.15;">Room correction</div>
+        <div style="font-family:'Space Mono','Courier New',monospace;font-size:14px;letter-spacing:0.06em;color:rgba(20,20,20,0.74);">Audio · DAC</div>
+        <div style="flex:1;"></div>
+        <div data-rc="power" onClick="{{ toggleOn }}" style="display:flex;align-items:center;gap:12px;height:60px;padding:0 12px 0 16px;border-radius:11px;background:rgba(20,20,20,0.055);border:1px solid rgba(20,20,20,0.11);box-sizing:border-box;cursor:pointer;opacity:{{ powerOpacity }};pointer-events:{{ powerPointer }};">
+          <span style="flex:1;min-width:0;font-family:'Space Mono','Courier New',monospace;font-size:14px;letter-spacing:0.14em;text-transform:uppercase;white-space:nowrap;color:{{ powerInk }};">{{ powerShort }}</span>
+          <span style="width:60px;height:34px;border-radius:13px;flex-shrink:0;position:relative;box-sizing:border-box;display:block;background:{{ togBg }};border:1px solid {{ togBorder }};"><span style="position:absolute;top:3px;width:26px;height:26px;border-radius:50%;display:block;left:{{ knobLeft }};background:{{ knobBg }};"></span></span>
+        </div>
+      </div>
+      <div style="flex-shrink:0;display:flex;flex-direction:column;gap:10px;padding:22px 20px 22px 22px;box-sizing:border-box;border-right:1px solid rgba(20,20,20,0.099);width:{{ barMidW }};">
+        <sc-if value="{{ measured }}" hint-placeholder-val="{{ true }}">
+          <div data-rc="reach" style="display:flex;gap:8px;opacity:{{ reachOpacity }};pointer-events:{{ reachPointer }};">
+            <sc-for list="{{ reachChips }}" as="r" hint-placeholder-count="2">
+              <div onClick="{{ r.onTap }}" style="flex:1;min-width:0;height:64px;padding:0 14px;border-radius:11px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;gap:3px;cursor:pointer;background:{{ r.bg }};border:{{ r.border }};">
+                <span style="font-size:18px;font-weight:700;white-space:nowrap;color:{{ r.ink }};">{{ r.name }}</span>
+                <span style="font-family:'Space Mono','Courier New',monospace;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{ r.subInk }};">{{ r.sub }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+        <div data-rc="ab" onClick="{{ toggleAb }}" style="display:flex;align-items:center;gap:14px;min-height:84px;border-radius:14px;padding:12px 16px 12px 18px;box-sizing:border-box;cursor:pointer;background:{{ abBg }};border:1px solid {{ abLine }};opacity:{{ abOpacity }};pointer-events:{{ abPointer }};">
+          <span style="flex-shrink:0;height:30px;padding:0 9px;border-radius:6px;box-sizing:border-box;display:flex;align-items:center;font-family:'Space Mono','Courier New',monospace;font-size:13px;font-weight:700;letter-spacing:0.08em;border:1.5px solid {{ abTagLine }};color:{{ abTagInk }};">A/B</span>
+          <span style="flex:1;min-width:0;"><span style="display:block;font-size:20px;font-weight:700;white-space:nowrap;">Hear it without</span><span style="display:block;font-size:16px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{ abSubInk }};">{{ abShort }}</span></span>
+          <span style="width:60px;height:34px;border-radius:13px;flex-shrink:0;position:relative;box-sizing:border-box;display:block;background:{{ abTogBg }};border:1px solid {{ abTogLine }};"><span style="position:absolute;top:3px;width:26px;height:26px;border-radius:50%;display:block;left:{{ abKnobLeft }};background:{{ abKnobBg }};"></span></span>
+        </div>
+        <div data-rc="measured" style="display:flex;align-items:center;gap:12px;min-height:68px;border-radius:14px;padding:10px 18px;box-sizing:border-box;background:rgba(20,20,20,0.055);border:1px solid rgba(20,20,20,0.11);">
+          <span style="flex:1;min-width:0;"><span style="display:block;font-size:19px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ measuredTitle }}</span><span style="display:block;font-size:16px;color:rgba(20,20,20,0.74);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ measuredSubBar }}</span></span>
+          <sc-if value="{{ notCheckedMark }}" hint-placeholder-val="{{ false }}"><span style="flex-shrink:0;height:30px;padding:0 10px;border-radius:6px;box-sizing:border-box;display:flex;align-items:center;font-family:'Space Mono','Courier New',monospace;font-size:12px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;white-space:nowrap;background:rgba(150,72,0,0.14);border:1px solid rgba(150,72,0,0.4);color:#964800;">Not checked</span></sc-if>
+        </div>
+        <div style="flex:1;"></div>
+        <div onClick="{{ openSheet }}" style="height:60px;flex-shrink:0;border-radius:11px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:12px;font-size:18px;font-weight:700;white-space:nowrap;cursor:pointer;background:{{ againBg }};border:1px solid {{ againLine }};color:{{ againInk }};"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="7" y="2.5" width="10" height="19" rx="2.5"></rect><path d="M11 18.5h2"></path></svg>{{ againLabelBar }}</div>
+      </div>
+      <div data-rc="chart" style="flex:1;min-width:0;display:flex;flex-direction:column;padding:20px 32px 18px 24px;box-sizing:border-box;opacity:{{ chartOpacity }};">
+        <sc-if value="{{ measured }}" hint-placeholder-val="{{ true }}">
+          <dc-import name="bauhaus-RoomChart" variant="split" size="bar" legend="{{ false }}" ch="{{ ch }}" on-ch="{{ setCh }}" reach="{{ reach }}" set="{{ dset }}" kind="{{ kind }}" title="{{ resultHead }}" line="{{ resultLine }}" style="width:100%;height:100%;" hint-size="100%,100%"></dc-import>
+        </sc-if>
+        <sc-if value="{{ neverMeasured }}" hint-placeholder-val="{{ false }}">
+          <div data-rc="never" style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:12px;padding:0 12px;">
+            <div style="font-size:28px;font-weight:800;letter-spacing:-0.015em;">Correct what your room adds to the sound</div>
+            <div style="font-size:18px;line-height:1.45;color:rgba(20,20,20,0.857);max-width:820px;text-wrap:pretty;">{{ beforeLead }} You measure from the phone.</div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+    <sc-if value="{{ sheet }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:rgba(242,239,232,0.62);"></div>
+      <div data-rc="sheet" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:820px;height:320px;background:#fbfaf6;border-radius:17px;padding:26px 30px;box-sizing:border-box;display:flex;gap:28px;align-items:center;box-shadow:0 34px 90px rgba(0,0,0,0.21);">
+        <div style="width:200px;height:200px;flex-shrink:0;border-radius:11px;background:#141414;position:relative;">
+          <span style="position:absolute;left:14px;top:14px;width:46px;height:46px;border:9px solid #ffffff;border-radius:5px;box-sizing:border-box;display:block;"></span>
+          <span style="position:absolute;right:14px;top:14px;width:46px;height:46px;border:9px solid #ffffff;border-radius:5px;box-sizing:border-box;display:block;"></span>
+          <span style="position:absolute;left:14px;bottom:14px;width:46px;height:46px;border:9px solid #ffffff;border-radius:5px;box-sizing:border-box;display:block;"></span>
+          <span style="position:absolute;left:72px;top:72px;right:14px;bottom:14px;background:repeating-linear-gradient(90deg,#ffffff 0 8px,transparent 8px 14px),repeating-linear-gradient(0deg,transparent 0 9px,#141414 9px 14px);display:block;"></span>
+        </div>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:10px;">
+          <div style="font-size:24px;font-weight:700;">Measure from your phone</div>
+          <div style="font-size:17px;line-height:1.45;color:rgba(20,20,20,0.857);text-wrap:pretty;">You hold the phone at the seat while you move the microphone. Scan this, or open the player's page and go to Settings · Audio · Room correction.</div>
+          <div style="display:flex;align-items:center;gap:16px;margin-top:6px;">
+            <span style="flex:1;font-family:'Space Mono','Courier New',monospace;font-size:16px;color:#1a47c4;">gexis-living.local:8090</span>
+            <div onClick="{{ closeSheet }}" style="height:60px;padding:0 28px;border-radius:11px;box-sizing:border-box;display:flex;align-items:center;font-size:18px;font-weight:600;cursor:pointer;background:rgba(20,20,20,0.077);border:1px solid rgba(20,20,20,0.154);">Close</div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+  </sc-if>
+
+  <sc-if value="{{ isBarRun }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:#e1d7c1;"></div>
+    <div style="position:absolute;inset:0;background:rgba(251,250,246,0.92);"></div>
+    <div data-rc="run" style="position:absolute;inset:0;display:flex;align-items:center;gap:56px;padding:0 64px;box-sizing:border-box;">
+      <div style="flex-shrink:0;display:flex;flex-direction:column;gap:12px;">
+        <span style="font-family:'Space Mono','Courier New',monospace;font-size:14px;letter-spacing:0.22em;text-transform:uppercase;white-space:nowrap;color:#1a47c4;">Room correction</span>
+        <div style="font-size:48px;font-weight:800;letter-spacing:-0.02em;line-height:1.05;white-space:nowrap;">{{ runHead }}</div>
+        <div style="font-size:22px;font-weight:600;white-space:nowrap;color:rgba(20,20,20,0.883);">Please keep quiet throughout</div>
+      </div>
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:14px;">
+        <div style="font-family:'Space Mono','Courier New',monospace;font-size:21px;letter-spacing:0.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ runLine }}</div>
+        <div style="position:relative;height:12px;border-radius:5px;background:rgba(20,20,20,0.132);"><div style="position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:#1a47c4;width:{{ runPct }};"></div></div>
+        <div style="display:flex;align-items:center;gap:12px;font-size:19px;color:rgba(20,20,20,0.818);">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="7" y="2.5" width="10" height="19" rx="2.5"></rect><path d="M11 18.5h2"></path></svg>
+          <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">The sweeps rise to a high whistle. Follow it on the phone.</span>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isDrawer }}" hint-placeholder-val="{{ false }}">
+    <sc-if value="{{ weave }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;inset:-90px;background:repeating-linear-gradient(90deg,#e9e0cb 0 48px,#d8ceb7 48px 96px);filter:blur(70px);transform:scale(1.14);"></div></sc-if><sc-if value="{{ flatGround }}" hint-placeholder-val="{{ true }}"><div style="position:absolute;inset:0;background:radial-gradient(130% 105% at 20% 42%,#2a3f4d,#fbfaf6);"></div></sc-if>
+    <div style="position:absolute;inset:0;background:rgba(242,239,232,0.62);"></div>
+    <div data-rc="drawer" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:820px;background:#fbfaf6;border:1px solid rgba(26,71,196,0.242);border-radius:21px;padding:34px 40px 36px;box-sizing:border-box;box-shadow:0 34px 90px rgba(0,0,0,0.21);">
+      <div style="font-family:'Space Mono','Courier New',monospace;font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(20,20,20,0.74);margin-bottom:22px;">Controls</div>
+      <div style="display:flex;align-items:center;gap:22px;">
+        <div style="width:58px;height:58px;flex-shrink:0;display:flex;align-items:center;justify-content:center;"><svg viewBox="0 0 30 30" width="30" height="30" fill="none" stroke="#141414" stroke-width="2.5" stroke-linecap="round"><path d="M3 11h5l7-6v20l-7-6H3z" fill="#141414"></path><path d="M19 10a7 7 0 0 1 0 10M22 6a12 12 0 0 1 0 18"></path></svg></div>
+        <div style="flex:1;height:64px;display:flex;align-items:center;min-width:0;"><div style="width:100%;height:14px;border-radius:999px;background:rgba(20,20,20,0.154);position:relative;"><div style="position:absolute;left:0;top:0;bottom:0;width:62%;border-radius:999px;background:#1a47c4;"></div><div style="position:absolute;top:50%;left:62%;width:40px;height:40px;border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 4px 14px rgba(0,0,0,0.158);background:#141414;"></div></div></div>
+        <span style="font-family:'Space Mono','Courier New',monospace;font-size:25px;font-weight:600;width:76px;text-align:right;flex-shrink:0;">62</span>
+      </div>
+      <div style="height:1px;background:rgba(20,20,20,0.11);margin:26px 0 22px;"></div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="flex:1;min-width:0;"><div style="font-size:19px;font-weight:600;">Equaliser</div><div style="font-family:'Space Mono','Courier New',monospace;font-size:12px;letter-spacing:0.06em;margin-top:5px;color:rgba(20,20,20,0.818);">{{ eqState }}</div></div>
+        <div style="height:58px;padding:0 18px 0 22px;border-radius:11px;box-sizing:border-box;background:rgba(20,20,20,0.077);border:1px solid rgba(20,20,20,0.154);display:flex;align-items:center;gap:12px;font-size:17px;font-weight:600;flex-shrink:0;">Edit<span style="width:9px;height:9px;border-right:2.5px solid rgba(20,20,20,0.74);border-top:2.5px solid rgba(20,20,20,0.74);transform:rotate(45deg);display:block;margin-left:-2px;"></span></div>
+        <span style="width:60px;height:34px;border-radius:13px;position:relative;box-sizing:border-box;display:block;flex-shrink:0;background:rgba(26,71,196,0.352);border:1px solid rgba(26,71,196,0.675);"><span style="position:absolute;top:3px;left:29px;width:26px;height:26px;border-radius:50%;display:block;background:#1a47c4;"></span></span>
+      </div>
+      <sc-if value="{{ quickShown }}" hint-placeholder-val="{{ true }}">
+        <div style="height:1px;background:rgba(20,20,20,0.11);margin:24px 0 20px;"></div>
+        <div data-rc="room-quick" style="display:flex;align-items:center;gap:12px;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:19px;font-weight:600;">Room correction</div>
+            <div style="font-family:'Space Mono','Courier New',monospace;font-size:12px;letter-spacing:0.06em;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{ qStateInk }};">{{ qState }}</div>
+          </div>
+          <sc-if value="{{ qSegShown }}" hint-placeholder-val="{{ true }}">
+            <div style="flex-shrink:0;display:flex;gap:4px;padding:4px;border-radius:13px;background:rgba(20,20,20,0.077);opacity:{{ qOpacity }};pointer-events:{{ qPointer }};">
+              <sc-for list="{{ qSegs }}" as="s" hint-placeholder-count="3">
+                <span onClick="{{ s.onTap }}" style="height:50px;padding:0 20px;border-radius:10px;box-sizing:border-box;display:flex;align-items:center;font-size:17px;font-weight:700;white-space:nowrap;cursor:pointer;background:{{ s.bg }};border:1px solid {{ s.line }};color:{{ s.ink }};opacity:{{ s.opacity }};pointer-events:{{ s.pointer }};">{{ s.name }}</span>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ qOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="height:58px;padding:0 18px 0 22px;border-radius:11px;box-sizing:border-box;background:rgba(20,20,20,0.077);border:1px solid rgba(20,20,20,0.154);display:flex;align-items:center;gap:12px;font-size:17px;font-weight:600;flex-shrink:0;">Open<span style="width:9px;height:9px;border-right:2.5px solid rgba(20,20,20,0.74);border-top:2.5px solid rgba(20,20,20,0.74);transform:rotate(45deg);display:block;margin-left:-2px;"></span></div>
+          </sc-if>
+        </div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isBarTray }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:#e1d7c1;"></div>
+    <div style="position:absolute;inset:0;background:radial-gradient(130% 105% at 20% 42%,rgba(251,250,246,0.62),rgba(251,250,246,0.93));"></div>
+    <div style="position:absolute;inset:0;background:rgba(242,239,232,0.55);"></div>
+    <div data-rc="bar-tray" style="position:absolute;left:0;right:0;top:0;height:136px;background:#fbfaf6;border-radius:0 0 24px 24px;border-bottom:1px solid rgba(20,20,20,0.132);box-shadow:0 18px 44px rgba(0,0,0,0.175);">
+      <div style="position:absolute;left:0;right:0;top:0;height:122px;display:flex;align-items:center;gap:20px;padding:0 40px;box-sizing:border-box;">
+        <div style="width:64px;height:64px;border-radius:50%;background:rgba(20,20,20,0.077);display:grid;place-items:center;flex-shrink:0;"><span style="width:24px;height:24px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:4px;"><i style="border-radius:3px;background:rgba(20,20,20,0.902);"></i><i style="border-radius:3px;background:rgba(20,20,20,0.902);"></i><i style="border-radius:3px;background:rgba(20,20,20,0.902);"></i><i style="border-radius:3px;background:rgba(20,20,20,0.902);"></i></span></div>
+        <div style="width:60px;height:60px;border-radius:50%;background:rgba(20,20,20,0.077);display:grid;place-items:center;flex-shrink:0;"><span style="display:flex;align-items:flex-end;gap:4px;height:22px;"><i style="width:4px;height:12px;border-radius:2px;background:rgba(20,20,20,0.883);"></i><i style="width:4px;height:22px;border-radius:2px;background:rgba(20,20,20,0.883);"></i><i style="width:4px;height:16px;border-radius:2px;background:rgba(20,20,20,0.883);"></i><i style="width:4px;height:8px;border-radius:2px;background:rgba(20,20,20,0.883);"></i></span></div>
+        <div style="height:60px;padding:0 20px 0 18px;border-radius:23px;box-sizing:border-box;display:flex;align-items:center;gap:12px;flex-shrink:0;background:rgba(26,71,196,0.132);border:1px solid rgba(26,71,196,0.643);">
+          <svg viewBox="0 0 24 24" width="24" height="24" style="flex-shrink:0;color:#1a47c4;" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 4v16M12 4v16M18 4v16"></path><circle cx="6" cy="14" r="2.6" fill="#fbfaf6"></circle><circle cx="12" cy="8" r="2.6" fill="#fbfaf6"></circle><circle cx="18" cy="12" r="2.6" fill="#fbfaf6"></circle></svg>
+          <span style="font-size:19px;font-weight:700;white-space:nowrap;color:#1a47c4;">Rock</span>
+        </div>
+        <sc-if value="{{ quickShown }}" hint-placeholder-val="{{ true }}">
+          <div data-rc="room-quick" onClick="{{ qTap }}" style="height:60px;padding:0 22px 0 18px;border-radius:23px;box-sizing:border-box;display:flex;align-items:center;gap:12px;flex-shrink:0;cursor:pointer;background:{{ qBtnBg }};border:1px solid {{ qBtnLine }};opacity:{{ qOpacity }};" style-active="transform:scale(0.95)">
+            <svg viewBox="0 0 24 24" width="24" height="24" style="flex-shrink:0;color:{{ qBtnInk }};" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18M5 20V9l7-5 7 5v11"></path><path d="M9 15c1-1.5 2-1.5 3 0s2 1.5 3 0"></path></svg>
+            <span style="font-size:19px;font-weight:700;white-space:nowrap;color:{{ qBtnInk }};">{{ qBtnText }}</span>
+          </div>
+        </sc-if>
+        <span style="width:1px;height:44px;background:rgba(20,20,20,0.154);flex-shrink:0;"></span>
+        <svg viewBox="0 0 30 30" width="30" height="30" fill="none" stroke="#141414" stroke-width="2.5" stroke-linecap="round" style="flex-shrink:0;"><path d="M3 11h5l7-6v20l-7-6H3z" fill="#141414"></path><path d="M19 10a7 7 0 0 1 0 10M22 6a12 12 0 0 1 0 18"></path></svg>
+        <div style="flex:1;min-width:0;align-self:stretch;display:flex;align-items:center;">
+          <div style="width:100%;height:10px;border-radius:999px;background:rgba(20,20,20,0.165);position:relative;">
+            <div style="position:absolute;left:0;top:0;bottom:0;width:62%;border-radius:999px;background:#1a47c4;"></div>
+            <div style="position:absolute;top:50%;left:62%;width:44px;height:44px;border-radius:50%;transform:translate(-50%,-50%);background:#141414;box-shadow:0 3px 10px rgba(0,0,0,0.158);"></div>
+          </div>
+        </div>
+        <span style="font-family:'Space Mono','Courier New',monospace;font-size:25px;font-weight:700;width:72px;text-align:right;flex-shrink:0;">62</span>
+      </div>
+      <div style="position:absolute;left:50%;bottom:10px;width:88px;height:6px;margin-left:-44px;border-radius:3px;background:rgba(20,20,20,0.462);"></div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isPhoneTray }}" hint-placeholder-val="{{ false }}">
+    <sc-if value="{{ weave }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;inset:-90px;background:repeating-linear-gradient(90deg,#e9e0cb 0 48px,#d8ceb7 48px 96px);filter:blur(70px);transform:scale(1.14);"></div></sc-if><sc-if value="{{ flatGround }}" hint-placeholder-val="{{ true }}"><div style="position:absolute;inset:0;background:radial-gradient(130% 105% at 20% 42%,#2a3f4d,#fbfaf6);"></div></sc-if>
+    <div style="position:absolute;inset:0;background:radial-gradient(130% 105% at 20% 42%,rgba(251,250,246,0.72),rgba(251,250,246,0.96));"></div>
+    <div style="position:absolute;left:0;right:0;bottom:0;">
+      <div data-rc="phone-tray" style="position:relative;display:flex;flex-direction:column;gap:10px;padding:16px 16px 14px;background:#fbfaf6;border-top:1px solid rgba(20,20,20,0.176);border-radius:15px 20px 0 0;box-shadow:0 -10px 32px rgba(0,0,0,0.21);">
+        <span style="position:absolute;top:6px;left:50%;width:36px;height:4px;margin-left:-18px;border-radius:2px;background:rgba(20,20,20,0.264);display:block;"></span>
+        <div style="display:flex;align-items:center;gap:10px;padding-top:4px;">
+          <span style="display:flex;align-items:flex-end;gap:2px;height:16px;flex-shrink:0;"><span style="width:3px;height:8px;border-radius:1px;background:#1a47c4;"></span><span style="width:3px;height:16px;border-radius:1px;background:#1a47c4;"></span><span style="width:3px;height:11px;border-radius:1px;background:#1a47c4;"></span><span style="width:3px;height:13px;border-radius:1px;background:#1a47c4;"></span></span>
+          <span style="flex:1;min-width:0;font-size:17px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Rempompi</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="position:relative;flex:1;height:32px;display:flex;align-items:center;min-width:0;">
+            <span style="width:100%;height:6px;border-radius:3px;background:rgba(20,20,20,0.198);overflow:hidden;display:block;"><span style="display:block;height:100%;width:62%;background:#1a47c4;"></span></span>
+            <span style="position:absolute;top:50%;left:62%;width:20px;height:20px;margin:-10px 0 0 -10px;border-radius:50%;background:#141414;box-shadow:0 1px 4px rgba(0,0,0,0.14);display:block;"></span>
+          </div>
+          <span style="width:40px;flex:none;text-align:right;font-family:'Space Mono','Courier New',monospace;font-size:12px;color:rgba(20,20,20,0.818);">62%</span>
+          <div style="height:56px;padding:0 11px;border-radius:11px;box-sizing:border-box;display:flex;align-items:center;gap:6px;flex:none;background:rgba(26,71,196,0.132);border:1px solid rgba(26,71,196,0.643);color:#1a47c4;">
+            <svg viewBox="0 0 24 24" width="18" height="18" style="flex-shrink:0;" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 4v16M12 4v16M18 4v16"></path><circle cx="6" cy="14" r="2.6" fill="#fbfaf6"></circle><circle cx="12" cy="8" r="2.6" fill="#fbfaf6"></circle><circle cx="18" cy="12" r="2.6" fill="#fbfaf6"></circle></svg>
+            <sc-if value="{{ wideTray }}" hint-placeholder-val="{{ true }}"><span style="font-size:14px;font-weight:700;white-space:nowrap;">Rock</span></sc-if>
+          </div>
+          <sc-if value="{{ quickShown }}" hint-placeholder-val="{{ true }}">
+            <div data-rc="room-quick" onClick="{{ qTap }}" style="height:56px;padding:0 11px;border-radius:11px;box-sizing:border-box;display:flex;align-items:center;gap:6px;flex:none;cursor:pointer;background:{{ qBtnBg }};border:1px solid {{ qBtnLine }};color:{{ qBtnInk }};opacity:{{ qOpacity }};">
+              <svg viewBox="0 0 24 24" width="18" height="18" style="flex-shrink:0;" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18M5 20V9l7-5 7 5v11"></path><path d="M9 15c1-1.5 2-1.5 3 0s2 1.5 3 0"></path></svg>
+              <sc-if value="{{ wideTray }}" hint-placeholder-val="{{ true }}"><span style="font-size:14px;font-weight:700;white-space:nowrap;">{{ qChipText }}</span></sc-if>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:412,&quot;height&quot;:880},&quot;surface&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;phone&quot;,&quot;panel&quot;,&quot;bar&quot;,&quot;drawer&quot;,&quot;bartray&quot;,&quot;phonetray&quot;],&quot;default&quot;:&quot;phone&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Room correction&quot;},&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;audio&quot;,&quot;before&quot;,&quot;place&quot;,&quot;level&quot;,&quot;measure&quot;,&quot;move&quot;,&quot;correction&quot;,&quot;checkmove&quot;,&quot;checking&quot;,&quot;result&quot;,&quot;unchecked&quot;,&quot;cancelled&quot;,&quot;page&quot;,&quot;run&quot;],&quot;default&quot;:&quot;audio&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Room correction&quot;},&quot;v&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Room correction&quot;},&quot;w&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[412,360,1850,1280],&quot;default&quot;:412,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Room correction&quot;}}">
+// Phase 30, room correction for the full range. One component, every surface:
+// surface = phone | panel | bar | drawer | bartray | phonetray. URL parameters override props.
+// Page / quick variants (v): full | bass | bassonly | without | off | unchecked | dsd | never.
+const ACC = '#1a47c4', AMB = '#964800', INK = '#141414', COR = '#d1261c', MUT = 'rgba(20,20,20,0.74)';
+const SEL = { bg: 'rgba(26,71,196,0.176)', line: 'rgba(26,71,196,0.708)', ink: ACC };
+const WO = { bg: 'rgba(150,72,0,0.16)', line: 'rgba(150,72,0,0.55)', ink: AMB };
+const REST = { bg: 'transparent', line: 'transparent', ink: 'rgba(20,20,20,0.818)' };
+const RUNS = ['level', 'measure', 'move', 'checkmove', 'checking'];
+const PLACES = [[170, 98], [122, 98], [218, 98]];
+const MOVES = { 2: 'About 40 cm to the left of where your head was', 3: 'About 40 cm to the right of where your head was' };
+const LEAD = 'The player plays sweeps through your speakers and listens with a measurement microphone at your seat. It cuts the peaks your room adds to the bass, and above the bass evens out the room\'s broad bumps and dips by 3 dB at most, so your speakers keep their own balance.';
+
+class Component extends DCLogic {
+  state = { k: null, s: null };
+  P() {
+    if (!this._q) {
+      const o = {};
+      try { new URLSearchParams(location.search).forEach((v, k) => { o[k] = v === 'true' ? true : v === 'false' ? false : (v !== '' && !isNaN(+v) ? +v : v); }); } catch (e) {}
+      this._q = o;
+    }
+    return Object.assign({}, this.props, this._q);
+  }
+  key() { const p = this.P(); return ['surface', 'screen', 'v', 'ch', 'n', 'spk', 'sweep', 'count', 'sheet', 'resumed'].map(k => String(p[k])).join('|'); }
+  seed() {
+    const p = this.P(), surface = p.surface || 'phone';
+    let screen = p.screen || (surface === 'phone' ? 'audio' : 'page');
+    const v = p.v == null ? '' : String(p.v);
+    const pageLike = screen === 'page' || screen === 'audio' || ['drawer', 'bartray', 'phonetray'].includes(surface);
+    const pv = pageLike ? (v || 'full') : 'full';
+    if (surface === 'phone' && screen === 'page' && pv === 'never') screen = 'before';
+    return { screen, v, ch: p.ch || 'L', measured: pv !== 'never', reach: pv === 'bass' || pv === 'bassonly' ? 'bass' : 'full', bassonly: pv === 'bassonly', on: pv !== 'off', ab: pv === 'without', unchecked: pv === 'unchecked', dsd: pv === 'dsd', sheet: !!p.sheet, t: 0, live: false, n: null, counting: false };
+  }
+  cur() { return this.state.k === this.key() && this.state.s ? this.state.s : this.seed(); }
+  put(patch) { const s = this.cur(); this.setState({ k: this.key(), s: { ...s, ...patch } }); }
+  go(screen, extra) { this.put({ screen, v: '', t: 0, live: true, counting: false, ...(extra || {}) }); }
+  componentDidMount() {
+    if (!window.RC30) this._w = setInterval(() => { if (window.RC30) { clearInterval(this._w); this.forceUpdate(); } }, 50);
+    const sc = this.P().scroll;
+    if (sc) { let k = 0; const f = () => { const el = document.querySelector('[data-noscrollbar]'); if (el && el.scrollHeight > el.clientHeight + 10) el.scrollTop = sc === 'chart' ? (el.querySelector('[data-rc="chart"]') || {}).offsetTop - 16 || 0 : +sc; else if (k++ < 30) setTimeout(f, 100); }; setTimeout(f, 300); }
+  }
+  componentWillUnmount() { clearInterval(this._w); clearInterval(this._tick); }
+  componentDidUpdate() { const s = this.cur(), need = s.live && RUNS.includes(s.screen); if (need && !this._tick) this._tick = setInterval(() => this.tick(), 100); if (!need && this._tick) { clearInterval(this._tick); this._tick = null; } }
+  tick() {
+    const s = this.cur();
+    if (!s.live || !RUNS.includes(s.screen)) return;
+    if ((s.screen === 'move' || s.screen === 'checkmove') && !s.counting) return;
+    const t = s.t + 100, n = s.n || 1;
+    if (s.screen === 'level' && t >= 2800) return this.go('measure', { n: 1 });
+    if (s.screen === 'measure' && t >= 6000) return n < 3 ? this.go('move', { n: n + 1 }) : this.go('correction');
+    if (s.screen === 'move' && t >= 3000) return this.go('measure', { n });
+    if (s.screen === 'checkmove' && t >= 3000) return this.go('checking', { n });
+    if (s.screen === 'checking' && t >= 4000) return n < 3 ? this.go('checkmove', { n: n + 1 }) : this.go('result');
+    this.put({ t });
+  }
+
+  renderVals() {
+    const p = this.P();
+    const surface = p.surface || 'phone';
+    const off = { isPhone: false, isPanelPage: false, isPanelRun: false, isBarPage: false, isBarRun: false, isDrawer: false, isBarTray: false, isPhoneTray: false, track: [], checks: [], speakers: [], places: [], reachChips: [], cutGroups: [], qSegs: [] };
+    if (!window.RC30) return off;
+    const R = window.RC30, s = this.cur(), sc = s.screen, auto = s.live, ch = s.ch;
+    const pv = p.v == null ? '' : String(p.v);
+
+    // run progress
+    let n = s.n || p.n || (sc === 'move' || sc === 'checkmove' ? 2 : 1);
+    let spk = p.spk || 'R', sweep = p.sweep || 1, count = p.count || 3;
+    if (auto && sc === 'measure') { const ph = Math.min(2, Math.floor(s.t / 2000)); spk = ['L', 'R', 'B'][ph]; sweep = Math.floor((s.t % 2000) / 1000) + 1; }
+    if (auto && (sc === 'move' || sc === 'checkmove') && s.counting) count = Math.max(1, 3 - Math.floor(s.t / 1000));
+    const counting = (sc === 'move' || sc === 'checkmove') && (s.counting || pv === 'count');
+
+    // which chart: the data set, the reach, measured or expected
+    const resV = ['correction', 'result'].includes(sc) ? (s.v || pv || 'normal') : 'normal';
+    const dset = s.bassonly ? 'bassonly' : resV === 'nothingabove' ? 'flatabove' : resV === 'nothingbass' ? 'flatbass' : resV === 'nothing' ? 'flat' : 'normal';
+    const reach = ['correction', 'result', 'unchecked'].includes(sc) ? 'full' : s.reach;
+    const checked = sc === 'result' || (sc === 'page' && !s.unchecked) || surface !== 'phone' && !s.unchecked;
+    let kind = sc === 'correction' || sc === 'unchecked' || s.unchecked ? 'expected' : 'measured';
+    if (ch === 'B' && !(checked && sc !== 'correction')) kind = 'none';
+    if (resV === 'nothing') kind = 'none';
+    const d = R.data(ch, dset, reach);
+    const chName = ch === 'L' ? 'Left speaker' : ch === 'R' ? 'Right speaker' : 'Both speakers';
+
+    // the result's words
+    let resultHead, resultLine, warnText = '';
+    if (ch === 'B' && kind === 'none') { resultHead = 'Both speakers, before'; resultLine = 'The two together, as you hear them. Measure again and check it to see them after.'; }
+    else if (dset === 'flatbass') { resultHead = 'Nothing to cut in the bass'; resultLine = 'Above the bass: within ' + d.within + ' dB of the speaker\'s own balance.'; }
+    else if (dset === 'flat') { resultHead = 'Nothing to correct'; resultLine = 'Already near the target, in the bass and above it.'; }
+    else {
+      resultHead = 'Peaks down by up to ' + d.peak + ' dB' + (kind === 'expected' && sc !== 'correction' ? ', expected' : '');
+      resultLine = reach === 'bass' ? (s.bassonly ? 'Measured for the bass only.' : 'Above the bass: left alone, as Bass is chosen.')
+        : dset === 'flatabove' ? 'Above the bass: already within ' + d.roomAbove + ' dB of the speaker\'s own balance, so left as it is.'
+        : 'Above the bass: within ' + d.within + ' dB of the speaker\'s own balance.';
+      if (ch === 'B') resultLine = 'The two together, as you hear them.';
+    }
+    if (sc === 'result' && resV === 'worse') warnText = 'Position 3 is 1.4 dB further from the target than before.';
+
+    // the list of corrections (1g)
+    const lst = R.list(ch === 'B' ? 'L' : ch, dset, reach);
+    const row = u => ({ f: u.f, g: u.g, ink: u.up ? ACC : COR });
+    const cutGroups = ch === 'B' ? [{ name: 'Both together', kind: '', hasRows: false, rows: [], empty: true, emptyText: 'Each speaker\'s corrections are on its own tab. Both shows the two as you hear them.', gapTop: '0', gapTopSm: '0' }] : [
+      { name: 'In the bass', kind: lst.bass.length ? 'narrow cuts' : '', rows: lst.bass.map(row), hasRows: lst.bass.length > 0, empty: !lst.bass.length, emptyText: 'Nothing to cut: near the target already.', gapTop: '4px', gapTopSm: '2px' },
+      { name: 'Above the bass', kind: lst.above.length ? 'broad, up or down' : '', rows: lst.above.map(row), hasRows: lst.above.length > 0, empty: !lst.above.length, emptyText: reach === 'bass' ? (s.bassonly ? 'Not measured: this measurement covers the bass only.' : 'Left alone: Bass is chosen.') : 'Nothing to correct: within ' + d.roomAbove + ' dB of the speaker\'s own balance already.', gapTop: '8px', gapTopSm: '6px' }
+    ];
+    const nB = lst.bass.length, nA = lst.above.length;
+    const words = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight'];
+
+    // switches
+    const measured = s.measured, on = s.on, ab = s.ab && on, dsd = s.dsd;
+    const sw = (lit, amb) => ({ bg: lit ? (amb ? 'rgba(150,72,0,0.3)' : 'rgba(26,71,196,0.352)') : 'rgba(20,20,20,0.088)', line: lit ? (amb ? 'rgba(150,72,0,0.55)' : 'rgba(26,71,196,0.675)') : 'rgba(20,20,20,0.176)', knob: lit ? (amb ? AMB : ACC) : 'rgba(20,20,20,0.74)', left: lit ? '29px' : '3px' });
+    const pw = sw(on && measured), aw = sw(ab, true);
+    const reachChips = [['bass', 'Bass', 'Up to 250 Hz'], ['full', 'Full range', '15 Hz to 20 kHz']].map(([k, name, sub]) => {
+      const sel = s.reach === k, locked = k === 'full' && s.bassonly;
+      return {
+        name, sub: locked ? 'Measure again' : sub,
+        bg: sel ? SEL.bg : locked ? 'transparent' : 'rgba(20,20,20,0.055)',
+        border: sel ? '1px solid rgba(26,71,196,0.708)' : locked ? '1.5px dashed rgba(20,20,20,0.308)' : '1px solid rgba(20,20,20,0.132)',
+        ink: sel ? ACC : locked ? MUT : INK, subInk: locked ? AMB : sel ? 'rgba(20,20,20,0.857)' : 'rgba(20,20,20,0.818)',
+        onTap: () => (locked ? (surface === 'phone' ? this.go('before') : this.put({ sheet: true })) : this.put({ reach: k }))
+      };
+    });
+    const live = on && measured && !dsd;
+    const page = {
+      measured, neverMeasured: !measured, dsd, bassOnly: s.bassonly, notCheckedMark: measured && s.unchecked, reachChips,
+      reachOpacity: on && !dsd ? 1 : 0.45, reachPointer: on && !dsd ? 'auto' : 'none',
+      togBg: pw.bg, togBorder: pw.line, knobBg: pw.knob, knobLeft: pw.left,
+      powerText: !measured ? 'Measure first' : on ? 'On' : 'Off · bit-perfect', powerShort: !measured ? 'Off' : on ? 'On' : 'Off',
+      powerInk: on && measured ? ACC : 'rgba(20,20,20,0.818)', powerOpacity: measured ? 1 : 0.5, powerPointer: measured ? 'auto' : 'none',
+      powerNote: on ? 'For the DAC, HiFiBerry DAC2 HD. Each output keeps its own.' : 'Off: the correction is taken out. With the equaliser also off, the sound is untouched, bit-perfect.',
+      toggleOn: () => this.put({ on: !s.on }), toggleAb: () => this.put({ ab: !s.ab }),
+      abBg: ab ? 'rgba(150,72,0,0.1)' : 'rgba(20,20,20,0.055)', abLine: ab ? 'rgba(150,72,0,0.5)' : 'rgba(20,20,20,0.11)',
+      abOpacity: live ? 1 : 0.4, abPointer: live ? 'auto' : 'none',
+      abTagLine: ab ? AMB : 'rgba(20,20,20,0.44)', abTagInk: ab ? AMB : 'rgba(20,20,20,0.883)',
+      abTogBg: aw.bg, abTogLine: aw.line, abKnobBg: aw.knob, abKnobLeft: aw.left,
+      abSub: !on ? 'Only while room correction is on.' : ab ? 'Now without: no correction at all. Switch back to hear it.' : 'Compare: no correction at all, heard at once. Stays where you put it.',
+      abShort: ab ? 'Now without: no correction at all' : 'Compare, heard at once', abSubInk: ab ? AMB : MUT,
+      chartOpacity: dsd || !on ? 0.5 : 1,
+      measuredLine: s.bassonly ? '3 November 2026 · three positions · bass only' : '7 November 2026 · three positions · full range',
+      measuredDate: s.bassonly ? '3 November 2026' : '7 November 2026', measuredSub: s.bassonly ? 'Three positions · bass only' : 'Three positions · full range',
+      measuredTitle: !measured ? 'Not measured yet' : s.bassonly ? '3 November 2026' : '7 November 2026',
+      measuredSubBar: !measured ? 'Measure from your phone' : s.bassonly ? 'Three positions · bass only' : 'Three positions · full range',
+      cutsWho: ch === 'B' ? 'Both speakers' : chName + (nB || nA ? ' · ' + (nB + nA) + ' corrections' : ''),
+      againLabel: s.bassonly ? 'Measure again for the full range' : 'Measure again', againLabelPanel: !measured ? 'Measure from your phone' : s.bassonly ? 'Measure again for the full range' : 'Measure again',
+      againBg: !measured || s.bassonly ? 'rgba(26,71,196,0.176)' : 'rgba(20,20,20,0.077)', againLine: !measured || s.bassonly ? 'rgba(26,71,196,0.708)' : 'rgba(20,20,20,0.154)', againInk: !measured || s.bassonly ? ACC : INK,
+      sheet: s.sheet, openSheet: () => this.put({ sheet: true }), closeSheet: () => this.put({ sheet: false }),
+      barMidW: (p.w ?? 1850) === 1280 ? '360px' : '400px', beforeLead: LEAD,
+      againLabelBar: !measured ? 'Measure from your phone' : s.bassonly && (p.w ?? 1850) !== 1280 ? 'Measure again for the full range' : 'Measure again'
+    };
+
+    // panel and bar while measuring
+    const runV = pv || 'sweep', posN = p.n || 2;
+    const runPct = runV === 'level' ? 5 : runV === 'check' ? 76 + posN * 7 : Math.round(8 + ((posN - 1) + (spk === 'R' ? 0.33 : spk === 'B' ? 0.66 : 0)) / 3 * 66);
+    const run = {
+      runHead: runV === 'check' ? 'Checking the room' : 'Measuring the room', runPct: runPct + '%',
+      runLine: runV === 'level' ? 'Finding the level · soft noise, getting louder'
+        : runV === 'wait' ? 'Position ' + posN + ' of 3 · Waiting for the phone'
+        : runV === 'count' ? 'Position ' + posN + ' of 3 · Sweeps in 3'
+        : runV === 'check' ? 'Checking · position ' + posN + ' of 3'
+        : 'Position ' + posN + ' of 3 · ' + (spk === 'L' ? 'Left speaker' : spk === 'R' ? 'Right speaker' : 'Both speakers')
+    };
+    const trackN = surface === 'phone' ? n : posN;
+    const track = [1, 2, 3].map(i => ({ n: i, bg: i < trackN ? ACC : i === trackN ? 'rgba(26,71,196,0.675)' : 'rgba(20,20,20,0.132)', ink: i === trackN ? INK : MUT }));
+
+    // the seat drawing
+    const inPos = ['measure', 'move', 'checkmove', 'checking'].includes(sc);
+    const places = PLACES.map(([x, y], i) => {
+      const k = i + 1, active = (sc === 'place' && k === 1) || (inPos && k === n), done = inPos && k < n;
+      return { label: done && !active ? '✓' : String(k), left: (x / 340 * 100) + '%', top: (y / 196 * 100) + '%', size: active ? '30px' : '24px', bg: active ? ACC : done ? 'rgba(26,71,196,0.22)' : '#fbfaf6', line: active ? ACC : done ? 'rgba(26,71,196,0.74)' : 'rgba(20,20,20,0.33)', ink: active ? '#ffffff' : done ? ACC : 'rgba(20,20,20,0.883)', glow: active ? '0 0 0 6px rgba(26,71,196,0.22)' : 'none' };
+    });
+    let arrowD = '', arrowHead = '';
+    if ((sc === 'move' || sc === 'checkmove') && n > 1) {
+      const [x1, y1] = PLACES[0], [x2, y2] = PLACES[n - 1];
+      const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L;
+      const sx = x1 + ux * 13, sy = y1 + uy * 13, ex = x2 - ux * 19, ey = y2 - uy * 19;
+      arrowD = `M${sx},${sy}L${ex},${ey}`;
+      arrowHead = `M${ex + ux * 6},${ey + uy * 6}L${ex - uy * 5},${ey + ux * 5}L${ex + uy * 5},${ey - ux * 5}Z`;
+    }
+    const playing = sc === 'measure' || sc === 'checking' ? spk : '';
+    const lit = k => playing === k || playing === 'B';
+
+    // before: the checks
+    const bv = sc === 'before' ? (s.v || pv || 'ok') : 'ok';
+    const mk = (kind, name, sub, i, actions) => ({ name, sub, ink: kind === 'warn' ? AMB : INK, rule: i ? '1px solid rgba(20,20,20,0.088)' : 'none', okDisplay: kind === 'ok' ? 'block' : 'none', waitDisplay: kind === 'wait' ? 'block' : 'none', warnDisplay: kind === 'warn' ? 'block' : 'none', busyDisplay: kind === 'busy' ? 'block' : 'none', needDisplay: kind === 'need' ? 'block' : 'none', actions: actions || [], hasActions: !!(actions && actions.length) });
+    const act = (label, litA, onTap) => ({ label, onTap: onTap || null, bg: litA ? SEL.bg : 'rgba(20,20,20,0.077)', line: litA ? SEL.line : 'rgba(20,20,20,0.154)', ink: litA ? ACC : INK });
+    const choose = () => this.put({ v: 'reading', live: true });
+    const noMic = bv === 'nomic' || bv === 'othermic';
+    const fileOk = ['ok', 'playing', 'dsd', 'group', 'update'].includes(bv);
+    const mic = bv === 'nomic' ? mk('warn', 'Plug in the UMIK-1', 'Into one of the player\'s USB ports. It is found by itself.', 0)
+      : bv === 'othermic' ? mk('warn', 'This microphone is not supported yet', 'Room correction measures with the miniDSP UMIK-1 for now.', 0)
+      : mk('ok', 'Microphone', fileOk ? 'miniDSP UMIK-1 · 707-1234' : 'miniDSP UMIK-1 · its serial comes from the file', 0);
+    const cal = noMic ? mk('wait', 'Calibration', 'Its file is chosen once the microphone is found', 1)
+      : bv === 'nofile' ? mk('need', 'Its calibration file', 'Download the 90° file for your microphone\'s serial from miniDSP\'s page, then choose it here.', 1, [act('miniDSP\'s page', false), act('Choose the file', true, choose)])
+      : bv === 'reading' ? mk('busy', 'Calibration', 'Reading the file…', 1)
+      : bv === 'badfile' ? mk('warn', 'This is not a calibration file', 'Choose the 90° file downloaded from miniDSP\'s page.', 1, [act('Choose another file', true, choose)])
+      : bv === 'zero' ? mk('warn', 'This is the 0° file', 'Choose the 90° one: the microphone points at the ceiling.', 1, [act('Choose another file', true, choose)])
+      : bv === 'noserial' ? mk('warn', 'No serial in this file', 'Choose the file miniDSP gives for your microphone\'s serial.', 1, [act('Choose another file', true, choose)])
+      : mk('ok', 'Calibration', 'From the file for 707-1234 · 90°', 1, [act('Choose another file', false, choose)]);
+    const quiet3 = bv === 'group' ? mk('warn', 'In a group', 'Leave the group to measure the room.', 2)
+      : bv === 'update' ? mk('warn', 'An update is installing', 'Measure once it has finished.', 2)
+      : mk('wait', 'A quiet room', bv === 'playing' ? 'About four minutes. Spotify is playing: it stops when you start.' : bv === 'dsd' ? 'About four minutes. DSD is playing: it stops when you start.' : 'About four minutes, music stops', 2);
+    const checks = [mic, cal, quiet3];
+    const ready = ['ok', 'playing', 'dsd'].includes(bv);
+    if (sc === 'before' && bv === 'reading' && auto) { if (!this._rt) this._rt = setTimeout(() => { this._rt = null; this.put({ v: 'ok' }); }, 1400); }
+
+    // measuring: three rows
+    const noise = pv === 'noise';
+    const order = ['L', 'R', 'B'];
+    const speakers = order.map((k, i) => {
+      const doneK = order.indexOf(spk) > i, nowK = spk === k;
+      const kd = doneK ? 'ok' : nowK ? (noise ? 'warn' : 'busy') : 'wait';
+      const name = k === 'L' ? 'Left speaker' : k === 'R' ? 'Right speaker' : 'Both speakers';
+      const sub = doneK ? 'Two sweeps, they agree' : nowK ? (noise ? 'A noise spoiled this sweep. Measuring it again.' : 'Playing · sweep ' + sweep + ' of 2') : (k === 'R' ? 'Two sweeps, after the left' : 'Two sweeps together, after the right');
+      return { name, sub, subInk: nowK && noise ? AMB : MUT, rule: i ? '1px solid rgba(20,20,20,0.088)' : 'none', okDisplay: kd === 'ok' ? 'block' : 'none', waitDisplay: kd === 'wait' ? 'block' : 'none', warnDisplay: kd === 'warn' ? 'block' : 'none', busyDisplay: kd === 'busy' ? 'block' : 'none' };
+    });
+
+    // level, about 60 dB
+    const quiet = sc === 'level' && (s.v === 'quiet' || pv === 'quiet');
+    const db = quiet ? 52 : auto ? Math.min(60, Math.round(42 + s.t / 2800 * 18)) : 57;
+    const pct = v => Math.round((v - 40) / 35 * 100) + '%';
+
+    // phone: heads, notes and buttons
+    const isCheck = sc === 'checkmove' || sc === 'checking';
+    const hd = {
+      before: ['Correct what your room adds to the sound', LEAD],
+      place: ['Put the microphone where your head is', ''],
+      level: quiet ? ['Only 52 dB at the seat', 'At the player\'s maximum level. Turn the amplifier up a little and try again.'] : ['Finding the level', 'Soft noise, getting louder until the microphone hears about 60 dB.'],
+      measure: ['Position ' + n + ' of 3', ''],
+      move: ['Move it to position ' + n, ''],
+      checkmove: [n === 1 ? 'Move it back to position 1' : 'Move it to position ' + n, ''],
+      checking: ['Checking at position ' + n, ''],
+      correction: resV === 'nothing' ? ['Nothing to correct', ''] : [ch === 'B' ? (words[nB] + ' cuts in the bass, ' + words[nA].toLowerCase() + ' broad corrections above').replace('No cuts in the bass, ', 'Nothing to cut in the bass, ') : (nB ? words[nB] + ' cuts in the bass' : 'Nothing to cut in the bass') + (nA ? ', ' + words[nA].toLowerCase() + ' broad corrections above' : ', nothing to correct above'), ''],
+      result: [resultHead, resultLine],
+      unchecked: [resultHead, resultLine],
+      cancelled: ['Measuring cancelled', 'Nothing changed: the output is as it was. Music can play again.']
+    }[sc] || ['', ''];
+    if (sc === 'correction' && ch === 'B' && resV !== 'nothing') hd[0] = (nB ? words[nB] + ' cuts in the bass' : 'Nothing to cut in the bass') + (nA ? ', ' + words[nA].toLowerCase() + ' broad corrections above' : ', nothing to correct above');
+    const afterTx = sc === 'place' ? 'On a stand at ear height, pointing at the ceiling. Then keep the room quiet throughout: the sweeps rise from a low rumble to a high whistle.'
+      : (sc === 'move' || (sc === 'checkmove' && n > 1)) && !counting ? (MOVES[n] || '') + ', at the same height, still pointing at the ceiling. Step back, then tap Measure here.'
+      : sc === 'checkmove' && n === 1 && !counting ? 'Back where your head was, at the same height, still pointing at the ceiling. Step back, then tap Measure here.'
+      : sc === 'checking' ? 'Sweeps with the correction on, from each speaker and both together.' : '';
+    let tail = '', tailInk = MUT;
+    if (sc === 'place') tail = 'Music stops now, on every source.' + (p.screenless ? '' : ' The player\'s screen shows that it is measuring.');
+    if (sc === 'correction' && resV !== 'nothing') {
+      const dp = R.dips(ch === 'B' ? 'L' : ch);
+      tail = (nB ? 'In the bass only cuts: the dips at ' + dp[0] + ' and ' + dp[1] + ' Hz stay, as more power does not fill them. ' : '') + (nA ? 'Above it the corrections are broad and 3 dB at most, so the speaker keeps its own balance.' : 'Above the bass the room is already within ' + R.data(ch, dset, 'full').roomAbove + ' dB of the speaker\'s own balance, so it is left as it is.');
+    }
+    if (sc === 'correction' && resV === 'nothing') { tail = 'Your room is already near the target, in the bass and above it, so there is nothing worth correcting. Room correction stays off.'; tailInk = 'rgba(20,20,20,0.857)'; }
+    if (sc === 'result' && resV !== 'worse') { tail = 'No position is worse than before.'; tailInk = INK; }
+    if (sc === 'unchecked') { tail = 'The check was skipped: this is what the correction should do. Measure again to check it.'; tailInk = 'rgba(20,20,20,0.857)'; }
+    if (isCheck && !counting) { tail = 'Skip keeps the correction as it is worked out, marked Not checked.'; }
+
+    const cancel = () => this.go('cancelled');
+    const toAudio = () => this.put({ screen: 'audio', v: '', live: true });
+    const keep = un => () => this.put({ screen: 'page', v: '', measured: true, on: true, ab: false, unchecked: un, dsd: false, bassonly: false, reach: 'full' });
+    const skip = () => this.go('unchecked');
+    const foot = {
+      before: [null, null, ['Measure', () => this.go('place')]],
+      place: [['Cancel', cancel], null, ['Start', () => this.go('level')]],
+      level: quiet ? [['Cancel', cancel], null, ['Try again', () => this.go('level')]] : [['Cancel', cancel], null, null],
+      measure: [['Cancel', cancel], null, null],
+      move: counting ? [['Cancel', cancel], null, null] : [['Cancel', cancel], null, ['Measure here', () => this.put({ counting: true, t: 0, live: true })]],
+      correction: resV === 'nothing' ? [null, null, ['Done', toAudio]] : [['Discard', toAudio], null, ['Check it', () => this.go('checkmove', { n: 1 })]],
+      checkmove: counting ? [['Cancel', cancel], ['Skip', skip], null] : [['Cancel', cancel], ['Skip', skip], ['Measure here', () => this.put({ counting: true, t: 0, live: true })]],
+      checking: [['Cancel', cancel], ['Skip', skip], null],
+      result: [['Discard', toAudio], null, ['Keep it', keep(false)]],
+      unchecked: [['Discard', toAudio], null, ['Keep it', keep(true)]],
+      cancelled: [null, null, ['Done', toAudio]]
+    }[sc] || [null, null, null];
+    const crumbs = { audio: 'Settings', before: 'Settings · Audio · DAC', page: 'Settings · Audio · DAC', place: 'Step 1 of 4', level: 'Step 2 of 4', measure: 'Step 3 of 4', move: 'Step 3 of 4', correction: 'Step 4 of 4', checkmove: 'Checking', checking: 'Checking', result: 'Step 4 of 4', unchecked: 'Step 4 of 4', cancelled: 'Settings · Audio · DAC' };
+    const inRun = RUNS.includes(sc) || ['correction', 'result', 'unchecked'].includes(sc);
+
+    // close to the music (1l)
+    const qv = pv || 'full';
+    const qMeasured = qv !== 'never', qOn = qv !== 'off', qDsd = qv === 'dsd', qBassOnly = qv === 'bassonly';
+    const qReach = s.reach, qAb = s.ab && qOn;
+    const reachWord = qReach === 'bass' ? 'Bass' : 'Full range';
+    const qLit = qMeasured && qOn && !qDsd;
+    const qSel = qAb ? 'without' : qReach;
+    const qSegs = [['without', 'Without'], ['bass', 'Bass'], ['full', 'Full range']].map(([k, name]) => {
+      const sel = qSel === k, st = sel ? (k === 'without' ? WO : SEL) : REST, locked = k === 'full' && qBassOnly;
+      return { name, bg: st.bg, line: st.line, ink: st.ink, opacity: locked ? 0.4 : 1, pointer: locked ? 'none' : 'auto', onTap: () => (k === 'without' ? this.put({ ab: true }) : this.put({ ab: false, reach: k })) };
+    });
+    const quick = {
+      quickShown: qMeasured, eqState: 'Rock · preset', qSegs, qSegShown: qOn, qOpen: !qOn,
+      qState: !qOn ? 'Off · open it to turn it on' : qDsd ? 'Stands aside while DSD plays' : qAb ? 'Without · no correction at all' : qBassOnly ? 'Bass · measured for the bass only' : reachWord + ' · measured 7 November',
+      qStateInk: qAb ? AMB : 'rgba(20,20,20,0.818)', qOpacity: qDsd ? 0.4 : 1, qPointer: qDsd ? 'none' : 'auto',
+      qBtnBg: !qLit ? 'rgba(20,20,20,0.077)' : qAb ? 'rgba(150,72,0,0.12)' : 'rgba(26,71,196,0.132)',
+      qBtnLine: !qLit ? 'rgba(20,20,20,0.154)' : qAb ? 'rgba(150,72,0,0.5)' : 'rgba(26,71,196,0.643)',
+      qBtnInk: !qLit ? 'rgba(20,20,20,0.883)' : qAb ? AMB : ACC,
+      qBtnText: !qOn ? 'Room · Off' : qDsd ? 'Room · DSD' : qAb ? 'Room · Without' : 'Room · ' + reachWord,
+      qChipText: !qOn ? 'Off' : qDsd ? 'DSD' : qAb ? 'Without' : qReach === 'bass' ? 'Bass' : 'Full',
+      qTap: () => { if (qLit) this.put({ ab: !s.ab }); }, wideTray: (p.w || 412) >= 380
+    };
+
+    const isPhone = surface === 'phone';
+    const hasChart = ['correction', 'result', 'unchecked', 'page'].includes(sc) && !(sc === 'correction' && resV === 'nothing' && false);
+    return {
+      ...off, ...page, ...run, ...quick, weave: !p.board, flatGround: !!p.board,
+      ch, setCh: k => this.put({ ch: k }), reach, dset, kind, resultHead, resultLine,
+      chartH: (p.w || 412) < 380 ? '344px' : '330px',
+      isPhone, isPanelPage: surface === 'panel' && sc !== 'run', isPanelRun: surface === 'panel' && sc === 'run',
+      isBarPage: surface === 'bar' && sc !== 'run', isBarRun: surface === 'bar' && sc === 'run',
+      isDrawer: surface === 'drawer', isBarTray: surface === 'bartray', isPhoneTray: surface === 'phonetray',
+      title: sc === 'audio' ? 'Audio' : inRun ? 'Measure the room' : 'Room correction', crumb: crumbs[sc] || '', hasBack: !inRun,
+      goBack: () => { if (sc !== 'audio') toAudio(); },
+      resumed: !!p.resumed && sc === 'measure',
+      showTracker: inPos, track, trackText: (isCheck ? 'Checking · position ' : 'Position ') + n + ' of 3',
+      isAudio: sc === 'audio',
+      rowState: !measured ? 'Not measured yet' : !on ? 'Off' : ab ? 'Without · comparing, no correction' : s.bassonly ? 'Bass · measured for the bass only' : (s.reach === 'bass' ? 'Bass' : 'Full range') + ' · measured 7 November',
+      rowInk: ab && on && measured ? AMB : MUT,
+      openRoom: () => this.put({ screen: measured ? 'page' : 'before', v: '', live: true }),
+      hasHead: !!hd[0], head: hd[0], headInk: quiet ? AMB : INK, hasLead: !!hd[1], lead: hd[1], notChecked: sc === 'unchecked',
+      isBefore: sc === 'before', checks,
+      isLevel: sc === 'level', levelDb: String(db), levelInk: quiet ? AMB : ACC, levelPct: pct(db), goalPct: pct(60),
+      showDrawing: ['place'].includes(sc) || inPos, places, arrowD, arrowHead,
+      spkL: lit('L') ? ACC : 'rgba(20,20,20,0.33)', spkR: lit('R') ? ACC : 'rgba(20,20,20,0.33)', spkLInk: lit('L') ? ACC : MUT, spkRInk: lit('R') ? ACC : MUT,
+      hasAfter: !!afterTx, afterText: afterTx,
+      isMeasure: sc === 'measure', speakers, measureNote: 'Nothing to do while it runs, about 45 seconds a position. Each sweep ends in a high whistle: keep quiet until it stops.',
+      counting, count: String(count),
+      isChecking: sc === 'checking', checkPct: Math.round(((n - 1) + (auto ? (s.t % 4000) / 4000 : 0.4)) / 3 * 100) + '%',
+      chartHeadShown: sc === 'page' || sc === 'correction',
+      isPage: sc === 'page', hasChart: hasChart && !(sc === 'correction' && resV === 'nothing' && ch === 'B'),
+      showCuts: sc === 'correction' && resV !== 'nothing', cutGroups,
+      hasWarn: !!warnText, warnText, hasTail: !!tail, tail, tailInk,
+      measureAgain: () => this.go('before'),
+      hasFoot: isPhone && sc !== 'audio' && sc !== 'page',
+      hasQuiet: !!foot[0], quietLabel: foot[0] ? foot[0][0] : '', quietTap: foot[0] ? foot[0][1] : null,
+      hasSecond: !!foot[1], secondLabel: foot[1] ? foot[1][0] : '', secondTap: foot[1] ? foot[1][1] : null,
+      hasPrimary: !!foot[2], primaryLabel: foot[2] ? foot[2][0] : '', primaryTap: foot[2] ? foot[2][1] : null,
+      primaryOpacity: sc === 'before' && !ready ? 0.4 : 1, primaryPointer: sc === 'before' && !ready ? 'none' : 'auto'
+    };
+  }
+}
+</script>
+</body>
+</html>
