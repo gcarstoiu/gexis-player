@@ -26,19 +26,11 @@ the screen (Phase 35), with zlib's Debian update. Built by run 42471673684
 mirror and the published indexes took 26 and 20 minutes during GitHub's
 incident with unauthenticated downloads, and signing (on R2D2) waited until
 GitHub served the files again (a 503 first). The channel, each part, the
-notes and the history read back good. Notes approved by George; **release
-PR #97 open for George to merge** (every check passed). The integration's
+notes and the history read back good. Notes approved by George; release PR #97 merged by George
+the same day. The integration's
 0.6.0 released the same day (its `main` fast-forwarded to `ha-page`, tag and
 release; notes approved by George); the Home Assistant session sent the
 final names and fields.
-
-**Before it, Testing: 1.14.0** (2026-11-06, serial 66): room correction for the bass
-(Phase 29), with the kernel 6.18.60 and Mesa 26.2.6 from the Raspberry Pi
-archive. Built by run 42261893617 (`verify-image.sh` all 151 checks passed,
-as 1.13.0), signed on R2D2; the channel, each part, the notes and the history
-read back good. Notes approved by George; release PR #96 merged by George
-the same day. The API page's
-deploy timed out in GitHub Pages' queue and passed on a re-run.
 
 **Stable: 1.13.0** (promoted by George 2026-11-06, serial 14; on Testing
 since 2026-11-03, serial 65): Plexamp and Beszel from the catalogue (Phase
@@ -100,8 +92,8 @@ at the seat; each speaker alone, then both together (shown as *Both*, never
 cut); the check with Skip; the UMIK-1 only, its 90° file given from the phone;
 the level before a run put back as the DAC's own (Lesson 93). Layouts are
 checked with made-up data in `~/projects/scratch/ph29/harness` (it builds from
-`-next`). sofapi has the git34 preview (the same code) and cuts recalculated
-from three of George's first run's positions; Testing offers it 1.14.0.
+`-next`). sofapi has cuts recalculated from three of George's first run's
+positions (it now runs Phase 35's preview, which carries the same code).
 **Not yet:** the cuts read from CamillaDSP while music plays (only readable
 then), a full run at three positions with both, the level against a meter,
 two sweeps' agreement at 60 dB, the stage's cost, the A/B bit-exactness.
@@ -169,7 +161,7 @@ indexes, not these copies; George had the older releases' copies removed
   measure it again (to-do `glass-revisit-2027`).
 
 **The Home Assistant integration**: `gcarstoiu/gexis-player-homeassistant`
-0.5.0 (local `~/projects/gexis-player-homeassistant`, tests on
+0.6.0 (local `~/projects/gexis-player-homeassistant`, tests on
 `~/projects/ha-venv`). **HACS's default list**: hacs/default#12691 waits for
 HACS's maintainers - do not ask them for a review (their template).
 
@@ -184,32 +176,13 @@ most 3 dB, *Bass* or *Full range*, in groups as the bass). The brief
 Design. Next: a full-range measurement of the room once sofapi is on 1.14.0,
 then the ADR.
 
-**Phase 35** (`ph-ha-page`, George 2026-11-07, now, while 30 waits): Home
-Assistant puts a page of its own on the screen for a while (live cameras)
-and takes it down. In the player, not a plugin; any touch closes it; a time
-limit, else 10 minutes; a switch for each player, off; show and hide actions
-in the integration. Measured the same day, one run and no more (George):
-[Finding 142](docs/findings/142-a-live-camera-page-on-the-panel-while-music-plays.md) -
-seven cameras fit beside music at 44.1 kHz on the plain path, with half the
-DAC's margin, 1.6 cores more and 74 °C still rising. ADR-0176 accepted the
-same day (George); built on `ph-ha-page` (worktree `~/projects/gexis-player-ph35`)
-and the integration's `ha-page` (0.6.0, from `main`; `multiroom` left as it
-is). Preview `1.14.0+git25.4b831af` on sofapi (2026-11-07 18:49, run
-42397583346). Amended the same day (George, from the Home Assistant side):
-one page kept loaded and hidden, a show of it only revealing it, in 1.15.0;
-[Finding 143](docs/findings/143-a-home-assistant-page-kept-loaded-and-hidden.md)
-measured it first (60-90 MB, no processor measurable); K1-K8 accepted and
-built (`8a5b7e49`; the integration's `39672fe`). **George's tests passed**
-on sofapi (2026-11-08, preview `1.14.0+git28.7174aad`): the page over the
-idle screen, now playing, the visualiser and the dashboard; closed by a
-touch, a D-pad key and its limit; standby woken and put back; a phone's
-request winning; the kept page shown at once. Two fixes came of them
-(`51879ad4`, `7174aad1`): what was under the page, or what a person asked
-for, goes up before the page goes - now playing had shown for the
-visualiser's raise. sofapi's kept page cleared, its test files removed.
-Merged into `next` with George's OK; **on Testing with 1.15.0** (above).
-After PR #97's merge: `ph-ha-page` and the integration's `ha-page` deleted,
-the worktree `~/projects/gexis-player-ph35` removed.
+**Phase 35** (a page from Home Assistant on the screen, ADR-0176 as amended;
+Findings 142-143) **on Testing with 1.15.0** (2026-11-08), with the
+integration's 0.6.0; its branches and worktree removed after PR #97. **Not
+yet on a player:** the heat take-down, a USB keyboard's key, one page
+replacing another, the switch turned off while a page is up; acceptance 4
+(192 kHz with room correction) not measured. The Home Assistant session
+wires sofapi's cameras once sofapi runs 1.15.0 and Home Assistant 0.6.0.
 
 Phases and their IDs: `docs/DEVELOPMENT.md`. MPD parked (ADR-0151). **Raspberry
 Pi Imager** (ADR-0159, a task): Imager's own list stays open as it is
@@ -220,7 +193,7 @@ in Claude's memory, not here) holds the open items with their detail.
 
 **Routine clean-up** (`docs/ROUTINE-CLEANUP.md`, George 2026-10-12): after
 every merged release PR, otherwise weekly on Sunday evening. **Last run:
-2026-11-06, after 1.14.0.**
+2026-11-08, after 1.15.0.**
 
 ## Phases
 
@@ -229,7 +202,8 @@ consecutively without letters, each with a stable ID (George, 2026-10-13).
 On Stable with work open: 22 (multiroom), 23 (AirPlay 2, limited testing),
 27 (releases built on GitHub; a card still to flash) and 28 (Plexamp and
 Beszel to the catalogue), both with 1.13.0. 29 (room correction for the
-bass) in progress, on Testing with 1.14.0; 30 in research (2026-11-07) and 35 beside it (2026-11-07), then 31-34; MPD parked. `docs/DEVELOPMENT.md`
+bass) in progress, on Testing since 1.14.0; 35 (a page from Home Assistant)
+on Testing with 1.15.0; 30 in research (2026-11-07), then 31-34; MPD parked. `docs/DEVELOPMENT.md`
 holds each phase's acceptance criteria.
 
 ## Machines
