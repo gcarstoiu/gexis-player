@@ -13,8 +13,8 @@ a show of that address only reveals it - a doorbell does not wait for Home
 Assistant to load. Every close hides it again.
 
 The side effects are the caller's - `prepare` before a page comes up over
-nothing, `restore` after the last one goes - so this keeps only who is up,
-until when, and why the last one went.
+nothing, `restore` as the last one goes, before the panel is told - so this
+keeps only who is up, until when, and why the last one went.
 """
 from __future__ import annotations
 
@@ -258,9 +258,15 @@ class Page:
             self.closed = {"id": self.id, "by": by, "at": round(self._clock(), 1)}
             self.shown, self.id, self.url, self.until = False, None, None, None
             token, self._token = self._token or {}, None
-            self._publish(self.state())
+            # What was there goes back before the panel is told: the
+            # visualiser is a window over the panel's, so raised first it
+            # covers the page as it goes, where the panel otherwise showed
+            # now playing for the raise (sofapi, 2026-11-08). Standby alike.
+            try:
+                await self._restore(token, back)
+            finally:
+                self._publish(self.state())
             logger.info("page: down (%s)", by)
-        await self._restore(token, back)
         return True
 
     def _start_timers(self, seconds: int) -> None:

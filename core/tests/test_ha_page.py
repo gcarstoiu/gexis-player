@@ -73,6 +73,34 @@ async def test_up_then_down_prepares_once_and_puts_back_what_was_there():
     assert not await page.hide("touch")
 
 
+async def test_what_was_there_goes_back_before_the_panel_is_told():
+    """The visualiser raised over the page as it goes, not after it: the
+    panel showed now playing between them (sofapi, 2026-11-08). The page no
+    longer counts as up by then, or it would block the raise."""
+    told, seen = [], []
+
+    async def restore(token, back):
+        seen.append((page.shown, told[-1]["shown"]))
+
+    page = Page(told.append, prepare=lambda: asyncio.sleep(0, {}), restore=restore, clock=Clock())
+    await page.show(URL, "cameras", 60)
+    await page.hide("touch")
+    assert seen == [(False, True)] and told[-1]["shown"] is False
+
+
+async def test_the_panel_is_told_even_when_putting_back_fails():
+    told = []
+
+    async def restore(token, back):
+        raise RuntimeError("wlrctl")
+
+    page = Page(told.append, prepare=lambda: asyncio.sleep(0, {}), restore=restore, clock=Clock())
+    await page.show(URL, "cameras", 60)
+    with pytest.raises(RuntimeError):
+        await page.hide("touch")
+    assert told[-1]["shown"] is False and not page.shown
+
+
 async def test_the_address_never_reaches_the_state():
     """P2: the socket is open on the network and an address can carry a token."""
     page, told, _, _ = _page()
