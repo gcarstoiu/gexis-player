@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-11-07 (on R2D2).
+Last updated: 2026-11-08 (on R2D2).
 
 ## Start here
 
@@ -185,10 +185,17 @@ is). Preview `1.14.0+git25.4b831af` on sofapi (2026-11-07 18:49, run
 42397583346). Amended the same day (George, from the Home Assistant side):
 one page kept loaded and hidden, a show of it only revealing it, in 1.15.0;
 [Finding 143](docs/findings/143-a-home-assistant-page-kept-loaded-and-hidden.md)
-measured it first (60-90 MB, no processor measurable); K1-K8 accepted. Being
-built on the same branches; then a new preview for George's tests (paused
-after a touch closed the first page), the release (1.15.0) and the
-integration's 0.6.0.
+measured it first (60-90 MB, no processor measurable); K1-K8 accepted and
+built (`8a5b7e49`; the integration's `39672fe`). **George's tests passed**
+on sofapi (2026-11-08, preview `1.14.0+git28.7174aad`): the page over the
+idle screen, now playing, the visualiser and the dashboard; closed by a
+touch, a D-pad key and its limit; standby woken and put back; a phone's
+request winning; the kept page shown at once. Two fixes came of them
+(`51879ad4`, `7174aad1`): what was under the page, or what a person asked
+for, goes up before the page goes - now playing had shown for the
+visualiser's raise. sofapi's kept page cleared, its test files removed.
+**Next (George's OK, 2026-11-08):** `ph-ha-page` into `next`, 1.15.0's notes
+for George, the release, then the integration's 0.6.0.
 
 Phases and their IDs: `docs/DEVELOPMENT.md`. MPD parked (ADR-0151). **Raspberry
 Pi Imager** (ADR-0159, a task): Imager's own list stays open as it is
