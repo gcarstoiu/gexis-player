@@ -246,11 +246,13 @@ class Page:
             self._publish(self.state())
             logger.info("page: %s up for %d s", page_id, seconds)
 
-    async def hide(self, by: str, *, page_id: str | None = None, back: bool = True) -> bool:
+    async def hide(self, by: str, *, page_id: str | None = None, back: bool = True,
+                   then: Callable[[], Awaitable[None]] | None = None) -> bool:
         """Down, and what was there put back - unless `back` is False: a
         person who asked the panel for something else (P5) wants that, not
-        the visualiser or standby from before. With `page_id`, only that
-        page: an automation never closes another's."""
+        the visualiser or standby from before; `then` does it, in the page's
+        place as a put-back would be. With `page_id`, only that page: an
+        automation never closes another's."""
         async with self._lock:
             if not self.shown or (page_id is not None and page_id != self.id):
                 return False
@@ -264,6 +266,8 @@ class Page:
             # now playing for the raise (sofapi, 2026-11-08). Standby alike.
             try:
                 await self._restore(token, back)
+                if then is not None:
+                    await then()
             finally:
                 self._publish(self.state())
             logger.info("page: down (%s)", by)

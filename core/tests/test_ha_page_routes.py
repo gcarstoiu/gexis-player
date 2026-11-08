@@ -168,6 +168,42 @@ async def test_a_persons_request_takes_the_page_down_without_putting_back():
         assert store.state.panel["page"]["closed"]["by"] == "asked"
 
 
+class _Visualiser:
+    """Refused while a page is up, as the real one is."""
+    refused = False
+
+    def __init__(self, page, store):
+        self.page, self.store, self.raised_under = page, store, []
+
+    def on_touch(self):
+        pass
+
+    def _has_levels(self):
+        return True
+
+    async def request_async(self, action):
+        if action == "show" and self.page.shown:
+            return False
+        self.raised_under.append(self.store.state.panel["page"]["shown"])
+        return True
+
+
+@pytest.mark.asyncio
+async def test_the_visualiser_asked_for_is_raised_over_the_page_before_it_goes():
+    """P5 with nothing between them: now playing showed while the visualiser
+    was raised after the page had gone (sofapi, 2026-11-08)."""
+    store, page, server, restored = _setup()
+    server._peppy = visualiser = _Visualiser(page, store)
+    async with TestClient(TestServer(server.make_app())) as client:
+        await client.post("/panel/page/show", json={"url": URL})
+        r = await client.post("/peppy/show")
+        assert r.status == 200 and visualiser.raised_under == [True]
+        assert not page.shown and store.state.panel["page"]["closed"]["by"] == "asked"
+        assert restored == [False]
+        await client.post("/peppy/show")
+        assert visualiser.raised_under == [True, False]
+
+
 @pytest.mark.asyncio
 async def test_the_switch_turned_off_takes_a_page_down_and_the_status_says_so():
     store, page, server, _ = _setup()

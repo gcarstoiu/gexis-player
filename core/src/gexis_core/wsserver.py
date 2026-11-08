@@ -1637,8 +1637,7 @@ class StateServer:
         if self._standby is None:
             return web.json_response({"error": "standby is not wired up"}, status=503)
         if action == "on":
-            await self._page_gives_way()
-            await self._standby.sleep("asked")
+            await self._page_gives_way(lambda: self._standby.sleep("asked"))
         elif action == "off":
             await self._standby.wake("phone")
         else:
@@ -1664,11 +1663,13 @@ class StateServer:
         if self._dashboard is None:
             return web.json_response({"error": "the dashboard is not wired up"}, status=503)
         by = "schedule" if request.query.get("by") == "schedule" else "asked"
-        if action == "show":
-            if by == "asked":
-                await self._page_gives_way()
-            if by == "asked" and self._peppy is not None:
-                self._peppy.on_touch()
+        if action == "show" and by == "asked":
+            async def asked() -> None:
+                if self._peppy is not None:
+                    self._peppy.on_touch()
+                self._dashboard.show(by)
+            await self._page_gives_way(asked)
+        elif action == "show":
             self._dashboard.show(by)
         elif action == "hide":
             self._dashboard.hide(by)
@@ -1681,12 +1682,23 @@ class StateServer:
         return (self._setting_or_none("ha_pages") is True
                 and self._setting_or_none("headless") is not True)
 
-    async def _page_gives_way(self) -> None:
+    async def _page_gives_way(self, asked: Callable[[], object]):
         """**ADR-0176 P5: a person's request wins.** Asking the panel for
-        something else takes the page down first, and leaves the visualiser
-        and standby to what was asked rather than putting back the old."""
-        if self._page is not None and self._page.shown:
-            await self._page.hide(ha_page.ASKED, back=False)
+        something else takes the page down, and leaves the visualiser and
+        standby to what was asked rather than putting back the old. What was
+        asked is done while the page still covers the screen - the visualiser
+        raised over it, the panel changed under it - so what was between
+        them never shows (sofapi, 2026-11-08). Its answer is returned."""
+        if self._page is None or not self._page.shown:
+            return await asked()
+        done = []
+
+        async def then() -> None:
+            done.append(await asked())
+
+        if not await self._page.hide(ha_page.ASKED, back=False, then=then):
+            return await asked()
+        return done[0]
 
     async def _handle_page(self, request: web.Request) -> web.Response:
         """**ADR-0176: whether a page from Home Assistant is up.** Its
@@ -1957,8 +1969,7 @@ class StateServer:
             return web.json_response({"error": 'body must be {"action": ...}'}, status=400)
         action = body["action"]
         if action == "measure":
-            await self._page_gives_way()
-            return await self._room_call(self._room.start)
+            return await self._page_gives_way(lambda: self._room_call(self._room.start))
         return await self._room_call(lambda: self._room.tap(action))
 
     async def _handle_idle_request(self, request: web.Request) -> web.Response:
@@ -1970,10 +1981,11 @@ class StateServer:
         action = request.match_info["action"]
         if action not in ("show", "hide"):
             return web.json_response({"error": f"unknown action {action}"}, status=404)
-        await self._page_gives_way()
-        if self._peppy is not None:
-            self._peppy.on_touch()
-        self._store.request_idle(action == "show")
+        async def asked() -> None:
+            if self._peppy is not None:
+                self._peppy.on_touch()
+            self._store.request_idle(action == "show")
+        await self._page_gives_way(asked)
         return web.json_response({"idle": action})
 
     #: ADR-0101 as amended: where a phone may send the panel.
@@ -1990,10 +2002,11 @@ class StateServer:
             return web.json_response({"error": f"unknown view {to}"}, status=404)
         if to != "home" and self._store.state.active is None:
             return web.json_response({"error": "nothing is playing"}, status=409)
-        await self._page_gives_way()
-        if self._peppy is not None:
-            self._peppy.on_touch()
-        self._store.request_view(to)
+        async def asked() -> None:
+            if self._peppy is not None:
+                self._peppy.on_touch()
+            self._store.request_view(to)
+        await self._page_gives_way(asked)
         return web.json_response({"view": to})
 
     async def _handle_wifi_details(self, request: web.Request) -> web.Response:
@@ -3006,10 +3019,11 @@ class StateServer:
             return web.json_response({"error": "the Peppy screen is not wired up"}, status=503)
         if action not in ("show", "hide"):
             return web.json_response({"error": f"unknown action {action}"}, status=404)
-        if action == "show":
-            await self._page_gives_way()
         # Off the loop: raising or lowering waits on wlrctl (review, 2026-10-12).
-        shown = await self._peppy.request_async(action)
+        if action == "show":
+            shown = await self._page_gives_way(lambda: self._peppy.request_async("show"))
+        else:
+            shown = await self._peppy.request_async(action)
         # **Only when it was tried and found no window** (ShelvesPi,
         # 2026-10-21): a show refused for standby started the driver again
         # with the only output off, and it could not start - *the video
