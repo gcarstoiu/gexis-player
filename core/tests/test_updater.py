@@ -138,12 +138,13 @@ def test_the_tag_is_the_version_with_plus_spelled_as_dash(up):
 def test_the_plan_reads_what_apt_would_change(monkeypatch, up):
     sim = ("Inst gexis-core [0.2.1+git828.523f5cc] (0.2.1+git900.abc1234 Gexis Player:r0.2.1-git900.abc1234 [arm64])\n"
            "Inst libfoo (1.0-1 Gexis Player:r0.2.1-git900.abc1234 [arm64])\n"
+           "Remv gexis-plexamp [4.13.2-2+git5.aaaaaaa]\n"
            "Conf gexis-core (0.2.1+git900.abc1234 Gexis Player:r0.2.1-git900.abc1234 [arm64])\n")
     monkeypatch.setattr(up, "apt", lambda opts, *a: subprocess.CompletedProcess(a, 0, sim, ""))
-    assert up.plan([], "0.2.1+git900.abc1234") == [
+    assert up.plan([], "0.2.1+git900.abc1234") == ([
         ("gexis-core", "0.2.1+git828.523f5cc", "0.2.1+git900.abc1234"),
         ("libfoo", None, "1.0-1"),
-    ]
+    ], [("gexis-plexamp", "4.13.2-2+git5.aaaaaaa")])
 
 
 def view_of(up, opts):
@@ -294,7 +295,7 @@ def fake_install(up, monkeypatch, *, fail_install=False, answers=True):
     monkeypatch.setattr(up, "installed", lambda p: "1")
     monkeypatch.setattr(up, "parts_of", lambda v: (["ours-old"], ["ours-old"]))
     monkeypatch.setattr(up, "apt_env", lambda repos, pins=None: [])
-    monkeypatch.setattr(up, "plan", lambda opts, v: [("gexis-core", "1", "2")])
+    monkeypatch.setattr(up, "plan", lambda opts, v: ([("gexis-core", "1", "2")], [("gexis-plexamp", "4.1")]))
     def apt(opts, *args, prefix=None):
         if fail_install and "--no-download" in args and "dist-upgrade" in args and prefix and "--allow-downgrades" not in args:
             return subprocess.CompletedProcess(args, 100, "", "E: broken")
@@ -341,6 +342,49 @@ def test_a_failed_install_marks_its_step_and_goes_back(up, monkeypatch):
     last = seen[-1]
     assert last["state"] == "failed" and last["steps"]["install"] == "failed"
     assert last["attempted"] == "2"
+
+
+#: apt's simulation of an update from 1.12.x to 1.13.0 or later.
+REMOVES = "Remv gexis-plexamp [4.1]\nInst gexis-core [1] (2 Gexis Player:ours-x [arm64])\n"
+
+
+def test_going_back_is_fetched_for_what_the_update_removes_too(up, monkeypatch):
+    """The review of 1.16.1: 1.13.0's player conflicts with Plexamp and
+    Beszel, which 1.12's depends on; installed from the image, they were
+    never in the updater's cache, and going back could not put them back."""
+    plan = up.plan
+    seen, _ = fake_install(up, monkeypatch, answers=False)
+    monkeypatch.setattr(up, "plan", plan)
+    calls, real = [], up.apt
+
+    def apt(opts, *args, prefix=None):
+        calls.append(args)
+        return subprocess.CompletedProcess(args, 0, REMOVES, "") if "-s" in args else real(opts, *args, prefix=prefix)
+
+    monkeypatch.setattr(up, "apt", apt)
+    assert up.install(None) == 1, "the core did not answer: it goes back"
+    fetched = [a for a in calls if "--download-only" in a and "--reinstall" in a]
+    assert any("gexis-core=1" in a for a in fetched) and any("gexis-plexamp=4.1" in a for a in fetched)
+    assert any("--no-download" in a and "--allow-downgrades" in a for a in calls)
+
+
+def test_a_fetch_for_going_back_that_fails_says_going_back_will_not_be_possible(up, monkeypatch):
+    plan = up.plan
+    seen, _ = fake_install(up, monkeypatch)
+    monkeypatch.setattr(up, "plan", plan)
+    real = up.apt
+
+    def apt(opts, *args, prefix=None):
+        if "-s" in args:
+            return subprocess.CompletedProcess(args, 0, REMOVES, "")
+        if "--reinstall" in args and "gexis-plexamp=4.1" in args:
+            return subprocess.CompletedProcess(args, 100, "", "E: Version '4.1' for 'gexis-plexamp' was not found")
+        return real(opts, *args, prefix=prefix)
+
+    monkeypatch.setattr(up, "apt", apt)
+    assert up.install(None) == 0, "the update itself goes on"
+    said = [s["message"] for s in seen if "going back will not be possible" in (s.get("message") or "")]
+    assert said and "was not found" in said[0]
 
 
 def test_apt_s_download_status_becomes_the_share_done(up, monkeypatch):

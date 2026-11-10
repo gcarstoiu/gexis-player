@@ -417,9 +417,11 @@ key, or for another release, stops the update.
 
 1. **download** - `apt-get update` on the new parts; simulate to plan the
    changes; `--download-only` everything. Then pre-download, from the
-   installed release, the current versions of every package that will change,
-   so going back needs no network. If those repositories can't be read, the
-   update continues and says going back won't be possible.
+   installed release, the current versions of every package that will change
+   or be removed (a release that conflicts with one the old release depends
+   on), so going back needs no network. If those repositories can't be read,
+   or a package can't be fetched from them, the update continues and says
+   going back won't be possible.
 2. **backup** - `POST /settings/backup?before=update` on the core, then wait
    up to 120 s for a new `.tgz` in `/var/lib/gexis-core/backups/` (ADR-0083).
    No backup, no update. The core names it
