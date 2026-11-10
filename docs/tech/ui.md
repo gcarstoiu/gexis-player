@@ -416,7 +416,10 @@ Details worth knowing:
   be shown or hidden (`POST /panel/idle/{show|hide}`). The asks come back to
   the panel in `panel.view_request` / `panel.idle_request`. Each ask is
   numbered, applied once, and ignored if it is older than 60 s, so a panel
-  that reloads does not replay it.
+  that reloads does not replay it. A view ask closes what covers Now Playing
+  (Settings, the equaliser's editor, room correction's page; a measurement's
+  own screen stays), and the panel reports Now Playing as shown only with
+  none of them up.
 
 ### Library structure
 
