@@ -552,7 +552,9 @@ when Software is in force, and starts the renderers again. Renderer plugins
 through the same `output`; only sources that are switched on are restarted
 (`_restart_renderers()`), so a switched-off source stays off. Every level kept
 as a raw number - the one shown, Mute's, and the one before Fixed - is carried
-to the new output's scale through dB (`carry_raw()`, `_carry_levels()`); in
+to the new output's scale through dB (`carry_raw()`, `_carry_levels()`); the
+one a measurement keeps is stored with its scale and carried when it is put
+back, after a restart too (`keep_level()`, `level_kept()`); in
 Hardware the new card is given the level shown, in Fixed it is set to full
 scale. For 30 s afterwards
 the start guard answers a renderer's report above the level playing

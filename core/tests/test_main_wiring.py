@@ -382,3 +382,99 @@ def test_a_visualiser_not_running_with_skins_installed_is_started():
     assert up.index("visualiser_held['settling']") < up.index("await _restart_visualiser()"), \
         "held while the settling screen is up, as the restart itself is"
     assert "asyncio.ensure_future(_visualiser_running())" in MAIN.read_text()
+
+
+class _Card:
+    """The level control, as the room run writes it through the bridge."""
+
+    def __init__(self) -> None:
+        self.written: list[int] = []
+
+    async def write_hardware(self, raw: int) -> None:
+        self.written.append(raw)
+
+
+def _room_level(store: dict, card: _Card) -> tuple[dict, object]:
+    """`_room_loud`, `_room_quiet` and the restart's put-back as `main()`
+    defines them, over a store and the volume module's own scale."""
+    import logging
+    import types
+
+    from gexis_core import volume as vol
+
+    state = types.SimpleNamespace(volume=None)
+    ns = dict(vol.__dict__)
+    ns.update(
+        settings_store=types.SimpleNamespace(get=store.get, set=store.__setitem__),
+        state_store=types.SimpleNamespace(state=state), volume_bridge=card,
+        mute=vol.Mute(card.write_hardware, lambda: None),
+        fixed_now={"value": False}, room_level_up={"value": False},
+        ROOM_VOLUME_KEY="_room_volume_before", logger=logging.getLogger("test"),
+    )
+    for name in ("_room_loud", "_room_quiet", "_room_volume_after_restart"):
+        exec(_closure(name), ns)
+    return ns, state
+
+
+def _jack():
+    from gexis_core import mixer_scale
+    return mixer_scale.Scale(raw_min=-10239, raw_max=400, db_min=-102.39, db_step=0.01)
+
+
+async def test_the_level_before_a_measurement_goes_back_on_the_scale_in_force(monkeypatch):
+    """**The review of 1.16.1.** The level before a run was kept as a bare
+    raw and written back on whatever scale was in force at the end: the jack
+    standing in for HDMI mid-run got the software stage's -30 dB (raw 240)
+    as its own raw 240, above 0 dB."""
+    import types
+
+    from gexis_core import outputs
+    from gexis_core import volume as vol
+
+    soft, jack = outputs.SOFTVOL_SCALE, _jack()
+    monkeypatch.setattr(vol, "_scale", soft)
+    store, card = {}, _Card()
+    ns, state = _room_level(store, card)
+    state.volume = types.SimpleNamespace(raw=soft.raw(-30.0), muted=False)
+    await ns["_room_loud"]()
+    assert card.written[-1] == soft.top
+    vol.use_scale(jack)
+    await ns["_room_quiet"]()
+    assert jack.db(card.written[-1]) == -30.0
+    assert store["_room_volume_before"] is None
+
+
+async def test_a_run_cut_short_goes_back_on_the_output_the_restart_came_up_on(monkeypatch):
+    """A restart mid-run that comes up on another output (the review of
+    1.16.1): the software stage's -30 dB was written to the DAC2 HD as its
+    raw 240, its 0 dB."""
+    import types
+
+    from gexis_core import mixer_scale, outputs
+    from gexis_core import volume as vol
+
+    soft = outputs.SOFTVOL_SCALE
+    monkeypatch.setattr(vol, "_scale", soft)
+    store = {}
+    ns, state = _room_level(store, _Card())
+    state.volume = types.SimpleNamespace(raw=soft.raw(-30.0), muted=False)
+    await ns["_room_loud"]()
+    # The next start, on the DAC2 HD.
+    vol.use_scale(mixer_scale.DAC2_HD)
+    card = _Card()
+    ns, _ = _room_level(store, card)
+    await ns["_room_volume_after_restart"]()
+    assert mixer_scale.DAC2_HD.db(card.written[-1]) == -30.0
+
+
+async def test_a_level_kept_before_its_scale_was_goes_back_as_it_was(monkeypatch):
+    """A run cut short on 1.16.1 kept no scale: its raw is the scale's in
+    force, as it was taken then."""
+    from gexis_core import mixer_scale
+    from gexis_core import volume as vol
+
+    monkeypatch.setattr(vol, "_scale", mixer_scale.DAC2_HD)
+    card = _Card()
+    ns, _ = _room_level({"_room_volume_before": {"raw": 180, "muted": False}}, card)
+    await ns["_room_volume_after_restart"]()
+    assert card.written == [180]
