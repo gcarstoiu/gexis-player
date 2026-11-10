@@ -190,6 +190,9 @@ Taken from `Adapter` and `Capabilities` as they are. The prose for each is in
   absent and draws nothing. `track_id`, `title`, `artist`, `album`, `year`,
   `artwork`, `artwork_small`, `sample_rate` (Hz), `bit_depth` (bits; added 2026-10-02), `codec`, `position`, `duration`,
   `transport`, `source_type`, `shuffle`, `repeat`, `unavailable`.
+  *Noted 2026-11-10:* a number that is not one, or not finite (`NaN`,
+  `Infinity`), is dropped, and so is a character UTF-8 cannot encode (half
+  of a surrogate pair) in the text.
 - **`queue`** — only a renderer that has one (ADR-0038 §5). Others send a
   stream and no queue. *Noted 2026-10-12:* each entry of the list has the
   same fields as `metadata`, read the same way; anything but a list is no

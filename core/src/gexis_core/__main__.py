@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 import functools
 import logging
+import math
 import re
 import shutil
 import subprocess
@@ -536,17 +537,28 @@ def plugin_metadata(renderer_id: str, raw) -> TrackMetadata:
     `source_type` is **ours to set**, not the plugin's: it says which
     renderer supplied the metadata, and a plugin naming a different one
     would be lying about attribution the panel draws.
+
+    **What cannot be published is dropped** (the review of 1.16.1): a
+    character UTF-8 cannot encode (half an emoji, cut by its sender) stopped
+    every broadcast, and a number that is not finite reached the screens as
+    JSON they refuse.
     """
+    def _text(value) -> str:
+        return str(value).encode("utf-8", "ignore").decode("utf-8")
+
     raw = raw if isinstance(raw, dict) else {}
     text = ("track_id", "title", "artist", "album", "year", "artwork",
             "artwork_small", "codec", "transport", "repeat")
-    fields = {k: str(raw[k]) for k in text if raw.get(k) is not None}
+    fields = {k: _text(raw[k]) for k in text if raw.get(k) is not None}
     for number, cast in (("position", float), ("duration", float),
                          ("sample_rate", int), ("bit_depth", int)):
         try:
             if raw.get(number) is not None:
-                fields[number] = cast(raw[number])
-        except (TypeError, ValueError):
+                value = cast(raw[number])
+                if not math.isfinite(value):
+                    raise ValueError(value)
+                fields[number] = value
+        except (TypeError, ValueError, OverflowError):
             logger.warning(
                 "plugins: %s sent %s=%r, which is not a number",
                 renderer_id, number, raw.get(number),
@@ -555,7 +567,7 @@ def plugin_metadata(renderer_id: str, raw) -> TrackMetadata:
         fields["shuffle"] = raw["shuffle"]
     unavailable = raw.get("unavailable")
     if isinstance(unavailable, list):
-        fields["unavailable"] = frozenset(str(u) for u in unavailable)
+        fields["unavailable"] = frozenset(_text(u) for u in unavailable)
     return replace(BLANK_METADATA, source_type=renderer_id, **fields)
 
 

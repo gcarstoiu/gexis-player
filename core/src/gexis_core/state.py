@@ -90,6 +90,8 @@ class StateStore:
         #: than none (ADR-0012).
         self._found_artwork: dict[str, tuple[tuple[str, str, str], str]] = {}
         self._subscribers: list[Callable[[PlaybackState], None]] = []
+        #: Subscribers that raised at their last call, by id: logged once.
+        self._failing: set[int] = set()
 
     def subscribe(self, callback: Callable[[PlaybackState], None]) -> None:
         """Registered once, by the WebSocket server - not per client. The
@@ -521,7 +523,18 @@ class StateStore:
         self._notify()
 
     def _notify(self) -> None:
+        """**One subscriber failing stops none of the others** (the review of
+        1.16.1): the moOde file's writer, first, raised on a title it could
+        not encode, and no change reached the screens after it."""
         state = self.state
         for callback in self._subscribers:
-            callback(state)
+            try:
+                callback(state)
+            except Exception:  # noqa: BLE001 - the others are still told
+                if id(callback) not in self._failing:
+                    self._failing.add(id(callback))
+                    logger.exception("state: %s failed; the others were told",
+                                     getattr(callback, "__qualname__", callback))
+            else:
+                self._failing.discard(id(callback))
 
