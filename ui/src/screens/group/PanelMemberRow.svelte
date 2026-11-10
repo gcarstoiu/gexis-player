@@ -10,7 +10,9 @@
   import { track } from './panelSlider.js';
 
   //: `level`: what the slider shows (the finger's, while it moves).
-  let { m, level, canremove = false, onlevel, ondone, onmute, onremove } = $props();
+  //: `armsAt`: the drawer's (VolumeDrawer); no touch before it.
+  let { m, level, armsAt = 0, canremove = false, onlevel, ondone, onmute, onremove } = $props();
+  const armed = () => performance.now() >= armsAt;
 
   const tag = $derived(!m.reachable ? 'Off' : m.leads ? 'Leads' : m.me ? 'This one' : m.fixed ? 'Fixed' : '');
   const drag = track((percent) => onlevel?.(percent), () => ondone?.());
@@ -27,7 +29,7 @@
     <span class="off">Not reachable</span>
   {:else if m.fixed}
     {#if m.fixed_mute !== null}
-      <button class="mute" type="button" aria-label={m.muted ? `Unmute ${m.name}` : `Mute ${m.name}`} onclick={onmute}>
+      <button class="mute" type="button" aria-label={m.muted ? `Unmute ${m.name}` : `Mute ${m.name}`} onclick={() => armed() && onmute?.()}>
         <span class="small"><VolumeIcon percent={100} muted={m.muted} /></span>
       </button>
     {:else}
@@ -39,13 +41,13 @@
       <span class="locked__tag">{m.muted ? 'Off' : '100%'}</span>
     </div>
   {:else}
-    <button class="mute" type="button" aria-label={m.muted ? `Unmute ${m.name}` : `Mute ${m.name}`} onclick={onmute}>
+    <button class="mute" type="button" aria-label={m.muted ? `Unmute ${m.name}` : `Mute ${m.name}`} onclick={() => armed() && onmute?.()}>
       <span class="small"><VolumeIcon percent={level} muted={m.muted} /></span>
     </button>
     <div class="track" role="slider" tabindex="-1" aria-label={`${m.name} volume`}
          aria-valuemin="0" aria-valuemax="100" aria-valuenow={level ?? 0} data-step={DPAD_STEP}
          ondpadstep={(event) => { onlevel?.(Math.max(0, Math.min(100, (level ?? 0) + event.detail.step * DPAD_STEP))); ondone?.(); }}
-         onpointerdown={drag.down} onpointermove={drag.move} onpointerup={drag.up} onpointercancel={drag.up}>
+         onpointerdown={(event) => armed() && drag.down(event)} onpointermove={drag.move} onpointerup={drag.up} onpointercancel={drag.up}>
       <div class="rail">
         <div class="fill" class:is-muted={m.muted} style:width={`${level ?? 0}%`}></div>
         <div class="knob" style:left={`${level ?? 0}%`} data-dpad-knob></div>
@@ -54,7 +56,7 @@
     <span class="value">{m.muted ? 'Off' : (level ?? '—')}</span>
   {/if}
   {#if canremove}
-    <button class="remove" type="button" aria-label={`Remove ${m.name}`} onclick={onremove}>
+    <button class="remove" type="button" aria-label={`Remove ${m.name}`} onclick={() => armed() && onremove?.()}>
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" style="stroke: var(--ink-body)"
            stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
     </button>
