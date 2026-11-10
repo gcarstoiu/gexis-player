@@ -543,3 +543,42 @@ async def test_without_the_groups_loopback_a_member_still_hears_the_group(tmp_pa
     assert kitchen.room.chain == outputs.WITHOUT_LOOPBACK
     assert kitchen.snap.host == "living.local", "it plays the group's music through its own chain"
     assert living.room.chain == outputs.ALL
+
+
+async def test_without_the_groups_loopback_arbitration_asks_about_the_players_own_chain(tmp_path, monkeypatch):
+    """The review of 1.16.1: without the group's loopback, arbitration was
+    still pointed at it - the card missing - so every look at who holds the
+    device raised, and a joining member's change stopped before its client
+    started."""
+    from gexis_core import __main__ as core_main
+    from gexis_core import alsa
+    cards = tmp_path / "cards"
+    cards.write_text(" 0 [sndrpihifiberry]: HifiberryDac - snd_rpi_hifiberry_dac\n"
+                     "                      snd_rpi_hifiberry_dac\n"
+                     " 1 [Loopback       ]: Loopback - Loopback\n"
+                     "                      Loopback 1\n")
+    resolve = alsa.resolve_card_number
+    monkeypatch.setattr(alsa, "resolve_card_number", lambda card_id=None, cards_file=None: resolve(card_id, cards))
+    monkeypatch.setattr(alsa, "_card", "sndrpihifiberry")
+    monkeypatch.setattr(alsa, "_renderers_card", None)
+    monkeypatch.setattr(alsa, "_also_card", None)
+    monkeypatch.setattr(outputs, "eq_in_path", lambda card: False)
+    net = Net(tmp_path)
+    living, kitchen = net.add("living", "Living Room"), net.add("kitchen", "Kitchen")
+    kitchen.snap.card = False
+    monkeypatch.setattr(outputs, "group_in_path", lambda: kitchen.room.chain)
+
+    async def rechain():
+        # As `_group_rechain`: who holds the device first, then the cards
+        # watched (`_equaliser_follows`) and the client back.
+        kitchen.rechains += 1
+        alsa.playback_pcm_node()
+        core_main._watch_renderers_cards("sndrpihifiberry")
+        await kitchen.room.relisten()
+    kitchen.room._rechain = rechain
+    await living.room.join("kitchen")
+    await net.settle()
+    assert kitchen.room.chain == outputs.WITHOUT_LOOPBACK
+    assert alsa.renderers_card() == "sndrpihifiberry"
+    assert kitchen.snap.host == "living.local", "it hears the group"
+    assert kitchen.rechains == 1, "the fallback's chain written once"

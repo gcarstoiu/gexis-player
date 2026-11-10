@@ -582,8 +582,9 @@ class Multiroom:
 
     async def _enter(self, record: Record) -> None:
         self._alone_when_idle = False
-        made = await self._card_or_fallback()
-        await self._set_chain(self._chain_for(record) if made else outputs.WITHOUT_LOOPBACK)
+        if await self._card_or_fallback():
+            await self._set_chain(self._chain_for(record))
+        # Else the fallback's chain is in force already.
         await self.snap.serve(True)
         await self._listen()
 

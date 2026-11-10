@@ -602,10 +602,12 @@ def _watch_renderers_cards(card: str) -> None:
     """**Which cards arbitration asks about** (ADR-0162, ADR-0166): the
     output's, or the equaliser's loopback while it is in the path - or, in a
     group, the group's loopback, and with Lyrion's own sync also the chain
-    Squeezelite plays to."""
+    Squeezelite plays to. **Not where the group's loopback could not be
+    made** (`WITHOUT_LOOPBACK`): the renderers play to the player's own
+    chain, and asking about the missing card raised (the review of 1.16.1)."""
     chain = outputs.LOOPBACK if outputs.eq_in_path(card) else None
     group = outputs.group_in_path()
-    if group:
+    if group and group != outputs.WITHOUT_LOOPBACK:
         alsa.set_renderers_card(outputs.GROUP_CARD)
         alsa.set_also_card((chain or card) if group == outputs.BUT_LYRION else None)
     else:
