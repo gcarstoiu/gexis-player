@@ -86,6 +86,73 @@ def test_carried_once_not_twice(places):
     assert _carry(places, stored=True, versions=lambda: {"beszel": "0.21.1-1"}) == []
 
 
+def _installed(root: Path, version: str = "0.21.1-1") -> None:
+    (root / "beszel" / version).mkdir(parents=True)
+    (root / "beszel" / version / "plugin.json").write_text(
+        '{"id": "beszel", "name": "Beszel", "kind": "service", "version": "%s", "run": "run"}' % version)
+    (root / "beszel" / "current").symlink_to(version)
+
+
+def test_a_plugin_removed_after_its_carry_stays_removed(places, tmp_path):
+    """The review of 1.16.1: the Plugins page's record of ours kept the id,
+    so every start after Remove recorded it again and the catalogue
+    installed it again. The record loses it once carried."""
+    record = {"added": {"beszel", "visualiser-skins"}}
+    root = tmp_path / "plugins"
+
+    def start(stored):
+        return carry_over.carry(ours=set(), stored=lambda key: stored, added=record["added"],
+                                write_added=lambda ids: record.update(added=ids),
+                                known=places["known"], private=places["private"], wants=places["wants"],
+                                versions=lambda: uploads.versions(root), stop=lambda unit: None,
+                                moved=[places["moved"]])
+
+    assert start(False) == ["beszel"]
+    assert record["added"] == {"visualiser-skins"}, "ours stay"
+    _installed(root)
+    uploads.remember(root, places["known"])
+    # Remove, as `_uninstall_plugin` does it: its package, its record, its switch.
+    uploads.remove("beszel", root)
+    uploads.forget("beszel", places["known"])
+    assert start(None) == []
+    assert uploads.missing(root, places["known"]) == []
+
+
+def test_a_plugin_carried_by_an_earlier_release_leaves_the_record_too(places, tmp_path):
+    """1.13.0 to 1.16.1 carried without taking the id out: at the next start
+    it goes, the plugin installed and nothing recorded again."""
+    record = {"added": {"beszel"}}
+    root = tmp_path / "plugins"
+    _installed(root)
+    assert carry_over.carry(ours=set(), stored=lambda key: True, added=record["added"],
+                            write_added=lambda ids: record.update(added=ids),
+                            known=places["known"], private=places["private"], wants=places["wants"],
+                            versions=lambda: uploads.versions(root), stop=lambda unit: None,
+                            moved=[places["moved"]]) == []
+    assert record["added"] == set()
+
+
+def test_the_record_is_left_alone_when_it_holds_none_of_them(places):
+    written = []
+    carry_over.carry(ours=set(), stored=lambda key: None, added={"visualiser-skins"}, write_added=written.append,
+                     known=places["known"], private=places["private"], wants=places["wants"],
+                     versions=dict, stop=lambda unit: None, moved=[places["moved"]])
+    carry_over.carry(ours={"beszel"}, stored=lambda key: None, added={"beszel"}, write_added=written.append,
+                     known=places["known"], private=places["private"], wants=places["wants"],
+                     versions=dict, stop=lambda unit: None, moved=[places["moved"]])
+    assert written == [], "nothing to take out, and not while the player still ships it"
+
+
+def test_a_record_that_cannot_be_written_does_not_stop_the_start(places):
+    import sqlite3
+
+    def refuse(ids):
+        raise sqlite3.OperationalError("attempt to write a readonly database")
+    assert carry_over.carry(ours=set(), stored=lambda key: None, added={"beszel"}, write_added=refuse,
+                            known=places["known"], private=places["private"], wants=places["wants"],
+                            versions=dict, stop=lambda unit: None, moved=[places["moved"]]) == ["beszel"]
+
+
 def test_a_file_the_plugin_already_has_is_not_overwritten(places):
     (places["private"] / "beszel").mkdir(parents=True)
     (places["private"] / "beszel" / "fingerprint").write_text("its own")
