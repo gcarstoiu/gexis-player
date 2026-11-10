@@ -285,9 +285,10 @@ Rough, and subject to change:
   and the phone. Roon, with the player as a Roon device and Roon's Now
   Playing on its screen. Releases built on GitHub, each with a record of
   its build. Plexamp and Beszel as plugins from the catalogue, updated
-  there. Room correction for the bass, with a USB microphone.
-- 🔜 **Next:** room correction for the full range, and internet radio
-  without a Lyrion server.
+  there. Room correction with a USB microphone, for the bass or the full
+  range. A page from Home Assistant on the screen for a while, such as
+  cameras when the doorbell rings.
+- 🔜 **Next:** internet radio without a Lyrion server.
 - 🎨 **Later:** with Plex switched on, your own Plex server fills in
   the artist and album information other sources leave out.
 - 💭 **Maybe:** the DAC's own filter and polarity options.
