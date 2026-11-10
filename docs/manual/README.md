@@ -1016,7 +1016,8 @@ to *Add plugins*; its settings and sign-in stay, for when it is added again,
 unless *Keep its settings and sign-in* is turned off. After a restore, plugins
 from the catalogue are installed from it again, unless it has withdrawn them
 since; an uploaded one needs uploading again. The player reads the catalogue
-from GitHub once a day and when *Add plugins* opens.
+from GitHub once a day and when *Add plugins* opens, and more often while a
+plugin waits to be installed again.
 
 ### System — *The player, its network, updates and maintenance*
 

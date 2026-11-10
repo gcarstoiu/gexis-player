@@ -44,6 +44,9 @@ CONTRACTS = (1,)
 #: Read by itself once a day, and when *Add plugins* opens if older than this.
 EVERY_S = 24 * 3600
 FRESH_S = 15 * 60
+#: While a restore's plugin is not in yet: read again this soon, then twice
+#: as long after each miss, up to the daily read.
+RETRY_S = 60
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
 TIMEOUT = aiohttp.ClientTimeout(total=30)
 ARCHIVE_TIMEOUT = aiohttp.ClientTimeout(total=None, sock_connect=30, sock_read=60)
@@ -574,11 +577,20 @@ class Service:
 
     async def run(self, *, first_delay: float = 60, restore: list[dict] | None = None) -> None:
         """Read it a minute after the start, then once a day; after a
-        restore, sooner, and install from it what the restore needs."""
-        await asyncio.sleep(20 if restore else first_delay)
-        await self.refresh()
-        if restore:
-            await self.restore(restore)
+        restore, sooner, and install from it what the restore needs.
+        **Tried again until it is in** (the review of 1.16.1: once per start,
+        so a first read without the network left it to the next start), at
+        each read, and the reads sooner while it is not."""
+        owed = list(restore or [])
+        await asyncio.sleep(20 if owed else first_delay)
+        retry = RETRY_S
         while True:
-            await asyncio.sleep(EVERY_S)
             await self.refresh()
+            if owed:
+                done = set(await self.restore(owed)) | set(self.installed())
+                owed = [m for m in owed if m["id"] not in done]
+            if owed:
+                await asyncio.sleep(retry)
+                retry = min(retry * 2, EVERY_S)
+            else:
+                await asyncio.sleep(EVERY_S)
