@@ -327,9 +327,10 @@ had.
 
 A renderer's rows land in **Sources**, under a sub-heading carrying its name,
 which is the shape the three built-ins already have. A service's land in
-**System**, same shape. Rows that fail the registry's own validation are dropped
-with the reason logged rather than taking the device down: one badly packaged
-plugin must not cost the others.
+**System**, same shape. A plugin whose rows fail the registry's own validation
+is left out of Settings, its switch with them, and the reason logged, rather
+than taking the device down: one badly packaged plugin must not cost the
+others.
 
 **A row may hide behind another with `onlyWhen`** (ADR-0044's vocabulary), and
 **it names your rows, not the core's**: the key is prefixed exactly as `key` is,

@@ -243,6 +243,27 @@ async def restart_if_enabled(unit: str) -> None:
     await asyncio.to_thread(functools.partial(_restart_if_enabled, unit))
 
 
+def _row_keys(plugin) -> list[str]:
+    """The keys of the rows a plugin brought, as the registry stores them -
+    less an `enabled` of its own where the core gives it the switch: the
+    registry keeps the switch, and wired after it the row's callback took
+    its place, so switching never started or stopped the unit."""
+    return [f"{plugin.id}.{row['key']}" for row in plugin.settings
+            if row.get("key") and not (row["key"] == "enabled" and plugin.enabled_row is None)]
+
+
+def _settled(installed: list, registry: list[dict]) -> list:
+    """**The plugins whose rows the registry took** (the review of 1.16.1).
+    `Settings.with_plugins` drops a plugin whose rows it refuses, so that
+    one badly packaged plugin stops nothing else; wired all the same, its
+    keys made `Settings` refuse to start - the core with it, at every boot,
+    and no screen left to remove the plugin from."""
+    registered = {row["key"] for group in registry for row in group["rows"] if row.get("key")}
+    return [p for p in installed
+            if (p.enabled_row or f"{p.id}.enabled") in registered
+            and all(key in registered for key in _row_keys(p))]
+
+
 def _chosen_server(config: Config, store: SettingsStore) -> Config:
     """`config`, with `lms_server` applied if one was chosen and is usable.
 
@@ -2355,12 +2376,16 @@ async def main() -> None:
             _apply_plugin_unit(p, on is not False)
         )
 
+    registry = Settings.with_plugins(load_registry(), installed_plugins, downloads,
+                                     missing=restored_missing)
+    settled = _settled(installed_plugins, registry)
+
     #: The switch every plugin gets unless its manifest names a row that
     #: already exists - which the three built-ins do, because theirs predate
     #: this and do more than manage a unit.
     plugin_switches = {
         f"{plugin.id}.enabled": _plugin_switch(plugin)
-        for plugin in installed_plugins
+        for plugin in settled
         if plugin.enabled_row is None
     }
 
@@ -2381,7 +2406,7 @@ async def main() -> None:
     #: value takes over the moment the switch is used.
     plugin_switch_defaults = {
         key: (lambda on=_unit_is_enabled(plugin.unit): on)
-        for plugin in installed_plugins
+        for plugin in settled
         if plugin.enabled_row is None
         for key in (f"{plugin.id}.enabled",)
     }
@@ -2391,11 +2416,9 @@ async def main() -> None:
     #: bound per row rather than passed: `Settings.set` calls a wired callback
     #: with the value and nothing else, as it does for every other row.
     plugin_rows = {
-        f"{plugin.id}.{row['key']}":
-            (lambda value, key=f"{plugin.id}.{row['key']}": _plugin_setting(key, value))
-        for plugin in installed_plugins
-        for row in plugin.settings
-        if row.get("key")
+        key: (lambda value, key=key: _plugin_setting(key, value))
+        for plugin in settled
+        for key in _row_keys(plugin)
     }
 
     # **ADR-0111: the visualiser's skins follow the screen.** One pack per
@@ -2778,8 +2801,7 @@ async def main() -> None:
                and len(screen_detect.ports()) == 1,
                # ADR-0158 D5: only where the player can set the backlight.
                "brightness": lambda: standby_module.screen_backlight() is not None},
-        registry=Settings.with_plugins(load_registry(), installed_plugins, downloads,
-                                       missing=restored_missing),
+        registry=registry,
         defaults={
             # ADR-0162: the Equaliser row says what is in use.
             "equaliser": lambda: equaliser.summary() if equaliser is not None else "Off",
@@ -2863,7 +2885,7 @@ async def main() -> None:
                       # not turn on, and says why.
                       **{f"{plugin.id}.enabled":
                          (lambda plugin_id=plugin.id: catalogue.switch_unavailable(plugin_id))
-                         for plugin in installed_plugins
+                         for plugin in settled
                          if plugin.catalogue and plugin.enabled_row is None}},
         options={
             "skin_corpus": skins_offered,
@@ -2904,14 +2926,14 @@ async def main() -> None:
                "screen": lambda: _reports_note("screen", hardware_report.screen_reports(settings_store.get("screen"))),
                # The Lyrion server's first start says what it is doing.
                **({"lyrion-server.enabled": lambda: _lyrion_note(settings.value("lyrion-server.enabled") is True)}
-                  if any(p.id == "lyrion-server" for p in installed_plugins) else {}),
+                  if any(p.id == "lyrion-server" for p in settled) else {}),
                # ADR-0168: withdrawn or blocked by a read during the run, said
                # without waiting for a restart.
                **{f"{plugin.id}.enabled":
                   (lambda plugin_id=plugin.id, p=plugin: catalogue_note(
                       catalogue.pulled(plugin_id),
                       catalogue.summary(plugin_id) or settings_registry_line(p, "catalogue")))
-                  for plugin in installed_plugins
+                  for plugin in settled
                   if plugin.catalogue and plugin.enabled_row is None}},
         # Wired = something reads it (ADR-0035). The token is read on every
         # Popular lookup, so it takes effect as soon as it is typed.
@@ -3116,10 +3138,10 @@ async def main() -> None:
                **plugin_switches, **plugin_rows,
                # ADR-0100 as amended: Retry under a failed download.
                **{f"{plugin.id}.download": (lambda _value=None, p=plugin: asyncio.ensure_future(_retry_download(p)))
-                  for plugin in installed_plugins if plugin.id in downloads},
+                  for plugin in settled if plugin.id in downloads},
                # ADR-0100, amended 2026-09-28: Remove, beside Retry.
                **{f"{plugin.id}.remove": (lambda _value=None, p=plugin: asyncio.ensure_future(_remove_download(p)))
-                  for plugin in installed_plugins if plugin.id in downloads and not plugin.uploaded}},
+                  for plugin in settled if plugin.id in downloads and not plugin.uploaded}},
         # **Phase 9 criterion 2.** These two act through
         # `POST /settings/{key}/items`, not through `set` - joining a network
         # and forgetting a device - so they are wired, and saying otherwise
