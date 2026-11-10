@@ -408,9 +408,17 @@ nothing there is followed through a link:
   `fsync`ed, renamed into place and the folder synced (2026-10-16: a power
   cut had left a final name with 0 bytes); a `.part` left by a backup cut short is removed by
   the next backup once it is 10 minutes old (`STALE_PART_S`), by name only.
-  A live SQLite database with a `-wal` beside it - the Beszel hub's - goes
-  in as one consistent file, copied with SQLite's own backup, without its
-  `-wal` and `-shm`. **Only files and folders go in**: a link, a pipe, a
+  What goes in is **read through what was opened, never by path** (the
+  review of 1.16.1): each folder and file is opened relative to the folder
+  above it with `O_NOFOLLOW`, and its kind, size and owner come from that
+  descriptor, so a plugin swapping a folder of its own for a link mid-walk
+  cannot have root's files archived under its name. A live SQLite database
+  with a `-wal` beside it - the Beszel hub's - goes in as one consistent
+  file, copied with SQLite's own backup, without its `-wal` and `-shm`;
+  SQLite opens by path, so it reads hard links to them made from the open
+  folder into a folder of root's own in `/var/lib/gexis-core`
+  (`.backup-db-*`, removed after; one a power cut left is swept by the next
+  backup). **Only files and folders go in**: a link, a pipe, a
   device or a hard-linked second name under a backed-up folder (a plugin's
   pipe, a venv's `lib64 -> lib`) is left out and logged. The updater's
   failure mark, `.before-update-failed`, is removed and made anew with
