@@ -1,6 +1,10 @@
 {
  "_about": "Every release's notes, newest first, exactly as published and signed (ADR-0116). publish.sh reads a release's notes from here; Settings -> Change logs shows the last 10.",
  "releases": {
+  "1.16.0": {
+   "date": "2026-11-10",
+   "notes": "New\n• Room correction for the full range, in Settings → Audio: above the bass it evens out the room's broad bumps and dips by 3 dB at most, up or down, and keeps the speakers' own balance.\n• Bass or Full range, on its page and in the volume controls, heard at once; Hear it without compares with no correction at all.\n• The chart shows the bass and the range above it, with what is cut and what is raised.\n\nGood to know\n• A measurement made before this release covers the bass only, and the microphone's calibration file is asked for once more; measuring again, in about five minutes and its check, reaches the full range.\n• With room correction on, the music is lowered by up to 3 dB so the correction cannot clip, and the volume gives it back; near the top of the volume, and with Fixed volume, it plays up to 3 dB quieter.\n• Nothing above 14 kHz is corrected."
+  },
   "1.15.0": {
    "date": "2026-11-08",
    "notes": "New\n• Pages from Home Assistant, in Settings → Display: Home Assistant can put a page of its own on the screen for a while, such as cameras when the doorbell rings, and take it down again.\n• A touch, any remote key or its time limit closes it, and what was on the screen comes back, the visualiser and standby included.\n• Home Assistant can keep one page loaded and hidden, so that it appears at once.\n\nGood to know\n• Off until switched on, for each player. The actions come with the Gexis Player integration 0.6.0, and the page needs what the dashboard needs in Home Assistant.\n• A page stays up for ten minutes unless Home Assistant says otherwise, an hour at most, and is taken down if the player gets too hot.\n• A page kept loaded takes about 60-90 MB of memory."
