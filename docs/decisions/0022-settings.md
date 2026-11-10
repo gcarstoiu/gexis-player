@@ -655,3 +655,15 @@ Confirmed by George, 2026-11-07, [ADR-0176](0176-a-page-from-home-assistant-on-t
 | Longest time limit | [H] | 60 minutes a call may ask |
 | Page heat limit | [H] | 80 °C, or the firmware throttling: the page is taken down |
 | Page kept loaded | [N] | The address Home Assistant gives (`gexis.preload_page`), loaded and hidden so a show only reveals it; none until set; kept on the player, not shown in Settings (amendment, the same day) |
+
+### Appended 2026-11-10 — room correction for the full range
+
+Confirmed by George, 2026-11-07 (Phase 30's decisions), [ADR-0177](0177-room-correction-for-the-full-range.md):
+
+| Setting | Mark | Notes |
+|---|---|---|
+| Room correction reach | [N] | *Bass* or *Full range*, kept for each output and in backups; a new measurement starts at *Full range*, one from before Phase 30 holds *Bass* until the room is measured again |
+| Measured range | [H] | Up to 20 kHz: the sweeps and the chart (where the broad corrections stop is ADR-0177's decision 2) |
+| Correction above the bass | [H] | At most 3 dB up or down, broad filters only |
+| Target above the bass | [H] | The speaker's own slope in the room, fitted from 300 Hz to 10 kHz |
+| Positions | [H] | The same three as the bass's (George, 2026-11-10: whether more help is checked later) |
