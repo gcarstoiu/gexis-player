@@ -854,7 +854,8 @@ phone only.
   records for one group the later change wins (`accepts`: revision, then
   time, then author). A player joined from another group leaves it first. A
   member that was off is sent the record when the next search for players
-  finds it (`reconcile`, every 30 s).
+  finds it (`reconcile`, every 30 s), and so is a player taken out that
+  missed it, whatever group the player that tells it is in by then.
 - **What a change does here** (`Multiroom._apply`): into a group, the
   group's loopback is made, `output.conf` rewritten for the group (the
   renderers restarted - waited for only if one plays or holds the device,

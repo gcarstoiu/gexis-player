@@ -50,6 +50,11 @@ class Net:
         self.players[member.id] = player
         return player
 
+    def statuses(self, *ids):
+        """Each player's `/player/status`, as the half-minute round finds it."""
+        return {pid: {"id": pid, "host": f"{pid}.local", "group": g.summary(self.players[pid].record)}
+                for pid in ids}
+
 
 def test_a_record_survives_its_json():
     record = g.Record.new(LIVING, KITCHEN, clock=lambda: 5.0)
@@ -249,3 +254,23 @@ async def test_a_member_is_told_before_the_player_asked_has_done_its_own_part(tm
     assert living.record is None, "told at once"
     slow.set()
     await kitchen.settled()
+
+
+@pytest.mark.parametrize("restarted", [False, True])
+async def test_a_member_removed_while_unreachable_learns_it_when_seen_again(tmp_path, restarted):
+    """The review of 1.16.1: a record owed to a player taken out was sent
+    only once the player that owed it was in no group, so a member removed
+    as it dropped off went on playing the group's music."""
+    net = Net(tmp_path)
+    living, kitchen, study = net.add(LIVING), net.add(KITCHEN), net.add(STUDY)
+    await living.join(KITCHEN)
+    await living.join(STUDY)
+    net.off.add("study")
+    record = await living.remove("study")
+    if restarted:
+        living = net.add(LIVING)  # what it owed is gone with the restart
+    net.off.clear()
+    await living.reconcile(net.statuses("kitchen", "study"))
+    await kitchen.reconcile(net.statuses("living", "study"))
+    assert study.record is None
+    assert living.record == kitchen.record == record
