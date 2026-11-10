@@ -93,6 +93,7 @@ class RoomControl:
         self._run_stage = None       # what a run wants on the stage
         self._run_card: str | None = None
         self._ended: dict | None = None
+        self._ended_run = None       # the run whose end that is
 
     # -- reading ------------------------------------------------------------------
 
@@ -394,6 +395,10 @@ class RoomControl:
             await self._release()
 
     def _run_published(self, state, ended) -> None:
-        if ended is not None:
+        # A run's end is taken once: its last publish, the player put back,
+        # brought back an end *Done* had cleared before it (the review of
+        # 1.16.1).
+        if ended is not None and self._ended_run is not self.run:
+            self._ended_run = self.run
             self._ended = dict(ended)
         self.publish()

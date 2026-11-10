@@ -208,6 +208,21 @@ async def test_while_it_runs_the_player_is_held_and_the_equaliser_flat():
     assert rig.control.summary()["ended"] is None
 
 
+async def test_the_end_shown_before_the_player_is_put_back_stays_shown():
+    """*Done* (or Back) on *Measuring cancelled* at once: the run's last
+    publish, as it lets the player go, does not bring the end back (the
+    review of 1.16.1: the page went back to *Measuring cancelled*)."""
+    rig = Rig()
+    await rig.control.calibration(CAL, "x_90deg.txt")
+    await rig.control.start()
+    await rig.run_to("place")
+    await rig.control.tap("cancel")
+    await rig.control.tap("done")
+    assert rig.control.frozen() is not None, "before the player is put back"
+    await rig.control.run.wait()
+    assert rig.control.frozen() is None and rig.control.summary()["ended"] is None
+
+
 async def test_with_the_equaliser_on_the_path_never_changes():
     rig = Rig()
     rig.eq = True
