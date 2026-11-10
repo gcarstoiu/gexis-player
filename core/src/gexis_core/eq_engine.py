@@ -195,7 +195,9 @@ class EqEngine:
         self._run = run
         self._on_change = on_change
         self._give_back = give_back
-        self._given = 0.0   # the headroom the volume was last told to give back
+        #: The headroom the volume was last told to give back; None: tell it
+        #: whatever it is (`_start`).
+        self._given: float | None = 0.0
         self._takes_rate = takes_rate
         self._cards = cards
         self._card: str | None = None
@@ -247,6 +249,11 @@ class EqEngine:
     # -- running -------------------------------------------------------------
 
     async def _start(self, restart: bool) -> None:
+        # **The volume told again, whatever the headroom** (the review of
+        # 1.16.1): a change of output or volume type restarts the stage, and
+        # the same number was not passed on, so the give-back stayed on the
+        # control it had left; the volume compares the whole target.
+        self._given = None
         await self._end_stream()
         await self._camilla.close()
         if not self._loopback_loaded():

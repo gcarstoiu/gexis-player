@@ -208,3 +208,57 @@ async def test_one_give_back_at_a_time(card):
     await asyncio.gather(bridge.give_back(ROCK), bridge.give_back(GiveBack("DAC", 2.0, DAC)))
     assert give_back() == GiveBack("DAC", 2.0, DAC) and card.values["DAC"] == 104
     assert await get_raw("DAC") == 100
+
+
+class _Camilla:
+    async def cmd(self, name, arg=None):
+        return None
+
+    async def close(self):
+        pass
+
+
+async def test_a_change_of_volume_type_moves_the_give_back_with_the_control(card, tmp_path, monkeypatch):
+    """**The review of 1.16.1.** Hardware to Software with Rock on, in
+    `_switch_output`'s order: the stage restarted at the same headroom and
+    the volume was not told, so the give-back stayed on the DAC, parked at
+    full scale, and the software stage got nothing back - Rock 5 dB under
+    Flat until the next preset."""
+    from gexis_core import equaliser as eq
+    from gexis_core.eq_engine import EqEngine
+
+    soft = outputs.SOFTVOL_SCALE
+    monkeypatch.setattr(vol, "_scale", DAC)     # put back afterwards
+    control = {"name": "DAC", "scale": DAC}
+    bridge = VolumeBridge("DAC", FakeSpotify(), get_active_renderer=lambda: None)
+
+    async def gives_back(headroom):
+        # `_equaliser_gives_back`: at the level control of the output in use.
+        await bridge.give_back(GiveBack(control["name"], headroom, control["scale"]) if headroom > 0 else None)
+
+    async def nothing(*args, **kwargs):
+        return ""
+
+    async def no_watch():
+        await asyncio.sleep(3600)
+
+    cards = tmp_path / "cards"
+    cards.write_text(" 7 [Loopback       ]: Loopback - Loopback\n")
+    engine = EqEngine(camilla=_Camilla(), systemctl=nothing, run=nothing, cards=cards, give_back=gives_back)
+    monkeypatch.setattr(engine, "_watching", no_watch)
+    rock = eq.PRESET["rock"].gains
+    await bridge.write_hardware(DAC.raw(-20.0))
+    await engine.configure("sndrpihifiberry", rock)
+    assert give_back() == ROCK and card.values["DAC"] == DAC.raw(-20.0) + ROCK.steps
+
+    vol.use_scale(soft)
+    bridge.set_mixer_name(outputs.SOFTVOL_CONTROL)
+    control.update(name=outputs.SOFTVOL_CONTROL, scale=soft)
+    await engine.configure("sndrpihifiberry", rock, restart=True)          # `_equaliser_follows`
+    await set_raw(outputs.SOFTVOL_CONTROL, soft.raw(-20.0), scale=soft)    # `_start_software_volume`
+    await set_raw("DAC", DAC.top, scale=DAC)
+    engine._watch.cancel()
+    given = GiveBack(outputs.SOFTVOL_CONTROL, 5.0, soft)
+    assert give_back() == given
+    assert card.values[outputs.SOFTVOL_CONTROL] == soft.raw(-20.0) + given.steps
+    assert card.values["DAC"] == DAC.top

@@ -632,8 +632,10 @@ renderer → pcm.output (meter, peppyalsa; integers only) → hw:Loopback,0,0
   back on the quiet side of each change (after the lowering when it rises,
   before it when it falls) in 0.5 dB steps, and at once while nothing plays;
   the start, the boot step (`softvol_boot`) and a change of output put it in
-  force before the level is read or written. Not under Fixed, where the
-  control holds full scale under any give-back.
+  force before the level is read or written; a change of output or volume
+  type restarts the stage, which tells the volume again even at the same
+  headroom, and the volume moves it to the control now in use. Not under
+  Fixed, where the control holds full scale under any give-back.
 - **The meter** stays before it, over the loopback (D4): the visualiser
   shows the music as it arrives, on every output, HDMI included. `output`
   reaches the loopback through `copy` and `linear` to S32_LE, so float is
