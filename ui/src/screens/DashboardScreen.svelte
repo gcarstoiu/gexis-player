@@ -40,7 +40,7 @@
       src={check.url}
       title="Home Assistant dashboard"
       data-real-input
-      sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+      sandbox="allow-scripts allow-same-origin allow-forms"
       onload={() => (loaded = true)}
     ></iframe>
   {:else if check}
