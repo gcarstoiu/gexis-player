@@ -610,7 +610,11 @@ renderer → pcm.output (meter, peppyalsa; integers only) → hw:Loopback,0,0
   rate and every resume after a pause (Squeezelite lets the device go 1 s
   into one). A rate the card lacks is converted to its highest
   (`AsyncSinc`), as Squeezelite's own resampler would, since Squeezelite
-  now sees the loopback, which takes every rate.
+  now sees the loopback, which takes every rate. One of 32 kHz or below,
+  where the 16 kHz band would sit at half the rate, which CamillaDSP refuses,
+  is converted to 48 kHz where the card takes it, else to its highest
+  (`eq_engine.playing_rate()`; a card's highest can be 768 kHz, where the
+  stage's cost is not measured).
 - **The bands** are ten Peaking filters (Q √2, 31.25 × 2ⁿ Hz), all in the
   pipeline at 0 dB too. A change is a `PatchConfig` of the bands that moved,
   heard at once; CamillaDSP's GraphicEqualizer is not used, because it

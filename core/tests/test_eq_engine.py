@@ -178,6 +178,61 @@ async def test_a_rate_the_card_lacks_is_converted_to_its_highest(monkeypatch, tm
     assert d["capture_samplerate"] == 88200 and d["samplerate"] == 192000 and d["resampler"]["type"] == "AsyncSinc"
 
 
+def _below_half_the_rate(config: dict) -> bool:
+    """CamillaDSP's own check: it refuses a filter at or above half the rate."""
+    rate = config["devices"]["samplerate"]
+    return all(f["parameters"]["freq"] < rate / 2
+               for f in config["filters"].values() if f["type"] == "Biquad")
+
+
+async def test_a_rate_the_stage_cannot_run_at_is_converted_to_48_khz(monkeypatch, tmp_path):
+    """**The review of 1.16.1.** A 32 kHz radio stream on HDMI, which takes
+    every rate behind its conversion, put the 16 kHz band at half the rate:
+    CamillaDSP refused the configuration and the stream played silence. To
+    48 kHz, not the card's highest, whose cost is not measured above 192."""
+    rig = Rig(monkeypatch, tmp_path)
+    monkeypatch.setattr(eq_engine.outputs, "top_rate", lambda card: 768000)
+    await rig.engine.configure("vc4hdmi0", eq.FLAT, room=((), ()))
+    for rate in (32000, 24000, 16000, 12000, 11025, 8000):
+        rig.amixer = contents(rate=rate)
+        await rig.engine._look()
+        config = json.loads([a for n, a in rig.camilla.sent if n == "SetConfigJson"][-1])
+        d = config["devices"]
+        assert (d["capture_samplerate"], d["samplerate"]) == (rate, 48000), rate
+        assert d["chunksize"] == eq.chunksize(48000) and d["resampler"]["type"] == "AsyncSinc"
+        assert _below_half_the_rate(config), rate
+        rig.amixer = contents(active="off")
+        await rig.engine._look()
+    rig.amixer = contents(rate=44100)
+    await rig.engine._look()
+    config = json.loads([a for n, a in rig.camilla.sent if n == "SetConfigJson"][-1])
+    assert config["devices"]["samplerate"] == 44100 and "resampler" not in config["devices"], \
+        "a rate it runs at plays as it is"
+    assert _below_half_the_rate(config)
+
+
+async def test_a_low_rate_on_a_card_never_asked_goes_to_48_khz(monkeypatch, tmp_path):
+    rig = Rig(monkeypatch, tmp_path, takes_rate=lambda card, rate: None)
+    monkeypatch.setattr(eq_engine.outputs, "top_rate", lambda card: None)
+    await rig.engine.configure("Headphones", eq.FLAT)
+    rig.amixer = contents(rate=32000)
+    await rig.engine._look()
+    d = json.loads(next(a for n, a in rig.camilla.sent if n == "SetConfigJson"))["devices"]
+    assert (d["capture_samplerate"], d["samplerate"]) == (32000, 48000)
+
+
+def test_the_rate_camilladsp_plays_at(monkeypatch):
+    """One answer for the engine and for the group's latency (ADR-0166 D7)."""
+    monkeypatch.setattr(eq_engine.outputs, "top_rate", lambda card: 192000)
+    takes = lambda card, rate: rate != 88200  # noqa: E731
+    assert eq_engine.playing_rate("Adapter", 96000, takes) == 96000
+    assert eq_engine.playing_rate("Adapter", 88200, takes) == 192000
+    assert eq_engine.playing_rate("Adapter", 32000, takes) == 48000
+    no_48 = lambda card, rate: rate in (44100, 88200, 176400)  # noqa: E731
+    assert eq_engine.playing_rate("Adapter", 32000, no_48) == 192000, "a card without 48 kHz: its highest"
+    assert eq_engine.playing_rate("Adapter", 44100, lambda card, rate: None) == 44100
+
+
 async def test_off_stops_it(monkeypatch, tmp_path):
     rig = Rig(monkeypatch, tmp_path)
     await rig.engine.configure("sndrpihifiberry", eq.FLAT)
