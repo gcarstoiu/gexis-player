@@ -178,12 +178,19 @@ arrived 2026-11-08 (`design/source/30/`; George's answers in
 with its check): [Finding 144](docs/findings/144-room-correction-above-the-bass-one-room-measured.md);
 three positions kept (George). **[ADR-0177](docs/decisions/0177-room-correction-for-the-full-range.md)
 proposed** the same day; George asked for the build to go ahead on its
-recommendations, its decisions 1-4 his to confirm. **Now: the build** on
-`ph-room-correction-full` (worktree `~/projects/gexis-player-ph30`). The
-throwaway `ph30-research` on top kept the run's recordings on sofapi
-(`/var/lib/gexis-core/room-research`, copied to `scratch/ph30/measure`);
-the branch and both copies go once the ADR is accepted. sofapi runs that
-preview, with the correction kept from the run (curves to 20 kHz).
+recommendations, its decisions 1-4 his to confirm. **Built** the same day on
+`ph-room-correction-full` (worktree `~/projects/gexis-player-ph30`): the
+broad corrections, the reach, the split chart, the grouped corrections, the
+drawer's three-way control, the new words; layouts checked with made-up data
+in `~/projects/scratch/ph30/harness` (`WT` set to the worktree). **Now:** a
+preview on sofapi for George's tests. sofapi's measurement of 10 Nov was
+kept by the research preview, which stored no range, so the new one reads it
+as the bass's: *Measure again for the full range*. **Owed:** decisions 1-4;
+the stage's cost at 44.1/96/192 kHz; acceptance 2 as a finding from a run
+checked at Full range. The throwaway `ph30-research` kept the run's
+recordings on sofapi (`/var/lib/gexis-core/room-research`, copied to
+`scratch/ph30/measure`); the branch and both copies go once the ADR is
+accepted.
 
 **Phase 35** (a page from Home Assistant on the screen, ADR-0176 as amended;
 Findings 142-143) **on Testing with 1.15.0** (2026-11-08), with the

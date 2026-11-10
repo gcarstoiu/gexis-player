@@ -114,10 +114,18 @@ line at any frequency; the check's placing in brackets):
   keeps any one position from getting more than 1.4 dB further anywhere (1.8
   without it).
 
-**Joining the bass at 250 Hz.** The line sits above the level Phase 29 takes
-the bass target from (the average from 250 to 500 Hz): 2.9 dB on the left,
-pulled down there by the 315 Hz dip, and 1.4 dB on the right. Taken from the
-line, the bass's cuts come out smaller:
+**As built** (ADR-0177, `room_dsp.design` on the same curves, after the
+trials above): the left gets five filters, the right four; every position
+comes closer in both placings - the left 2.01 to 1.44 dB RMS (the check's
+1.95 to 1.43), the right 1.97 to 1.30 (1.84 to 1.22) - and none gets more
+than 1.6 dB further at any frequency. It differs from the chosen trial in
+holding the correction near none where the positions disagree, and in the
+filters' frequencies staying from 250 Hz to 14 kHz.
+
+**Joining the bass at 250 Hz.** The line (its mean from 250 to 500 Hz) sits
+above the level Phase 29 takes the bass target from (the average there): 2.9
+dB on the left, pulled down there by the 315 Hz dip, and 1.4 dB on the
+right. Taken from the line, the bass's cuts come out smaller:
 
 | | Phase 29's level | The line's |
 |---|---|---|

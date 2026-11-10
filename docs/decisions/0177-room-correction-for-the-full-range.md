@@ -54,8 +54,8 @@ probably with the next room-correction phase (34).
    to 1/3 octave, from 300 Hz to 10 kHz: the speaker's own slope (Finding
    144: +0.4 and −0.4 dB an octave in sofapi's room).
 3. **One target throughout** (decision 1): from this phase on, the bass's
-   target takes its level from that line (its mean from 250 to 500 Hz), not
-   from the average there, so the two meet at 250 Hz and the bass's cuts are
+   target takes its level from that line (where it meets 250 Hz), not from
+   the average from 250 to 500 Hz, so the two meet and the bass's cuts are
    the same list whatever the reach (the design's state).
 4. **The corrections above the bass** are Peaking filters, for each speaker:
    - up to six, between 250 Hz and 14 kHz, each and all together within
@@ -151,6 +151,37 @@ Proposed, to append only once George confirms:
 - **[H]** Up to six broad filters above the bass, from 250 Hz to 14 kHz, Q 0.5
   to 2; a gap under 1.5 dB left.
 - **[H]** The bass's target level taken from the line (decision 1).
+
+## While building
+
+On `ph-room-correction-full`, 2026-11-10; what differs from the proposal:
+
+- **The bass's level is the line's value at 250 Hz** (item 3), not its mean
+  from 250 to 500 Hz: the two then meet exactly. The mean is within 0.2 dB
+  of it at the slopes Finding 144 measured.
+- **No headroom while a run measures** (items 7-8): the stage would lower
+  the run's own level by the raise, and at the run's maximum level the
+  volume cannot give it back. The check's sweeps play lower by the broad
+  corrections' highest point instead; the response is the recording over
+  what was played, so its level is the room's.
+- **Where the positions disagree the correction is held near none** (item
+  4): the gap there counts for less, and the fit still weighs those
+  frequencies, so a neighbouring filter's skirt is pulled out of them too.
+  On a made-up room with one position dipping 9 dB at 3 kHz, the
+  correction there is −0.2 dB; with all three dipping, +1.6 dB.
+- **The curves are kept to a hundredth of a decibel**, not a tenth: on the
+  ±5 dB pane a tenth showed as steps.
+- **The equaliser's note keeps saying its own lowering**; room correction's
+  share of the headroom is not shown anywhere (the design draws none).
+- **The Settings row says the reach**, as the design's Audio page does:
+  *Full range · measured 3 November*, *Bass · measured for the bass only*,
+  *Without · comparing, no correction*.
+- **The design as built on sofapi's run** (Finding 144's curves): left, five
+  filters (252 Hz +2.7 dB, 389 Hz +2.7, 497 Hz −3.0, 1.05 kHz −1.7,
+  2.39 kHz +1.8); right, four (318 Hz +2.1, 541 Hz −3.0, 1.99 kHz +2.7,
+  7.87 kHz −1.3). Every position comes closer in both placings: the left
+  2.01 to 1.44 dB RMS (the check's 1.95 to 1.43), the right 1.97 to 1.30
+  (1.84 to 1.22); none more than 1.6 dB further at any frequency.
 
 ## Measured before it is called done
 
