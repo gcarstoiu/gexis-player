@@ -92,6 +92,18 @@ async def test_a_bad_call_is_a_400_and_an_unknown_action_a_404():
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("action", ["show", "preload"])
+@pytest.mark.parametrize("url", ["http://[::1/", "http://[nothex]/"])
+async def test_a_malformed_address_is_the_400_sentence_not_a_500(action, url):
+    """The review of 1.16.1: a bracketed host that does not parse."""
+    _, page, server, _ = _setup()
+    async with TestClient(TestServer(server.make_app())) as client:
+        r = await client.post(f"/panel/page/{action}", json={"url": url})
+        assert r.status == 400 and (await r.json())["error"] == "url must be an http or https address"
+        assert not page.shown and page.preload is None
+
+
+@pytest.mark.asyncio
 async def test_a_page_that_cannot_be_framed_is_refused_with_its_sentence():
     async def refuses(url):
         return {"url": url, "embeddable": False, "reason": "refuses framing"}
