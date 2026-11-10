@@ -140,8 +140,10 @@ Under the volume sits the **equaliser**: the setting in use (*Rock ·
 preset*), its switch, and the settings as a row of buttons to change to -
 the presets, then your own. **Edit** opens the whole equaliser (see
 [The equaliser](#the-equaliser)). Under it, once the room has been measured,
-**room correction**: *On* and *Without* one tap apart, to compare, and when it
-is off, **Open** goes to its page (see [Room correction](#room-correction)).
+**room correction**: *Without · Bass · Full range*, each a tap and heard at
+once - *Without* to compare, *Bass* or *Full range* for how far it reaches -
+and when it is off, **Open** goes to its page (see [Room
+correction](#room-correction)).
 
 Between them, when other Gexis players are on the network, **Other players**
 and **Add players**, to play the same music on them; grouped, the volume is
@@ -662,10 +664,11 @@ to the level. **Edit bands in Settings** opens the whole equaliser, where on
 the phone each band is a row, a slider sideways from 0. Swipe it down, or tap
 above it, to close it.
 
-Beside it, once the room has been measured, the **Room** button: a tap
-switches room correction between *On* and *Without* (amber), to compare;
-when it is off it opens room correction's page. Room correction is measured
-from the phone: see [Room correction](#room-correction).
+Beside it, once the room has been measured, the **Room** button, which
+names how far it reaches (*Full* or *Bass*): a tap switches room correction
+between that and *Without* (amber), to compare; when it is off it opens room
+correction's page. Room correction is measured from the phone: see [Room
+correction](#room-correction).
 
 ### Settings on the phone
 
@@ -698,9 +701,9 @@ the equaliser's button and the volume. It stays until it is closed - tap
 below it, or push it back up - or the visualiser takes over or Home opens.
 The equaliser's button names the setting in use; tapped, it opens a second
 band under the first with the switch, the settings to change to and
-**Edit**. Beside it, once the room has been measured, **Room · On**: a tap
-switches between *On* and *Without*, to compare; *Room · Off* opens room
-correction's page. Then, with other Gexis players on the network, the **Group**
+**Edit**. Beside it, once the room has been measured, **Room · Full range**
+(or *Bass*, how far it reaches): a tap switches between it and *Without*, to
+compare; *Room · Off* opens room correction's page. Then, with other Gexis players on the network, the **Group**
 button: its band adds players to play the same music, and grouped it holds
 each player's own level, Leave and Undo group (section 6).
 
@@ -789,7 +792,7 @@ player into your Plex account).
 | Maximum volume | The loudest the player will go, on any input. At 80, 100 % on every control means that level. Hidden with Volume on *Fixed*. |
 | Volume curve | How the slider's travel maps to loudness. *Cubic* (half travel is −15.5 dB) is the usual shape; *Linear* puts half travel at −30 dB. |
 | Equaliser | Opens the equaliser, for the output in use; the row says what it uses (*Rock*, *Custom*) or *Off*. See below. |
-| Room correction | Opens room correction, for the output in use; the row says *On · measured 3 November*, *Without*, *Off* or *Not measured yet*. See below. |
+| Room correction | Opens room correction, for the output in use; the row says *Full range · measured 3 November* (or *Bass*), *Without*, *Off* or *Not measured yet*. See below. |
 
 #### The equaliser
 
@@ -833,11 +836,14 @@ and the visualiser shows the music as it arrives, before the equaliser.
 
 ![Room correction](images/panel-room-correction.webp)
 
-The player measures the room with a USB measurement microphone at your seat,
-and cuts the peaks the room adds to the bass, below 250 Hz. **Only cuts**: a
-dip stays as it is, since more power does not fill it. The aim is a gentle
-rise below about 80 Hz (+3 dB), not flat. **Each output keeps its own**, as
-with the equaliser.
+The player measures the room with a USB measurement microphone at your seat.
+**In the bass**, below 250 Hz, it cuts the peaks the room adds - **only
+cuts**: a dip stays as it is, since more power does not fill it - towards a
+gentle rise below about 80 Hz (+3 dB), not flat. **Above the bass** it evens
+out the room's broad bumps and dips, **by 3 dB at most, up or down**, towards
+the speaker's own balance: the slope your speakers have in the room is kept,
+and nothing above 14 kHz is touched. **Each output keeps its own**, as with
+the equaliser, and so does how far it reaches: **Bass** or **Full range**.
 
 **What it needs**: a miniDSP **UMIK-1**, plugged into one of the player's USB
 ports, and its **90° calibration file** from miniDSP's page, which asks for
@@ -850,46 +856,68 @@ nothing to press. On the player's screen, *Measure from your phone* (or
 *Measure again*) shows a code that opens this page on a phone.
 
 1. *Settings → Audio → Room correction* lists what is needed: the
-   microphone, its calibration and a quiet room. The first time, **Choose
-   the file** takes the 90° file (*miniDSP's page* is where to get it); a
-   0° file is refused. **Measure**: what is playing stops, on every source,
-   and nothing can play until the measurement ends.
+   microphone, its calibration and a quiet room - about five minutes. The
+   first time, **Choose the file** takes the 90° file (*miniDSP's page* is
+   where to get it); a 0° file, or one that is not a calibration file, is
+   refused with **Choose another file**. A file given before the full range
+   was measured is asked for again: *Choose its file again*. **Measure**:
+   what is playing stops, on every source, and nothing can play until the
+   measurement ends.
 2. Put the microphone where your head is, on a stand at ear height,
-   pointing at the ceiling, and tap **Start**.
+   pointing at the ceiling, and tap **Start**. Keep the room quiet
+   throughout: the sweeps rise from a low rumble to a high whistle.
 3. The player listens to the quiet room, then soft noise gets louder until
    the microphone hears about 60 dB, the level of a conversation, never
    above the output's *Maximum volume*. Only if it cannot reach 45 dB, turn
    the amplifier up a little and tap **Try again**.
-4. Each speaker plays two sweeps on its own, then both together, about 45
-   seconds a position.
+4. Each speaker plays two sweeps on its own, then both together, about a
+   minute a position.
    Then move the microphone where the phone shows - three positions: your
    head, and about 40 cm to either side - step back and tap **Measure
    here**; three seconds later the sweeps play. It never moves on without
    the tap. A sweep spoiled by a noise (a door, a voice) is measured again.
-5. The correction: the cuts for each speaker, and a chart of before (the
-   average of the three positions), each position, the target and the
-   expected after. A peak is cut unless most positions would end further
-   from the target. **Check it** measures the three positions again with
-   the correction on, a tap at each again, about three minutes more;
-   **Skip** keeps it as worked out, marked *Not checked*.
-6. **Keep it** switches room correction on; **Discard** leaves the output as
-   it was. **Cancel**, at any step, leaves it as it was too, and so does
-   ten minutes without a tap. A room whose bass is already near the target
-   has nothing to cut, and room correction stays off.
+5. The correction, for each speaker: the cuts in the bass and the broad
+   corrections above it, and a chart of before (the average of the three
+   positions), each position, the target and the expected after. A peak is
+   cut, and a broad correction made, unless most positions would end
+   further from the target; where the three positions disagree, less is
+   corrected. **Check it** measures the three positions again with the
+   correction on, a tap at each again; **Skip** keeps it as worked out,
+   marked *Not checked*. If a position ends further from the target than
+   before, the result says which.
+6. **Keep it** switches room correction on, at the full range; **Discard**
+   leaves the output as it was. **Cancel**, at any step, leaves it as it was
+   too, and so does ten minutes without a tap. A room already near the
+   target, in the bass and above it, has nothing to correct, and room
+   correction stays off.
 
 On its page:
 
 - **On or off.** Off, the correction is taken out; with the equaliser also
   off, the sound is untouched, bit-perfect. With the equaliser off,
   switching it on or off reopens the output, so what is playing stops.
-- **Hear it without** (*A/B*): the cuts at 0 dB, to compare, heard at once,
-  and amber while set. It stays where you put it, after a restart too, until
-  switched back.
-- **The chart**, for the left and the right speaker: before, each position,
-  the target (dotted) and after - measured, or dashed and *expected* when the
-  check was skipped. Above 250 Hz is left alone. **Both** shows the two
-  speakers together, as you hear them: never cut themselves, and their after
-  only once the check has measured it.
+- **Reaches**: **Bass** (up to 250 Hz) or **Full range** (15 Hz to 20 kHz),
+  a tap heard at once, so the two compare by the choice itself. A
+  measurement made before the full range could be measured reaches the bass
+  only: *Full range* asks for **Measure again for the full range**.
+- **Hear it without** (*A/B*): no correction at all, to compare, heard at
+  once, and amber while set. It stays where you put it, after a restart
+  too, until switched back.
+- **The level stays the same** across the three: the broad corrections may
+  raise by up to 3 dB, so the player lowers the music that much before them,
+  and the volume gives it back - except near the top of the volume and with
+  *Fixed* volume, where the music plays up to 3 dB quieter with room
+  correction on, *Bass* and *Without* alike.
+- **The chart**, for the left and the right speaker, in two parts: the bass,
+  and above it on a closer scale (±5 dB). Before, each position, the target
+  (dotted: the bass rise joined to the speaker's own slope) and after -
+  measured, or dashed and *expected* when the check was skipped; what is cut
+  and what is raised are shaded. With *Bass* chosen, above 250 Hz is left
+  alone. **Both** shows the two speakers together, as you hear them: never
+  corrected themselves, and their after only once the check has measured
+  it.
+- **The corrections**, on the panel's page: in the bass, narrow cuts; above
+  it, broad, up or down.
 - **Measure again** replaces the measurement once the new one is kept.
 - **DSD** plays untouched: room correction stands aside while a DSD track
   plays natively, and is back for the next PCM track.

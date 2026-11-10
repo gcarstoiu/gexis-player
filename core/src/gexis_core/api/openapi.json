@@ -14349,7 +14349,7 @@
           },
           "row": {
             "type": "string",
-            "description": "The Settings row's state: *Not measured yet*, *On \u00b7 measured 3 November*, *Without \u00b7 comparing, the cuts at 0 dB*, *Off*."
+            "description": "The Settings row's state: *Not measured yet*, *Full range \u00b7 measured 3 November*, *Bass \u00b7 measured 3 November*, *Bass \u00b7 measured for the bass only* (a measurement kept before ADR-0177), *Without \u00b7 comparing, no correction*, *Off*."
           },
           "dsd": {
             "type": "boolean",

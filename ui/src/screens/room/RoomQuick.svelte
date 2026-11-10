@@ -1,12 +1,16 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <!--
-  The *Room* control, close to the music (ADR-0175; design/source/29
-  Q01-Q11): beside the equaliser's in the panel's volume drawer (`drawer`),
-  the bar's tray (`bartray`) and the phone's volume row (`phone`).
+  The *Room* control, close to the music (ADR-0175, ADR-0177; design/source/29
+  Q01-Q11, design/source/30 1l): beside the equaliser's in the panel's volume
+  drawer (`drawer`), the bar's tray (`bartray`) and the phone's volume row
+  (`phone`).
 
-  On and Without are one tap apart - the A/B, kept as set. Off, it says so
-  and a tap opens Room correction's page; while DSD plays it is dimmed and
-  does nothing; an output never measured has none.
+  The drawer has one control, *Without · Bass · Full range*: a tap sets it,
+  heard at once (Without is *Hear it without*). The tray and the phone stay
+  one tap, On and Without - the A/B, kept as set - and name the reach. Off,
+  it says so and a tap opens Room correction's page; while DSD plays it is
+  dimmed and does nothing; an output never measured has none. A measurement
+  from before Phase 30 reaches the bass only: Full range is dimmed.
 -->
 <script>
   import { room, setRoom } from '../../lib/room.svelte.js';
@@ -15,15 +19,31 @@
 
   const r = $derived($room);
   const measured = $derived(r?.measured ?? null);
+  //: The control moves from the press; the core's word wins in the end.
   let want = $state(null);
+  let wantReach = $state(null);
   const without = $derived(want ?? !!r?.without);
+  const reach = $derived(wantReach ?? r?.reach ?? 'full');
   $effect(() => {
     if (want !== null && !!r?.without === want) want = null;
+    if (wantReach !== null && r?.reach === wantReach) wantReach = null;
   });
   const on = $derived(!!r?.on);
   const dsd = $derived(!!r?.dsd);
   const lit = $derived(on && !dsd);
+  const bassOnly = $derived(measured?.range === 'bass');
   let error = $state(null);
+
+  async function send(changes) {
+    error = null;
+    try {
+      await setRoom(changes);
+    } catch (e) {
+      error = e.message;
+      want = null;
+      wantReach = null;
+    }
+  }
 
   async function tap() {
     if (!on) {
@@ -31,20 +51,38 @@
       return;
     }
     if (dsd) return;
-    error = null;
     want = !without;
-    try {
-      await setRoom({ without: want });
-    } catch (e) {
-      error = e.message;
-      want = null;
-    }
+    await send({ without: want });
   }
 
+  //: The drawer's three: Without is the A/B, Bass and Full range the reach
+  //: (with the A/B off).
+  async function choose(k) {
+    if (!lit) return;
+    if (k === 'without') {
+      if (without) return;
+      want = true;
+      await send({ without: true });
+      return;
+    }
+    if (k === 'full' && bassOnly) return;
+    const changes = {};
+    if (without) changes.without = false;
+    if (reach !== k) changes.reach = k;
+    if (!Object.keys(changes).length) return;
+    if ('without' in changes) want = false;
+    if ('reach' in changes) wantReach = k;
+    await send(changes);
+  }
+
+  const reachWord = $derived(reach === 'bass' ? 'Bass' : 'Full range');
   const stateLine = $derived(!on ? 'Off · open it to turn it on' : dsd ? 'Stands aside while DSD plays'
-    : without ? 'Without · the cuts at 0 dB' : `On · measured ${measured?.day ?? ''}`);
-  const pill = $derived(!on ? 'Room · Off' : dsd ? 'Room · DSD' : without ? 'Room · Without' : 'Room · On');
-  const chip = $derived(!on ? 'Room off' : dsd ? 'DSD' : without ? 'Without' : 'Room');
+    : without ? 'Without · no correction at all' : bassOnly ? 'Bass · measured for the bass only'
+      : `${reachWord} · measured ${measured?.day ?? ''}`);
+  const pill = $derived(!on ? 'Room · Off' : dsd ? 'Room · DSD' : without ? 'Room · Without' : `Room · ${reachWord}`);
+  const chip = $derived(!on ? 'Off' : dsd ? 'DSD' : without ? 'Without' : reach === 'bass' ? 'Bass' : 'Full');
+  const selected = $derived(without ? 'without' : reach);
+  const SEGS = [['without', 'Without'], ['bass', 'Bass'], ['full', 'Full range']];
 </script>
 
 {#snippet glyph(size)}
@@ -64,11 +102,13 @@
           <div class="state" class:is-amber={lit && without}>{error ?? stateLine}</div>
         </div>
         {#if on}
-          <button type="button" class="seg" class:is-dim={dsd} aria-label="Hear it without" aria-pressed={without}
-                  onclick={tap} disabled={dsd}>
-            <span class="seg__on" class:is-sel={!without}>On</span>
-            <span class="seg__wo" class:is-sel={without}>Without</span>
-          </button>
+          <div class="seg" class:is-dim={dsd} role="group" aria-label="Room correction">
+            {#each SEGS as [k, name] (k)}
+              <button type="button" class="seg__btn seg__btn--{k}" class:is-sel={selected === k}
+                      class:is-locked={k === 'full' && bassOnly} aria-pressed={selected === k}
+                      disabled={dsd || (k === 'full' && bassOnly)} onclick={() => choose(k)}>{name}</button>
+            {/each}
+          </div>
         {:else}
           <button type="button" class="open" onclick={() => onopen?.()}>Open<span class="open__chev"></span></button>
         {/if}
@@ -126,32 +166,37 @@
     padding: 4px;
     border-radius: var(--r-17);
     background: var(--ink-fill);
-    border: 0;
-    font: inherit;
-    color: inherit;
   }
-  .seg span {
+  .seg__btn {
     height: 50px;
-    padding: 0 22px;
+    padding: 0 20px;
     border-radius: var(--r-13);
     box-sizing: border-box;
     display: flex;
     align-items: center;
+    font: inherit;
     font-size: 17px;
     font-weight: 700;
+    white-space: nowrap;
     background: transparent;
     border: 1px solid transparent;
     color: var(--ink-muted);
   }
-  .seg__on.is-sel {
+  .seg__btn.is-sel {
     background: var(--c-lms-16);
     border-color: var(--c-lms-55);
     color: var(--accent-lms);
   }
-  .seg__wo.is-sel {
+  .seg__btn--without.is-sel {
     background: var(--c-warn-16);
     border-color: var(--c-warn-55);
     color: var(--rc-without);
+  }
+  .seg__btn.is-locked {
+    opacity: 0.4;
+  }
+  .seg__btn:active {
+    transform: scale(0.95);
   }
   .open {
     height: 58px;
@@ -235,7 +280,6 @@
   }
   .pill:active,
   .chip:active,
-  .seg:active,
   .open:active {
     transform: scale(0.95);
   }

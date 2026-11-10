@@ -28,7 +28,7 @@ from gexis_core.room_correction import Room, RoomError
 
 logger = logging.getLogger("gexis_core.room_control")
 
-#: The month names for *On · measured 3 November*.
+#: The month names for *Full range · measured 3 November*.
 _MONTHS = ("January", "February", "March", "April", "May", "June", "July", "August", "September",
            "October", "November", "December")
 
@@ -145,14 +145,17 @@ class RoomControl:
         return out
 
     def _row(self, here: rc.OutputRoom) -> str:
-        """The Settings row's state (the design's R01-R04)."""
+        """The Settings row's state (design/source/29 R01-R04, worded as
+        design/source/30 draws it: the reach, or Without)."""
         if here.measured is None or here.measured.nothing_to_correct:
             return "Not measured yet"
         if not here.on:
             return "Off"
         if here.without:
-            return "Without · comparing, the cuts at 0 dB"
-        return f"On · measured {day(here.measured.date)}"
+            return "Without · comparing, no correction"
+        if here.measured.range != rc.FULL:
+            return "Bass · measured for the bass only"
+        return f"{'Bass' if here.reach == rc.BASS else 'Full range'} · measured {day(here.measured.date)}"
 
     def summary(self) -> dict | None:
         """**What `/state` carries**: enough for the Settings row, the *Room*

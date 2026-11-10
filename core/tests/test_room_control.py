@@ -176,7 +176,7 @@ async def test_a_run_kept_switches_it_on():
     assert names[-3:] == ["quiet", "sync", "release"], "kept: the stage stays, with the cuts"
     s = rig.control.snapshot()
     assert s["on"] and not s["without"] and s["measured"]["checked"]
-    assert s["row"] == "On · measured 5 November"
+    assert s["row"] == "Full range · measured 5 November"
     assert s["chart"]["after_kind"] == "measured"
     assert s["reach"] == rc.FULL and s["measured"]["range"] == rc.FULL, "a new measurement starts at the full range"
     assert s["above"]["L"] and s["measured"]["within"] < s["measured"]["room_within"]
@@ -235,7 +235,7 @@ async def test_off_and_on_and_without():
     await rig.measure()
     rig.calls.clear()
     s = await rig.control.update({"without": True})
-    assert s["without"] and s["row"] == "Without · comparing, the cuts at 0 dB"
+    assert s["without"] and s["row"] == "Without · comparing, no correction"
     assert rig.names() == ["sync"], "compared at once, no reopening"
     assert rig.control.stage("sndrpihifiberry").cuts[0][0][1] == 0.0
     s = await rig.control.update({"on": False})
@@ -244,7 +244,7 @@ async def test_off_and_on_and_without():
     with pytest.raises(RoomError, match="Only while"):
         await rig.control.update({"without": True})
     await rig.control.update({"on": True})
-    assert rig.control.snapshot()["row"] == "On · measured 5 November"
+    assert rig.control.snapshot()["row"] == "Full range · measured 5 November"
 
 
 async def test_the_reach_is_heard_at_once_and_kept_while_off():
@@ -254,7 +254,7 @@ async def test_the_reach_is_heard_at_once_and_kept_while_off():
     await rig.measure()
     rig.calls.clear()
     s = await rig.control.update({"reach": rc.BASS})
-    assert s["reach"] == rc.BASS and rig.names() == ["sync"]
+    assert s["reach"] == rc.BASS and rig.names() == ["sync"] and s["row"] == "Bass · measured 5 November"
     play = rig.control.stage("sndrpihifiberry")
     assert all(g == 0.0 for _, g, _ in play.above[0]) and any(g for _, g, _ in play.cuts[0])
     assert rig.summaries[-1]["reach"] == rc.BASS, "on /state"
@@ -277,6 +277,7 @@ async def test_a_measurement_from_before_is_held_at_the_bass():
         sp.pop("above", None)
     s = rig.control.snapshot()
     assert s["reach"] == rc.BASS and s["measured"]["range"] == rc.BASS and s["above"] == {"L": [], "R": []}
+    assert s["row"] == "Bass · measured for the bass only"
     assert s["chart"]["range"] == rc.BASS
     with pytest.raises(RoomError, match="covers the bass only"):
         await rig.control.update({"reach": rc.FULL})

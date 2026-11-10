@@ -66,7 +66,9 @@ def _floats(value, n: int | None = None) -> tuple[float, ...]:
     return tuple(out)
 
 
-def _round(values, digits: int = 1) -> list[float]:
+def _round(values, digits: int = 2) -> list[float]:
+    """Curves to a hundredth of a decibel: the chart's ±5 dB pane above the
+    bass shows a tenth's steps (ADR-0177)."""
     return [round(float(v), digits) for v in values]
 
 
