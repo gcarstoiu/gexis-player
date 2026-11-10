@@ -108,6 +108,10 @@ NOT_SHIPPED = frozenset({"waveshare_35DSI"})
 #: ADR-0158 D6: boards whose DSI connector carries four lanes.
 MODEL = Path("/proc/device-tree/model")
 FOUR_LANE_BOARDS = re.compile(r"^Raspberry Pi (5 Model|Compute Module)")
+#: **Overlays that are four-lane by themselves** (D6; the review of 1.16.1):
+#: the JDI LT070ME05000's, on either board - no `4lane` parameter says so,
+#: the list's notes do ("Requires Compute Module (4-lane DSI)").
+FOUR_LANE_OVERLAYS = frozenset({"vc4-kms-dsi-lt070me05000", "vc4-kms-dsi-lt070me05000-v2"})
 
 #: **A case is not a screen** (George, 2026-10-03: *"In general the box and
 #: non box i would say are the same"* - his 10.1" (B) came in Waveshare's case,
@@ -157,7 +161,10 @@ class Screen:
 
     @property
     def lanes(self) -> int:
-        """DSI lanes the overlay drives (`..._4lane` or two)."""
+        """DSI lanes the overlay drives (`..._4lane`, a four-lane overlay,
+        or two)."""
+        if any(o.split(",", 1)[0] in FOUR_LANE_OVERLAYS for o in self.overlays):
+            return 4
         params = (p for o in self.overlays for p in o.split(",")[1:])
         return 4 if any(p.endswith("4lane") for p in params) else 2
 

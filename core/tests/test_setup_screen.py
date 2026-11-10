@@ -232,7 +232,8 @@ def test_the_list_alone_is_offered_when_no_other_screen_is_in_use(tmp_path, monk
 
 
 def test_a_pi_4_offers_no_four_lane_model_in_settings_or_setup(tmp_path, monkeypatch):
-    """ADR-0158 D6; one already in use is still named."""
+    """ADR-0158 D6, the JDI 7" included (the review of 1.16.1); one already
+    in use is still named."""
     from gexis_core import screen_apply, settings_registry
 
     monkeypatch.setattr(screens, "MODEL", tmp_path / "model")
@@ -240,10 +241,10 @@ def test_a_pi_4_offers_no_four_lane_model_in_settings_or_setup(tmp_path, monkeyp
     monkeypatch.setattr(screen_apply, "STATE", tmp_path / "screen.json")
     four = {s.label for s in screens.all_screens() if s.lanes == 4}
     listed = settings_registry._screens()
-    assert len(four) == 6 and not four & set(listed)
+    assert len(four) == 8 and not four & set(listed)
     assert listed == tuple(s.label for s in screens.offered())
     models = {m["label"] for m in screen_choices(screen_detect.Seen(), now=())["models"]}
-    assert not four & models and len(models) == len(screens.all_screens()) - 6
+    assert not four & models and len(models) == len(screens.all_screens()) - 8
     screen_apply.write_state({"current": {"screen": "waveshare-dsi-v2-10.1a-4lane", "rotation": 180,
                                           "connector": "DSI-1"}}, tmp_path / "screen.json")
     assert settings_registry._screens()[-1] == screens.by_id("waveshare-dsi-v2-10.1a-4lane").label
