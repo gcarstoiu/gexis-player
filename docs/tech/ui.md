@@ -210,8 +210,10 @@ strip; Artists and Lyrion's lettered lists share it.
 
 A volume drawer or bar tray that opened by itself, for a change made
 elsewhere, takes no touch on its level or mute for 400 ms
-(`VOLUME_ARM_MS` in `App.svelte`), so a tap meant for what was under it does
-not set the level; one opened from the panel is unaffected.
+(`VOLUME_ARM_MS` in `App.svelte`), nor, grouped, on the group's sliders and
+buttons, nor on the equaliser's and room correction's quick changes
+(`armsAt`), so a tap meant for what was under it changes nothing; one opened
+from the panel is unaffected.
 
 ### The equaliser (ADR-0162)
 

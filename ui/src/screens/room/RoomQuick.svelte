@@ -15,7 +15,10 @@
 <script>
   import { room, setRoom } from '../../lib/room.svelte.js';
 
-  let { host = 'drawer', onopen = null } = $props();
+  //: `armsAt`: the drawer's or the tray's - one that came by itself takes
+  //: no touch here before it (App.svelte, VOLUME_ARM_MS).
+  let { host = 'drawer', armsAt = 0, onopen = null } = $props();
+  const armed = () => performance.now() >= armsAt;
 
   const r = $derived($room);
   const measured = $derived(r?.measured ?? null);
@@ -46,6 +49,7 @@
   }
 
   async function tap() {
+    if (!armed()) return;
     if (!on) {
       onopen?.();
       return;
@@ -58,7 +62,7 @@
   //: The drawer's three: Without is the A/B, Bass and Full range the reach
   //: (with the A/B off).
   async function choose(k) {
-    if (!lit) return;
+    if (!lit || !armed()) return;
     if (k === 'without') {
       if (without) return;
       want = true;
@@ -112,7 +116,7 @@
             {/each}
           </div>
         {:else}
-          <button type="button" class="open" onclick={() => onopen?.()}>Open<span class="open__chev"></span></button>
+          <button type="button" class="open" onclick={() => armed() && onopen?.()}>Open<span class="open__chev"></span></button>
         {/if}
       </div>
     </div>
