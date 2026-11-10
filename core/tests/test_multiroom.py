@@ -263,6 +263,25 @@ async def test_joining_another_group_is_refused_when_grouped_or_not_a_leader(tmp
         await garage.room.enter("office")
 
 
+async def test_a_leader_joined_to_another_group_leaves_its_own_led_by_a_member(tmp_path):
+    """The review of 1.16.1: the members it led were left silent, following
+    a leader no longer in their group."""
+    net = Net(tmp_path)
+    living, kitchen, study = net.add("living", "Living Room"), net.add("kitchen", "Kitchen"), net.add("study", "Study")
+    office = net.add("office", "Office")
+    await living.room.join("kitchen")
+    await living.room.join("study")
+    living.play("spotify")
+    await net.settle()
+    await office.room.join("living")
+    await net.settle()
+    assert living.room.record.leader == "office" and living.stopped == ["spotify"], "C1"
+    assert living.snap.host == "office.local"
+    for p in (kitchen, study):
+        assert p.room.record.ids() == ["kitchen", "study"] and p.room.record.leader == "kitchen"
+    assert kitchen.snap.host == "127.0.0.1" and study.snap.host == "kitchen.local"
+
+
 async def test_a_source_started_on_a_member_makes_it_the_leader_and_stops_the_old_ones(tmp_path):
     net = Net(tmp_path)
     living, kitchen = net.add("living", "Living Room"), net.add("kitchen", "Kitchen")

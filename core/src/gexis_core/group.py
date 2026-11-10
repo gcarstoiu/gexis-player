@@ -109,9 +109,13 @@ class Record:
 
     def without(self, player_id: str, by: str, clock=time.time) -> "Record":
         """`player_id` taken out; a group of one is no group (the design's
-        `removeFrom`). The leader is never taken out this way."""
+        `removeFrom`). **The leader, gone to another group, hands the lead
+        to the first player left**, as one unsynced in Lyrion does (B8; the
+        review of 1.16.1: the others were left led by a player not in the
+        group, silent). Never removed: *Undo group* ends its group."""
         members = tuple(m for m in self.members if m.id != player_id)
-        return self.bumped(by, clock, members=members, ended=len(members) < 2)
+        leader = members[0].id if player_id == self.leader and members else self.leader
+        return self.bumped(by, clock, members=members, leader=leader, ended=len(members) < 2)
 
     def led_by(self, player_id: str, by: str, clock=time.time) -> "Record":
         return self.bumped(by, clock, leader=player_id)
@@ -407,11 +411,11 @@ class Group:
                 continue
             if theirs.get("id") not in (None, record.id) and float(theirs.get("changed") or 0) > record.changed:
                 # In another group since: it went, and its word did not
-                # reach us. Taken out here, without a word back to it.
+                # reach us. Taken out here, without a word back to it - the
+                # leader too, the lead handed on as it does itself.
                 logger.info("group: %s is in another group now; taken out of this one", member.name)
                 async with self._lock:
-                    if self.record is not None and self.record.has(member.id) \
-                            and member.id != self.record.leader:
+                    if self.record is not None and self.record.has(member.id):
                         self._keep(self.record.without(member.id, by=self.me or "", clock=self._clock))
                 continue
             if await self._deliver(member, record):
