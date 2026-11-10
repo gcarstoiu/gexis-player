@@ -1339,3 +1339,78 @@ def test_a_name_file_without_a_name_leaves_the_device_s_own(tmp_path):
 
     backups.restore(name, tmp_path / "out", root)
     assert (root / "etc/gexis/device-name.env").read_text() == 'GEXIS_DEVICE_NAME="Sofa"\n'
+
+
+def _uploaded(tmp_path):
+    made, share = tmp_path / "made", tmp_path / "share"
+    name = backups.create("Kitchen", made, _real_device(tmp_path / "root", VALUES))
+    share.mkdir()
+    fd, part = backups.upload_part(share)
+    with os.fdopen(fd, "wb") as f:
+        f.write((made / name).read_bytes())
+    return share, part, (made / name).read_bytes()
+
+
+def test_an_upload_swapped_for_a_link_while_it_is_checked_is_not_followed(tmp_path, monkeypatch):
+    """**The review of 1.16.1** (high): the share is `pi`'s and not sticky,
+    so `pi` can put a link under the upload's name once it is checked. Root
+    then changed the mode and owner of what it named and linked it into the
+    share - `/etc/shadow`, served to the network. Everything after the check
+    goes through the file that was checked."""
+    share, part, body = _uploaded(tmp_path)
+    secret = tmp_path / "secret"
+    secret.write_text("root:$6$hash")
+    secret.chmod(0o600)
+    listed = backups.available
+
+    def swapped(directory):
+        part.unlink()
+        part.symlink_to(secret)
+        return listed(directory)
+    monkeypatch.setattr(backups, "available", swapped)
+
+    with pytest.raises(backups.Refused, match="did not arrive whole"):
+        backups.add_upload(part, None, 5, share)
+    assert secret.stat().st_mode & 0o7777 == 0o600
+    assert [p.name for p in share.iterdir()] == [], "nothing linked in, the link removed"
+
+
+def test_an_upload_moved_aside_while_it_is_checked_is_still_the_one_added(tmp_path, monkeypatch):
+    """Renamed rather than removed, the file checked keeps a name, and that
+    file - not what is under the upload's name now - goes in."""
+    share, part, body = _uploaded(tmp_path)
+    secret = tmp_path / "secret"
+    secret.write_text("root:$6$hash")
+    secret.chmod(0o600)
+    listed = backups.available
+
+    def swapped(directory):
+        part.rename(tmp_path / "aside")
+        part.symlink_to(secret)
+        return listed(directory)
+    monkeypatch.setattr(backups, "available", swapped)
+
+    added = backups.add_upload(part, None, 5, share)
+    kept = share / added["name"]
+    assert kept.read_bytes() == body and kept.stat().st_ino == (tmp_path / "aside").stat().st_ino
+    assert secret.stat().st_mode & 0o7777 == 0o600
+
+
+def test_an_upload_that_is_a_link_before_it_is_checked_is_refused(tmp_path):
+    share, part, _ = _uploaded(tmp_path)
+    secret = tmp_path / "secret"
+    secret.write_bytes(b"x")
+    part.unlink()
+    part.symlink_to(secret)
+    with pytest.raises(backups.Refused):
+        backups.add_upload(part, None, 5, share)
+    assert sorted(p.name for p in share.iterdir()) == []
+
+
+def test_a_backup_compared_with_an_upload_is_never_read_through_a_link(tmp_path, monkeypatch):
+    share, part, body = _uploaded(tmp_path)
+    secret = tmp_path / "secret"
+    secret.write_bytes(body)
+    (share / "gexis-kitchen-20260101-120000.tgz").symlink_to(secret)
+    added = backups.add_upload(part, "gexis-kitchen-20260101-120000.tgz", 5, share)
+    assert added["already"] is False and added["name"] != "gexis-kitchen-20260101-120000.tgz"
