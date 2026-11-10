@@ -714,7 +714,12 @@ about every HTTP page; choose *Continue to site*. What you send stays on
 your home network, between your phone and the player.
 
 **What is the setup network's password, and why does the phone say it has no internet?**
-It is `gexis-setup` on every player, and the screen shows it too. The phone's warning about no internet is expected: stay
+On a new player it is `gexis-setup`, and the screen shows it too. A player
+already set up opens the setup network when its Wi-Fi has been gone for two
+minutes; then, with a screen, it uses a password of its own, shown on that
+screen, and without one `gexis-setup`. There the page only asks for the Wi-Fi
+network to join, and once its own network is back the player returns to it
+within ten minutes. The phone's warning about no internet is expected: stay
 connected, as the setup page is served by the player itself.
 
 **My phone sees gexis-setup but cannot join it, or keeps dropping off it.**

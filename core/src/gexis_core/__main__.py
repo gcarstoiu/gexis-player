@@ -4730,7 +4730,8 @@ async def main() -> None:
             skins_state["waited"] = False
             _skins_kick()
 
-    setup_network = SetupNetwork(on_change=_setup_changed)
+    setup_network = SetupNetwork(on_change=_setup_changed,
+                                 headless=lambda: settings_store.get("headless") is True)
     setup_ref["net"] = setup_network
     # ADR-0169 (George, 2026-10-30): an updated player starts from what is in
     # use. A new one leaves it to setup, which records what it chose.

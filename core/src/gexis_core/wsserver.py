@@ -107,6 +107,17 @@ APP_FILES = {
     "apple-touch-icon.png": "image/png",
 }
 
+#: **What a player already set up answers over its setup network**
+#: (ADR-0178 decision 2): its page, and setup's status, networks, answers and
+#: Finish. Settings and their tokens, backups, plugins and a reset are not
+#: reached from there.
+SETUP_NETWORK_ROUTES = frozenset({
+    ("GET", "/"), ("GET", "/surface"), ("GET", "/state"), ("GET", "/setup/status"),
+    ("GET", "/setup/answers"), ("POST", "/setup/answers"), ("GET", "/setup/networks"),
+    ("POST", "/setup/finish"),
+    *(("GET", f"/{name}") for name in APP_FILES),
+})
+
 DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 8090
 
@@ -2580,7 +2591,10 @@ class StateServer:
         if self._setup is None:
             return web.json_response({"needed": False, "network": "unmanaged"})
         panel = self._from_panel(request)
-        return web.json_response(self._setup.status() if panel else self._setup.public_status())
+        status = self._setup.status() if panel else self._setup.public_status()
+        # The name the phone is sent to afterwards: a player already set up
+        # keeps its own (ADR-0178 decision 2), and Settings is closed there.
+        return web.json_response({**status, "host": device_name.hostname()})
 
     @staticmethod
     def _setup_error(raw: str, status: int) -> web.Response:
@@ -2590,6 +2604,27 @@ class StateServer:
 
         logger.info("setup: answered %s: %s", status, raw)
         return web.json_response({"error": setup_flow.said(raw)}, status=status)
+
+    def _over_setup_network(self, request: web.Request) -> bool:
+        """Whether the request arrived on the setup network's own address."""
+        from gexis_core import setup_network
+
+        sockname = request.transport.get_extra_info("sockname") if request.transport is not None else None
+        return bool(sockname) and sockname[0] == setup_network.ADDRESS
+
+    @web.middleware
+    async def _setup_network_only_sets_up(self, request: web.Request, handler):
+        """ADR-0178 decision 2: over its setup network, a player already set
+        up only joins a Wi-Fi network (`SETUP_NETWORK_ROUTES`)."""
+        if (self._setup is not None and self._over_setup_network(request)
+                and not self._setup.status().get("needed")):
+            method = "GET" if request.method == "HEAD" else request.method
+            if (method, request.path) not in SETUP_NETWORK_ROUTES and not (
+                    method == "GET" and request.path.startswith("/assets/")):
+                logger.info("setup: refused %s %s over the setup network", request.method, request.path)
+                return web.json_response({"error": "Over its setup network this player only joins a Wi-Fi network."},
+                                         status=403)
+        return await handler(request)
 
     @web.middleware
     async def _note_setup_use(self, request: web.Request, handler):
@@ -3675,7 +3710,7 @@ class StateServer:
         (DEVELOPMENT.md: "tested with a WebSocket client") - rather than
         binding a fixed port or reaching into `run()`'s internals.
         """
-        app = web.Application(middlewares=[self._note_setup_use])
+        app = web.Application(middlewares=[self._setup_network_only_sets_up, self._note_setup_use])
         app.router.add_get("/state", self._handle)
         app.router.add_post("/renderer/{renderer_id}/activate", self._handle_activate)
         app.router.add_post("/transport/{command}", self._handle_transport)

@@ -40,6 +40,10 @@ STARTS = ("new", "restore")
 #: How long the panel shows where the device went, before its own screens.
 DONE_S = 10.0
 
+#: The answers that make the Wi-Fi: all a player already set up takes over
+#: its setup network (ADR-0178 decision 2).
+NETWORK_ANSWERS = ("ssid", "password", "hidden")
+
 #: Answer -> the setting it becomes. The Wi-Fi is not a setting; it is a
 #: NetworkManager profile, made last.
 SETTINGS = {
@@ -231,6 +235,10 @@ class SetupFlow:
         """Check an uploaded file and keep it for finishing. Raises
         `backups.Refused` with the sentence for the phone; a refused file is
         deleted, and one kept before it stays."""
+        if not self._network.needed:
+            # ADR-0178 decision 2: not offered to a player already set up.
+            upload.unlink(missing_ok=True)
+            raise backups.Refused("This player is already set up: here it only joins a Wi-Fi network.")
         # Read under the name it came with, which carries when it was made.
         named = upload
         if filename and backups.NAME.match(Path(filename).name) and backups.SAFE.match(Path(filename).name):
@@ -280,6 +288,8 @@ class SetupFlow:
         if not data.get("ssid") and self._network.status()["network"] != "online":
             raise ValueError("no network chosen")
         if data.get("start") == "restore":
+            if not self._network.needed:
+                raise ValueError("already set up: no restore over the setup network")
             if not self._restoring(data):
                 raise ValueError("no backup")
             values, _ = self._restore_values(data)
@@ -308,6 +318,10 @@ class SetupFlow:
         # and part 1's answers carry no plugins: taken as a new player's, every
         # plugin was switched off and part 2 owed again.
         new_player = self._network.needed
+        if not new_player:
+            # Only the network (ADR-0178 decision 2): a name, a time zone, an
+            # output or a screen sent with it is not taken.
+            data = {key: data[key] for key in NETWORK_ANSWERS if key in data}
         mode = data.get("lms_mode")
         for answer, key in SETTINGS.items():
             if answer not in data or data[answer] in (None, ""):

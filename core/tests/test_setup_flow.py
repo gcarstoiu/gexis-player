@@ -375,6 +375,8 @@ from test_backups import VALUES, _real_device
 
 def _with_backup(tmp_path, nm, settings=None, values=VALUES, **kw):
     flow, net, clock, countries, reboots = make(tmp_path, nm, settings, **kw)
+    # A backup is restored onto a new card (ADR-0178 decision 2).
+    net._needed = True
     flow._backup = tmp_path / "state" / "setup-backup.tgz"
     flow._restore_root = tmp_path / "card"
     (tmp_path / "card").mkdir()
@@ -650,3 +652,50 @@ def test_a_new_network_for_a_player_already_set_up_leaves_its_plugins_and_part_t
     assert owed == [], "part 2 is a new player's"
     assert not (tmp_path / "settling.json").exists()
     assert (tmp_path / "setup-done").exists()
+
+
+def _set_up(tmp_path, settings, **kw):
+    flow, net, clock, countries, reboots = make(tmp_path, FakeNM(devices=NOTHING), settings, **kw)
+    (tmp_path / "setup-done").touch()
+    return flow, net, countries, reboots
+
+
+def _finish_set_up(flow, net):
+    async def go():
+        net._state = "open"
+        net._needed = False
+        flow.finish()
+        await flow._task
+    asyncio.run(go())
+
+
+def test_a_player_already_set_up_is_given_only_its_network(tmp_path):
+    """**ADR-0178 decision 2.** Over its setup network, a player already set
+    up is given a Wi-Fi network and nothing else: a name, a time zone, an
+    output or a screen sent with it are not applied."""
+    settings = FakeSettings(device_name="Sofa", timezone="Europe/London", output_device="DAC")
+    flow, net, countries, reboots = _set_up(tmp_path, settings)
+    flow.save({"ssid": "NewRouter", "password": "hunter22", "name": "Kitchen", "timezone": "Europe/Berlin",
+               "output": "Headphones"})
+    _finish_set_up(flow, net)
+    assert settings.sets == []
+    assert countries == [] and reboots == []
+    assert net._nmcli.did("connection", "add") or net._nmcli.did("device", "wifi", "connect"), "the network joined"
+
+
+def test_a_player_already_set_up_takes_no_backup_over_its_setup_network(tmp_path):
+    """Restoring is not offered there (ADR-0178 decision 2): a backup is
+    refused, and a restore kept from before is not finished."""
+    flow, net, _, _, upload, _ = _with_backup(tmp_path, FakeNM(devices=NOTHING))
+    flow.take_backup(upload)
+    flow.save({"ssid": "NewRouter", "password": "hunter22"})
+    net._state, net._needed = "open", False
+
+    async def go():
+        flow.finish()
+    with pytest.raises(ValueError, match="already set up"):
+        asyncio.run(go())
+    again = tmp_path / "again.tgz"
+    again.write_bytes(flow._backup.read_bytes())
+    with pytest.raises(_backups.Refused):
+        flow.take_backup(again)
