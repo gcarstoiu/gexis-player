@@ -75,6 +75,31 @@ def test_a_used_player_goes_back_to_a_freshly_flashed_card(tmp_path):
     assert "hifiberry" not in config and config.startswith("dtparam=audio=on")
 
 
+def test_the_boot_files_are_never_rewritten_in_place(tmp_path, monkeypatch):
+    """The review of 1.16.1: cmdline.txt (the Wi-Fi country, on every set-up
+    player) and config.txt were truncated and written on the FAT boot
+    partition, unsynced; a power cut there can leave a Pi that does not
+    boot. Written beside, on the card, renamed over, as the screen's are."""
+    import os
+    _used_player(tmp_path)
+    boot = tmp_path / "boot/firmware"
+    inodes = {name: (boot / name).stat().st_ino for name in ("cmdline.txt", "config.txt")}
+    synced, real_fsync = [], os.fsync
+
+    def fsync(fd):
+        synced.append(os.readlink(f"/proc/self/fd/{fd}"))
+        real_fsync(fd)
+
+    monkeypatch.setattr(os, "fsync", fsync)
+    done = factory_reset.wipe(tmp_path)
+    assert "cmdline.txt" in done and "config.txt" in done
+    for name, inode in inodes.items():
+        assert (boot / name).stat().st_ino != inode, f"{name}: a new file renamed into place"
+        assert str(boot / name) + ".tmp" in synced, f"{name}: on the card before the rename"
+        assert not (boot / (name + ".tmp")).exists()
+    assert str(boot) in synced, "and the rename itself"
+
+
 def test_the_request_is_what_settings_writes(tmp_path):
     request = tmp_path / "var/lib/gexis/factory-reset"
     factory_reset.request(request)

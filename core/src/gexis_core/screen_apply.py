@@ -340,7 +340,7 @@ def write_files(applied: Applied | None, *, env: Path = SCREEN_ENV, cmdline: Pat
     if before is not None:
         after = with_overlays(before, screen.overlays if screen else ())
         if overlays_in(after) != overlays_in(before):
-            _replace_durably(config, after)
+            replace_durably(config, after)
             changed = True
     try:
         before = cmdline.read_text()
@@ -349,18 +349,20 @@ def write_files(applied: Applied | None, *, env: Path = SCREEN_ENV, cmdline: Pat
     after = with_video(before.strip(), video_for(screen, applied.connector, applied.rotation) if screen else None)
     if after.strip() == before.strip():
         return changed
-    _replace_durably(cmdline, after)
+    replace_durably(cmdline, after)
     return True
 
 
-def _replace_durably(path: Path, text: str) -> None:
+def replace_durably(path: Path, text: str) -> None:
     """**cmdline.txt is never rewritten in place** (review, 2026-10-12).
     Truncate-then-write on the FAT boot partition, on a player switched off
     at the wall (ADR-0019), can leave it empty: no `root=`, and a Pi that
     does not boot until someone edits the card by hand. So: written beside
     it, on the card before the rename, then renamed over it, and the rename
     itself on the card. On vfat a rename is not atomic the way it is on ext4,
-    which is why both syncs are here and not only the rename."""
+    which is why both syncs are here and not only the rename. config.txt
+    goes the same way, the board's block and the reset's writes included
+    (the review of 1.16.1)."""
     tmp = path.with_name(path.name + ".tmp")
     try:
         with open(tmp, "w") as out:

@@ -205,7 +205,9 @@ def wipe(root: Path = Path("/"), run=subprocess.run) -> list[str]:
         before = path.read_text()
         after = _cmdline(screen_apply.with_video(before.strip(), None)) + "\n"
         if after != before:
-            path.write_text(after)
+            # Never truncated in place on the FAT boot partition (the
+            # review of 1.16.1): a power cut there leaves no `root=`.
+            screen_apply.replace_durably(path, after)
             return True
         return False
     step("cmdline.txt", cmdline)
@@ -222,7 +224,7 @@ def wipe(root: Path = Path("/"), run=subprocess.run) -> list[str]:
             # screen chosen, laid it out without the block, and restarted.
             after = screen_apply.with_overlays(after, ())
         if after != before:
-            path.write_text(after)
+            screen_apply.replace_durably(path, after)
             return True
         return False
     step("config.txt", config_txt)

@@ -943,7 +943,8 @@ screen check, the core, the kiosk, the renderers and the Lyrion Server.
 - writes back the image's hostname `raspberrypi` (and sets it on the running
   kernel), Spotify's name `gexis` and the time zone Europe/London;
 - strips the screen's `video=` and the Wi-Fi country from `cmdline.txt` and
-  the sound card board's block from `config.txt`;
+  the sound card board's block from `config.txt`, each written beside,
+  synced and renamed over (`screen_apply.replace_durably`), never in place;
 - purges every installed `gexis-skins*` package.
 
 The 2026-10-10 step that kept this boot's log after a reset
