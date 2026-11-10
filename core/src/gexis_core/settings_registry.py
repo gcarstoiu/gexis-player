@@ -154,8 +154,8 @@ def _board_problems() -> dict[str, str]:
 
 
 #: `screen_port`: the ports a screen can be on (ADR-0141; ADR-0158 D3: a
-#: DSI panel's too, while its driver is loaded) - the two HDMI ports until
-#: the daemon says what is there.
+#: DSI panel's too, while its driver is loaded or a port was chosen over
+#: it) - the two HDMI ports until the daemon says what is there.
 OPTION_RESOLVERS = {"timezones": _timezones, "skin_corpus": tuple, "output_device": tuple,
                     "screens": _screens, "boards": _boards, "screen_port": lambda: ("HDMI 1", "HDMI 2")}
 #: Sources only the daemon can answer: the resolvers above are placeholders

@@ -407,8 +407,8 @@ def test_a_dsi_panel_counts_as_a_screen_for_the_boot_gap_and_setup(tmp_path):
 
 class _ScreenPort:
     """`_choose_screen_port` as main() defines it - the closure itself, not
-    its source - run on files in a folder, with `ports` attached and a TV
-    on `tv`."""
+    its source - run on files in a folder, with `ports` attached (a list a
+    test may change, as a restart does) and a TV on `tv`."""
 
     def __init__(self, tmp_path, monkeypatch, ports, tv):
         import functools
@@ -421,7 +421,8 @@ class _ScreenPort:
                               "cmdline": tmp_path / "cmdline.txt", "config": tmp_path / "config.txt"}
         files["cmdline"].write_text("console=tty1 root=PARTUUID=x rootwait\n")
         files["config"].write_text("display_auto_detect=1\n")
-        monkeypatch.setattr(screen_detect, "ports", lambda *a, **k: ports)
+        self.ports = ports
+        monkeypatch.setattr(screen_detect, "ports", lambda *a, **k: list(self.ports))
         monkeypatch.setattr(screen_detect, "tv_mode", lambda connector, drm=None: (1920, 1080) if connector == tv else None)
 
         class Bound:
@@ -445,7 +446,7 @@ class _ScreenPort:
                        _setup_running=lambda setup: False, _systemctl_reboot=reboot,
                        asyncio=types.SimpleNamespace(sleep=None, ensure_future=lambda c: c.close()),
                        logger=logging.getLogger("test"))
-        for name in ("_port_connector", "_choose_screen_port"):
+        for name in ("_port_connector", "_port_label", "_screen_ports", "_choose_screen_port"):
             exec(_closure(name), self.ns)
 
     def choose(self, label):
@@ -540,3 +541,70 @@ def test_a_port_s_kept_screen_comes_back_only_while_it_is_the_one_there():
     bigger = screen_detect.Seen(True, "HDMI-A-1", "ABC", "M", (1280, 720), ())
     assert screen_watch.for_port(bigger, screen_watch.target(bigger), picked)[1] == 0
     assert screen_watch.for_port(panel, ten, None) == (ten, 0)
+
+
+# --- A DSI panel whose driver line goes with a TV chosen over it -------------
+
+GOODIX = screen_detect.Seen(True, "DSI-1", None, None, (800, 1280), (), ("goodix",))
+HDMI_2_EMPTY = screen_detect.Seen(False, "HDMI-A-2")
+
+
+def test_dsi_is_still_offered_after_a_tv_took_its_driver_line(tmp_path, monkeypatch):
+    """ADR-0158 D3: an HDMI port chosen under Screen port wins, and choosing
+    DSI again goes back. The Waveshare 10.1" DSI-TOUCH-A needs its overlay
+    written; the TV's choice took it out, so after the restart the panel had
+    no driver, no connector, and DSI was not offered (the review of 1.16.1).
+    It is offered from the model kept there, and choosing it writes the
+    overlay back and asks Keep on the panel."""
+    port = _ScreenPort(tmp_path, monkeypatch, [GOODIX, TV_ON_1, HDMI_2_EMPTY], tv="HDMI-A-1")
+    model = screens.by_id("waveshare-dsi-v2-10.1a")
+    screen_apply.choose(Applied(model.id, 180, "DSI-1"), **port.files, now=1)
+    port.keep()
+    port.choose("HDMI 1")
+    port.keep()
+    assert screen_apply.overlays_in(port.files["config"].read_text()) == (), "the panel is dark: no driver"
+    port.ports = [TV_ON_1, HDMI_2_EMPTY]                         # the restart: no DSI connector
+    offered = port.ns["_screen_ports"]()
+    assert [port.ns["_port_label"](p.connector) for p in offered] == ["DSI", "HDMI 1", "HDMI 2"]
+    assert offered[0].connected and offered[0].dsi, "its line is the DSI panel's, not Nothing connected"
+    port.choose("DSI")
+    assert port.current() == {"screen": model.id, "rotation": 180, "connector": "DSI-1", "chosen": True}
+    assert screen_apply.overlays_in(port.files["config"].read_text()) == model.overlays
+    assert screen_apply.read_state(port.files["state"])["pending"], "Keep this screen? on the panel"
+
+
+def test_dsi_is_offered_from_memory_only_for_a_panel_a_port_was_chosen_over(tmp_path, monkeypatch):
+    """Not for the Touch Display class, whose connector the firmware makes
+    whenever the panel is there; not once DSI is the screen again or nothing
+    was chosen over it; not with its connector there."""
+    port = _ScreenPort(tmp_path, monkeypatch, [TV_ON_1, HDMI_2_EMPTY], tv="HDMI-A-1")
+    labels = lambda: [port.ns["_port_label"](p.connector) for p in port.ns["_screen_ports"]()]  # noqa: E731
+    state = port.files["state"]
+    screen_apply.write_state({"current": Applied("other-1920x1080-capped", 0, "HDMI-A-1", chosen=True).to_json(),
+                              "kept_on": {"DSI-1": {"screen": "hosyond-7-dsi", "rotation": 180}}}, state)
+    assert labels() == ["HDMI 1", "HDMI 2"], "found by the firmware: its port is there whenever it is"
+    screen_apply.write_state({"current": Applied("other-1920x1080-capped", 0, "HDMI-A-1").to_json(),
+                              "kept_on": {"DSI-1": {"screen": "waveshare-dsi-v2-10.1a", "rotation": 0}}}, state)
+    assert labels() == ["HDMI 1", "HDMI 2"], "not chosen over it"
+    screen_apply.write_state({"current": Applied("other-1920x1080-capped", 0, "HDMI-A-1", chosen=True).to_json(),
+                              "kept_on": {"DSI-1": {"screen": "waveshare-dsi-v2-10.1a", "rotation": 0}}}, state)
+    assert labels() == ["DSI", "HDMI 1", "HDMI 2"]
+    port.ports = [GOODIX, TV_ON_1, HDMI_2_EMPTY]
+    assert labels() == ["DSI", "HDMI 1", "HDMI 2"], "once, from the port itself"
+    # A state from before `kept_on`: the panel as the screen before the TV.
+    port.ports = [TV_ON_1, HDMI_2_EMPTY]
+    screen_apply.write_state({"current": Applied("other-1920x1080-capped", 0, "HDMI-A-1", chosen=True).to_json(),
+                              "previous": Applied("waveshare-dsi-v2-10.1a", 0, "DSI-1").to_json()}, state)
+    assert labels() == ["DSI", "HDMI 1", "HDMI 2"]
+
+
+def test_screen_port_lists_and_names_the_ports_it_can_choose():
+    """The options, their lines and whether the row shows come from the same
+    list `_choose_screen_port` chooses from."""
+    from test_main_wiring import _closure, MAIN
+    main = MAIN.read_text()
+    assert '"screen_port": lambda: [_port_label(p.connector) for p in _screen_ports()]' in main
+    assert "for p in _screen_ports()}}," in main
+    assert "and len(_screen_ports()) >= 2" in main and "and len(_screen_ports()) == 1" in main
+    for name in ("_port_line", "_choose_screen_port"):
+        assert "for p in _screen_ports() if p.connector == connector" in _closure(name), name

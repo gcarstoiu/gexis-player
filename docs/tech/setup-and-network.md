@@ -545,7 +545,11 @@ DSI connector turns `bl_power` off and leaves the output on
 (`standby.backlight`), and `read_output` reads the backlight back;
 *Screen brightness* writes `brightness` as a share of `max_brightness`, at
 once and at every start. *Screen port* takes its options from the ports
-there are (`optionsFrom: screen_port`), *DSI* among them. With a TV chosen,
+there are (`optionsFrom: screen_port`, `_screen_ports`), *DSI* among them -
+also while an HDMI port chosen there is the screen over a DSI panel whose
+overlay that choice took out (`screen_apply.left_dark`: no driver, so no
+connector), from the model kept on its port, whose overlay choosing *DSI*
+writes back. With a TV chosen,
 the DSI touch is ignored by a udev rule on its I2C driver (`DRIVERS==`).
 
 **Who answers *Keep this screen?*** (ADR-0147 D3, D5, as amended by
