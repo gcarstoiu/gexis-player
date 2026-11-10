@@ -7,6 +7,7 @@ import asyncio
 
 import pytest
 
+from gexis_core import group as groups
 from gexis_core import multiroom as mr
 from gexis_core import outputs
 from gexis_core.adapters.base import Capabilities, VolumeMechanism
@@ -494,6 +495,42 @@ async def test_a_chain_changed_on_a_round_keeps_the_member_hearing_the_group(tmp
     await net.settle()
     assert kitchen.room.chain == outputs.ALL
     assert kitchen.snap.host == "living.local", "the client back after the rewrite"
+
+
+@pytest.mark.parametrize("kept", [None, outputs.WITHOUT_LOOPBACK])
+async def test_a_group_kept_without_its_chain_is_put_in_force_at_the_start(tmp_path, kept):
+    """The review of 1.16.1: a member started again after the fallback (its
+    chain not read at a start) or stopped between keeping the group and its
+    chain came up with `output.conf` written for a player alone and the
+    group's chain only written down: silent in the group."""
+    record = groups.Record.new(Member("living", "Living Room", "living.local"),
+                               Member("kitchen", "Kitchen", "kitchen.local"))
+    groups.write(record, tmp_path / "kitchen.json")
+    if kept:
+        mr.write_chain(kept, tmp_path / "kitchen-chain.json")
+    net = Net(tmp_path)
+    net.add("living", "Living Room")
+    kitchen = net.add("kitchen", "Kitchen")
+    assert kitchen.room.chain is None, "as `output.conf` was written at this start"
+    await kitchen.room.start()
+    await net.settle()
+    assert kitchen.room.chain == outputs.ALL and kitchen.rechains == 1
+    assert mr.read_chain(tmp_path / "kitchen-chain.json") == outputs.ALL
+    assert kitchen.snap.host == "living.local"
+
+
+async def test_a_group_kept_with_its_chain_is_not_written_again_at_the_start(tmp_path):
+    record = groups.Record.new(Member("living", "Living Room", "living.local"),
+                               Member("kitchen", "Kitchen", "kitchen.local"))
+    groups.write(record, tmp_path / "kitchen.json")
+    mr.write_chain(outputs.ALL, tmp_path / "kitchen-chain.json")
+    net = Net(tmp_path)
+    net.add("living", "Living Room")
+    kitchen = net.add("kitchen", "Kitchen")
+    await kitchen.room.start()
+    await net.settle()
+    assert kitchen.room.chain == outputs.ALL and kitchen.rechains == 0
+    assert kitchen.snap.host == "living.local"
 
 
 async def test_a_member_silent_for_a_round_does_not_change_the_chain(tmp_path):

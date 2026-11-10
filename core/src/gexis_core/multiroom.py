@@ -210,7 +210,8 @@ class Multiroom:
 
     async def start(self) -> None:
         """At the core's start: a group kept from before is put back in force
-        (decision 3). The chain was written with it already (`chain`)."""
+        (decision 3). The chain was written with it already (`chain`) - or,
+        where none was read, it is put in force here."""
         self.watch()
         record = self.group.record
         if record is None:
@@ -219,9 +220,14 @@ class Multiroom:
                     len(record.members), record.leader)
         self.peers.follow(self._others(record))
         if self.chain is None:
-            self.chain = outputs.ALL
-            write_chain(self.chain, self._chain_path)
-        await self._card_or_fallback()
+            # **`output.conf` was written for a player alone** at this start
+            # (the fallback's chain is not read, or none was kept): with the
+            # group's only written down, the member was silent (the review
+            # of 1.16.1).
+            if await self._card_or_fallback():
+                await self._set_chain(self._chain_for(record))
+        else:
+            await self._card_or_fallback()
         await self.snap.serve(True)
         await self._listen()
         self._changed()
