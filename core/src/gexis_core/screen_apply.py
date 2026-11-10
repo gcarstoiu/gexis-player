@@ -18,7 +18,8 @@ no screen leaves the block empty, and nothing else in the file is touched.
 
 The state of the last change is `/var/lib/gexis/screen.json`:
 `current`, `previous`, and whether the current one is still `pending` a
-Keep. Nothing here restarts anything; the caller does.
+Keep; and `kept_on`, the screen last kept on each port. Nothing here
+restarts anything; the caller does.
 """
 from __future__ import annotations
 
@@ -395,8 +396,34 @@ def choose(applied: Applied, *, state: Path = STATE, env: Path = SCREEN_ENV, cmd
     asks = would_ask(applied, env=env, cmdline=cmdline, config=config)
     write_files(applied, env=env, cmdline=cmdline, config=config)
     write_state({"current": applied.to_json(), "previous": previous, "pending": asks,
-                 "after_setup": after_setup, "since": now if now is not None else time.time()}, state)
+                 "after_setup": after_setup, "since": now if now is not None else time.time(),
+                 "kept_on": _kept_on(data, None if asks else applied)}, state)
     return asks
+
+
+def _kept_on(data: dict, kept: Applied | None = None) -> dict:
+    """screen.json's `kept_on`, with `kept` as its port's screen."""
+    doc = data.get("kept_on")
+    doc = dict(doc) if isinstance(doc, dict) else {}
+    if kept is not None:
+        doc[kept.connector] = {"screen": kept.screen_id, "rotation": kept.rotation}
+    return doc
+
+
+def kept_on(connector: str, state: Path | None = None) -> Applied | None:
+    """**The screen last kept on `connector`**, its model and rotation, or
+    None (the review of 1.16.1: back from a TV, the panel came back as the
+    class at 0°). In a state from before this was kept, the screen in use or
+    the one before it, when it was on that port."""
+    data = read_state(state or STATE)
+    found = data.get("kept_on")
+    doc = found.get(connector) if isinstance(found, dict) else None
+    if doc is None:
+        kept = [data.get("previous")] if data.get("pending") else [data.get("current"), data.get("previous")]
+        doc = next((d for d in kept if isinstance(d, dict) and (d.get("connector") or CONNECTOR) == connector), None)
+    if not isinstance(doc, dict) or not doc.get("screen"):
+        return None
+    return Applied(doc["screen"], int(doc.get("rotation", 0)), connector)
 
 
 def refresh(*, state: Path = STATE, env: Path = SCREEN_ENV, cmdline: Path = CMDLINE, config: Path = CONFIG) -> bool:
@@ -427,6 +454,7 @@ def confirm_provisional(label: str, *, state: Path = STATE) -> bool:
     if model is None or model.label != label:
         return False
     data.pop("provisional", None)
+    data["kept_on"] = _kept_on(data, Applied.of(current))
     write_state(data, state)
     return True
 
@@ -435,6 +463,9 @@ def keep(*, state: Path = STATE) -> None:
     data = read_state(state)
     if data.get("pending"):
         data["pending"] = False
+        current = data.get("current")
+        if isinstance(current, dict) and current.get("screen"):
+            data["kept_on"] = _kept_on(data, Applied.of(current))
         write_state(data, state)
 
 
@@ -445,7 +476,8 @@ def revert(*, state: Path = STATE, env: Path = SCREEN_ENV, cmdline: Path = CMDLI
     previous = data.get("previous")
     applied = Applied.of(previous) if previous else None
     write_files(applied, env=env, cmdline=cmdline, config=config)
-    write_state({"current": previous, "previous": None, "pending": False, "reverted": data.get("current")}, state)
+    write_state({"current": previous, "previous": None, "pending": False, "reverted": data.get("current"),
+                 "kept_on": _kept_on(data)}, state)
 
 
 def settings_of(path: Path = STATE) -> dict[str, str | None]:
