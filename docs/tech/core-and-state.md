@@ -769,9 +769,9 @@ until, seq, closed: {id, by, at}}` - never the address, since `/state` is
 open to the network; `seq` goes up when the panel has a page to load. `POST
 /panel/page/show` (`{url, id = "page", seconds = 600}`, 10 to 3600) is
 refused while `ha_pages` is off (403), on a headless player or during a room
-measurement (409); the address goes through the idle page's probe first,
-and a page that cannot be framed is refused with `ha_page.explain`'s
-sentence (422). A show while one is up replaces it (`closed.by: replaced`);
+measurement (409), checked again after the probe; the address goes through
+the idle page's probe first, and a page that cannot be framed is refused
+with `ha_page.explain`'s sentence (422). A show while one is up replaces it (`closed.by: replaced`);
 the same id again restarts its limit. `POST /panel/page/hide` (`{id}`
 optional; `?by=touch` or `?by=key` from the panel only) and `GET
 /panel/page`, which adds `url` for the panel only and `pages`, the switch.

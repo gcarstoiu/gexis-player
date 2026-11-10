@@ -1748,15 +1748,9 @@ class StateServer:
             if preload is None:
                 self._page.set_preload(None)
                 return web.json_response(self._page.state())
-        if self._setting_or_none("headless") is True:
-            return web.json_response({"error": "this player has no screen"}, status=409)
-        if self._setting_or_none("ha_pages") is not True:
-            return web.json_response({"error": "Pages from Home Assistant are off on this player: "
-                                               "switch them on in Settings → Display."}, status=403)
-        # A measurement takes the screen to say so, and wants the processor
-        # quiet while it records.
-        if self._room is not None and self._room.running():
-            return web.json_response({"error": "The room is being measured on this player."}, status=409)
+        refused = self._page_refused()
+        if refused is not None:
+            return refused
         if action == "preload":
             # K1: checked as a show is, so the action fails with the reason.
             if self._page_check is not None:
@@ -1764,6 +1758,9 @@ class StateServer:
                 if not found.get("embeddable"):
                     return web.json_response({"error": ha_page.explain(found.get("reason")),
                                               "reason": found.get("reason")}, status=422)
+                refused = self._page_refused()
+                if refused is not None:
+                    return refused
             self._page.set_preload(preload)
             return web.json_response(self._page.state())
         try:
@@ -1778,8 +1775,28 @@ class StateServer:
             if not found.get("embeddable"):
                 return web.json_response({"error": ha_page.explain(found.get("reason")),
                                           "reason": found.get("reason")}, status=422)
+        # **Asked again after the check** (the review of 1.16.1): it can take
+        # 5 s, and the switch turned off or a measurement begun meanwhile
+        # had the page up all the same.
+        refused = self._page_refused()
+        if refused is not None:
+            return refused
         await self._page.show(url, page_id, seconds)
         return web.json_response(self._page.state())
+
+    def _page_refused(self) -> web.Response | None:
+        """Why a page cannot go up now - no screen, the switch off, a
+        measurement running - or None."""
+        if self._setting_or_none("headless") is True:
+            return web.json_response({"error": "this player has no screen"}, status=409)
+        if self._setting_or_none("ha_pages") is not True:
+            return web.json_response({"error": "Pages from Home Assistant are off on this player: "
+                                               "switch them on in Settings → Display."}, status=403)
+        # A measurement takes the screen to say so, and wants the processor
+        # quiet while it records.
+        if self._room is not None and self._room.running():
+            return web.json_response({"error": "The room is being measured on this player."}, status=409)
+        return None
 
     async def _handle_panel_input(self, request: web.Request) -> web.Response:
         """**ADR-0157: the phone's tap or typing, made real.** The panel asks
