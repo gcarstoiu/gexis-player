@@ -615,5 +615,5 @@ def test_a_restore_applies_its_answers_with_a_real_store(tmp_path):
     assert ("set", "timezone", "Europe/Berlin") in calls
     rename = [c for c in calls if c[0] == "rename"]
     assert rename and rename[0][1] == "ShelvesPi"
-    assert "NAME=gexis" in rename[0][2], "renamed after the backup's own name file came back"
+    assert rename[0][2] == 'GEXIS_DEVICE_NAME="gexis"\n', "renamed after the backup's own name file came back"
     assert calls.index(("set", "device_name", "ShelvesPi")) < calls.index(rename[0])
