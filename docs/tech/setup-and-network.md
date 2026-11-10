@@ -921,7 +921,7 @@ screen check, the core, the kiosk, the renderers and the Lyrion Server.
 `wipe()` then:
 
 - removes the files and folders in `REMOVED` (settings and enrichment
-  databases, caches, the device name, share passwords, the setup
+  databases, the page Home Assistant keeps loaded, caches, the device name, share passwords, the setup
   marker and answers, the screen and board records, components, uploaded
   plugins, Plexamp, Spotify's state, Beszel, the Lyrion Server's prefs and
   cache, and `/etc/gexis/settings-seed.json`, the settings chosen when the

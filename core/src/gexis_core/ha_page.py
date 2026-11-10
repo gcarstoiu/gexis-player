@@ -52,7 +52,8 @@ THROTTLED_NOW = 0x2 | 0x4 | 0x8
 HEAT_EVERY_S = 5.0
 ID_MAX = 64
 #: K1: the page kept loaded, saved so a restart loads it again - not in the
-#: settings, `/state` or a backup (P2: an address can carry a token).
+#: settings, `/state` or a backup (P2: an address can carry a token). Root's
+#: alone (the review of 1.16.1): written 0644, every plugin's user read it.
 PRELOAD_PATH = Path("/var/lib/gexis-core/page-preload.json")
 
 
@@ -108,6 +109,7 @@ def _read_preload(path: Path | None) -> str | None:
     if path is None:
         return None
     try:
+        os.chmod(path, 0o600)  # one saved 0644 by 1.16.1
         url = json.loads(path.read_text()).get("url")
     except (OSError, ValueError, AttributeError):
         return None
@@ -222,7 +224,10 @@ class Page:
         if self._preload_path is not None:
             try:
                 tmp = self._preload_path.with_suffix(".tmp")
-                tmp.write_text(json.dumps({"url": url}))
+                fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+                with os.fdopen(fd, "w") as out:
+                    os.fchmod(out.fileno(), 0o600)
+                    out.write(json.dumps({"url": url}))
                 os.replace(tmp, self._preload_path)
             except OSError:
                 logger.exception("page: the page kept loaded could not be saved")

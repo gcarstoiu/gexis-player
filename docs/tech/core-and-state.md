@@ -810,8 +810,9 @@ stops animating (`html.page-up`).
 
 **A page kept loaded** (the amendment, K1-K8). `POST /panel/page/preload`
 (`{url}`; `{url: null}` or `""` clears it, allowed with the switch off) is
-checked as a show is and saved in `/var/lib/gexis-core/page-preload.json`,
-outside the settings, `/state` and backups; `Page` reads it at start.
+checked as a show is and saved in `/var/lib/gexis-core/page-preload.json`
+(0600, root's alone; a factory reset removes it), outside the settings,
+`/state` and backups; `Page` reads it at start.
 `panel.page.preloaded` is true while an address is set, `ha_pages` is on
 and the player is not headless; the switch's write calls `Page.refresh`.
 `GET /panel/page` adds `preload: {url, n}` for the panel only, `n` one more

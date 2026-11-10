@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """ADR-0176: a page from Home Assistant on the screen, for a while."""
 import asyncio
+import os
 
 import pytest
 
@@ -224,6 +225,21 @@ def test_the_page_kept_is_saved_and_read_again_at_the_next_start(tmp_path):
     assert again.preload == URL and again.preloaded
     again.set_preload(None)
     assert _page(preload_path=path)[0].preload is None
+
+
+def test_the_page_kept_is_root_s_alone(tmp_path):
+    """An address can carry a token (P2): not readable by a plugin's user
+    (the review of 1.16.1), and one saved 0644 before is closed at start."""
+    path = tmp_path / "page-preload.json"
+    old = os.umask(0o022)
+    try:
+        _page(preload_path=path)[0].set_preload(URL)
+    finally:
+        os.umask(old)
+    assert path.stat().st_mode & 0o777 == 0o600
+    path.chmod(0o644)
+    assert _page(preload_path=path)[0].preload == URL
+    assert path.stat().st_mode & 0o777 == 0o600
 
 
 def test_a_damaged_file_keeps_nothing(tmp_path):
