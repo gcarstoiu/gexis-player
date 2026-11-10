@@ -146,6 +146,49 @@ def test_a_plugin_s_queue_is_published_as_a_queue():
     assert "plugin_queue(session.id" in _closure("_plugin_event")
 
 
+def test_a_plugin_s_metadata_drops_what_cannot_be_published():
+    """The review of 1.16.1: a character UTF-8 cannot encode - half an emoji,
+    cut by its sender - and numbers that are not finite were kept. The first
+    stopped every broadcast; the second reached the screens as JSON they
+    refuse, or raised."""
+    import json
+
+    from gexis_core.__main__ import plugin_metadata
+
+    line = ('{"title": "Song \\ud83c", "artist": "A\\udcff B", "position": NaN, "duration": "Infinity", '
+            '"sample_rate": 1e400, "bit_depth": 24, "unavailable": ["next\\ud800"]}')
+    m = plugin_metadata("plexamp", json.loads(line))
+    assert (m.title, m.artist, m.unavailable) == ("Song ", "A B", frozenset({"next"}))
+    assert (m.position, m.duration, m.sample_rate, m.bit_depth) == (None, None, None, 24)
+    json.dumps(m.to_json(), allow_nan=False, ensure_ascii=False).encode("utf-8")
+
+
+def test_a_plugin_title_cut_mid_emoji_reaches_the_screens(tmp_path):
+    """As `main()` wires them: the moOde file's writer first, the broadcast
+    after it."""
+    import json
+
+    from gexis_core.__main__ import plugin_metadata
+    from gexis_core.adapters.base import Capabilities, VolumeMechanism
+    from gexis_core.metadata_file import MetadataFileWriter
+    from gexis_core.state import StateStore
+
+    caps = Capabilities(audio_connection="output", acquisition_events=frozenset(), supports_artwork=False,
+                        supports_sample_rate=False, volume_managed=False,
+                        volume_mechanism=VolumeMechanism.DUMMY_MIXER)
+    store = StateStore({"lms": caps})
+    store.add_renderer("plexamp", caps)
+    store.subscribe(MetadataFileWriter(tmp_path / "currentsong.txt").write)
+    broadcasts = []
+    store.subscribe(broadcasts.append)
+    store.set_active("plexamp")
+    message = json.loads('{"t": "metadata", "metadata": {"title": "Song \\ud83c", "artist": "A"}}')
+    store.set_metadata("plexamp", plugin_metadata("plexamp", message["metadata"]))
+    store.set_volume_raw(100)
+    assert broadcasts[-2].metadata.title == "Song " and broadcasts[-1].volume.raw == 100
+    assert "title=Song \n" in (tmp_path / "currentsong.txt").read_text()
+
+
 class _Stop(BaseException):
     """Ends a `run()` loop from inside a test, as a cancel would."""
 
