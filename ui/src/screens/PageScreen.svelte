@@ -29,14 +29,18 @@
 
   $effect(() => {
     seq;
-    url = null;
-    loaded = false;
     let gone = false;
     fetch('/panel/page', { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : null))
       .then((answer) => {
         if (gone) return;
-        url = answer?.shown ? (answer.url ?? null) : null;
+        // **The page shown stays unless its address changed** (the review
+        // of 1.16.1): the kept page renewed or cleared reloaded it.
+        const shownUrl = shown && answer?.shown ? (answer.url ?? null) : null;
+        if (shownUrl !== url) {
+          url = shownUrl;
+          loaded = false;
+        }
         const next = answer?.preload ?? null;
         if (!next) preload = null;
         else if (next.url !== preload?.url || next.n !== preload?.n) {
@@ -46,6 +50,12 @@
       })
       .catch(() => {});
     return () => { gone = true; };
+  });
+  // Gone, it takes its address with it: the next page starts from none.
+  $effect(() => {
+    if (shown) return;
+    url = null;
+    loaded = false;
   });
 
   const kept = $derived(shown && !!preload && url === preload.url);
