@@ -16,8 +16,9 @@ STAGE_DIR=/src/image/stage-gexis/02-renderers
 : "${GO_LIBRESPOT_VERSION:?} ${GO_LIBRESPOT_ASSET:?} ${GO_LIBRESPOT_URL:?} ${GO_LIBRESPOT_SHA256:?}"
 # The revision counts changes to our own files around it: -2 turned
 # normalisation off (2026-10-05) - the same upstream version, new content,
-# so a new version (LESSONS 53).
-VERSION="${GO_LIBRESPOT_VERSION#v}-2"
+# so a new version (LESSONS 53). -3: the unit kept off the audio chain's
+# control address (the review of 1.16.1).
+VERSION="${GO_LIBRESPOT_VERSION#v}-3"
 
 PKG=gexis-go-librespot
 STAGE=/tmp/stage/$PKG

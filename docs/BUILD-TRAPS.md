@@ -97,3 +97,10 @@ traps below are a local build's, kept for when GitHub is unavailable.
 - **The API page's deploy can time out in GitHub Pages' queue** (1.14.0,
   `deployment_queued` for ten minutes): the page built; `gh run rerun <id>
   --failed` deployed it. It is not one of `main`'s required checks.
+- **A package versioned by its upstream (CamillaDSP, go-librespot,
+  Squeezelite, PeppyALSA and the rest) is not reinstalled at the same
+  version**, whatever files of ours it carries (LESSONS 53). The review of
+  1.16.1 changed CamillaDSP's unit under an unchanged `4.1.3-1`; found by
+  listing the preview's packages before installing. `packaging/revisions.json`
+  records each one's revision and a hash of its own files, and
+  `test_package_revisions.py` fails until a changed one's revision is raised.

@@ -1,0 +1,30 @@
+{
+  "camilladsp": {
+    "revision": 2,
+    "sha256": "1932d9d2d33877af2dc59c6463c1ebadb8d31a272b97942ed2a3b5d698983f40"
+  },
+  "go-librespot": {
+    "revision": 3,
+    "sha256": "fabbbe1d92256e92fb3b5f3dff3c69eb5f1b7245285cce65ff81a72848ac6dbb"
+  },
+  "nqptp": {
+    "revision": 2,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "peppy-engines": {
+    "revision": 1,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "peppyalsa": {
+    "revision": 6,
+    "sha256": "8fe492e0749b4e207ea2b998cf4a3cfc94702149b9d95475e13194f5aa72d76e"
+  },
+  "shairport-sync": {
+    "revision": 2,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "squeezelite": {
+    "revision": 3,
+    "sha256": "60bf8253e62331f127c777e4893a898420a2c686f2fc5d6f60dfbb73346a81e4"
+  }
+}
