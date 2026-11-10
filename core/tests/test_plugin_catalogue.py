@@ -245,8 +245,85 @@ async def test_install_downloads_checks_and_hands_the_archive_on(key, tmp_path):
             break
         await asyncio.sleep(0.01)
     assert job.phase == "installed" and calls["installed"] == [("hello", hashlib.sha256(data).hexdigest())]
-    # One install restarts the core itself (ADR-0106).
-    assert calls["restart_with"] == [True] and calls["restarted"] == 0
+    # The core restarted once it is in (ADR-0106).
+    assert calls["restart_with"] == [False] and calls["restarted"] == 1
+
+
+class Held(Session):
+    """One download held until `release` is set."""
+
+    def __init__(self, served: dict[str, bytes], url: str, release: asyncio.Event):
+        super().__init__(served)
+        self.url, self.release = url, release
+
+    def get(self, url, **kw):
+        response = super().get(url, **kw)
+        if url == self.url:
+            pieces = response.iter_chunked
+
+            async def held(size):
+                await self.release.wait()
+                async for piece in pieces(size):
+                    yield piece
+            response.iter_chunked = held
+        return response
+
+
+async def _until(check) -> None:
+    for _ in range(200):
+        if check():
+            return
+        await asyncio.sleep(0.01)
+    raise AssertionError("not reached")
+
+
+def _two(sign, *, hub_served: bytes | None = None):
+    found = {pid: archive(plugin_id=pid) for pid in ("agent", "hub")}
+    versions = {pid: listed(data, url=f"https://github.com/someone/b/releases/download/v1/{pid}.tar.gz")
+                for pid, data in found.items()}
+    cat = index(*(entry(v, plugin_id=pid) for pid, v in versions.items()))
+    served = {**published(cat, sign), versions["agent"]["url"]: found["agent"],
+              versions["hub"]["url"]: found["hub"] if hub_served is None else hub_served}
+    return served, versions["hub"]["url"]
+
+
+@pytest.mark.parametrize("hub_fails", [False, True])
+async def test_installs_that_overlap_restart_the_core_once_none_is_under_way(key, tmp_path, hub_fails):
+    """The review of 1.16.1: Beszel's hub, then its agent, added one after the
+    other - the agent, in first, restarted the core under the hub's
+    download, which was lost. The core restarts once, when the last ends,
+    whether it went in or not."""
+    keyring, sign = key
+    served, held_url = _two(sign, hub_served=b"not the listed archive" if hub_fails else None)
+    release = asyncio.Event()
+    svc, calls = service(key, tmp_path, served)
+    svc.session = lambda: Held(served, held_url, release)
+    await svc.refresh()
+    hub, agent = svc.start_install("hub"), svc.start_install("agent")
+    await _until(lambda: agent.phase == "installed")
+    await asyncio.sleep(0.05)
+    assert hub.phase == "downloading" and calls["restarted"] == 0 and calls["restart_with"] == [False]
+    release.set()
+    await _until(lambda: hub.phase in ("installed", "failed"))
+    await asyncio.sleep(0.05)
+    assert hub.phase == ("failed" if hub_fails else "installed")
+    assert calls["restarted"] == 1
+
+
+async def test_a_restore_during_an_install_leaves_the_restart_to_the_last(key, tmp_path):
+    keyring, sign = key
+    served, held_url = _two(sign)
+    release = asyncio.Event()
+    svc, calls = service(key, tmp_path, served)
+    svc.session = lambda: Held(served, held_url, release)
+    await svc.refresh()
+    hub = svc.start_install("hub")
+    assert await svc.restore([{"id": "agent", "version": "0.1.0"}]) == ["agent"]
+    assert hub.phase == "downloading" and calls["restarted"] == 0
+    release.set()
+    await _until(lambda: hub.phase == "installed")
+    await asyncio.sleep(0.05)
+    assert calls["restarted"] == 1
 
 
 async def test_an_archive_that_is_not_the_listed_one_fails_and_installs_nothing(key, tmp_path):
