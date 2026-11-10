@@ -860,7 +860,9 @@ phone only.
   renderers restarted - waited for only if one plays or holds the device,
   since a renderer keeps the ALSA configuration it read first), the server started and
   the client pointed at the leader; a joined player's own source stops first
-  (C1). The leader moving: the old one's source stops, every client moves.
+  (C1). The leader moving: the old one's source stops, every client moves;
+  a leader joined to another group hands the lead to the first player left
+  (a group of two ends).
   Out of a group: the client and server stop and the chain is the player's
   own again - except on a leader still playing, which plays on through its
   own server until nothing holds the device (*the music stays on the

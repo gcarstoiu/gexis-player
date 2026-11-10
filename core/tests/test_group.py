@@ -102,6 +102,48 @@ async def test_a_player_joined_from_another_group_leaves_it(tmp_path):
     assert office.record is None
 
 
+async def test_a_leader_joined_to_another_group_hands_its_own_on(tmp_path):
+    """The review of 1.16.1: joined to Office's group (Home Assistant's join,
+    a sync in a Lyrion app, the API), Living Room left Kitchen and Study a
+    group led by a player no longer in it - silent, its leader shown off."""
+    net = Net(tmp_path)
+    living, kitchen, study, office = net.add(LIVING), net.add(KITCHEN), net.add(STUDY), net.add(OFFICE)
+    await living.join(KITCHEN)
+    await living.join(STUDY)
+    await office.join(LIVING)
+    await asyncio.sleep(0)  # Living Room's word to its old group, sent beside its answer
+    await asyncio.sleep(0)
+    assert living.record.ids() == ["office", "living"] and living.record.leader == "office"
+    assert kitchen.record == study.record
+    assert kitchen.record.ids() == ["kitchen", "study"] and kitchen.record.leader == "kitchen"
+
+
+async def test_a_leader_joined_to_another_group_ends_a_group_of_two(tmp_path):
+    net = Net(tmp_path)
+    living, kitchen, office = net.add(LIVING), net.add(KITCHEN), net.add(OFFICE)
+    await living.join(KITCHEN)
+    await office.join(LIVING)
+    await asyncio.sleep(0)
+    await asyncio.sleep(0)
+    assert kitchen.record is None
+
+
+async def test_a_leader_gone_to_another_group_unheard_is_taken_out_with_the_lead_handed_on(tmp_path):
+    net = Net(tmp_path)
+    living, kitchen, study, office = net.add(LIVING), net.add(KITCHEN), net.add(STUDY), net.add(OFFICE)
+    await living.join(KITCHEN)
+    await living.join(STUDY)
+    net.off.update({"kitchen", "study"})
+    await office.join(LIVING)
+    await asyncio.sleep(0)
+    await asyncio.sleep(0)
+    net.off.clear()
+    living._owed.clear()  # its word lost, as across a restart
+    await kitchen.reconcile({"living": {"id": "living", "group": g.summary(living.record)},
+                             "study": {"id": "study", "group": g.summary(study.record)}})
+    assert kitchen.record.ids() == ["kitchen", "study"] and kitchen.record.leader == "kitchen"
+
+
 async def test_the_leader_cannot_be_removed_and_a_member_can(tmp_path):
     net = Net(tmp_path)
     living, kitchen, study = net.add(LIVING), net.add(KITCHEN), net.add(STUDY)
