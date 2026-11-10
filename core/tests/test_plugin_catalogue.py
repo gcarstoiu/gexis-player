@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import tarfile
 
+import aiohttp
 import pytest
 from aiohttp.test_utils import TestClient, TestServer
 
@@ -411,6 +412,88 @@ async def test_a_restore_installs_them_all_then_restarts_once(key, tmp_path):
     again, calls = service(key, tmp_path, published(cat, sign))
     await again.refresh()
     assert await again.restore(missing) == [] and calls["restarted"] == 0
+
+
+class Offline(Session):
+    """No network until `net["up"]`."""
+
+    def __init__(self, served: dict[str, bytes], net: dict):
+        super().__init__(served)
+        self.net = net
+
+    def get(self, url, **kw):
+        if not self.net["up"]:
+            raise aiohttp.ClientConnectionError("no route to host")
+        return super().get(url, **kw)
+
+
+REAL_SLEEP = asyncio.sleep
+
+
+async def _run(svc, restore, monkeypatch, *, until, on_wait=lambda seconds: None) -> list[float]:
+    """`Service.run` with each wait recorded and skipped, until `until(waits)`."""
+    waits = []
+
+    async def skip(seconds):
+        waits.append(seconds)
+        on_wait(seconds)
+        await REAL_SLEEP(0)
+    monkeypatch.setattr(pc.asyncio, "sleep", skip)
+    task = asyncio.ensure_future(svc.run(restore=restore))
+    for _ in range(300):
+        if until(waits):
+            break
+        await REAL_SLEEP(0.01)
+    task.cancel()
+    await asyncio.gather(task, return_exceptions=True)
+    return waits
+
+
+OWED = [{"id": "hello", "version": None, "origin": "catalogue"}]
+
+
+async def test_what_is_owed_is_installed_once_the_network_is_there(key, tmp_path, monkeypatch):
+    """The review of 1.16.1: a plugin a restore or the carry-over owes was
+    tried once per start; with no network 20 s after it, not again until the
+    next start, while its row said it would be installed once the player
+    reaches the catalogue. A new card keeps no catalogue."""
+    keyring, sign = key
+    data = archive()
+    served = {**published(index(entry(listed(data))), sign), listed(data)["url"]: data}
+    net = {"up": False}
+    svc, calls = service(key, tmp_path, served)
+    svc.session = lambda: Offline(served, net)
+    waits = await _run(svc, OWED, monkeypatch, until=lambda waits: calls["installed"] and calls["restarted"],
+                       on_wait=lambda seconds: seconds != 20 and net.update(up=True))
+    assert [pid for pid, _ in calls["installed"]] == ["hello"] and calls["restarted"] == 1
+    assert waits[:2] == [20, pc.RETRY_S]
+
+
+async def test_a_download_that_failed_is_tried_again(key, tmp_path, monkeypatch):
+    keyring, sign = key
+    data = archive()
+    cat = index(entry(listed(data)))
+    pc.accept(cat, sign(cat), keyring=keyring, state=tmp_path)
+    served = {**published(cat, sign), listed(data)["url"]: data}
+    net = {"up": False}
+    svc, calls = service(key, tmp_path, served)
+    svc.session = lambda: Offline(served, net)
+    await _run(svc, OWED, monkeypatch, until=lambda waits: calls["installed"],
+               on_wait=lambda seconds: seconds != 20 and net.update(up=True))
+    assert [pid for pid, _ in calls["installed"]] == ["hello"] and svc.jobs["hello"].phase == "installed"
+
+
+async def test_owed_is_tried_sooner_then_less_often_and_daily_once_in(key, tmp_path, monkeypatch):
+    keyring, sign = key
+    monkeypatch.setattr(pc, "EVERY_S", 300)
+    cat = index(entry(listed(archive())))
+    svc, calls = service(key, tmp_path, published(cat, sign))   # its archive cannot be had
+    waits = await _run(svc, OWED, monkeypatch, until=lambda waits: len(waits) >= 6)
+    assert waits[:6] == [20, pc.RETRY_S, 2 * pc.RETRY_S, 4 * pc.RETRY_S, 300, 300]
+    assert calls["installed"] == []
+    nothing, _ = service(key, tmp_path, published(cat, sign))
+    waits = await _run(nothing, [], monkeypatch, until=lambda waits: len(waits) >= 3)
+    assert waits[:3] == [60, 300, 300], "nothing owed: the daily read"
 
 
 async def test_a_withdrawal_read_during_a_run_reaches_the_row(key, tmp_path):

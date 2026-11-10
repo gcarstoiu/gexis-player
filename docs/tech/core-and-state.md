@@ -555,7 +555,10 @@ pieces in code:
   sha256), and installs it as an upload (`uploads.install`), recording
   `origin: catalogue` in `plugins-known.json` - so a restore installs it
   from the catalogue again: every such plugin downloaded and installed in
-  turn, then the core restarted once. A read that brings a different
+  turn, then the core restarted once. What it could not install yet (no
+  network at the start, a download that stopped) is tried at each read,
+  the reads then coming a minute after a miss and twice as long after each
+  further one, up to the daily read. A read that brings a different
   serial moves the settings revision, so open screens read again. A
   *withdrawn* plugin is marked on its row (its note is worked out with every
   settings read, so a withdrawal read during a run shows at once); a
