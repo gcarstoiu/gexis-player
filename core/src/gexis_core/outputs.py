@@ -83,6 +83,12 @@ group_in_path: Callable[[], str | None] = lambda: None
 #: What CamillaDSP plays to while the equaliser is on: the rest of the
 #: output's chain, after the loopback (ADR-0162 D1, D8).
 EQ_OUT = "gexis_eq_out"
+#: **Where the chain's control ports listen** - CamillaDSP's websocket and
+#: snapserver's JSON-RPC, which take orders from whoever reaches them. A
+#: loopback address of their own, denied to plugins' units (`IPAddressDeny=`;
+#: the review of 1.16.1): 127.0.0.1, where the player's API is open to them,
+#: stays theirs.
+CONTROL_HOST = "127.0.0.2"
 
 #: Friendly names for the board's own outputs, whose ALSA ids are stable
 #: and unhelpful. Anything else is named from what `aplay -l` says it is,

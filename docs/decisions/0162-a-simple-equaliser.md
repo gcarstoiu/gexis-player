@@ -288,3 +288,12 @@ still 58 px tall. The bar's tray and the editor keep theirs, which hold
   off; a change of source with a boost on; the dip at a change.
 - The manual's picture of the volume drawer still shows it before the
   equaliser's row; retaken with the demo library on the preview player.
+
+## Amended 2026-11-10 (the review of 1.16.1)
+
+CamillaDSP's unit is sandboxed: it writes nothing (`ProtectSystem=strict`, a
+private `/tmp`), opens only the sound devices (`DevicePolicy=closed`,
+`DeviceAllow=char-alsa rw`), and keeps no capabilities. Its websocket accepts
+any configuration, and one naming a file as its playback device wrote
+wherever `pi` could. The websocket listens on `127.0.0.2`, denied to plugins
+(ADR-0170 as amended the same day).

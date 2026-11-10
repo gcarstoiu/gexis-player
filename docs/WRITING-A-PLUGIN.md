@@ -83,7 +83,7 @@ Every uploaded plugin runs under `gexis-uploaded-<kind>@<id>.service`:
 | **Can write** | Only its own data folder, `$STATE_DIRECTORY` (also `$GEXIS_PLUGIN_DATA`, and `$HOME`), kept across restarts and versions and deleted with the plugin; software it downloads there can run from there; `$HOME/.cache` is left out of backups. Plus its own `/tmp` |
 | **Can read** | The system, read-only. **Not** `/home` |
 | **Devices** | A **renderer** gets the sound cards (and the basics every program has, like `/dev/null`); a **service** gets no devices beyond those basics. More only as its `permissions` ask, below |
-| **Network** | Open |
+| **Network** | Open, but for `127.0.0.2`, where the player's audio chain takes its orders. `127.0.0.1` is open, the player's own API included |
 | **Processes** | Its own only: other users' processes are out of sight (`ProtectProc=invisible`) |
 | **The player** | The plugin socket, `$GEXIS_PLUGIN_SOCKET` (`/run/gexis/plugins.sock`) |
 | **Limits** | 1 GB of memory (past it, the kernel ends your plugin and it restarts), 1.5 CPU cores, 128 tasks |

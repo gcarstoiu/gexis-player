@@ -88,7 +88,7 @@ enabled = false
 
 [tcp]
 enabled = true
-bind_to_address = 127.0.0.1
+bind_to_address = {outputs.CONTROL_HOST}
 port = {CONTROL_PORT}
 
 [stream]
@@ -176,7 +176,7 @@ class Control:
             if self._writer is not None and not self._writer.is_closing():
                 return self._writer
             reader, writer = await asyncio.wait_for(
-                asyncio.open_connection("127.0.0.1", self._port), timeout)
+                asyncio.open_connection(outputs.CONTROL_HOST, self._port), timeout)
             self._writer = writer
             self._reader = asyncio.create_task(self._read(reader))
             return writer

@@ -1,7 +1,8 @@
 # ADR-0162 D1: CamillaDSP behind the equaliser's loopback. Never enabled: the
 # core starts it while the equaliser is on for the output in use, sends it a
-# configuration for each stream over its websocket (loopback only), and stops
-# it when the equaliser is out of the path.
+# configuration for each stream over its websocket (loopback only, on the
+# address plugins' units are denied: `outputs.CONTROL_HOST`), and stops it
+# when the equaliser is out of the path.
 [Unit]
 Description=Gexis Player equaliser (CamillaDSP)
 Documentation=https://github.com/HEnquist/camilladsp
@@ -9,10 +10,30 @@ After=sound.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/camilladsp --port 1234 --address 127.0.0.1 --wait --loglevel warn
+ExecStart=/usr/bin/camilladsp --port 1234 --address 127.0.0.2 --wait --loglevel warn
 Restart=on-failure
 RestartSec=1
 User=pi
 Group=audio
 # Ahead of the visualiser for the processor: an underrun here is a dropout.
 Nice=-10
+# **It writes nothing and opens only the sound devices** (the review of
+# 1.16.1): its websocket takes any configuration, and one naming a file as
+# its playback device wrote wherever pi could.
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+DevicePolicy=closed
+DeviceAllow=char-alsa rw
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+RestrictSUIDSGID=yes
+LockPersonality=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
