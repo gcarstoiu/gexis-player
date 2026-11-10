@@ -1378,6 +1378,37 @@ network could not be joined; Finding 126).
 software acts on the same thing during it, and prove the observer on a case
 known to work.**
 
+**94. A suite green on the machine it was written on** (2026-11-11, the
+review of 1.16.1). The fix for a backup upload swapped for a link worked
+through the one file opened, and linked it into the share by its descriptor
+(`os.link("/proc/self/fd/N", final)`), so whatever stood under its name by
+then was never linked. Its tests failed first and passed after; the branch's
+full suite passed; it was merged with 53 others, the suite passing after
+each merge. The combined branch's first push failed GitHub's *Core tests*
+with `[Errno 18] Invalid cross-device link` in five upload tests: the
+runners' temporary folders are an overlay, on which the descriptor's link
+names the file on the layer beneath, another device. Found by reading the
+push's checks (Lesson 90). The fix falls back, on that error, to linking by
+name without following a link, and keeps the result only if it is the file
+checked. **Rule:** code that leans on a filesystem's particulars (magic
+links, link counts, renames across folders) is tested on each filesystem it
+can meet, and a push's checks are read before the change is called done.
+
+**95. A rule kept in a comment** (2026-11-11, the review of 1.16.1). A fix
+sandboxed CamillaDSP's unit and moved its websocket to `127.0.0.2`; the core
+moved with it. `packaging/camilladsp/build.sh` says above its version line
+to raise the revision whenever the unit changes, *or apt keeps the old one*
+(Lesson 53); the revision stayed `-1`. The helper's tests and the full suite
+passed, and a review of the diff read the unit and the code, not the version
+line. On an updated player the core would have spoken to `127.0.0.2` while
+the old unit kept CamillaDSP on `127.0.0.1`: no sound with the equaliser on.
+Found before installing the preview, by listing which package carried each
+changed file and its version (go-librespot's unit too, harmlessly). **Rule:**
+a rule that one change needs another lives in a test, not a comment:
+`packaging/revisions.json` records each upstream-versioned package's
+revision and a hash of its own files, and `test_package_revisions.py` fails
+until a changed one's revision is raised.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build

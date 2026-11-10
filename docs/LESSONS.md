@@ -501,6 +501,21 @@ and put the output back at 100 %, and so did his next. A restore is checked
 by reading the level back from the device, and again after the next
 ordinary use of the same path - not by the line that logs the write.
 
+**94. A suite green on the machine it was written on** (2026-11-11, the
+review of 1.16.1). A fix linked an open upload into the share through
+`/proc/self/fd/N`; every local run passed, and the merged branch's first
+push failed on GitHub: its runners' temporary folders are an overlay, where
+that link is on another device. Filesystem tricks are tested where the code
+can run, and the push's checks read before the fix is called done.
+
+**95. A rule kept in a comment** (2026-11-11, the review of 1.16.1).
+CamillaDSP's unit changed under an unchanged `4.1.3-1`, which apt does not
+reinstall - Lesson 53's case, the build script's own comment saying to raise
+the revision - past a helper's tests and a diff review. Found by listing what
+each preview package carries before installing it. A rule that a change
+needs another change belongs in a test (`packaging/revisions.json`), not a
+comment.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target, the check quietly
