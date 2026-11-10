@@ -162,3 +162,30 @@ def test_the_music_folders_space_reads_as_a_phone_shows_it(tmp_path):
     assert lf.size_text(1_500_000_000_000) == "1.5 TB"
     space = lf.music_space(tmp_path / "Music")
     assert space["free"] <= space["total"] and space["text"].count(" free of ") == 1
+
+
+def test_an_empty_music_folder_holds_nothing_to_read(tmp_path):
+    """The review of 1.16.1: a new player's Music folder is empty, Lyrion's
+    scan of it leaves no mark, and the player waited for one for good."""
+    music = tmp_path / "gexis-music"
+    assert lf.holds_music(music) is False, "not there at all"
+    (music / "Playlists").mkdir(parents=True)
+    (music / "Playlists" / "Evening.m3u").write_text("#EXTM3U\n")
+    (music / ".DS_Store").write_bytes(b"\0")
+    (music / "Artist" / ".hidden").mkdir(parents=True)
+    (music / "Artist" / ".hidden" / "a.flac").write_bytes(b"fLaC")
+    assert lf.holds_music(music) is False, "Lyrion's playlists and hidden files are not music to read"
+    (music / "Artist" / "Album").mkdir()
+    (music / "Artist" / "Album" / "01.flac").write_bytes(b"fLaC")
+    assert lf.holds_music(music) is True
+
+
+def test_a_music_folder_that_cannot_be_read_counts_as_holding_music(tmp_path, monkeypatch):
+    music = tmp_path / "gexis-music"
+    music.mkdir()
+
+    def refused(top, onerror=None, **kw):
+        onerror(PermissionError(13, "Permission denied", str(top)))
+        return iter(())
+    monkeypatch.setattr(lf.os, "walk", refused)
+    assert lf.holds_music(music) is True, "as before: waiting for Lyrion to read it"

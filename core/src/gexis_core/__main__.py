@@ -13,6 +13,7 @@ import re
 import shutil
 import subprocess
 import time
+from collections.abc import Callable
 from pathlib import Path
 
 import aiohttp
@@ -457,6 +458,15 @@ def _lyrion_setup_note(marker: Path = LYRION_ADDONS_DONE) -> str | None:
         return None
     return (f"Setting up: Lyrion is installing Material Skin and its add-ons, and restarts once on "
             f"the way. This takes about 3 minutes. Then open http://{device_name.hostname() or 'gexis'}.local:9000")
+
+
+def lyrion_located(value: Callable[[str], object], shares, usb) -> bool:
+    """Whether the Lyrion server has somewhere to read music from: a saved
+    share, the USB folders while switched on, or the Music folder while it
+    holds some (the review of 1.16.1: a new player's, empty, was waited on
+    for a scan that leaves no mark)."""
+    return (bool(shares.points()) or (value("lyrion-server.usb") is True and bool(usb.all()))
+            or (value("lyrion-server.music_folder") is True and lyrion_folders.holds_music(lyrion_folders.MUSIC)))
 
 
 def _lyrion_note(on: bool) -> str | None:
@@ -3946,8 +3956,7 @@ async def main() -> None:
     def _set_lyrion_stage(status) -> None:
         """ADR-0115 decision 28: the stage from what `serverstatus` answered
         (None: no answer), published when it changes."""
-        located = (settings.value("lyrion-server.music_folder") is True or bool(lyrion_shares.points())
-                   or (settings.value("lyrion-server.usb") is True and bool(lyrion_usb.all())))
+        located = lyrion_located(settings.value, lyrion_shares, lyrion_usb)
         addons = ({name: True for name in lyrion_addons.WANTED} if LYRION_ADDONS_DONE.exists()
                   else {name: (LYRION_PLUGINS / name).is_dir() for name in lyrion_addons.WANTED})
         if not LYRION_ADDONS_DONE.exists():

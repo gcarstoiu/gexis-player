@@ -53,3 +53,61 @@ def test_one_add_on_that_will_not_install_does_not_hold_the_rest_back():
     assert got["addons"][2]["name"] == "Radio Now Playing"
     waiting = stage(True, {"MaterialSkin": False, "MusicArtistInfo": True, "RadioNowPlaying": True}, {}, True)
     assert waiting["phase"] == "addons", "Material Skin is the one a person sees"
+
+
+def test_a_new_player_with_an_empty_music_folder_settles(tmp_path, monkeypatch):
+    """The review of 1.16.1: part 2 chose the Lyrion server with its Music
+    folder, empty on a new player; Lyrion's scan of it ended with no songs
+    and left no mark, and Getting ready said *About to read your music* for
+    good, its dialog up. Nothing to read is ready, with no music yet."""
+    from gexis_core import lyrion_folders, personalise, settling
+    from gexis_core.__main__ import lyrion_located
+
+    music = tmp_path / "gexis-music"
+    (music / "Playlists").mkdir(parents=True)
+    monkeypatch.setattr(lyrion_folders, "MUSIC", music)
+
+    class NoShares:
+        def points(self):
+            return []
+
+    class NoDrives:
+        def all(self):
+            return []
+    values = {"visualiser_skins": True, "lyrion-server.enabled": True,
+              "lyrion-server.music_folder": True, "lyrion-server.usb": False}
+    recorded = {}
+
+    class Store:
+        def value(self, key):
+            return values.get(key)
+
+        def set(self, key, value):
+            values[key] = value
+    personalise.apply(dict(values), Store(), [{"row": "lyrion-server.enabled", "component": "lyrion",
+                                               "name": "Lyrion"}],
+                      lambda items: recorded.setdefault("items", items), status={})
+    path = tmp_path / "settling.json"
+    settling.begin(recorded["items"], path, now=0)
+
+    def view(status):
+        after = stage(True, True, status, lyrion_located(values.get, NoShares(), NoDrives()))
+        return after, settling.view(settling.read(path), {"skins": {"state": "installed"},
+                                                          "lyrion": {"state": "installed", "after": after}}, now=60)
+    for status in ({"info total songs": 0, "lastscan": 0}, {}):
+        after, seen = view(status)
+        assert (after["phase"], after["label"], after["first"]) == ("ready", "Ready, no music yet", False)
+        assert seen["phase"] == "ready"
+    (music / "Album").mkdir()
+    (music / "Album" / "01.flac").write_bytes(b"fLaC")
+    after, seen = view({"info total songs": 0})
+    assert after["phase"] == "waiting" and seen["phase"] == "settling", "music to read: Lyrion reads it first"
+
+
+def test_the_stage_is_worked_out_with_where_music_is_to_be_read():
+    import ast
+    from pathlib import Path
+    main = Path(__file__).resolve().parents[1] / "src" / "gexis_core" / "__main__.py"
+    [found] = [ast.unparse(n) for n in ast.walk(ast.parse(main.read_text()))
+               if isinstance(n, ast.FunctionDef) and n.name == "_set_lyrion_stage"]
+    assert "located = lyrion_located(settings.value, lyrion_shares, lyrion_usb)" in found
