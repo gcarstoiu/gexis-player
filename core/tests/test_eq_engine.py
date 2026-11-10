@@ -2,10 +2,11 @@
 CamillaDSP, systemd and ALSA's tools played by fakes."""
 import asyncio
 import json
+from pathlib import Path
 
 import pytest
 
-from gexis_core import eq_engine
+from gexis_core import eq_engine, outputs
 from gexis_core import equaliser as eq
 from gexis_core.eq_engine import EqEngine, Stream, parse_contents
 
@@ -30,6 +31,29 @@ def test_the_stream_is_read_from_device_1():
     assert parse_contents(contents(active="off")) is None
     assert parse_contents(contents(fmt=99)) is None, "a format no renderer sends"
     assert parse_contents("") is None
+
+
+UNIT = Path(__file__).resolve().parents[2] / "image/stage-gexis/11-equaliser/files/gexis-equaliser.service"
+
+
+def test_camilladsp_listens_where_plugins_cannot_reach_and_is_spoken_to_there():
+    """The review of 1.16.1: its websocket takes any configuration, with no
+    credential, from whoever reaches it - a plugin included."""
+    unit = UNIT.read_text()
+    assert f"--port {eq_engine.PORT} --address {outputs.CONTROL_HOST} " in unit
+    assert eq_engine.Camilla().url == f"ws://{outputs.CONTROL_HOST}:{eq_engine.PORT}"
+
+
+def test_camilladsp_can_write_nothing_and_open_only_the_sound_devices():
+    """The review of 1.16.1: a configuration naming a file as its playback
+    device wrote wherever pi could - the kiosk's profile, Spotify's sign-in,
+    the card until it was full."""
+    lines = UNIT.read_text().splitlines()
+    for wanted in ("ProtectSystem=strict", "ProtectHome=yes", "PrivateTmp=yes", "DevicePolicy=closed",
+                   "DeviceAllow=char-alsa rw", "NoNewPrivileges=yes", "CapabilityBoundingSet="):
+        assert wanted in lines, wanted
+    assert not any(l.startswith(("ReadWritePaths", "StateDirectory", "RuntimeDirectory", "LogsDirectory"))
+                   for l in lines)
 
 
 class FakeCamilla:

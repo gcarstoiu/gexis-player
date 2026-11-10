@@ -28,7 +28,9 @@ IDLE = PLAYING_44.replace(": values=on", ": values=off")
 def test_the_server_answers_this_player_only_and_has_a_pipe_per_rate(tmp_path):
     conf = snapcast.server_config(400, run_dir=tmp_path)
     assert "[http]\nenabled = false" in conf, "no web page, no HTTP control"
-    assert "bind_to_address = 127.0.0.1\nport = 1705" in conf, "control on loopback only"
+    # Control on loopback only, and on the address plugins are kept off
+    # (the review of 1.16.1: it takes orders from whoever reaches it).
+    assert f"bind_to_address = {outputs.CONTROL_HOST}\nport = 1705" in conf
     assert "port = 1704" in conf and "buffer = 400" in conf
     for rate in snapcast.RATES:
         assert f"pipe://{tmp_path}/{rate}?name=r{rate}&mode=create&sampleformat={rate}:32:2" in conf
@@ -177,7 +179,7 @@ async def test_the_control_connection_is_kept_and_passes_the_servers_notices_on(
             writer.write((json.dumps({"id": request["id"], "jsonrpc": "2.0",
                                       "result": {"echo": request["method"]}}) + "\r\n").encode())
             await writer.drain()
-    server = await asyncio.start_server(serve, "127.0.0.1", 0)
+    server = await asyncio.start_server(serve, outputs.CONTROL_HOST, 0)
     port = server.sockets[0].getsockname()[1]
     control = snapcast.Control(port=port)
     notices = []

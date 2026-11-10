@@ -6,11 +6,12 @@ from __future__ import annotations
 import io
 import json
 import tarfile
+from pathlib import Path
 
 import pytest
 
 from gexis_core import plugin_permissions as pp
-from gexis_core import plugins, uploads
+from gexis_core import outputs, plugins, uploads
 
 
 def test_a_manifest_asks_only_for_what_the_player_knows():
@@ -112,3 +113,17 @@ def test_the_card_dropin_is_written_once_and_again_when_the_card_moves(tmp_path)
     (asound / "Roon").symlink_to("card6")
     assert pp.apply_card(unit, "Roon", root, asound) == [unit]
     assert "pcmC6D0p" in (root / f"{unit}.d" / pp.CARD_DROPIN).read_text()
+
+
+def test_no_plugin_reaches_the_audio_chain_s_control_ports():
+    """The review of 1.16.1: CamillaDSP's and Snapcast's control ports take
+    orders from whoever reaches them; a plugin rewrote the equaliser's
+    configuration through them. They listen on a loopback address of their
+    own, which plugins' units are denied - 127.0.0.1, where the player's API
+    is open to plugins, stays theirs."""
+    assert outputs.CONTROL_HOST.startswith("127.") and outputs.CONTROL_HOST != "127.0.0.1"
+    files = Path(__file__).resolve().parents[2] / "image/stage-gexis/03-core/files"
+    for unit in ("gexis-uploaded-service@.service", "gexis-uploaded-renderer@.service"):
+        lines = (files / unit).read_text().splitlines()
+        assert f"IPAddressDeny={outputs.CONTROL_HOST}" in lines, unit
+        assert not any(l.startswith("IPAddressAllow") for l in lines), unit

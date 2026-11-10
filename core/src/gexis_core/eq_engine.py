@@ -146,7 +146,7 @@ async def _systemctl(*args: str) -> None:
 class Camilla:
     """CamillaDSP's websocket: one connection, re-made when it drops."""
 
-    def __init__(self, url: str = f"ws://127.0.0.1:{PORT}"):
+    def __init__(self, url: str = f"ws://{outputs.CONTROL_HOST}:{PORT}"):
         self.url = url
         self._session: aiohttp.ClientSession | None = None
         self._ws = None

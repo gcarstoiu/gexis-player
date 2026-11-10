@@ -605,7 +605,12 @@ renderer → pcm.output (meter, peppyalsa; integers only) → hw:Loopback,0,0
   card.
 - **CamillaDSP** (`gexis-camilladsp`, upstream's aarch64 release) runs as
   `gexis-equaliser.service`, started and stopped by the core only, waiting
-  on a websocket at `127.0.0.1:1234`. `eq_engine.py` drives it.
+  on a websocket at `127.0.0.2:1234`. `eq_engine.py` drives it. Its unit
+  can write nothing (`ProtectSystem=strict`, `ProtectHome`, `PrivateTmp`)
+  and opens only the sound devices (`DevicePolicy=closed`). The websocket
+  takes any configuration from whoever reaches it, so it listens on
+  `outputs.CONTROL_HOST`, a loopback address of the chain's own that
+  plugins' units are denied (`IPAddressDeny=`; the review of 1.16.1).
 - **One stream at a time, at its own rate.** Whoever opens the loopback
   first sets its rate, format and channels, and it cannot be held across a
   change of rate (a 96 kHz stream opened while 44.1 kHz was held is given
@@ -809,7 +814,8 @@ leader's snapserver → network (FLAC, 32 bits) → each member's snapclient →
 - **The server** (`gexis-snapserver.service`, Debian's `snapserver`
   0.31.0) runs on every member, so whichever a source starts on leads at
   once. Its configuration is the core's (`/run/gexis/snapserver.conf`): no
-  HTTP, its JSON-RPC on `127.0.0.1:1705` only, the stream port 1704 for the
+  HTTP, its JSON-RPC on `127.0.0.2:1705` only (`outputs.CONTROL_HOST`, out
+  of plugins' reach as CamillaDSP's is), the stream port 1704 for the
   members, and one pipe stream per rate, 44.1 to 384 kHz at 32 bits. Its own
   ALSA source cannot be used: it holds the capture, which fixes the next
   stream's rate, and removing such a stream at runtime ends the server
