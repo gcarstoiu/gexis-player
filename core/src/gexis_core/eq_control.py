@@ -46,18 +46,23 @@ def kind_of(output: outputs.Output) -> str:
     return "DAC"
 
 
-def give_back_for(value, output: outputs.Output | None, headroom: float | None = None) -> volume.GiveBack | None:
+def give_back_for(value, output: outputs.Output | None, headroom: float | None = None,
+                  lift: tuple | None = None) -> volume.GiveBack | None:
     """What the volume gives back on `output` with the store's `value`:
-    the headroom of its bands, at its level control - the card's own or the
-    software stage (`output` as `_with_software` gives it). None with the
-    equaliser off there, no boost, or no control to give it back at.
-    `headroom` is the engine's, mid-change; else the store's."""
+    the headroom of its bands, and of room correction's filters as measured
+    (`lift`, ADR-0177 item 7: `room_correction.Room.lift`), at its level
+    control - the card's own or the software stage (`output` as
+    `_with_software` gives it). None with neither on there, no boost, or no
+    control to give it back at. `headroom` is the engine's, mid-change; else
+    the store's."""
     if output is None or not output.control:
         return None
     here = Equaliser.from_settings(value).output(output.card)
-    if not here.on:
-        return None
-    db = eq.headroom_db(here.gains) if headroom is None else headroom
+    if headroom is None:
+        if not here.on and not lift:
+            return None
+        headroom = eq.headroom_db(here.gains if here.on else eq.FLAT, lift)
+    db = headroom
     if db <= 0:
         return None
     return volume.GiveBack(output.control, db, output.scale or volume.current_scale())

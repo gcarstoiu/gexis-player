@@ -1,6 +1,6 @@
-"""Room correction as the player keeps it and shows it (ADR-0175): the
-switches, the calibration given from the phone, and a run held against the
-rest of the player."""
+"""Room correction as the player keeps it and shows it (ADR-0175, ADR-0177):
+the switches, how far it reaches, the calibration given from the phone, and a
+run held against the rest of the player."""
 import asyncio
 from types import SimpleNamespace
 
@@ -46,6 +46,9 @@ class Rig:
         def hook(name):
             async def call(*args):
                 self.calls.append((name, *args))
+                if name in ("sync", "reopen"):
+                    # The made-up room hears what the stage plays now.
+                    self.audio.stage = self.control.stage(DAC.card)
             return call
 
         async def fast(_s):
@@ -175,7 +178,10 @@ async def test_a_run_kept_switches_it_on():
     assert s["on"] and not s["without"] and s["measured"]["checked"]
     assert s["row"] == "On · measured 5 November"
     assert s["chart"]["after_kind"] == "measured"
-    assert rig.control.stage("sndrpihifiberry")[0], "the cuts on the stage"
+    assert s["reach"] == rc.FULL and s["measured"]["range"] == rc.FULL, "a new measurement starts at the full range"
+    assert s["above"]["L"] and s["measured"]["within"] < s["measured"]["room_within"]
+    play = rig.control.stage("sndrpihifiberry")
+    assert play.cuts[0] and play.above[0] and play.lift, "the corrections on the stage, with their headroom"
     assert rig.control.frozen() is None and not rig.control.in_path("vc4hdmi0")
 
 
@@ -231,7 +237,7 @@ async def test_off_and_on_and_without():
     s = await rig.control.update({"without": True})
     assert s["without"] and s["row"] == "Without · comparing, the cuts at 0 dB"
     assert rig.names() == ["sync"], "compared at once, no reopening"
-    assert rig.control.stage("sndrpihifiberry")[0][0][1] == 0.0
+    assert rig.control.stage("sndrpihifiberry").cuts[0][0][1] == 0.0
     s = await rig.control.update({"on": False})
     assert not s["on"] and not s["without"] and s["row"] == "Off"
     assert rig.names()[-1] == "reopen", "the equaliser off: the stage leaves the path"
@@ -239,6 +245,41 @@ async def test_off_and_on_and_without():
         await rig.control.update({"without": True})
     await rig.control.update({"on": True})
     assert rig.control.snapshot()["row"] == "On · measured 5 November"
+
+
+async def test_the_reach_is_heard_at_once_and_kept_while_off():
+    """ADR-0177: Bass or Full range, a tap heard at once - only the gains,
+    never the path; saved, and kept through off and on."""
+    rig = Rig()
+    await rig.measure()
+    rig.calls.clear()
+    s = await rig.control.update({"reach": rc.BASS})
+    assert s["reach"] == rc.BASS and rig.names() == ["sync"]
+    play = rig.control.stage("sndrpihifiberry")
+    assert all(g == 0.0 for _, g, _ in play.above[0]) and any(g for _, g, _ in play.cuts[0])
+    assert rig.summaries[-1]["reach"] == rc.BASS, "on /state"
+    await rig.control.update({"on": False})
+    with pytest.raises(RoomError, match="Only while"):
+        await rig.control.update({"reach": rc.FULL})
+    s = await rig.control.update({"on": True})
+    assert s["reach"] == rc.BASS, "kept through off and on"
+    with pytest.raises(RoomError, match="bass or full"):
+        await rig.control.update({"reach": "all"})
+
+
+async def test_a_measurement_from_before_is_held_at_the_bass():
+    rig = Rig()
+    await rig.measure()
+    stored = rig.store.rows[rc.KEY]
+    m = stored["outputs"]["sndrpihifiberry"]["measured"]
+    del m["range"]
+    for sp in m["speakers"].values():
+        sp.pop("above", None)
+    s = rig.control.snapshot()
+    assert s["reach"] == rc.BASS and s["measured"]["range"] == rc.BASS and s["above"] == {"L": [], "R": []}
+    assert s["chart"]["range"] == rc.BASS
+    with pytest.raises(RoomError, match="covers the bass only"):
+        await rig.control.update({"reach": rc.FULL})
 
 
 async def test_the_pending_measurement_is_shown_before_it_is_kept():
@@ -254,5 +295,7 @@ async def test_the_pending_measurement_is_shown_before_it_is_kept():
     await rig.run_to("correction")
     s = rig.control.snapshot()
     assert s["pending"]["chart"]["after_kind"] == "expected" and s["pending"]["cuts"]["L"]
+    assert s["pending"]["above"]["L"] and s["pending"]["range"] == rc.FULL
+    assert s["pending"]["within"] is not None and s["pending"]["nothing_to_correct"] is False
     assert s["measured"] is None, "nothing stored before Keep it"
     await rig.control.tap("cancel")

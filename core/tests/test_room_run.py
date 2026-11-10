@@ -1,5 +1,5 @@
-"""A measurement of the room from start to *Keep it* (ADR-0175), on a room
-made up in `room_sim`: the steps, the taps it waits for, the level, the
+"""A measurement of the room from start to *Keep it* (ADR-0175, ADR-0177), on
+a room made up in `room_sim`: the steps, the taps it waits for, the level, the
 sweeps that disagree, the check, Skip, Cancel and the timeout."""
 import asyncio
 
@@ -7,6 +7,7 @@ import pytest
 
 np = pytest.importorskip("numpy")
 
+from gexis_core import equaliser as eq  # noqa: E402
 from gexis_core import room_correction as rc  # noqa: E402
 from gexis_core import room_dsp as rd  # noqa: E402
 from gexis_core import room_run  # noqa: E402
@@ -92,16 +93,63 @@ async def test_a_whole_run_kept():
         rig.run.tap("next")
     state = await rig.until("result")
     assert not state.expected
-    stage = next(c for c in rig.calls if isinstance(c, tuple) and c[1] is not None)
-    assert stage[1] == (pending.cuts("L"), pending.cuts("R")), "checked with the correction on"
+    stage = next(c for c in rig.calls if isinstance(c, tuple) and c[1] is not None)[1]
+    assert stage.cuts == (pending.cuts("L"), pending.cuts("R")), "checked with the correction on"
+    assert stage.above == (pending.above("L"), pending.above("R")) and any(stage.above), "the full range"
+    assert stage.lift is None, "no headroom taken while it measures"
     rig.run.tap("keep")
     await asyncio.wait_for(rig.run._task, 5)
     kept = rig.kept[-1]
-    assert kept.checked and kept.date == "2026-11-05" and kept.worse == ()
+    assert kept.checked and kept.date == "2026-11-05" and kept.worse == () and kept.range == rc.FULL
     assert rig.ended[-1] == {"how": "kept", "why": None} and len({str(e) for e in rig.ended}) == 1
     s = kept.speakers["L"]
     fit = (rd.GRID >= 20) & (rd.GRID <= 250)
     assert np.max((np.array(s.after) - np.array(s.target))[fit]) < 3, "measured after, down near the target"
+    above = (rd.GRID >= 300) & (rd.GRID <= 14000)
+    gap = lambda c: np.max(np.abs(rd.smooth(np.array(c)) - np.array(s.target))[above])  # noqa: E731
+    assert gap(s.after) < gap(s.before) - 1.5, "above the bass too, measured"
+    assert s.within == rd.within_db(np.array(s.after), np.array(s.target)) and s.within < s.room_within
+
+
+async def test_the_check_plays_its_sweeps_lower_by_what_the_corrections_raise():
+    """ADR-0177 item 7: no headroom while a run measures, so the run's level
+    stays the run's; the check's sweeps play lower by the raise instead, and
+    no sweep peaks higher through the stage than the run's."""
+    rig = Rig()
+    await rig.measure_all()
+    run_peaks = list(rig.audio.peaks)
+    rig.run.tap("check")
+    for n in range(1, rc.POSITIONS + 1):
+        await rig.until("move", n, checking=True)
+        rig.audio.position = n
+        rig.run.tap("next")
+    await rig.until("result")
+    raise_db = rig.run._check_db
+    assert 2 <= raise_db <= 3.0
+    check_peaks = rig.audio.peaks[len(run_peaks):]
+    assert max(check_peaks) == pytest.approx(max(run_peaks) * 10 ** (-raise_db / 20), rel=0.01)
+    rig.run.cancel()
+    await rig.run.wait()
+
+
+async def test_bass_is_worked_out_from_the_check():
+    """ADR-0177 item 8: the check plays the full range; what *Bass* gives is
+    the broad corrections taken back out of what it measured."""
+    rig = Rig()
+    await rig.measure_all()
+    rig.run.tap("check")
+    for n in range(1, rc.POSITIONS + 1):
+        await rig.until("move", n, checking=True)
+        rig.audio.position = n
+        rig.run.tap("next")
+    await rig.until("result")
+    s = rig.run.pending.speakers["R"]
+    broad = rd.cuts_db([rd.Broad(f, g, q) for f, g, q in s.above], rd.GRID)
+    assert np.allclose(np.array(s.after_bass), np.array(s.after) - broad)
+    bass = rd.GRID <= 150
+    assert np.max(np.abs(np.array(s.after_bass) - np.array(s.after))[bass]) < 0.5, "the bass the same"
+    rig.run.cancel()
+    await rig.run.wait()
 
 
 async def test_it_never_moves_on_without_the_tap():
@@ -164,8 +212,8 @@ async def test_both_together_is_shown_and_never_corrected():
     rig = Rig()
     await rig.measure_all()
     both = rig.run.pending.speakers[rc.BOTH]
-    assert both.cuts == () and both.after == () and len(both.positions) == rc.POSITIONS
-    assert set(rig.run._cuts()) <= {rig.run.pending.cuts("L"), rig.run.pending.cuts("R")}
+    assert both.cuts == () and both.above == () and both.after == () and len(both.positions) == rc.POSITIONS
+    assert rig.run._cuts().cuts == (rig.run.pending.cuts("L"), rig.run.pending.cuts("R"))
     rig.run.tap("check")
     for n in range(1, rc.POSITIONS + 1):
         await rig.until("move", n, checking=True)
@@ -412,8 +460,8 @@ async def test_ten_minutes_without_a_tap_cancels_it():
     assert room_run.TIMEOUT_S == 600
 
 
-async def test_a_room_near_the_target_has_nothing_to_cut():
-    rig = Rig(Audio(modes=()))
+async def test_a_room_near_the_target_has_nothing_to_correct():
+    rig = Rig(Audio(modes=(), broad=()))
     await rig.run.start()
     await rig.until("place")
     rig.run.tap("start")

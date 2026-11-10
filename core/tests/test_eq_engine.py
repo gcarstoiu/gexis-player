@@ -303,3 +303,28 @@ async def test_hear_it_without_is_patched_at_once(monkeypatch, tmp_path):
         "room_l_2": {"parameters": {"freq": 86.0, "gain": 0.0, "q": 5.7}},
         "room_r_1": {"parameters": {"freq": 87.0, "gain": 0.0, "q": 5.0}}}})]
     assert ("restart", eq_engine.UNIT) not in rig.units
+
+
+async def test_the_rooms_raises_are_lowered_for_and_given_back(monkeypatch, tmp_path):
+    """ADR-0177 item 7: a stream starts lowered by the room's raise, which
+    the volume gives back; under *Bass* or *Without* the same - one headroom
+    whatever plays - and only the slots' gains move."""
+    rig = Rig(monkeypatch, tmp_path, give=True)
+    lift = (((42.0, -4.0, 8.6), (480.0, 3.0, 1.4)), ((87.0, -6.0, 5.0),))
+    full = eq.RoomPlay(cuts=([(42.0, -4.0, 8.6)], [(87.0, -6.0, 5.0)]), above=([(480.0, 3.0, 1.4)], []), lift=lift)
+    await rig.engine.configure("sndrpihifiberry", eq.FLAT, room=full)
+    rig.amixer = contents()
+    await rig.engine._look()
+    assert ("SetFaderVolume", [1, -3.0]) in rig.camilla.sent and ("give", 3.0) in rig.camilla.sent
+    config = json.loads(next(a for n, a in rig.camilla.sent if n == "SetConfigJson"))
+    assert config["filters"]["room_l_9"]["parameters"] == {"type": "Peaking", "freq": 480.0, "gain": 3.0, "q": 1.4}
+    rig.camilla.sent.clear()
+    bass = eq.RoomPlay(cuts=full.cuts, above=([(480.0, 0.0, 1.4)], []), lift=lift)
+    await rig.engine.configure("sndrpihifiberry", eq.FLAT, room=bass)
+    await rig.settle()
+    assert rig.camilla.sent == [("PatchConfig", {"filters": {
+        "room_l_9": {"parameters": {"freq": 480.0, "gain": 0.0, "q": 1.4}}}})], "the gain alone, the headroom kept"
+    rig.camilla.sent.clear()
+    await rig.engine.configure("sndrpihifiberry", eq.FLAT, room=eq.RoomPlay(cuts=full.cuts, above=full.above))
+    await rig.settle()
+    assert ("SetFaderVolume", [1, 0.0]) in rig.camilla.sent, "no lift (a run's check): no headroom"

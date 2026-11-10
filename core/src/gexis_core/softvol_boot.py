@@ -34,7 +34,7 @@ import subprocess
 import time
 from pathlib import Path
 
-from gexis_core import eq_control, outputs, volume
+from gexis_core import eq_control, outputs, room_correction, volume
 
 logger = logging.getLogger("gexis_core.softvol_boot")
 
@@ -150,7 +150,8 @@ def restore(store_path: Path = STORE) -> str:
     if not outputs.create_softvol_control():
         logger.warning("softvol-boot: the software control could not be made")
     want = outputs.SOFTVOL_SCALE.raw(db)
-    given = eq_control.give_back_for(rows.get(eq_control.KEY), outputs.with_software_volume(output))
+    given = eq_control.give_back_for(rows.get(eq_control.KEY), outputs.with_software_volume(output),
+                                     lift=room_correction.Room.from_settings(rows.get(room_correction.KEY)).lift(output.card))
     if given is not None:
         want = volume.to_control(want, given)
     set_raw(outputs.SOFTVOL_CONTROL, want)
@@ -158,7 +159,7 @@ def restore(store_path: Path = STORE) -> str:
     if got != want:
         return f"the software level did not take (wanted {want}, read {got})"
     return f"software volume at {db:.2f} dB on {output.label}" + (
-        f", {given.db:.1f} dB of the equaliser's given back" if given is not None else "")
+        f", {given.db:.1f} dB of the stage's headroom given back" if given is not None else "")
 
 
 def main() -> int:

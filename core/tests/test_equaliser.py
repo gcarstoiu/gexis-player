@@ -164,22 +164,31 @@ def test_camilladsps_hold_is_two_chunks_at_every_rate():
 # ---- ADR-0175: room correction's cuts in the same stage ---------------------------
 
 
-def test_room_slots_are_eight_for_each_speaker_the_rest_idle():
+def test_room_slots_are_fourteen_for_each_speaker_the_rest_idle():
+    """Eight for the bass's cuts, six for the broad corrections above it
+    (ADR-0177 item 6)."""
     slots = eq.room_slots([(42.1, -4.1, 8.6), (86.2, -8.4, 5.7)])
-    assert len(slots) == eq.ROOM_SLOTS
+    assert len(slots) == eq.ROOM_SLOTS + eq.ABOVE_SLOTS == 14
     assert slots[:2] == ((42.1, -4.1, 8.6), (86.2, -8.4, 5.7))
-    assert slots[2:] == (eq.ROOM_IDLE,) * 6
-    assert eq.room_slots([(50, 3, 2)])[0] == (50.0, 0.0, 2.0), "never a boost (decision 2)"
-    assert len(eq.room_slots([(50, -1, 2)] * 12)) == eq.ROOM_SLOTS
-    assert eq.room_stage(None) == ((eq.ROOM_IDLE,) * 8, (eq.ROOM_IDLE,) * 8)
+    assert slots[2:] == (eq.ROOM_IDLE,) * 12
+    assert eq.room_slots([(50, 3, 2)])[0] == (50.0, 0.0, 2.0), "never a boost in the bass (decision 2)"
+    assert len(eq.room_slots([(50, -1, 2)] * 12)) == 14
+    above = eq.room_slots([], [(480, 2.5, 1.4), (1800, -3, 0.8), (6000, 5, 1)])
+    assert above[:8] == (eq.ROOM_IDLE,) * 8
+    assert above[8:11] == ((480.0, 2.5, 1.4), (1800.0, -3.0, 0.8), (6000.0, 3.0, 1.0)), "±3 dB at most above"
+    assert eq.room_stage(None) == ((eq.ROOM_IDLE,) * 14, (eq.ROOM_IDLE,) * 14)
+    play = eq.RoomPlay(([(42, -4, 8.6)], []), ([], [(480, 2, 1.4)]), None)
+    left, right = eq.room_stage(play)
+    assert left[0] == (42.0, -4.0, 8.6) and right[8] == (480.0, 2.0, 1.4)
+    assert eq.room_stage((left, right)) == (left, right), "the slots again are the same slots"
 
 
 def test_room_cuts_follow_the_bands_one_step_for_each_speaker():
     c = eq.camilla_config(48000, "S32_LE", 2, eq.FLAT, "eq_out", room=([(42, -4, 8.6)], [(87, -8, 5.7)]))
     steps = c["pipeline"]
     assert steps[0]["names"][0] == "headroom" and "channels" not in steps[0]
-    assert steps[1] == {"type": "Filter", "channels": [0], "names": [f"room_l_{i}" for i in range(1, 9)]}
-    assert steps[2] == {"type": "Filter", "channels": [1], "names": [f"room_r_{i}" for i in range(1, 9)]}
+    assert steps[1] == {"type": "Filter", "channels": [0], "names": [f"room_l_{i}" for i in range(1, 15)]}
+    assert steps[2] == {"type": "Filter", "channels": [1], "names": [f"room_r_{i}" for i in range(1, 15)]}
     assert c["filters"]["room_l_1"]["parameters"] == {"type": "Peaking", "freq": 42.0, "gain": -4.0, "q": 8.6}
     assert c["filters"]["room_r_1"]["parameters"]["freq"] == 87.0
     assert c["filters"]["room_r_2"]["parameters"]["gain"] == 0.0
@@ -190,7 +199,23 @@ def test_room_slots_are_there_with_nothing_measured():
     switching it is a change of gains."""
     c = eq.camilla_config(44100, "S16_LE", 2, eq.FLAT, "x")
     assert len(c["pipeline"]) == 3
-    assert all(c["filters"][f"room_{s}_{i}"]["parameters"]["gain"] == 0 for s in "lr" for i in range(1, 9))
+    assert all(c["filters"][f"room_{s}_{i}"]["parameters"]["gain"] == 0 for s in "lr" for i in range(1, 15))
+
+
+def test_the_rooms_raises_join_the_headroom():
+    """ADR-0177 item 7: room correction's filters as measured join the curve
+    the signal is lowered by - beside the bands, or alone."""
+    lift = (((42.0, -6.0, 5.0), (480.0, 3.0, 1.4)), ((1800.0, 2.0, 1.0),))
+    assert eq.headroom_db(eq.FLAT, lift) == 3.0
+    assert eq.headroom_db(eq.FLAT, (((42.0, -6.0, 5.0),),)) == 0, "cuts lower nothing"
+    rock = eq.PRESET["rock"].gains
+    assert eq.headroom_db(rock, lift) >= eq.headroom_db(rock)
+    # A raise where the bands cut adds less than where they boost.
+    at_boost = eq.headroom_db(rock, (((31.25, 3.0, 1.0),),))
+    at_cut = eq.headroom_db(rock, (((700.0, 3.0, 1.0),),))
+    assert at_boost > at_cut >= eq.headroom_db(rock)
+    assert eq.room_lift(eq.RoomPlay(lift=lift)) == lift
+    assert eq.room_lift(None) is None and eq.room_lift(([(42, -4, 8)], [])) is None
 
 
 def test_a_mono_stream_has_the_left_speakers_cuts_only():
