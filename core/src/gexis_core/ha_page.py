@@ -86,8 +86,11 @@ def parse(body) -> tuple[str, str, int]:
 
 def _address(url: str) -> str:
     url = url.strip()
-    parts = urlsplit(url)
-    if parts.scheme not in ("http", "https") or not parts.netloc:
+    try:
+        parts = urlsplit(url)
+    except ValueError:  # a bracketed host that does not parse (the review of 1.16.1)
+        parts = None
+    if parts is None or parts.scheme not in ("http", "https") or not parts.netloc:
         raise Refused(400, "url must be an http or https address")
     return url
 
