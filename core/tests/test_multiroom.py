@@ -355,6 +355,45 @@ async def test_undo_keeps_the_music_on_the_leader_until_nothing_holds_the_device
     assert not living.snap.serving and living.room.chain is None
 
 
+@pytest.mark.parametrize("asked", ["kitchen", "living"])
+async def test_undo_while_the_leader_is_paused_waits_until_nothing_holds_the_device(tmp_path, asked):
+    """B3 as amended, the review of 1.16.1: paused, the stream into the
+    loopback has ended and Spotify still holds the device; going alone at
+    the undo restarted it under the paused session."""
+    net = Net(tmp_path)
+    living, kitchen = net.add("living", "Living Room"), net.add("kitchen", "Kitchen")
+    await living.room.join("kitchen")
+    living.play("spotify")
+    living.snap.rate = 44100
+    await net.settle()
+    living.store.set_metadata("spotify", TrackMetadata(transport="paused", source_type="spotify"))
+    living.snap.rate = None
+    await net.settle()
+    rechains = living.rechains
+    await net.players[asked].room.undo()
+    await net.settle()
+    assert living.room.record is None
+    assert living.rechains == rechains and living.snap.serving, "paused, Spotify still holds the device"
+    living.play(None)
+    await net.settle()
+    assert not living.snap.serving and living.room.chain is None and living.rechains == rechains + 1
+
+
+async def test_undo_while_lyrion_plays_on_the_leaders_own_chain_goes_alone_at_once(tmp_path):
+    # B2: Squeezelite keeps its chain going alone, so nothing waits for it.
+    net = Net(tmp_path)
+    living = net.add("living", "Living Room", lyrion=("server-uuid", "player-a"))
+    kitchen = net.add("kitchen", "Kitchen", lyrion=("server-uuid", "player-b"))
+    await net.settle()
+    await living.room.join("kitchen")
+    await net.settle()
+    living.play("lms")
+    await net.settle()
+    await living.room.undo()
+    await net.settle()
+    assert living.room.chain is None and not living.snap.serving
+
+
 async def test_a_source_taking_over_after_an_undo_is_not_restarted(tmp_path):
     """sofapi, 2026-10-28: the group undone while Bluetooth played; a cast
     took over, the stream ended between the two, and going alone restarted

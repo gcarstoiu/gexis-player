@@ -608,11 +608,15 @@ class Multiroom:
         if self._lms is not None and self._lms_on() and self._lms.sync_group[1]:
             self._lms_commanded = time.monotonic()
             await self._lms.unsync()
-        if old.leader == self.group.me and self.snap.rate is not None:
-            # The music stays on the leader: through its own server until the
-            # stream ends, so nothing is cut.
+        active = self._local_active()
+        # Lyrion on this player's own chain is not restarted by it (B2).
+        holds = active is not None and not (active == "lms" and self.chain == outputs.BUT_LYRION)
+        if old.leader == self.group.me and (self.snap.rate is not None or holds):
+            # The music stays on the leader: through its own server until
+            # nothing holds the device, a pause included (B3 as amended; the
+            # review of 1.16.1: a paused source was restarted at the undo).
             self._alone_when_idle = True
-            logger.info("multiroom: the group is undone; playing on alone once this stream ends")
+            logger.info("multiroom: the group is undone; playing on alone once nothing holds the device")
             return
         await self._alone()
 

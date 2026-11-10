@@ -874,10 +874,12 @@ phone only.
   the client pointed at the leader; a joined player's own source stops first
   (C1). The leader moving: the old one's source stops, every client moves.
   Out of a group: the client and server stop and the chain is the player's
-  own again - except on a leader still playing, which plays on through its
-  own server until nothing holds the device (*the music stays on the
-  leader*): going alone rewrites the chain and would restart whoever holds
-  it - a paused source, or one taking over meanwhile.
+  own again - except on a leader whose source still plays or holds the
+  device, paused included, which plays on through its own server until
+  nothing holds it (*the music stays on the leader*): going alone rewrites
+  the chain and would restart whoever holds it - a paused source, or one
+  taking over meanwhile. Lyrion on the leader's own chain (one Lyrion
+  server) is not restarted by it, so that leader goes alone at once.
 - **A source playing on a member leads** (D4, amended 2026-10-28): the
   supervisor's `on_active_change` reaches `Multiroom.on_local_active`, which
   notes the source; `_lead_if_playing`, run on every state change, claims
