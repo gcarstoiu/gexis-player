@@ -190,3 +190,26 @@ async def test_the_control_connection_is_kept_and_passes_the_servers_notices_on(
     await control.close()
     server.close()
     await server.wait_closed()
+
+
+@pytest.mark.parametrize("args", [("192.0.2.1\nLD_PRELOAD=/x.so", "abc"), ("192.0.2.1", "abc\nX=1"),
+                                  ("192.0.2.1", "abc", "*:16:*\nX=1"), ("a b", "abc")])
+def test_the_client_s_environment_takes_no_line_of_anyone_else_s(args):
+    """**The review of 1.16.1** (high): the leader's host was written as it
+    came, and a line break in it was a variable of its own for systemd."""
+    host, host_id, *fmt = args
+    with pytest.raises(ValueError):
+        snapcast.client_env(host, host_id, 0, fmt[0] if fmt else None)
+
+
+def test_a_host_the_client_cannot_take_stops_it_rather_than_writing_it(tmp_path, monkeypatch):
+    ran = []
+    monkeypatch.setattr(snapcast, "CLIENT_ENV", tmp_path / "snapclient.env")
+
+    async def run(*argv, **_):
+        ran.append(argv)
+        return 0, ""
+    snap = snapcast.Snapcast(run=run)
+    asyncio.run(snap.listen("192.0.2.1\nLD_PRELOAD=/x.so", "abc"))
+    assert not (tmp_path / "snapclient.env").exists()
+    assert not any("restart" in argv for argv in ran)
