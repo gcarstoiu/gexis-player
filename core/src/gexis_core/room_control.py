@@ -387,7 +387,12 @@ class RoomControl:
             # are the store's again.
             path_now = self._eq_on(card) or self.state().in_path(card)
             self._run_stage = None
-            if took and not path_now:
+            # **The chain written again whenever it is not the one wanted
+            # now** (the review of 1.16.1): the equaliser switched off during
+            # a run it had brought the stage in for was only synced - while a
+            # run needs the stage nothing reopens - and the chain went on
+            # sending every source into the loopback with CamillaDSP stopped.
+            if (getattr(self, "_path_before", False) or took) != path_now:
                 await self._reopen("room correction measured")
             else:
                 await self._sync()

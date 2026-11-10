@@ -702,8 +702,11 @@ hw:Loopback,1,0 → CamillaDSP (headroom fader, ten bands, then fourteen filters
   ends. It brings the stage into the path if it was not, with the bands flat
   and no filters - the room as it is - sets the output to its maximum
   level (100 % of *Maximum volume*; Fixed stays fixed), and puts both back
-  at the end. Its signals are played into `output`, as a renderer's music is
-  (`aplay`, S32_LE, 48 kHz, one speaker at a time, then both), and recorded from the
+  at the end: the chain is written again whenever it is not the one wanted
+  then, as when the equaliser was switched on or off during the run (which
+  only syncs while a run needs the stage). Its signals are played into
+  `output`, as a renderer's music is (`aplay`, S32_LE, 48 kHz, one speaker
+  at a time, then both), and recorded from the
   UMIK-1 (`arecord` through `plughw`, mono 48 kHz), found by its USB
   identity `2752:0007` and its capture volume set to the full.
 - **The level step**: the quiet room recorded first; then band-limited pink
