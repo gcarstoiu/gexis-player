@@ -352,9 +352,13 @@ Notes: <release page URL>
 written beside and renamed, so a cut mid-write leaves the one before; a file
 that does not read as a number counts as 0 (`seen_serial()`). `publish.sh`
 starts a channel's serial at 1 only when the channel file truly does not
-exist: a fetch that fails any other way (a 5xx, the rate limit, no network),
-or a 404 for a file the `channels` release lists, stops it before anything is
-signed or uploaded. `Format` lets a newer publishing layout tell an older
+exist: a fetch that fails any other way (a 5xx, the rate limit, no network)
+stops it before anything is signed or uploaded, and a 404 is believed only
+when GitHub's API, answering (retried, never taken from a failed call), lists
+no such file in the `channels` release. It also never goes below the serial
+it last gave the channel, kept in `packaging/release/out/serials/<channel>`:
+a file an upload cut short left missing, or an older one GitHub still
+serves, continues from there. `Format` lets a newer publishing layout tell an older
 updater to reflash rather than fail with a 404. A release goes to Testing
 first and keeps its number when promoted to Stable.
 

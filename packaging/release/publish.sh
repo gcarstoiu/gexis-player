@@ -32,6 +32,10 @@ SIGNER='B6643AE345702FBA!'
 BASE="https://github.com/$REPO/releases/download"
 BATCH=10
 PAUSE=80
+# **The serial each channel was last given here** (the review of 1.16.1): a
+# channel never goes below it, whatever GitHub answers - a file an upload cut
+# short left missing, or an older one still served from GitHub's cache.
+SERIALS=packaging/release/out/serials
 
 gh_retry() {  # a gh call that waits out a refusal: 5, 10, 15 ... minutes
 	local tries=0
@@ -86,7 +90,7 @@ channel_file() {  # channel tag -> writes, signs and uploads channels/<channel>
 	# "none yet", and a signed Serial: 1 replaced the real file; every device
 	# that had seen more refused the channel ("serial went down") for good.
 	# A 404 is asked again of the release itself before it is believed.
-	local code previous
+	local code previous releases listed floor
 	code=$(curl -sSL -o "$work/current" -w '%{http_code}' "$BASE/channels/$channel" 2>/dev/null) || code=failed
 	case "$code" in
 	200)
@@ -96,9 +100,18 @@ channel_file() {  # channel tag -> writes, signs and uploads channels/<channel>
 		serial=$((previous + 1))
 		;;
 	404)
-		# Read whole, then searched: `| grep -q` under pipefail can fail on a
-		# match, its writer cut off (BUILD-TRAPS).
-		if exists channels && grep -qxF "$channel" <<<"$(gh_retry gh release view channels --repo "$REPO" --json assets --jq '.assets[].name')"; then
+		# **Believed only when GitHub's API, answering, agrees** (the review
+		# of 1.16.1): `exists` took any failed call for "no channels
+		# release", so one failed call beside a 404 for a file that was there
+		# signed Serial: 1. Each answer here is retried, and a run whose call
+		# keeps failing stops. Read whole, then searched: `| grep -q` under
+		# pipefail can fail on a match, its writer cut off (BUILD-TRAPS).
+		releases=$(gh_retry gh api --paginate "repos/$REPO/releases?per_page=100" --jq '.[].tag_name')
+		listed=""
+		if grep -qxF channels <<<"$releases"; then
+			listed=$(gh_retry gh release view channels --repo "$REPO" --json assets --jq '.assets[].name')
+		fi
+		if grep -qxF "$channel" <<<"$listed"; then
 			echo "ERROR: $BASE/channels/$channel answered 404, but the channels release has it; not moving it" >&2; exit 1
 		fi
 		serial=1
@@ -107,6 +120,12 @@ channel_file() {  # channel tag -> writes, signs and uploads channels/<channel>
 		echo "ERROR: could not read the published $channel file ($code); not moving it - run again later" >&2; exit 1
 		;;
 	esac
+	floor=$(cat "$SERIALS/$channel" 2>/dev/null || echo 0)
+	[[ "$floor" =~ ^[0-9]+$ ]] || { echo "ERROR: $SERIALS/$channel holds no serial; not moving it" >&2; exit 1; }
+	if [ "$serial" -le "$floor" ]; then
+		echo "  $channel: $floor was published from here; using $((floor + 1)), not $serial" >&2
+		serial=$((floor + 1))
+	fi
 	curl -fsSL -o "$work/parts" "$BASE/$tag/parts" || { echo "ERROR: $tag has no parts file" >&2; exit 1; }
 	gpg --batch --verify "$work/parts" 2>/dev/null || { echo "ERROR: $tag's parts file does not verify" >&2; exit 1; }
 	version=$(gpg --batch --decrypt "$work/parts" 2>/dev/null | sed -n 's/^Release: //p')
@@ -125,6 +144,7 @@ EOF
 		|| gh_retry gh release create channels --repo "$REPO" --target main --title "Update channels" \
 			--notes "The signed files devices read to find their channel's release (ADR-0108). Not a release of the player."
 	gh_retry gh release upload channels "$work/$channel" --repo "$REPO" --clobber
+	mkdir -p "$SERIALS" && echo "$serial" > "$SERIALS/$channel"
 	echo "$channel -> $tag (serial $serial): $parts"
 	rm -rf "$work"
 }
