@@ -471,8 +471,11 @@ the name its port line gives) with *Change*, which opens `screen`'s list at
 its makers; *Screen port* is its own row (George, 2026-10-14, after one
 combined tile for a day). `screen_detect.seen()` picks **the port chosen under *Screen port*** when
 something is connected there (ADR-0147 D1: `chosen` in screen.json's
-`current`), else the applied port if a known panel is there, any port a known
-panel is on, the applied port, else the first connected. `screen_detect.ports()` lists both for
+`current`), else the applied port if a known panel is there or it is a DSI
+port (ADR-0158 D3: a panel whose overlay the player writes has no
+fingerprint), any port a known panel is on, the applied port, else the first
+connected; Keep remembers the screen on the applied port
+(`screen_detect.applied_port`). `screen_detect.ports()` lists both for
 *Screen port*: each port's line (`_port_line`) is its option note, a port with
 nothing connected is `unavailable`, and on a one-port board the read-only
 `screen_port_info` shows instead. Choosing applies **the screen on that port**
