@@ -35,6 +35,7 @@ REMOVED = (
     "etc/gexis/shares", "etc/systemd/journald.conf.d/60-gexis-debug-logs.conf",
     # Setup comes back (ADR-0104): no marker, no answers, nothing settling.
     "var/lib/gexis/setup-done", "var/lib/gexis/setup-answers.json", "var/lib/gexis/setup-backup.tgz",
+    "var/lib/gexis/setup-password",
     "var/lib/gexis/settling.json",
     # The screen and the sound card board.
     "etc/gexis/screen.env", "var/lib/gexis/screen.json", "var/lib/gexis/screen-seen.json",

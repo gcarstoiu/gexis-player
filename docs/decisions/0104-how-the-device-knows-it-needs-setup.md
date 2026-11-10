@@ -210,3 +210,13 @@ with no phone on it.
   player under a public domain, as Plex does (a project-run service, and each
   player's home address in public DNS). The install guide and FAQ say to
   choose *Continue to site*, and why it is safe on a home network.
+
+## Amended 2026-11-10 (ADR-0178)
+
+The 2026-10-18 amendment's one password stays for a new player. A player
+already set up, with a screen in use, opens its setup network with a
+password of its own, shown on the panel; over that network it only joins a
+Wi-Fi network: no restore, no other answer taken, and nothing else of the
+player answers there
+([ADR-0178](0178-fixes-from-the-review-of-1-16-1-that-change-what-is-seen.md)
+decision 2, George).

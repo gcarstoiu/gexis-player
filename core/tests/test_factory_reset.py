@@ -16,7 +16,7 @@ def _used_player(root: Path) -> None:
                 "var/lib/gexis-core/backups/gexis-living-room-20261009-120000.tgz",
                 "var/lib/gexis-core/pictures/beach.jpg",
                 "etc/gexis/device-name.env", "etc/machine-info", "var/lib/gexis/setup-done",
-                "var/lib/gexis/screen.json", "etc/gexis/screen.env", "var/lib/gexis/components/plexamp.sha256",
+                "var/lib/gexis/setup-password", "var/lib/gexis/screen.json", "etc/gexis/screen.env", "var/lib/gexis/components/plexamp.sha256",
                 "var/lib/go-librespot/state.json", "var/lib/beszel-agent/fingerprint",
                 "home/pi/.local/share/Plexamp/Settings/x", "home/pi/plexamp/js/index.js",
                 "home/pi/Library/Caches/x", "home/pi/.cache/Plexamp/x",
@@ -42,7 +42,8 @@ def test_a_used_player_goes_back_to_a_freshly_flashed_card(tmp_path):
     _used_player(tmp_path)
     factory_reset.wipe(tmp_path)
     for gone in ("var/lib/gexis-core/settings.db", "etc/gexis/device-name.env",
-                 "etc/machine-info", "var/lib/gexis/setup-done", "var/lib/gexis/screen.json",
+                 "etc/machine-info", "var/lib/gexis/setup-done", "var/lib/gexis/setup-password",
+                 "var/lib/gexis/screen.json",
                  "etc/gexis/screen.env", "var/lib/gexis/components", "var/lib/go-librespot/state.json",
                  "var/lib/beszel-agent", "home/pi/.local/share/Plexamp", "home/pi/plexamp",
                  "home/pi/Library", "home/pi/.cache/Plexamp",

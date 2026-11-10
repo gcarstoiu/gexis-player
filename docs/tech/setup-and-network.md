@@ -133,6 +133,10 @@ stateDiagram-v2
 (`WATCH_S`), only while the state is `online`, setup is finished and no
 `join_new` is under way. Two minutes (`LOST_S`) with no device `online()`
 accepts opens the setup network and runs the same `_hold` retry as at boot.
+A phone using the page holds it for its first ten minutes (`SETUP_ACTIVE_S`);
+after that the retry looks for a saved network whoever is on the page, so a
+player already set up returns home within ten minutes of its network's
+return (ADR-0178 decision 2).
 
 State strings are the ones `SetupNetwork.status()` publishes:
 `starting`, `waiting`, `open`, `joining`, `failed`, `done`, `online`.
@@ -176,11 +180,23 @@ open; the panel's join step counts down (*"Can't join? Channel 6 changes in
 1:42"*). A failed `connection up` is handled as a failed start: the network
 reopens from the quiet channel.
 
-**The password** is `gexis-setup` on every player, with a panel or without
-(`setup_network.PASSWORD`; George, 2026-10-18). Until then a player whose
-screen had been confirmed made one up and showed it on the panel (ADR-0109
-decision 5); a freshly flashed card never had a confirmed screen, so setup
-always used the fixed one anyway.
+**The password** is `gexis-setup` on a new player, with a panel or without
+(`setup_network.PASSWORD`; George, 2026-10-18). A player already set up
+(`needed` false) with a screen in use - connected (`panel_attached`), kept on
+the panel (`screen_apply.confirmed()`), and not headless - makes one up
+(8 characters from `PASSWORD_ALPHABET`), kept in
+`/var/lib/gexis/setup-password` (0600, removed by a factory reset) and shown
+on the panel, which reads it from `/setup/status` on loopback (ADR-0178
+decision 2). Until 2026-10-18 every player with a confirmed screen did so
+(ADR-0109 decision 5).
+
+**Over the setup network a player already set up only joins a Wi-Fi network**
+(ADR-0178 decision 2). A request arriving on `ADDRESS` reaches only
+`SETUP_NETWORK_ROUTES` (the page, `/surface`, `/state`, `/assets/`, setup's
+status, networks, answers and Finish) and is otherwise answered 403;
+`SetupFlow` takes only `NETWORK_ANSWERS` from its answers and refuses a
+backup or a restore. The phone's part 1 is welcome, network, joining, the
+name taken from `/setup/status`'s `host`. A new player is set up there whole.
 
 **No captive portal** (ADR-0031 amendment 2). The panel shows two QR codes in
 sequence: one that joins the network, then one for the page,
@@ -734,6 +750,10 @@ plugin on or off as chosen - explicitly, since a plugin switch defaults to on -
 and records in `/var/lib/gexis/settling.json` what the first start waits for:
 the visualiser's skins (component `skins`) when chosen, and each chosen plugin
 that downloads (its component name). Nothing to wait for writes nothing.
+A player already set up (`needed` false when Finish came: it opened setup
+because its Wi-Fi was gone, ADR-0134) is only given the network: its plugins,
+the Plugins page's record and part 2 are left as they were (the review of
+1.16.1).
 
 The core reads it every 2 s (`_follow_settling`) against `_all_components()`
 and publishes `settling` on `/state` (`settling.view`): each item `waiting`,
