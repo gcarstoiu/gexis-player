@@ -35,10 +35,12 @@
 {/if}
 
 <style>
+  /* Over the tray (12-13), in the drawer's band as the panel's is: under the
+     idle screen (20) and what stands over it (the review of 1.16.1). */
   .scrim {
     position: absolute;
     inset: 0;
-    z-index: 40;
+    z-index: 16;
     background: var(--bg-scrim);
   }
   .confirm {
@@ -46,7 +48,7 @@
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
-    z-index: 41;
+    z-index: 17;
     width: 640px;
     background: var(--bg-panel);
     border: 1px solid var(--mark-line);
