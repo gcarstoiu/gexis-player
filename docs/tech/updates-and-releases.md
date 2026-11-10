@@ -307,7 +307,10 @@ flowchart TD
 own GitHub release: `ours`, `skins`, `rpi` (Raspberry Pi archive's share of the
 tested set) and `debian`. A part's name is `<kind>-<first 12 hex of its
 Packages' sha256>`, which is also its apt suite. Unchanged parts already exist
-on GitHub and are not uploaded again. `packaging/release/reuse.py` goes further:
+on GitHub and are not uploaded again - except the indexes of a part not yet
+signed, which each upload replaces: its `Release` is dated, so one left by a
+tag that was never signed would not carry the next tag's attestation, and
+`--sign` checks that. `packaging/release/reuse.py` goes further:
 a file any published part already holds byte-for-byte is referenced from there
 (`Filename: ../<other-part>/<file>`), so each file is uploaded once, ever. "The
 same bytes" is proven by the holding part's own index, itself proven by its

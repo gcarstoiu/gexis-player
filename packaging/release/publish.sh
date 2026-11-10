@@ -54,9 +54,16 @@ exists() {  # whether a release exists - asked once: "no" is an answer, not a re
 upload_all() {  # release-tag directory: upload what is not there yet, packages first
 	local rel="$1" dir="$2" have f
 	have=$(gh_retry gh release view "$rel" --repo "$REPO" --json assets --jq '.assets[] | select(.state == "uploaded") | .name')
-	local debs=() idx=()
+	local debs=() idx=() signed=no
+	# **A part not yet signed takes this run's indexes** (the review of
+	# 1.16.1): its Release is dated, so never the same bytes twice, and one a
+	# tag left unsigned made every later tag with the same part unsignable -
+	# `--sign` asks for the file's attestation at its own tag.
+	grep -qxF InRelease <<<"$have" && signed=yes
 	for f in "$dir"/*; do
-		grep -qxF "$(basename "$f")" <<<"$have" && continue
+		if grep -qxF "$(basename "$f")" <<<"$have" && { [ "$signed" = yes ] || [[ "$f" == *.deb ]]; }; then
+			continue
+		fi
 		case "$f" in *.deb) debs+=("$f");; *) idx+=("$f");; esac
 	done
 	# The indexes last: a part is not usable until every package it lists is up.

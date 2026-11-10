@@ -226,3 +226,58 @@ def test_a_channel_never_seen_starts_at_one(tmp_path):
     r = gh.run("--promote", "r1.16.1")
     assert r.returncode == 0, r.stderr
     assert gh.serial("stable") == 1
+
+
+# --- a part a tag left unsigned (the review of 1.16.1) ---------------------
+
+PART = "skins-1957b7a7c16f"
+
+
+def _built(gh: FakeGitHub, tag: str, date: str) -> Path:
+    """`release/build.sh --unsigned`'s output for `tag`, as `release.yml`
+    attests it: one part, whose Release each run dates."""
+    dest = gh.tree / "packaging/release/out" / tag
+    repo = dest / "repos" / PART
+    repo.mkdir(parents=True)
+    packages = "Package: gexis-skins-x\n"
+    (repo / "Packages").write_text(packages)
+    (repo / "Release").write_text(f"Date: {date}\nSHA256:\n {hashlib.sha256(packages.encode()).hexdigest()} "
+                                  f"{len(packages)} Packages\n")
+    (repo / "gexis-skins-x_1_all.deb").write_text("deb")
+    (dest / "parts.plain").write_text(f"Release: {tag[1:]}\nParts: {PART}\n")
+    (dest / "build.txt").write_text("Run: 1\n")
+    (dest / "image").mkdir()
+    (dest / "image/gexis-player.img.xz").write_text("image")
+    for path in (repo / "Release", repo / "Packages", dest / "parts.plain", dest / "build.txt"):
+        gh.attest(path, tag)
+    return dest
+
+
+def test_a_part_a_tag_left_unsigned_takes_the_next_tag_s_indexes(tmp_path):
+    """1.17.0 uploaded, never signed (re-cut as 1.17.1), the same part in
+    both: its Release stayed 1.17.0's, and signing 1.17.1 stopped at "no
+    attestation from release.yml at v1.17.1"."""
+    gh = FakeGitHub(tmp_path)
+    _built(gh, "r1.17.0", "Mon, 01 Dec 2026 10:00:00 UTC")
+    assert gh.run("--upload", "r1.17.0").returncode == 0
+    shutil.rmtree(gh.tree / "packaging/release/out")
+    dest = _built(gh, "r1.17.1", "Tue, 02 Dec 2026 10:00:00 UTC")
+    r = gh.run("--upload", "r1.17.1")
+    assert r.returncode == 0, r.stderr
+    assert (gh.web / PART / "Release").read_text() == (dest / "repos" / PART / "Release").read_text()
+    r = gh.run("--sign", "r1.17.1")
+    assert r.returncode == 0, r.stderr
+    assert (gh.web / PART / "InRelease").read_text().startswith("SIGNED\nDate: Tue")
+
+
+def test_a_part_signed_before_keeps_its_indexes(tmp_path):
+    gh = FakeGitHub(tmp_path)
+    for name, text in (("Release", "Date: before\n"), ("InRelease", "SIGNED\nDate: before\n"),
+                       ("Release.gpg", "SIG\n"), ("Packages", "Package: gexis-skins-x\n"),
+                       ("gexis-skins-x_1_all.deb", "deb")):
+        gh.put(PART, name, text)
+    _built(gh, "r1.17.1", "Tue, 02 Dec 2026 10:00:00 UTC")
+    r = gh.run("--upload", "r1.17.1")
+    assert r.returncode == 0, r.stderr
+    assert (gh.web / PART / "Release").read_text() == "Date: before\n"
+    assert f"release upload {PART}" not in (tmp_path / "calls.log").read_text()
