@@ -23,7 +23,9 @@ traps below are a local build's, kept for when GitHub is unavailable.
 - **Signing on R2D2** needs `GEXIS_RELEASE_GNUPGHOME=~/projects/gexis-release-key`,
   `TMPDIR` in `~/projects/scratch/` (promotion downloads the 1.1 GB image), and
   `packaging/release/out` linked to `~/projects/gexis-release-out` in the
-  checkout it runs from (git-ignored; remove the link after). It refuses a
+  checkout it runs from (git-ignored; remove the link after); its
+  `serials/` holds each channel's last serial, which a channel never goes
+  below. It refuses a
   file without an attestation from `release.yml` at the tag.
 - **A download the build needs is listed in `packaging/inputs.tsv`** with its
   licence, or the release run fails; `packaging/inputs.sh publish` (with
