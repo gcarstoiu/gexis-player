@@ -1541,9 +1541,15 @@ def test_an_upload_moved_aside_while_it_is_checked_is_still_the_one_added(tmp_pa
         return listed(directory)
     monkeypatch.setattr(backups, "available", swapped)
 
-    added = backups.add_upload(part, None, 5, share)
-    kept = share / added["name"]
-    assert kept.read_bytes() == body and kept.stat().st_ino == (tmp_path / "aside").stat().st_ino
+    try:
+        added = backups.add_upload(part, None, 5, share)
+    except backups.Refused:
+        # Where the descriptor cannot be linked (an overlay: GitHub's
+        # runners), only the name can be, and it is not the file checked.
+        assert [p.name for p in share.iterdir() if not p.name.startswith(".")] == []
+    else:
+        kept = share / added["name"]
+        assert kept.read_bytes() == body and kept.stat().st_ino == (tmp_path / "aside").stat().st_ino
     assert secret.stat().st_mode & 0o7777 == 0o600
 
 
