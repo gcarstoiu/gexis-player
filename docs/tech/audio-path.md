@@ -610,7 +610,9 @@ renderer → pcm.output (meter, peppyalsa; integers only) → hw:Loopback,0,0
   and opens only the sound devices (`DevicePolicy=closed`). The websocket
   takes any configuration from whoever reaches it, so it listens on
   `outputs.CONTROL_HOST`, a loopback address of the chain's own that
-  plugins' units are denied (`IPAddressDeny=`; the review of 1.16.1).
+  plugins' units are denied (`IPAddressDeny=`; the review of 1.16.1), and
+  so are the panel's browser, the Lyrion server, Roon Bridge, go-librespot,
+  Squeezelite and Shairport Sync.
 - **One stream at a time, at its own rate.** Whoever opens the loopback
   first sets its rate, format and channels, and it cannot be held across a
   change of rate (a 96 kHz stream opened while 44.1 kHz was held is given

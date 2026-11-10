@@ -68,6 +68,9 @@ TimeoutStopSec=10
 Restart=on-failure
 RestartSec=2
 User=pi
+# The audio chain's control ports take orders from anyone; this has no
+# business there (the review of 1.16.1, as for plugins).
+IPAddressDeny=127.0.0.2
 Group=audio
 
 [Install]
