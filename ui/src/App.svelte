@@ -391,7 +391,9 @@
   //: phone.** Applied once per ask, as the idle ask is, and attention like a
   //: touch. Home is the library's root (a fresh one - wherever the library
   //: had got to), or the root screen with LMS off; the others close what
-  //: covers Now Playing, and Lyrics and Track set its tab.
+  //: covers Now Playing, and Lyrics and Track set its tab. Each closes the
+  //: equaliser's editor and room correction's page as it closes Settings
+  //: (the review of 1.16.1); a run's own screen is not theirs to close.
   let appliedViewAsk = null;
   let libraryHome = $state(0);
   $effect(() => {
@@ -404,6 +406,8 @@
       askedIdle = false;
       touches += 1;
       settingsOpen = false;
+      eqOpen = false;
+      roomOpen = false;
       closeVolume();
       // An artist or album asked for earlier is not asked for again: the
       // library remounts on `libraryHome` with these as its props, and an
@@ -432,7 +436,7 @@
   //: 2026-10-06).
   let reportedNow = null;
   $effect(() => {
-    const showing = !!$active && !libraryOpen && !settingsOpen && !waitingOpen && !idle;
+    const showing = !!$active && !libraryOpen && !settingsOpen && !eqOpen && !roomOpen && !waitingOpen && !idle;
     if (surface !== 'panel' || showing === reportedNow) return;
     reportedNow = showing;
     reportShown({ now: showing }).catch(() => (reportedNow = null));
@@ -443,7 +447,7 @@
   //: nothing over it, its lyrics on.
   $effect(() => {
     const showing =
-      $lyricsShown && !!$active && !libraryOpen && !settingsOpen && !idle && !$panel.visualiser;
+      $lyricsShown && !!$active && !libraryOpen && !settingsOpen && !eqOpen && !roomOpen && !idle && !$panel.visualiser;
     // The state this reads arrives every second; the core hears a change.
     if (surface !== 'panel' || showing === reportedLyrics) return;
     reportedLyrics = showing;
