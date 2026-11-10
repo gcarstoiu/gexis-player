@@ -135,6 +135,15 @@ def check(archive: bytes, *, ours: set[str], installed: dict[str, str]) -> Check
             raise Refused(f"plugin.json: {exc}") from None
         if parsed.id in ours:
             raise Refused(f"{parsed.id!r} belongs to the player")
+        # **Rows Settings would leave out are refused here** (ADR-0178
+        # decision 4): installed, the plugin came up with no switch and no
+        # settings, and nothing said why.
+        from gexis_core.settings_registry import Settings, load_registry
+
+        problems: dict[str, str] = {}
+        Settings.with_plugins(load_registry(), [parsed], problems=problems)
+        if parsed.id in problems:
+            raise Refused(f"plugin.json: {problems[parsed.id]}")
         if installed.get(parsed.id) == raw["version"]:
             raise Refused(f"version {raw['version']} of {parsed.id} is already installed")
         run = PurePosixPath(raw["run"])
