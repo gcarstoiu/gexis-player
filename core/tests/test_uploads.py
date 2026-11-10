@@ -214,3 +214,27 @@ def test_what_a_plugin_downloads_into_its_folder_can_run():
         lines = (files / unit).read_text().splitlines()
         assert "StateDirectory=gexis-uploaded/%i" in lines
         assert "ExecPaths=/var/lib/private/gexis-uploaded/%i" in lines, unit
+
+
+@pytest.mark.parametrize("rows, reason", [
+    ([{"key": "interval", "type": "number", "label": "Every (s)"}], "a number row needs min and max"),
+    ([{"key": "mode", "type": "choice", "label": "Mode"}], "a choice row needs options"),
+    ([{"key": "a", "type": "text", "label": "A"}, {"key": "a", "type": "text", "label": "A"}], "duplicate setting key"),
+    ([{"key": "a", "type": "text", "label": "A", "onlyWhen": ["nowhere", True]}], "onlyWhen names unknown setting"),
+])
+def test_settings_the_registry_would_refuse_are_refused_at_upload(tmp_path, rows, reason):
+    """ADR-0178 decision 4: a package whose rows Settings would leave out -
+    and once stopped the core with - is refused before anything is written,
+    with the registry's reason."""
+    m = {"id": "radiofoo", "name": "Radio Foo", "kind": "renderer", "version": "1.0.0", "run": "bin/radiofoo",
+         "settings": rows}
+    with pytest.raises(uploads.Refused, match=f"plugin.json: .*{reason}"):
+        uploads.install(package(m), ours={"lms"}, root=tmp_path)
+    assert not (tmp_path / "radiofoo").exists(), "nothing written"
+
+
+def test_usable_settings_still_install(tmp_path):
+    m = {"id": "radiofoo", "name": "Radio Foo", "kind": "renderer", "version": "1.0.0", "run": "bin/radiofoo",
+         "settings": [{"key": "interval", "type": "number", "label": "Every (s)", "min": 1, "max": 60},
+                      {"key": "enabled", "type": "toggle", "label": "On"}]}
+    assert uploads.install(package(m), ours={"lms"}, root=tmp_path).id == "radiofoo"
