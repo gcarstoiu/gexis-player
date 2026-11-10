@@ -499,7 +499,8 @@ no connector). The firmware brings up the Touch Display's overlay by itself
 `dtoverlay=` lines are written into a block of our own at the end of
 `/boot/firmware/config.txt`, under `[all]`, between `screen_apply.CONFIG_BEGIN`
 and `CONFIG_END`, durably as `cmdline.txt` is, and nothing else in the file
-is changed. The overlays are part of `picture()`'s boot part, so a change
+is changed; a factory reset takes the block out with the screen's state.
+The overlays are part of `picture()`'s boot part, so a change
 restarts, asks Keep, and a go-back takes the block out. The list offered
 (`screens.offered()`, D6) leaves out a four-lane model (`Screen.lanes`, from
 its overlay's `…_4lane` parameter) on a board whose connector carries two:

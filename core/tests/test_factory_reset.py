@@ -188,3 +188,43 @@ def test_the_images_copy_is_where_gexis_core_installs_it():
     """`DEFAULT_CORE_TOML` is the package's path, not a guess."""
     build = (Path(__file__).resolve().parents[2] / "packaging/core/build.sh").read_text()
     assert f'"$STAGE/{factory_reset.DEFAULT_CORE_TOML}"' in build
+
+
+def _with_a_dsi_panel(root: Path) -> dict:
+    """`_used_player` whose screen is the Waveshare 10.1" DSI-TOUCH-A, kept:
+    its overlay in config.txt's screen block, beside the board's."""
+    from gexis_core import screen_apply
+    _used_player(root)
+    files = {"state": root / "var/lib/gexis/screen.json", "env": root / "etc/gexis/screen.env",
+             "cmdline": root / "boot/firmware/cmdline.txt", "config": root / "boot/firmware/config.txt"}
+    screen_apply.choose(screen_apply.Applied("waveshare-dsi-v2-10.1a", 0, "DSI-1"), **files, now=1)
+    screen_apply.keep(state=files["state"])
+    assert screen_apply.overlays_in(files["config"].read_text()) == ("vc4-kms-dsi-waveshare-panel-v2,10_1_inch_a",)
+    return files
+
+
+def test_the_reset_takes_the_screen_s_block_out_of_config_txt(tmp_path, monkeypatch):
+    """The review of 1.16.1: the screen's state files went, its block in
+    config.txt (ADR-0158, newer than the reset) stayed - not a freshly
+    flashed card (ADR-0132 §3: the screen goes)."""
+    from gexis_core import screen_apply, screen_detect
+    monkeypatch.setattr(screen_detect, "ports", lambda *a, **k: [])
+    files = _with_a_dsi_panel(tmp_path)
+    factory_reset.wipe(tmp_path)
+    config = files["config"].read_text()
+    assert screen_apply.overlays_in(config) == () and screen_apply.CONFIG_BEGIN not in config
+    assert "hifiberry" not in config and config == "dtparam=audio=on\n"
+
+
+def test_the_reset_s_own_boot_lays_the_panel_out_without_a_restart(tmp_path, monkeypatch):
+    """The panel is up at this boot - the firmware read the block before the
+    wipe - and nothing is chosen, so setup lays it out from its own mode.
+    With the block left, that removed it and restarted, and setup ran with
+    the panel dark (the review of 1.16.1)."""
+    from gexis_core import screen_apply, screen_detect, screen_watch
+    monkeypatch.setattr(screen_detect, "ports", lambda *a, **k: [])
+    files = _with_a_dsi_panel(tmp_path)
+    factory_reset.wipe(tmp_path)
+    panel = screen_detect.Seen(True, "DSI-1", preferred=(800, 1280), panel=("goodix",))
+    assert screen_watch.during_setup(panel, path=tmp_path / "seen.json", files=files) == "switched"
+    assert screen_apply.read_state(files["state"])["current"]["connector"] == "DSI-1"

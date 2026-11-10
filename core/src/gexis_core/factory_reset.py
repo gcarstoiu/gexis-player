@@ -215,6 +215,11 @@ def wipe(root: Path = Path("/"), run=subprocess.run) -> list[str]:
             return False
         before = path.read_text()
         after = board_apply.with_block(before, None)
+        if screen_apply.overlays_in(after):
+            # **The screen's block goes too** (ADR-0158; the review of
+            # 1.16.1): left, the reset's own boot found the panel up with no
+            # screen chosen, laid it out without the block, and restarted.
+            after = screen_apply.with_overlays(after, ())
         if after != before:
             path.write_text(after)
             return True
