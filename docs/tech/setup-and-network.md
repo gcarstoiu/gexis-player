@@ -502,7 +502,8 @@ and `CONFIG_END`, durably as `cmdline.txt` is, and nothing else in the file
 is changed. The overlays are part of `picture()`'s boot part, so a change
 restarts, asks Keep, and a go-back takes the block out. The list offered
 (`screens.offered()`, D6) leaves out a four-lane model (`Screen.lanes`, from
-its overlay's `…_4lane` parameter) on a board whose connector carries two:
+its overlay's `…_4lane` parameter, or an overlay four-lane by itself,
+`screens.FOUR_LANE_OVERLAYS`: the JDI 7") on a board whose connector carries two:
 `screens.board_lanes()` reads `/proc/device-tree/model`, four on a Pi 5 or a
 Compute Module, two on any other Pi, every model off a Pi. Display standby on a
 DSI connector turns `bl_power` off and leaves the output on
