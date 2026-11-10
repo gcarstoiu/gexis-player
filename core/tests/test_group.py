@@ -249,3 +249,21 @@ async def test_a_member_is_told_before_the_player_asked_has_done_its_own_part(tm
     assert living.record is None, "told at once"
     slow.set()
     await kitchen.settled()
+
+
+@pytest.mark.parametrize("host", ["192.0.2.1\nLD_PRELOAD=/var/lib/gexis-core/pictures/x.so",
+                                  "a b", "x.local/path?", "host\r", "-o", "h\x00"])
+def test_a_member_s_host_is_a_name_or_an_address_and_nothing_else(host):
+    """**The review of 1.16.1** (high): a record's host went into the
+    snapclient's environment file as written, and a line break in it set
+    `LD_PRELOAD` for a unit running as `pi`. A record naming one is not a
+    group record."""
+    with pytest.raises(ValueError):
+        g.Member.from_json({"id": "x", "host": host})
+    with pytest.raises(ValueError):
+        g.Record.from_json({"id": "r", "revision": 1, "leader": "x", "members": [{"id": "x", "host": host}]})
+
+
+@pytest.mark.parametrize("host", ["192.0.2.1", "sofapi.local", "living-room.local", "fe80::1", "[fe80::1%wlan0]", ""])
+def test_names_and_addresses_still_make_members(host):
+    assert g.Member.from_json({"id": "x", "host": host}).host == host

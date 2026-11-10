@@ -24,6 +24,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import time
 import uuid
 from dataclasses import dataclass, field, replace
@@ -39,6 +40,11 @@ PATH = Path("/var/lib/gexis/group.json")
 #: without it cannot be joined (it is older than multiroom).
 PROTOCOL = 1
 PUSH_TIMEOUT_S = 3.0
+#: **A member's host: a name or an address, nothing else** (the review of
+#: 1.16.1). It goes into URLs and into the snapclient's environment file,
+#: and a record's host with a line break in it set `LD_PRELOAD` for a unit
+#: running as `pi`.
+HOST = re.compile(r"[A-Za-z0-9][A-Za-z0-9.-]{0,252}|\[?[0-9A-Fa-f:.]+(%[A-Za-z0-9_.-]+)?\]?")
 
 
 @dataclass(frozen=True)
@@ -53,8 +59,11 @@ class Member:
 
     @classmethod
     def from_json(cls, data: dict) -> "Member":
+        host = str(data.get("host") or "")
+        if host and not HOST.fullmatch(host):
+            raise ValueError(f"not a host: {host!r}")
         return cls(id=str(data["id"]), name=str(data.get("name") or data["id"]),
-                   host=str(data.get("host") or ""), port=int(data.get("port") or 8090))
+                   host=host, port=int(data.get("port") or 8090))
 
 
 @dataclass(frozen=True)

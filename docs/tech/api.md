@@ -124,7 +124,9 @@ the *All* slider (`from`, optional: the members' levels when the drag
 began); `POST /group/mute {muted}`; `POST /group/members/{id}/volume` and
 `/mute` set one member's own. A refusal is a 409 with the sentence to show.
 `POST /group/record` is how members keep one record: for players, not for
-clients.
+clients. A record whose member's `host` is not a name or an address
+(`group.HOST`) is refused with a 400; the client's environment takes only
+plain words (`snapcast.client_env`).
 
 ## Home Assistant
 
