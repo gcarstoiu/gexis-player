@@ -198,6 +198,7 @@ been written properly. **0098 has no record either.**
 | [0175](0175-room-correction-for-the-bass.md) | Room correction for the bass | Built 2026-11-06, in 1.14.0; accepted 2026-11-03 (Phase 29, George: decisions 1-6): cuts only below 250 Hz towards a gentle bass rise, in the equaliser's stage; three positions (2026-11-05, over five), most of them deciding a cut, measured again after; 60 dB; UMIK-1, its calibration file given from the phone |
 | [0176](0176-a-page-from-home-assistant-on-the-screen.md) | A page from Home Assistant on the screen | Accepted 2026-11-07 (Phase 35, George): over everything for a while, any touch or key closes it, a limit, a switch per player; amended the same day: one page kept loaded and hidden, from Home Assistant |
 | [0177](0177-room-correction-for-the-full-range.md) | Room correction for the full range | Accepted 2026-11-10 (Phase 30, George: decisions 1-4 as recommended): up to six broad filters, ±3 dB, 250 Hz-14 kHz, towards the speaker's own slope; Bass or Full range at one level |
+| [0178](0178-fixes-from-the-review-of-1-16-1-that-change-what-is-seen.md) | Fixes from the review of 1.16.1 that change what is seen | Accepted 2026-11-10 (George, as recommended): own pages only for browsers; a set-up player's setup network only gives a network; no dashboard pop-ups; bad plugin rows refused at upload |
 
 ## Cross-cutting rules
 
