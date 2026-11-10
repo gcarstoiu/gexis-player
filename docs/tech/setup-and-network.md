@@ -478,7 +478,9 @@ nothing connected is `unavailable`, and on a one-port board the read-only
 `screen_port_info` shows instead. Choosing applies **the screen on that port**
 (`screen_watch.target`: the panel recognised there, else the device by its own
 mode, `screens.fitted` holding a 16:9 screen larger than 1080p to
-`other-1920x1080-capped`, which carries a kernel `video=` mode) marked
+`other-1920x1080-capped`, which carries a kernel `video=` mode) - or the
+screen kept on that port last (`kept_on` in screen.json), its model and
+rotation, while it is still the one there (`screen_watch.for_port`) - marked
 `chosen`, through `screen_apply.choose` (restart, Keep), dropping its stored
 value so the row reads the port in use. `gexis-kiosk-start` then pins the
 window to the screen's port whenever both are connected.

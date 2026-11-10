@@ -2663,7 +2663,8 @@ async def main() -> None:
         them**, and since ADR-0147 **the choice wins** (George, 2026-10-13:
         the LG TV chosen on HDMI 2 went back to the panel at every start).
         The screen applied is the one on that port - the panel recognised
-        there, else the device by its own mode, a TV held to 1920 x 1080 -
+        there, else the device by its own mode, a TV held to 1920 x 1080; the
+        screen kept there last as it was, while it is still the one there -
         marked as chosen, so the start honours it over a known panel on the
         other port. A change of picture restarts and asks Keep; on a screen
         without touch, the phone answers (ADR-0147 D3). The stored setting
@@ -2682,10 +2683,13 @@ async def main() -> None:
             # A TV, run at 1080p from its own list and held there by the
             # kernel's mode, whatever a receiver says at a start (ADR-0147).
             model = screens.other(*size, capped=True)
+        # The panel's own model and rotation go with it back to its port:
+        # the screen in use there, else the one kept there last (the review
+        # of 1.16.1: back from a TV, the class at 0°).
+        kept = was if was is not None and was.connector == connector else screen_apply.kept_on(connector)
+        model, rotation = screen_watch.for_port(port, model, kept)
         if was is not None and was.connector == connector and was.screen_id == model.id and was.chosen:
             return
-        # The panel's own rotation goes with it back to its port.
-        rotation = was.rotation if was is not None and was.screen_id == model.id else 0
         in_setup = _setup_running(state_store.state.setup)
         applied = screen_apply.Applied(model.id, rotation, connector, chosen=True)
         asks = screen_apply.choose(applied, after_setup=in_setup)
