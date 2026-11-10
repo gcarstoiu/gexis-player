@@ -218,7 +218,8 @@ needed) any associated phone holds it, as it has nothing saved to go back to.
 On a configured one a phone holds it only while the setup page is in use
 (George, 2026-10-12): a request to `/` or a `/setup/...` route from a phone in
 the last `SETUP_ACTIVE_S` (600 s) - noted by the `_note_setup_use`
-middleware in `wsserver.py`, the panel's own loopback requests excluded - or
+middleware in `wsserver.py`, every loopback request excluded (the panel's,
+its token or not, and the plugins') - or
 when the retry first found a phone on the network less than `SETUP_ACTIVE_S`
 ago (`_phone_since`, cleared when a retry finds none, and with the page's
 last use each time the setup network is held again - Finding 125 #19 - so a
