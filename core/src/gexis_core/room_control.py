@@ -342,14 +342,15 @@ class RoomControl:
             if self.run is not None:
                 self.run.cancel()
             return self.snapshot()
-        if what == "done":
+        if what == "done" and not self.running():
             # The phone has shown how it ended; nothing left to show.
             self._ended = None
             self.publish()
             return self.snapshot()
         if not self.running():
             raise RoomError("The room is not being measured.")
-        if what not in ("start", "next", "check", "skip", "keep", "discard", "again"):
+        # `done` while it runs: *Nothing to correct*'s button, which ends it.
+        if what not in ("start", "next", "check", "skip", "keep", "discard", "again", "done"):
             raise RoomError(f"Unknown: {what}.")
         self.run.tap(what)
         await asyncio.sleep(0)
