@@ -8754,3 +8754,20 @@ the same day. The integration's
 0.6.0 released the same day (its `main` fast-forwarded to `ha-page`, tag and
 release; notes approved by George); the Home Assistant session sent the
 final names and fields.
+
+## 2026-11-10 — the Testing block for 1.16.0 and the Stable block for 1.13.0, superseded by 1.16.1 on both (moved verbatim)
+
+**Testing: 1.16.0** (2026-11-10, serial 68): room correction for the full
+range (Phase 30, ADR-0177). Built by run 42852145429 (`verify-image.sh` all
+151 checks passed, as 1.15.0); signed on R2D2; the channel (a good
+signature, serial 68), the notes, the history and the parts read back good.
+Notes approved by George; **release PR #98 for George to merge**. The tag
+`v1.16.0` is lightweight (earlier ones annotated); `build.sh` reads tags
+with `--tags`, so the versions are right.
+
+**Stable: 1.13.0** (promoted by George 2026-11-06, serial 14; on Testing
+since 2026-11-03, serial 65): Plexamp and Beszel from the catalogue (Phase
+28), on 1.12.1 (releases built on GitHub). Read back with a good signature;
+the image downloaded through README's link, its checksum and signature good.
+README names 1.13.0 (on `main` with #96). The two measurements are
+still owed (to-dos `ph22-measure`, `eq-measure`).

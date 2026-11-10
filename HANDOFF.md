@@ -20,20 +20,17 @@ and the ideas as Must / Should / Could. It follows `docs/DEVELOPMENT.md`'s
 phases; change it when a phase opens, closes or moves, and show George first. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Testing: 1.16.0** (2026-11-10, serial 68): room correction for the full
-range (Phase 30, ADR-0177). Built by run 42852145429 (`verify-image.sh` all
-151 checks passed, as 1.15.0); signed on R2D2; the channel (a good
-signature, serial 68), the notes, the history and the parts read back good.
-Notes approved by George; **release PR #98 for George to merge**. The tag
-`v1.16.0` is lightweight (earlier ones annotated); `build.sh` reads tags
-with `--tags`, so the versions are right.
-
-**Stable: 1.13.0** (promoted by George 2026-11-06, serial 14; on Testing
-since 2026-11-03, serial 65): Plexamp and Beszel from the catalogue (Phase
-28), on 1.12.1 (releases built on GitHub). Read back with a good signature;
-the image downloaded through README's link, its checksum and signature good.
-README names 1.13.0 (on `main` with #96). The two measurements are
-still owed (to-dos `ph22-measure`, `eq-measure`).
+**Stable and Testing: 1.16.1** (2026-11-10; Stable serial 15, Testing
+serial 69): room correction's Full range marked *Limited testing* (George),
+on 1.16.0 (room correction for the full range, Phase 30), with 1.14.0 (Phase
+29) and 1.15.0 (Phase 35) - Stable came from 1.13.0. Built by run
+42864483931 (`verify-image.sh` all 151 checks passed); signed on R2D2; both
+channels read back with a good signature; `releases/latest` is r1.16.1 and
+its image (1.1 GB) downloads through README's link, matching its checksum
+and signature. Notes approved by George; 1.16.0's PR #98 merged by George;
+**1.16.1's PR #99 for George to merge** (README names 1.16.1). `v1.16.0` is
+a lightweight tag (the others annotated); `build.sh` reads tags with
+`--tags`, so its versions are right.
 
 **R2D2's `/` fills up**: Docker's
 containerd store keeps images on `/`, not in `/home/docker`, and pi-gen
@@ -176,13 +173,14 @@ with its check): [Finding 144](docs/findings/144-room-correction-above-the-bass-
 three positions kept (George). **[ADR-0177](docs/decisions/0177-room-correction-for-the-full-range.md)
 accepted** the same day (George: decisions 1-4 as recommended, after asking
 for the build to go ahead on them). **Built** the same day on
-`ph-room-correction-full` (worktree `~/projects/gexis-player-ph30`): the
+`ph-room-correction-full` (merged and deleted 2026-11-10): the
 broad corrections, the reach, the split chart, the grouped corrections, the
 drawer's three-way control, the new words; layouts checked with made-up data
-in `~/projects/scratch/ph30/harness` (`WT` set to the worktree). **On
-Testing with 1.16.0** (2026-11-10, George's word, PR #98 to merge); sofapi
-runs the preview of the same commit's code. **Now:** George's run at the full
-range on sofapi. sofapi's measurement of 10 Nov was kept by the research
+in `~/projects/scratch/ph30/harness` (`WT` set to a worktree). **On Stable
+with 1.16.1** (2026-11-10, George), Full range marked *Limited testing*; a
+fix branch `ph30-testing-tag` (worktree `~/projects/gexis-player-ph30`) goes
+once #99 is merged. sofapi runs 1.16.0's code as a preview. **Now:** George's
+run at the full range on sofapi. sofapi's measurement of 10 Nov was kept by the research
 preview, which stored no range, so the new one reads it as the bass's:
 *Measure again for the full range*. **Owed:** the stage's cost at
 44.1/96/192 kHz; acceptance 2 as a finding from a run checked at Full
@@ -217,9 +215,8 @@ consecutively without letters, each with a stable ID (George, 2026-10-13).
 On Stable with work open: 22 (multiroom), 23 (AirPlay 2, limited testing),
 27 (releases built on GitHub; a card still to flash) and 28 (Plexamp and
 Beszel to the catalogue), both with 1.13.0. 29 (room correction for the
-bass) in progress, on Testing since 1.14.0; 35 (a page from Home Assistant)
-on Testing with 1.15.0; 30 (room correction for the full range) on Testing
-with 1.16.0; then 31-34; MPD parked. `docs/DEVELOPMENT.md`
+bass), 30 (the full range) and 35 (a page from Home Assistant) on Stable with
+1.16.1, work open; then 31-34; MPD parked. `docs/DEVELOPMENT.md`
 holds each phase's acceptance criteria.
 
 ## Machines

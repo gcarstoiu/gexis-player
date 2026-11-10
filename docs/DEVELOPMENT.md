@@ -3755,7 +3755,8 @@ after; the UMIK-1, its calibration downloaded by the serial (given from the
 phone since 2026-11-05). The phone's flow settled with George from a
 mock-up on 2026-11-04; design first: the brief is
 `design/briefs/29-room-correction.md`. **On Testing with 1.14.0**
-(2026-11-06, George); the acceptance below still to be seen on a player.
+(2026-11-06, George), **on Stable with 1.16.1** (2026-11-10, George); the
+acceptance below still to be seen on a player.
 
 **ID:** `ph-room-correction` · numbered 29 on 2026-11-03, after Plexamp and Beszel to the catalogue (George); numbered 28 on 2026-11-02, after releases built on GitHub (George); numbered 27 on 2026-11-01, after the Roon plugin (George); numbered 26 on 2026-10-29, after the plugin catalogue and themes (George: it still cannot be auditioned); numbered 24 on 2026-10-27, after multiroom and AirPlay 2 (George: no room correction can be tried yet); numbered 22 on 2026-10-26; 21 from 2026-10-25, 20 from 2026-10-24, 19 from 2026-10-21 (18 from 2026-10-19, 16 from 2026-10-15, 15 from 2026-10-14).
 **Since 2026-10-25** it builds on Phase 20's filter stage (`ph-equaliser`):
@@ -3902,7 +3903,8 @@ costs a Pi 4 beside Phase 29's filter.
 same day, and accepted it the same day (decisions 1-4 as recommended: the
 bass's level from the line, nothing corrected above 14 kHz, one level for
 Bass, Full range and Without, the times). Built the same day, and **on Testing with 1.16.0** (2026-11-10, serial
-68) at George's word, before his own run at the full range.
+68) at George's word, before his own run at the full range; **on Stable with
+1.16.1** the same evening (George), Full range marked *Limited testing*.
 
 **Acceptance (draft):**
 
@@ -4134,7 +4136,8 @@ the visualiser and the dashboard; closed by a touch, a D-pad key and its
 limit; standby woken and put back; a phone's request winning; the kept page
 shown at once. Two fixes came of it (what was under the page goes up before
 the page goes). **On Testing with 1.15.0** (2026-11-08, George; release PR
-#97), with the integration's 0.6.0. Not yet seen on a player: the heat
+#97), with the integration's 0.6.0; **on Stable with 1.16.1** (2026-11-10,
+George). Not yet seen on a player: the heat
 take-down, a USB keyboard's key, one page replacing another, the switch
 turned off while a page is up; acceptance 4 (192 kHz with room correction)
 not measured.
