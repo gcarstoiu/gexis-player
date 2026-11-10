@@ -215,7 +215,11 @@ The sound:
   to 0.5 dB** (the higher rates come within 0.01 dB): the design's drawing
   rounds 0.05 dB the other way, so one of the design's sample settings reads
   3 dB here against its 2.5. It moves on a fader that ramps over 200 ms; a
-  rising headroom moves before the boost.
+  rising headroom moves before the boost. **Amended 2026-11-10 (the review
+  of 1.16.1, whose findings George asked to be fixed):** the higher rates
+  come that close for the presets only; a treble boost of one's own rose up
+  to 1.6 dB above the headroom at 96 kHz and up, so it is the worst of every
+  rate the stage runs at, 44.1 to 768 kHz.
 - **C5 — The design's open point on the line and the note**: the note stays
   as D3 has it (from the filters, where neighbouring boosts add up), so
   Rock's line tops out at +4 while its note says 5 dB.

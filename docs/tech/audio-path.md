@@ -627,10 +627,12 @@ renderer → pcm.output (meter, peppyalsa; integers only) → hw:Loopback,0,0
   pipeline at 0 dB too. A change is a `PatchConfig` of the bands that moved,
   heard at once; CamillaDSP's GraphicEqualizer is not used, because it
   rebuilds its filters on each change and clicks (Finding 138).
-- **The headroom** (D3) is the combined curve's peak at 44.1 and 48 kHz,
-  rounded up to 0.5 dB, on the fader Aux1 of a `Volume` filter that ramps
-  over 200 ms. It is set before each stream starts; when it rises the fader
-  moves first and the bands follow the ramp.
+- **The headroom** (D3) is the combined curve's peak at the worst of every
+  rate the stage runs at (`equaliser.RATES`, 44.1 to 768 kHz: near half the
+  lower rates the top bands narrow, so a treble boost peaks higher at the
+  higher ones), rounded up to 0.5 dB, on the fader Aux1 of a `Volume`
+  filter that ramps over 200 ms. It is set before each stream starts; when
+  it rises the fader moves first and the bands follow the ramp.
 - **The volume gives the headroom back** (D3 as amended): the level control
   after CamillaDSP - the card's own or the software stage - cuts that much
   less, so a setting plays as loud as Flat at the same level. Within twice
