@@ -223,6 +223,14 @@
       untrack(() => { idle = false; askedIdle = false; });
       return;
     }
+    // **Nor under the update lock, a factory reset or the settling screen**
+    // (the review of 1.16.1): the idle screen pauses every animation but its
+    // own, and their marks of progress stood still under it. One already up
+    // goes, and one a phone asks for meanwhile.
+    if (updateLock || $resetting || settlingShown) {
+      if (idle) untrack(() => { idle = false; askedIdle = false; });
+      return;
+    }
     // **The idle screen can be off** (ADR-0133 amended 2026-10-11, second;
     // off on a new player): the panel then stays on what it shows.
     if (!idleOn) {
@@ -614,6 +622,10 @@
     !!$setup &&
       (['open', 'failed', 'joining', 'done'].includes($setup.network) ||
         ($setup.needed && ['waiting', 'online'].includes($setup.network)))
+  );
+  //: ADR-0128: the settling screen on the panel, as drawn below.
+  const settlingShown = $derived(
+    !!$settling && !$settling.hidden && $settling.modal !== false && !$screenConfirm && !updateLock && !setupShown
   );
 
   //: **...and on a phone, the setup page** in place of Settings while setup
@@ -1092,7 +1104,7 @@
 
   <!-- ADR-0128: the first start after setup, until it has settled - over
        everything but Keep this screen and the update lock. -->
-  {#if $settling && !$settling.hidden && $settling.modal !== false && !$screenConfirm && !updateLock && !setupShown}
+  {#if settlingShown}
     <SettlingScreen settling={$settling} ondone={() => settlingDone().catch(() => {})} onhide={() => settlingHide().catch(() => {})} />
   {:else if $personalise === 'pending' && $settingValues.headless !== true && !$screenConfirm && !updateLock && !setupShown}
     <!-- ADR-0149: part 2 is owed; the panel shows the way to it - **at

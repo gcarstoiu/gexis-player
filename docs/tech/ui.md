@@ -396,7 +396,8 @@ Details worth knowing:
   testing. The panel wakes from idle on a takeover, a pairing request, the
   visualiser being raised, or the end of setup. All of these also count as a
   touch, so the panel does not drop straight back to idle. The idle screen is
-  suppressed while setup is shown.
+  suppressed while setup, the update lock, a factory reset or the settling
+  screen is shown (its rule pauses every animation but its own).
 - **Handoff (ADR-0094).** When `$handoff` appears, `HandoffScreen` shows for
   at least `handoff_duration` seconds (default 1.5), or for as long as the
   takeover lasts if that is longer. The `show_transition` setting turns it
