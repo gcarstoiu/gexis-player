@@ -359,7 +359,11 @@ class Group:
         """What each member said of itself (its `/player/status`, by id):
         a member behind is sent the record again; one ahead is asked
         nothing - it sends its own when it changes - but a record it owes us
-        arrives through `receive`."""
+        arrives through `receive`. **A player taken out that missed it** -
+        a record owed to it, or its status naming this group at an older
+        revision - is sent it when seen, whatever this player is in now (the
+        review of 1.16.1: removed as it dropped off, a member went on
+        playing the group's music, and could take the group back)."""
         record = self.record
         for player_id, status in statuses.items():
             theirs = status.get("group") or {}
@@ -372,13 +376,21 @@ class Group:
                     await self._send(member, left)
                 except Exception as exc:  # noqa: BLE001 - told again at the next round
                     logger.info("group: %s did not take the change: %s", member.name, exc)
+        told: set[str] = set()
+        for player_id, owed in list(self._owed.items()):
+            status = statuses.get(player_id)
+            if status is None or (record is not None and record.has(player_id)):
+                continue
+            told.add(player_id)
+            if await self._deliver(owed.member(player_id) or _member_of(status), owed):
+                self._owed.pop(player_id, None)
         if record is None:
-            for player_id, owed in list(self._owed.items()):
-                status = statuses.get(player_id)
-                if status is not None and await self._deliver(owed.member(player_id) or
-                                                              _member_of(status), owed):
-                    self._owed.pop(player_id, None)
             return
+        for player_id, status in statuses.items():
+            theirs = status.get("group") or {}
+            if (player_id not in told and player_id != self.me and not record.has(player_id)
+                    and theirs.get("id") == record.id and int(theirs.get("revision") or 0) < record.revision):
+                await self._deliver(_member_of(status), record)
         for member in record.members:
             if member.id == self.me:
                 continue

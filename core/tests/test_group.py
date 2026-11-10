@@ -351,3 +351,23 @@ def test_a_member_s_host_is_a_name_or_an_address_and_nothing_else(host):
 @pytest.mark.parametrize("host", ["192.0.2.1", "sofapi.local", "living-room.local", "fe80::1", "[fe80::1%wlan0]", ""])
 def test_names_and_addresses_still_make_members(host):
     assert g.Member.from_json({"id": "x", "host": host}).host == host
+
+
+@pytest.mark.parametrize("restarted", [False, True])
+async def test_a_member_removed_while_unreachable_learns_it_when_seen_again(tmp_path, restarted):
+    """The review of 1.16.1: a record owed to a player taken out was sent
+    only once the player that owed it was in no group, so a member removed
+    as it dropped off went on playing the group's music."""
+    net = Net(tmp_path)
+    living, kitchen, study = net.add(LIVING), net.add(KITCHEN), net.add(STUDY)
+    await living.join(KITCHEN)
+    await living.join(STUDY)
+    net.off.add("study")
+    record = await living.remove("study")
+    if restarted:
+        living = net.add(LIVING)  # what it owed is gone with the restart
+    net.off.clear()
+    await living.reconcile(net.statuses("kitchen", "study"))
+    await kitchen.reconcile(net.statuses("living", "study"))
+    assert study.record is None
+    assert living.record == kitchen.record == record
