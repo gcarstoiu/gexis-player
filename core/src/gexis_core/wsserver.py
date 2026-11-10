@@ -45,7 +45,7 @@ from aiohttp import web
 from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
-from gexis_core import ha_page, memo, own_wallpapers, panel_token, screen_apply, settling, updates
+from gexis_core import ha_page, memo, own_pages, own_wallpapers, panel_token, screen_apply, settling, updates
 from gexis_core.players import Players, own_id, status_line
 from gexis_core.group import GroupError
 from gexis_core.wallpapers import SEARCH as PIXABAY_SEARCH
@@ -2627,6 +2627,23 @@ class StateServer:
         return await handler(request)
 
     @web.middleware
+    async def _own_pages_only(self, request: web.Request, handler):
+        """**ADR-0178 decision 1** (`own_pages`): from a browser, a change or
+        a socket comes from the player's own page, and the player is named
+        the way only the home network can."""
+        why = own_pages.refused(request.method, request.headers)
+        if why == own_pages.NAME:
+            logger.info("refused %s %s from a browser naming the player %r", request.method, request.path,
+                        request.headers.get("Host"))
+            return web.Response(status=403, text=f"Open this player as {device_name.hostname() or 'gexis'}.local, "
+                                                 f"or by its address.")
+        if why == own_pages.ORIGIN:
+            logger.info("refused %s %s from another site's page (%s)", request.method, request.path,
+                        request.headers.get("Origin") or request.headers.get("Sec-Fetch-Site"))
+            return web.json_response({"error": "Only the player's own page can do that."}, status=403)
+        return await handler(request)
+
+    @web.middleware
     async def _note_setup_use(self, request: web.Request, handler):
         """**Somebody is using the setup page** (George, 2026-10-12): the
         page itself or any `/setup/...` route, from a phone - the panel is on
@@ -3710,7 +3727,8 @@ class StateServer:
         (DEVELOPMENT.md: "tested with a WebSocket client") - rather than
         binding a fixed port or reaching into `run()`'s internals.
         """
-        app = web.Application(middlewares=[self._setup_network_only_sets_up, self._note_setup_use])
+        app = web.Application(middlewares=[self._own_pages_only, self._setup_network_only_sets_up,
+                                           self._note_setup_use])
         app.router.add_get("/state", self._handle)
         app.router.add_post("/renderer/{renderer_id}/activate", self._handle_activate)
         app.router.add_post("/transport/{command}", self._handle_transport)
