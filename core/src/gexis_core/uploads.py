@@ -17,6 +17,7 @@ module owns is the part that must be right whoever built the package:
 """
 from __future__ import annotations
 
+import hashlib
 import io
 import json
 import logging
@@ -73,10 +74,21 @@ def unit_for(plugin_id: str, kind: str) -> str:
 
 
 def _members(tar: tarfile.TarFile) -> list[tarfile.TarInfo]:
+    """The members, none named twice with different contents and none inside
+    a link: either lets an archive unpack a file over the one `check` read
+    (the review of 1.16.1). A name listed twice the same, as `tar` does with
+    a file named beside its folder, is one file."""
     members = tar.getmembers()
+    links = {PurePosixPath(m.name) for m in members if m.issym()}
+    seen: dict[PurePosixPath, tarfile.TarInfo] = {}
     total = 0
     for m in members:
         path = PurePosixPath(m.name)
+        if path in seen and not _same(tar, seen[path], m):
+            raise Refused(f"{m.name} is in the package twice")
+        seen[path] = m
+        if any(parent in links for parent in path.parents):
+            raise Refused(f"{m.name} is inside a link in the package")
         if path.is_absolute() or ".." in path.parts:
             raise Refused(f"{m.name} points outside the package")
         if m.isdev() or m.isfifo():
@@ -90,6 +102,20 @@ def _members(tar: tarfile.TarFile) -> list[tarfile.TarInfo]:
         if total > MAX_UNPACKED:
             raise Refused("it unpacks to more than 600 MB")
     return members
+
+
+def _same(tar: tarfile.TarFile, a: tarfile.TarInfo, b: tarfile.TarInfo) -> bool:
+    if (a.type, a.size, a.linkname) != (b.type, b.size, b.linkname):
+        return False
+    return not a.isfile() or _digest(tar, a) == _digest(tar, b)
+
+
+def _digest(tar: tarfile.TarFile, member: tarfile.TarInfo) -> bytes:
+    digest = hashlib.sha256()
+    with tar.extractfile(member) as data:
+        for chunk in iter(lambda: data.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.digest()
 
 
 def _executable_for_this_machine(data: bytes) -> bool:
@@ -113,7 +139,9 @@ def check(archive: bytes, *, ours: set[str], installed: dict[str, str]) -> Check
         raise Refused("it is not a .tar.gz package") from None
     with tar:
         members = _members(tar)
-        names = {PurePosixPath(m.name).as_posix().lstrip("./") or ".": m for m in members}
+        # As named, `./` dropped: stripped of every leading dot, `.plugin.json`
+        # was read as the manifest (the review of 1.16.1).
+        names = {PurePosixPath(m.name).as_posix(): m for m in members}
         if "plugin.json" not in names:
             raise Refused("plugin.json is not at the top of the package")
         try:
@@ -173,6 +201,15 @@ def install(archive: bytes, *, ours: set[str], root: Path = UPLOADS) -> Checked:
         # `data` refuses what `_members` already refused, as a second guard,
         # and drops setuid bits and ownership.
         tar.extractall(staging, filter="data")
+    # **What is installed is what was checked** (the review of 1.16.1): the
+    # manifest unpacked is read again, whatever the archive's trick.
+    try:
+        unpacked = json.loads((staging / "plugin.json").read_text())
+    except (OSError, ValueError):
+        unpacked = None
+    if unpacked != checked.manifest:
+        shutil.rmtree(staging, ignore_errors=True)
+        raise Refused("plugin.json unpacks to something other than the one checked")
     (staging / checked.run).chmod((staging / checked.run).stat().st_mode | 0o555)
     target = home / checked.version
     shutil.rmtree(target, ignore_errors=True)

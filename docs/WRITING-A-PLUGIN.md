@@ -331,6 +331,7 @@ The checks, so you can pass them first time:
   `version`, `run`, and no `unit`;
 - `run` is in the package and is an aarch64 program or a `#!` script;
 - no path or link escapes the package;
+- no path in it twice with different contents, and none inside a link;
 - under 200 MB, and under 600 MB unpacked.
 
 **Update** by uploading a package with a different `version`. The version
