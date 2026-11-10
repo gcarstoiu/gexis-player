@@ -685,9 +685,11 @@ its archive, into its own folder, and reports it with the contract's
 **Uploaded plugins** (ADR-0106, `core/src/gexis_core/uploads.py`) bypass the
 release entirely: a `.tar.gz` with `plugin.json` (plus `version` and `run`),
 checked before anything is written (manifest, unique id, no path escapes,
-aarch64 executable, size limits of 200 MB packed / 600 MB unpacked), unpacked
-into `/var/lib/gexis/plugins/<id>/<version>/` with `current` pointing at it and
-the previous version kept, and run under the sandboxed template
+no path twice with different contents, none inside a link, aarch64
+executable, size limits of 200 MB packed / 600 MB unpacked), unpacked into
+`/var/lib/gexis/plugins/<id>/<version>/` - refused unless the manifest
+unpacked is the one checked - with `current` pointing at it and the previous
+version kept, and run under the sandboxed template
 `gexis-uploaded-<kind>@<id>.service`. Uploading a newer version updates it.
 
 **Plugins from the catalogue** (ADR-0168) reach a player without a release
