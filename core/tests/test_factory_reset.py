@@ -13,6 +13,7 @@ def _used_player(root: Path) -> None:
         f.parent.mkdir(parents=True, exist_ok=True)
         f.write_text(text)
     for rel in ("var/lib/gexis-core/settings.db", "var/lib/gexis-core/enrichment.db",
+                "var/lib/gexis-core/page-preload.json",
                 "var/lib/gexis-core/backups/gexis-living-room-20261009-120000.tgz",
                 "var/lib/gexis-core/pictures/beach.jpg",
                 "etc/gexis/device-name.env", "etc/machine-info", "var/lib/gexis/setup-done",
@@ -46,7 +47,10 @@ def test_a_used_player_goes_back_to_a_freshly_flashed_card(tmp_path):
                  "etc/gexis/screen.env", "var/lib/gexis/components", "var/lib/go-librespot/state.json",
                  "var/lib/beszel-agent", "home/pi/.local/share/Plexamp", "home/pi/plexamp",
                  "home/pi/Library", "home/pi/.cache/Plexamp",
-                 "var/lib/squeezeboxserver/prefs", "var/lib/gexis/plugins"):
+                 "var/lib/squeezeboxserver/prefs", "var/lib/gexis/plugins",
+                 # The page Home Assistant kept loaded: its address can carry
+                 # a token (ADR-0176 K1; the review of 1.16.1).
+                 "var/lib/gexis-core/page-preload.json"):
         assert not (tmp_path / gone).exists(), gone
     # The owner's music, playlists and pictures stay (ADR-0132 as amended).
     for kept in ("var/lib/gexis-music/Album/track.flac", "var/lib/gexis-music/Playlists/Evening.m3u",
