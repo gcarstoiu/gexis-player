@@ -372,7 +372,7 @@ class Service:
     state: Path = STATE
     url: str = URL
     session: Callable[[], aiohttp.ClientSession] | None = None
-    #: Restart the core once after installs that did not.
+    #: Restart the core for the installs that went in, once none is under way.
     restart_core: Callable[[], Awaitable[None]] | None = None
     #: ADR-0170: what each plugin's person agreed to (`uploads.granted`).
     granted: Callable[[], dict[str, tuple[str, ...]]] | None = None
@@ -391,6 +391,7 @@ class Service:
         except OSError:
             self.checked = None
         self._lock = asyncio.Lock()
+        self._restart_owed = False
 
     def _session(self) -> aiohttp.ClientSession:
         return self.session() if self.session else aiohttp.ClientSession()
@@ -516,14 +517,19 @@ class Service:
         return job, version, False
 
     async def _install(self, job: Job, version: dict, *, restart: bool = True) -> bool:
+        """**One restart for installs that overlap** (the review of 1.16.1):
+        the first in restarted the core under another's download, which was
+        lost. The core restarts when the last under way ends."""
         def progress(done: int, total: int) -> None:
             job.done, job.total = done, total
         try:
             async with self._session() as session:
                 archive = await fetch_archive(session, version, progress)
             job.phase = "installing"
-            await self.install_archive(archive, job.plugin_id, restart, version_permissions(version) or ())
+            await self.install_archive(archive, job.plugin_id, restart and self.restart_core is None,
+                                       version_permissions(version) or ())
             job.phase = "installed"
+            self._restart_owed = True
             return True
         except (Unavailable, uploads.Refused) as exc:
             job.phase, job.error = "failed", str(exc)
@@ -531,7 +537,16 @@ class Service:
         except Exception as exc:  # noqa: BLE001 - the row says it failed, whatever the cause
             job.phase, job.error = "failed", "it could not be installed"
             logger.exception("catalogue: %s %s not installed: %s", job.plugin_id, job.version, exc)
+        finally:
+            if restart:
+                await self._restart_when_idle()
         return False
+
+    async def _restart_when_idle(self) -> None:
+        busy = any(j.phase in ("downloading", "installing") for j in self.jobs.values())
+        if self._restart_owed and not busy and self.restart_core:
+            self._restart_owed = False
+            await self.restart_core()
 
     async def restore(self, missing: list[dict]) -> list[str]:
         """After a restore, the plugins from the catalogue are installed from
@@ -568,8 +583,7 @@ class Service:
             if await self._install(job, version, restart=False):
                 logger.info("catalogue: %s %s installed again after a restore", job.plugin_id, job.version)
                 done.append(job.plugin_id)
-        if done and self.restart_core:
-            await self.restart_core()
+        await self._restart_when_idle()
         return done
 
     async def run(self, *, first_delay: float = 60, restore: list[dict] | None = None) -> None:

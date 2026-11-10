@@ -563,7 +563,8 @@ pieces in code:
   says why) and its switch refuses to turn it on (the registry's
   `restrictions`, so the row says why and a write of on is a 409). A
   release built without the key reads nothing and says `keyed: false`;
-  *Add plugins* offers only ours there.
+  *Add plugins* offers only ours there. Catalogue installs that overlap
+  restart the core once, when the last under way ends.
 - **One store for every plugin** (`plugin_store.py`, ADR-0169): ours that may
   be added (not the Lyrion client, Spotify, Bluetooth), the visualiser skins
   among them as `visualiser-skins`, are added or not, recorded in the

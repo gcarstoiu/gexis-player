@@ -1002,8 +1002,9 @@ Plugins page, each plugin's tag says where it came from.
 **How do I add or update a plugin?**
 *Add* in its tile, on the screen or a phone. One of the player's own is
 switched on, and downloads its software if it has some. One from the
-catalogue downloads there, the player restarts once to finish, and it arrives
-switched off: switch it on on the Plugins page. A newer version shows *Update
+catalogue downloads there, the player restarts once to finish (once for
+several added together), and it arrives switched off: switch it on on the
+Plugins page. A newer version shows *Update
 to …* on the plugin's row. Plugins never update by themselves.
 
 **Add plugins shows nothing from other authors.**
