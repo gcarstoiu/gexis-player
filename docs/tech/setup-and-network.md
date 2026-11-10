@@ -716,6 +716,10 @@ plugin on or off as chosen - explicitly, since a plugin switch defaults to on -
 and records in `/var/lib/gexis/settling.json` what the first start waits for:
 the visualiser's skins (component `skins`) when chosen, and each chosen plugin
 that downloads (its component name). Nothing to wait for writes nothing.
+A player already set up (`needed` false when Finish came: it opened setup
+because its Wi-Fi was gone, ADR-0134) is only given the network: its plugins,
+the Plugins page's record and part 2 are left as they were (the review of
+1.16.1).
 
 The core reads it every 2 s (`_follow_settling`) against `_all_components()`
 and publishes `settling` on `/state` (`settling.view`): each item `waiting`,

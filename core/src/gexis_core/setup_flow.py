@@ -303,6 +303,11 @@ class SetupFlow:
 
     async def _apply(self, data: dict) -> None:
         old_name = self._settings.value("device_name")
+        # **A player already set up is given a network, nothing more** (the
+        # review of 1.16.1). It opens setup when its Wi-Fi is gone (ADR-0134),
+        # and part 1's answers carry no plugins: taken as a new player's, every
+        # plugin was switched off and part 2 owed again.
+        new_player = self._network.needed
         mode = data.get("lms_mode")
         for answer, key in SETTINGS.items():
             if answer not in data or data[answer] in (None, ""):
@@ -347,14 +352,15 @@ class SetupFlow:
         self._marker.touch()
         self._path.unlink(missing_ok=True)
         library = await self._library(data)
-        self._plugins_and_settling(data)
-        # **ADR-0149: part 2 next, on the phone** - what it plays and shows,
-        # asked from the home network. Not after a restore, whose backup
-        # answers it.
-        try:
-            self._owed()
-        except OSError as exc:
-            logger.warning("setup: cannot record that part 2 is owed: %s", exc)
+        if new_player:
+            self._plugins_and_settling(data)
+            # **ADR-0149: part 2 next, on the phone** - what it plays and
+            # shows, asked from the home network. Not after a restore, whose
+            # backup answers it.
+            try:
+                self._owed()
+            except OSError as exc:
+                logger.warning("setup: cannot record that part 2 is owed: %s", exc)
         # ADR-0048: a rename takes effect at a restart, and the page's last
         # screen has already sent the phone to the new name.
         renaming = bool(data.get("name") and data["name"] != old_name and self._reboot is not None)

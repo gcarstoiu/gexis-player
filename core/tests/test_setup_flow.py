@@ -617,3 +617,36 @@ def test_a_restore_applies_its_answers_with_a_real_store(tmp_path):
     assert rename and rename[0][1] == "ShelvesPi"
     assert "NAME=gexis" in rename[0][2], "renamed after the backup's own name file came back"
     assert calls.index(("set", "device_name", "ShelvesPi")) < calls.index(rename[0])
+
+
+def test_a_new_network_for_a_player_already_set_up_leaves_its_plugins_and_part_two(tmp_path):
+    """**The review of 1.16.1** (high). A player set up long ago that lost
+    its Wi-Fi opens the setup network (ADR-0134), and the phone's part 1
+    ends with Finish - whose answers carry no `plugins`. It was taken for a
+    new player: every offered plugin switched off (the Lyrion Server among
+    them), the Plugins page's record emptied, and part 2 owed again."""
+    class Settings(FakeSettings):
+        def keep(self, key, value):
+            self.values[key] = value
+
+    owed = []
+    settings = Settings(**{"lyrion-server.enabled": True, "beszel.enabled": True,
+                           "_plugins_added": ["beszel", "lyrion-server", "visualiser-skins"]})
+    flow, net, *_ = make(tmp_path, FakeNM(devices=NOTHING), settings, plugins=PLUGINS,
+                         owed=lambda: owed.append(True))
+    (tmp_path / "setup-done").touch()
+    flow.save({"ssid": "NewRouter", "password": "hunter22", "start": "new", "name": "gexis",
+               "timezone": "Europe/Berlin"})
+
+    async def go():
+        net._state = "open"
+        net._needed = False
+        flow.finish()
+        await flow._task
+    asyncio.run(go())
+
+    assert settings.values["lyrion-server.enabled"] is True and settings.values["beszel.enabled"] is True
+    assert settings.values["_plugins_added"] == ["beszel", "lyrion-server", "visualiser-skins"]
+    assert owed == [], "part 2 is a new player's"
+    assert not (tmp_path / "settling.json").exists()
+    assert (tmp_path / "setup-done").exists()
