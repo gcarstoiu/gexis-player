@@ -17,6 +17,9 @@ Type=simple
 # As every renderer: the output chain's meter pipes and software volume are
 # pi's (go-librespot, Squeezelite, Plexamp).
 User=pi
+# The audio chain's control ports take orders from anyone; this has no
+# business there (the review of 1.16.1, as for plugins).
+IPAddressDeny=127.0.0.2
 Group=audio
 # ADR-0048: the player's own name is the name in the AirPlay list; a rename
 # restarts this unit.

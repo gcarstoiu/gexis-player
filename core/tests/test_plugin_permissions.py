@@ -127,3 +127,20 @@ def test_no_plugin_reaches_the_audio_chain_s_control_ports():
         lines = (files / unit).read_text().splitlines()
         assert f"IPAddressDeny={outputs.CONTROL_HOST}" in lines, unit
         assert not any(l.startswith("IPAddressAllow") for l in lines), unit
+
+
+#: Other software on the player that has no business with the audio chain's
+#: control: the panel's browser (pages from anywhere: Home Assistant, the
+#: idle page) and the third-party servers and receivers.
+OTHERS = ("04-ui/files/gexis-kiosk.service", "10-lyrion/files/gexis-lyrion.service",
+          "14-roon/files/gexis-roonbridge.service", "02-renderers/files/go-librespot.service",
+          "02-renderers/files/squeezelite.service", "13-airplay/files/gexis-shairport-sync.service")
+
+
+def test_nothing_else_on_the_player_reaches_the_audio_chain_s_control_ports():
+    """The review of 1.16.1, as for plugins: a page shown on the panel could
+    open CamillaDSP's websocket from the browser."""
+    stage = Path(__file__).resolve().parents[2] / "image/stage-gexis"
+    for unit in OTHERS:
+        lines = (stage / unit).read_text().splitlines()
+        assert f"IPAddressDeny={outputs.CONTROL_HOST}" in lines, unit
