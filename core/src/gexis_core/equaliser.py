@@ -348,6 +348,14 @@ FORMATS = {
 }
 
 
+def runs_at(rate: int) -> bool:
+    """**Whether the stage runs at `rate`**: CamillaDSP refuses a filter at
+    or above half the rate, so the 16 kHz band needs more than 32 kHz (room
+    correction's stop at 14 kHz). A 32 kHz radio stream was refused, and
+    played silence (the review of 1.16.1)."""
+    return rate > 2 * CENTRES[-1]
+
+
 def chunksize(rate: int) -> int:
     """About 23 ms a chunk, CamillaDSP's suggestion for each rate."""
     return 1024 if rate <= 48000 else 2048 if rate <= 96000 else 4096

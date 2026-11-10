@@ -5380,16 +5380,13 @@ async def main() -> None:
     def _group_after_client(rate: int | None) -> float:
         """ADR-0166 D7 as amended: what comes after this player's client and
         Snapcast cannot see - CamillaDSP's hold on every sample while the
-        equaliser is on, at the rate it plays to the card (the card's
-        highest where it lacks the stream's). None but that: the card's own
-        delay is for the measurement."""
+        equaliser is on, at the rate it plays to the card
+        (`eq_engine.playing_rate`). None but that: the card's own delay is
+        for the measurement."""
         output = _with_software(outputs.in_force(settings.value("output_device"))[0])
         if output is None or not outputs.eq_in_path(output.card):
             return 0.0
-        playing = rate or 44100
-        if outputs.takes_rate(output.card, playing) is False:
-            playing = outputs.top_rate(output.card) or playing
-        return eq_latency_ms(playing)
+        return eq_latency_ms(eq_engine.playing_rate(output.card, rate or 44100))
 
     #: The renderers were stopped for the loopback's reload: the next chain
     #: rewrite starts them again, whether or not anything played.
