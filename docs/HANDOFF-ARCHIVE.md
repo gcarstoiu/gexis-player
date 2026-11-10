@@ -8771,3 +8771,89 @@ since 2026-11-03, serial 65): Plexamp and Beszel from the catalogue (Phase
 the image downloaded through README's link, its checksum and signature good.
 README names 1.13.0 (on `main` with #96). The two measurements are
 still owed (to-dos `ph22-measure`, `eq-measure`).
+
+## 2026-11-10 — Phase 29, Phase 30 and Phase 35 narratives and the players line, after 1.16.1 on Stable (moved verbatim)
+
+**In progress: Phase 29**, room correction for the bass, **on Testing
+with 1.14.0** (2026-11-06, George; its branch merged and deleted - a fix goes
+on a branch from `next`). ADR-0175 as built: cuts only below 250 Hz towards a
+gentle rise below 80 Hz, in the equaliser's stage (16 cut slots), stacked as
+deep as the target takes; three positions, most of them deciding a cut; 60 dB
+at the seat; each speaker alone, then both together (shown as *Both*, never
+cut); the check with Skip; the UMIK-1 only, its 90° file given from the phone;
+the level before a run put back as the DAC's own (Lesson 93). Layouts are
+checked with made-up data in `~/projects/scratch/ph29/harness` (it builds from
+`-next`). sofapi has cuts recalculated from three of George's first run's
+positions (it now runs Phase 35's preview, which carries the same code).
+**Not yet:** the cuts read from CamillaDSP while music plays (only readable
+then), a full run at three positions with both, the level against a meter,
+two sweeps' agreement at 60 dB, the stage's cost, the A/B bit-exactness.
+**Copy to confirm** with George: the lines the design has no state for
+(`design/IMPLEMENTED-DIFFERENTLY.md`, Phase 29).
+
+**The players** (2026-11-08): sofapi on 1.15.0 through its updater (George),
+then Phase 30's research preview (the room measured again and kept
+2026-11-10), then Phase 30's build (`~/preview-ph30b`, 1.15.0+git19.a1c989e,
+2026-11-10; that measurement reads as bass-only), *Pages from Home
+Assistant* on and no page kept loaded yet,
+Plexamp 0.5.1 and Beszel from the catalogue; `rpi-eeprom-update` reports a bootloader update
+available, not applied (not looked into). Roon's extension enabled in
+George's Roon; the other three last seen on 1.9.1 through their updaters
+(2026-10-29). All four on Testing, which offers 1.15.0. sofapi and the bar
+grouped; AirPlay on at sofapi and guestpi. Each has its own Lyrion server.
+
+After Phase 29: 30 (room correction for the full range) and 31-34 in order,
+each ADR first. **Phase 30's research started 2026-11-07** (George): desk
+research in [Finding 141](docs/findings/141-room-correction-above-the-bass-what-is-known.md);
+the level only - the time-domain part is Phase 34 (George), which may end
+without being built. George's decisions the same day are in
+`docs/DEVELOPMENT.md` (the main seat, to 20 kHz, the speaker's own slope, at
+most 3 dB, *Bass* or *Full range*, in groups as the bass). **The design**
+arrived 2026-11-08 (`design/source/30/`; George's answers in
+`docs/DEVELOPMENT.md`). **The measurement** (George, 2026-11-10, one run
+with its check): [Finding 144](docs/findings/144-room-correction-above-the-bass-one-room-measured.md);
+three positions kept (George). **[ADR-0177](docs/decisions/0177-room-correction-for-the-full-range.md)
+accepted** the same day (George: decisions 1-4 as recommended, after asking
+for the build to go ahead on them). **Built** the same day on
+`ph-room-correction-full` (merged and deleted 2026-11-10): the
+broad corrections, the reach, the split chart, the grouped corrections, the
+drawer's three-way control, the new words; layouts checked with made-up data
+in `~/projects/scratch/ph30/harness` (`WT` set to a worktree). **On Stable
+with 1.16.1** (2026-11-10, George), Full range marked *Limited testing*; a
+fix branch `ph30-testing-tag` (worktree `~/projects/gexis-player-ph30`) goes
+once #99 is merged. sofapi runs 1.16.0's code as a preview. **Now:** George's
+run at the full range on sofapi. sofapi's measurement of 10 Nov was kept by the research
+preview, which stored no range, so the new one reads it as the bass's:
+*Measure again for the full range*. **Owed:** the stage's cost at
+44.1/96/192 kHz; acceptance 2 as a finding from a run checked at Full
+range. The
+throwaway `ph30-research` and the run's raw recordings (on sofapi and in
+scratch) were deleted when the ADR was accepted; the curves worked out from
+them stay in `scratch/ph30/measure/out`.
+
+**Phase 35** (a page from Home Assistant on the screen, ADR-0176 as amended;
+Findings 142-143) **on Testing with 1.15.0** (2026-11-08), with the
+integration's 0.6.0; its branches and worktree removed after PR #97. **Not
+yet on a player:** the heat take-down, a USB keyboard's key, one page
+replacing another, the switch turned off while a page is up; acceptance 4
+(192 kHz with room correction) not measured. Both updated by George the
+same day; the Home Assistant session wires sofapi's cameras.
+
+## 2026-11-10 — three standing notes now in docs/BUILD-TRAPS.md (moved verbatim)
+
+**R2D2's `/` fills up**: Docker's
+containerd store keeps images on `/`, not in `/home/docker`, and pi-gen
+rebuilds its 1.16 GB build image on every image build, about 1.7 GB at a
+build's peak; check `df -h /` before one (4.6 GB free on 2026-11-02, after
+the clean-up).
+
+**The release key** moved to `~/projects/gexis-release-key` (George,
+2026-10-24): every release command sets
+`GEXIS_RELEASE_GNUPGHOME=~/projects/gexis-release-key`; the scripts default
+to `~/.gnupg-gexis-release`, which no longer exists.
+
+**Release build output lives in `~/projects/gexis-release-out`**: link it to
+`packaging/release/out` in the checkout `publish.sh` runs from (git-ignored;
+remove the link after). Since ADR-0173 `reuse.py` reads the published
+indexes, not these copies; George had the older releases' copies removed
+(2026-11-04), 1.13.0's kept.

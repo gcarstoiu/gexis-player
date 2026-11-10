@@ -31,6 +31,9 @@ traps below are a local build's, kept for when GitHub is unavailable.
 - **`workflow_dispatch` needs the workflow on `main`**: previews by hand work
   only once a release PR has brought `release.yml` there.
 
+- **Tag annotated, like every release before**: `git tag -a vX -m "Gexis
+  Player X"` (1.16.0's was lightweight; `build.sh` reads tags with `--tags`,
+  so its versions came out right, but a plain `git describe` skips it).
 - **The release tag goes on the release-notes commit, nothing after it**
   (1.4.0, 2026-10-22): a package's version is the last commit that touched it,
   and the notes are core's last change - a documents fix committed after them
@@ -44,6 +47,10 @@ traps below are a local build's, kept for when GitHub is unavailable.
   was cancelled, re-run it (`gh run rerun <id>`).
 
 **Building**
+- **R2D2's `/` fills up** (moved from HANDOFF, 2026-11-10): Docker's
+  containerd store keeps images on `/`, not in `/home/docker`, and pi-gen
+  rebuilds its 1.16 GB build image on every image build, about 1.7 GB at a
+  build's peak; check `df -h /` before one.
 - **Clear space with `make prune`, never `make clean`**: `clean` destroys the
   warm pi-gen stages (~9 GB; a cold build is ~40 min against ~15).
 - **Never `docker start pigen_work`** - it starts a build. Read its volumes
