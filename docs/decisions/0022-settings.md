@@ -668,3 +668,4 @@ Confirmed by George, 2026-11-07 (Phase 30's decisions) and 2026-11-10 (ADR-0177'
 | Target above the bass | [H] | The speaker's own slope in the room, fitted from 300 Hz to 10 kHz |
 | Positions | [H] | The same three as the bass's (George, 2026-11-10: whether more help is checked later) |
 | Bass target level | [H] | From the speaker's slope line where it meets 250 Hz, for Bass and Full range alike (ADR-0177 decision 1, George 2026-11-10); a measurement from before Phase 30 keeps its own |
+| Broad corrections | [H] | Up to six for each speaker above the bass, Q 0.5 to 2 (0.7 to 2.5 octaves wide); a gap under 1.5 dB left alone (George, 2026-11-10) |

@@ -159,11 +159,9 @@ Confirmed by George on 2026-11-07, to append with this ADR:
 - **[H]** The same three positions.
 
 Appended with decisions 1 and 2 (George, 2026-11-10): the filters stop at
-14 kHz; the bass's target level taken from the line.
-
-Proposed, to append only once George confirms:
-- **[H]** Up to six broad filters above the bass, Q 0.5 to 2; a gap under
-  1.5 dB left.
+14 kHz; the bass's target level taken from the line. And, confirmed by
+George the same day: **[H]** up to six broad filters above the bass, Q 0.5
+to 2; a gap under 1.5 dB left.
 
 ## While building
 
