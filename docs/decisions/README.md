@@ -197,6 +197,7 @@ been written properly. **0098 has no record either.**
 | [0174](0174-plexamp-and-beszel-from-the-catalogue.md) | Plexamp and Beszel from the catalogue | Built 2026-11-03, in 1.13.0; accepted 2026-11-03 (Phase 28, George: decisions 1-3): out of the release, installed and updated from the catalogue, carried over |
 | [0175](0175-room-correction-for-the-bass.md) | Room correction for the bass | Built 2026-11-06, in 1.14.0; accepted 2026-11-03 (Phase 29, George: decisions 1-6): cuts only below 250 Hz towards a gentle bass rise, in the equaliser's stage; three positions (2026-11-05, over five), most of them deciding a cut, measured again after; 60 dB; UMIK-1, its calibration file given from the phone |
 | [0176](0176-a-page-from-home-assistant-on-the-screen.md) | A page from Home Assistant on the screen | Accepted 2026-11-07 (Phase 35, George): over everything for a while, any touch or key closes it, a limit, a switch per player; amended the same day: one page kept loaded and hidden, from Home Assistant |
+| [0177](0177-room-correction-for-the-full-range.md) | Room correction for the full range | Proposed 2026-11-10 (Phase 30; built on its recommendations at George's word, decisions 1-4 his to confirm): up to six broad filters, ±3 dB, 250 Hz-14 kHz, towards the speaker's own slope |
 
 ## Cross-cutting rules
 
