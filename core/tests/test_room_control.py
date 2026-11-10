@@ -230,6 +230,29 @@ async def test_discarded_nothing_changes():
     assert rig.control.summary()["ended"]["how"] == "discarded"
 
 
+async def test_done_on_nothing_to_correct_ends_the_run():
+    """*Done* is the only button on *Nothing to correct*; as the phone sends
+    it, through the control, it ends the run (the review of 1.16.1: the
+    player was held for the ten minutes' timeout)."""
+    rig = Rig()
+    rig.audio = Audio(modes=(), broad=())
+    await rig.control.calibration(CAL, "x_90deg.txt")
+    await rig.control.start()
+    await rig.run_to("place")
+    await rig.control.tap("start")
+    for n in range(2, rc.POSITIONS + 1):
+        await rig.run_to("move", n)
+        rig.audio.position = n
+        await rig.control.tap("next")
+    await rig.run_to("nothing")
+    await rig.control.tap("done")
+    await asyncio.wait_for(rig.control.run.wait(), 5)
+    assert rig.control.frozen() is None and rig.names()[-1] == "release"
+    assert rig.control.summary()["ended"]["how"] == "done" and rig.control.snapshot()["measured"] is None
+    await rig.control.tap("done")
+    assert rig.control.summary()["ended"] is None, "the end shown"
+
+
 async def test_off_and_on_and_without():
     rig = Rig()
     await rig.measure()
