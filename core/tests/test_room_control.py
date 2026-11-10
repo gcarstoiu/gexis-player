@@ -300,3 +300,52 @@ async def test_the_pending_measurement_is_shown_before_it_is_kept():
     assert s["pending"]["within"] is not None and s["pending"]["nothing_to_correct"] is False
     assert s["measured"] is None, "nothing stored before Keep it"
     await rig.control.tap("cancel")
+
+
+async def _until(rig, done):
+    for _ in range(5000):
+        if done(rig.control.run.state, rig.control.run):
+            return
+        await asyncio.sleep(0.001)
+    raise AssertionError(f"at {rig.control.run.state}")
+
+
+@pytest.mark.parametrize("when", ["at_once", "countdown", "measure"])
+async def test_a_second_measure_here_is_not_kept_for_the_next_position(when):
+    """A tap is for the screen it was sent on: a second *Measure here* (a
+    double tap, or a second phone) never answers the next position's (the
+    review of 1.16.1: position 3 was swept where position 2 was)."""
+    rig = Rig()
+    await rig.control.calibration(CAL, "x_90deg.txt")
+    await rig.control.start()
+    await rig.run_to("place")
+    await rig.control.tap("start")
+    await rig.run_to("move", 2)
+    rig.audio.position = 2
+    await rig.control.tap("next")
+    if when != "at_once":
+        await _until(rig, lambda s, _run: (s.step, s.position) == (when, 2))
+    await rig.control.tap("next")
+    await _until(rig, lambda s, run: s.position == 3 and (s.step != "move" or run.waiting))
+    s = rig.control.run.state
+    assert (s.step, s.position, rig.control.run.waiting) == ("move", 3, True), "waits for Measure here"
+    await rig.control.tap("cancel")
+    await rig.control.run.wait()
+
+
+async def test_a_second_try_again_is_not_kept_for_the_next_too_quiet():
+    rig = Rig()
+    rig.audio = Audio(offset=45.0)
+    await rig.control.calibration(CAL, "x_90deg.txt")
+    await rig.control.start()
+    await rig.run_to("place")
+    await rig.control.tap("start")
+    await _until(rig, lambda s, run: s.too_quiet and run.waiting)
+    once = len(rig.audio.plays)
+    await rig.control.tap("again")
+    await rig.control.tap("again")
+    await _until(rig, lambda s, run: s.too_quiet and run.waiting)
+    await asyncio.sleep(0.05)
+    assert rig.control.run.waiting and len(rig.audio.plays) == 2 * once, "one more try, not two"
+    await rig.control.tap("cancel")
+    await rig.control.run.wait()
