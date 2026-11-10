@@ -1045,6 +1045,10 @@ built; what the build decided where it differs, or says nothing:
 - **[S]** **The bass pane's reach** counts before, after and every position
   below 250 Hz on every tab, as built; the drawing counted before and the
   positions of the two speakers.
+- **[G]** **Full range is marked *Limited testing*** (George, 2026-11-10),
+  in AirPlay's words and the Tested tag's look, on the edge of the Full
+  range chip and of the drawer's segment, where it fits at every width. The
+  drawing has no mark.
 - **[S]** **On the 1280-wide bar the result's heading is 22 px** (the
   drawing: 24) and the tabs a little narrower, so the heading keeps its figure
   beside them and the bar's control column, with the drawing's 360 px middle

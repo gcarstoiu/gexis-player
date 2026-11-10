@@ -106,7 +106,9 @@
             {#each SEGS as [k, name] (k)}
               <button type="button" class="seg__btn seg__btn--{k}" class:is-sel={selected === k}
                       class:is-locked={k === 'full' && bassOnly} aria-pressed={selected === k}
-                      disabled={dsd || (k === 'full' && bassOnly)} onclick={() => choose(k)}>{name}</button>
+                      disabled={dsd || (k === 'full' && bassOnly)} onclick={() => choose(k)}>
+                {name}{#if k === 'full'}<span class="testing">Limited testing</span>{/if}
+              </button>
             {/each}
           </div>
         {:else}
@@ -168,6 +170,7 @@
     background: var(--ink-fill);
   }
   .seg__btn {
+    position: relative;
     height: 50px;
     padding: 0 20px;
     border-radius: var(--r-13);
@@ -194,6 +197,26 @@
   }
   .seg__btn.is-locked {
     opacity: 0.4;
+  }
+  /* Full range is marked as being tested (George, 2026-11-10), as on the
+     page: on the segment's top edge. */
+  .testing {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 1px 6px;
+    border-radius: var(--r-6);
+    border: 1px solid var(--c-ink-14);
+    background: var(--bg-panel);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 400;
+    line-height: 13px;
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--ink-quiet);
   }
   .seg__btn:active {
     transform: scale(0.95);
