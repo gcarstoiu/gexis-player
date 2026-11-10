@@ -6,6 +6,12 @@
 Every release of Gexis Player and its notes, newest first. The player
 shows the last 10 under Settings → System → Change logs.
 
+## 1.16.1 — 10 November 2026
+
+### Good to know
+
+- Room correction's Full range is marked Limited testing: so far it has been tried in one room, and problem reports help.
+
 ## 1.16.0 — 10 November 2026
 
 ### New
