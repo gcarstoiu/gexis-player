@@ -9,6 +9,8 @@ keeps it (`/var/lib/gexis/group.json`, so it lasts a restart, decision 3)
 and sends it to every member, old and new, over their HTTP API
 (`POST /group/record`). A member that was off is sent it when it is seen
 again (`reconcile`). Of two records for one group the later change wins.
+A group this player left or ended is remembered (`group-left.json`), so a
+member that missed the change cannot bring it back.
 
 **What being in a group does to a player** is not decided here: `apply` is
 told the record before and after, and `__main__` rewrites the chain, starts
@@ -36,6 +38,8 @@ import aiohttp
 logger = logging.getLogger("gexis_core.group")
 
 PATH = Path("/var/lib/gexis/group.json")
+#: How many groups this player left or ended are remembered.
+LEFT_KEPT = 16
 #: The version of the players' group API, in `/player/status`; a player
 #: without it cannot be joined (it is older than multiroom).
 PROTOCOL = 1
@@ -128,13 +132,19 @@ class Record:
                    by=str(data.get("by") or ""), ended=bool(data.get("ended")))
 
 
-def accepts(current: Record | None, new: Record, me: str) -> bool:
+def accepts(current: Record | None, new: Record, me: str, left: Record | None = None) -> bool:
     """**Whether a record sent by another player is taken.** The same group:
     a later change. Another group: only one this player is in, and not older
-    than the one it is in (it was joined to it)."""
+    than the one it is in (it was joined to it). **A group this player left
+    or ended** (`left`, the change that took it out): only a later change
+    (joined again), never the group as a member that missed the change
+    still has it (the review of 1.16.1: an undone group came back with a
+    member that had been off, its players' own music stopped)."""
     if current is not None and new.id == current.id:
         return new.order() > current.order()
     if new.ended or not new.has(me):
+        return False
+    if left is not None and new.id == left.id and new.order() <= left.order():
         return False
     return current is None or new.changed >= current.changed
 
@@ -142,6 +152,32 @@ def accepts(current: Record | None, new: Record, me: str) -> bool:
 def leaving(current: Record, me: str) -> Record:
     """`current` after this player has gone to another group."""
     return current.without(me, by=me)
+
+
+def left_path(path: Path = PATH) -> Path:
+    """Where the groups this player left or ended are kept, beside its own."""
+    return path.with_name(f"{path.stem}-left{path.suffix}")
+
+
+def read_left(path: Path) -> dict[str, Record]:
+    try:
+        records = [Record.from_json(r) for r in json.loads(path.read_text())]
+    except FileNotFoundError:
+        return {}
+    except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
+        logger.warning("group: %s is unreadable (%s); no group left is remembered", path, exc)
+        return {}
+    return {r.id: r for r in records}
+
+
+def write_left(left: dict[str, Record], path: Path) -> None:
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps([r.to_json() for r in left.values()]))
+        os.replace(tmp, path)
+    except OSError as exc:
+        logger.error("group: cannot keep the groups left in %s: %s", path, exc)
 
 
 def read(path: Path = PATH) -> Record | None:
@@ -187,6 +223,12 @@ class Group:
         self._path = path
         self._clock = clock
         self.record: Record | None = read(path)
+        #: **The groups this player left or ended**, by id: the change that
+        #: took it out, kept across a restart. Older revisions of them are
+        #: refused, and a player still showing one is sent it (`reconcile`).
+        #: A reflashed player has none, and is given its group again (B10).
+        self._left_path = left_path(path)
+        self._left: dict[str, Record] = read_left(self._left_path)
         self._lock = asyncio.Lock()
         #: Records a member has not had yet, by member id: sent again when it
         #: is next seen (`reconcile`).
@@ -296,14 +338,15 @@ class Group:
             return False
         async with self._lock:
             current = self.record
-            if not accepts(current, new, me):
+            if not accepts(current, new, me, self._left.get(new.id)):
                 return False
+            left = None
             if current is not None and new.id != current.id:
                 # Joined to another group: out of this one first (the
                 # design's "takes it out of any other group").
                 left = leaving(current, me)
                 self._spawn(self._tell(left))
-            self._keep(new)
+            self._keep(new, left)
         return True
 
     async def settled(self) -> None:
@@ -318,6 +361,17 @@ class Group:
         nothing - it sends its own when it changes - but a record it owes us
         arrives through `receive`."""
         record = self.record
+        for player_id, status in statuses.items():
+            theirs = status.get("group") or {}
+            left = self._left.get(theirs.get("id"))
+            if left is not None and player_id != self.me and int(theirs.get("revision") or 0) < left.revision:
+                # Still in a group this player left or ended, as it was
+                # before: sent the change that took this player out.
+                member = left.member(player_id) or _member_of(status)
+                try:
+                    await self._send(member, left)
+                except Exception as exc:  # noqa: BLE001 - told again at the next round
+                    logger.info("group: %s did not take the change: %s", member.name, exc)
         if record is None:
             for player_id, owed in list(self._owed.items()):
                 status = statuses.get(player_id)
@@ -333,7 +387,11 @@ class Group:
                 continue
             theirs = status.get("group") or {}
             if theirs.get("id") == record.id and int(theirs.get("revision") or 0) >= record.revision:
-                self._owed.pop(member.id, None)
+                # Up to date: what it was owed of this group it has - not a
+                # later record (an undo) or another group's.
+                owed = self._owed.get(member.id)
+                if owed is not None and owed.id == record.id and owed.revision <= record.revision:
+                    self._owed.pop(member.id, None)
                 continue
             if theirs.get("id") not in (None, record.id) and float(theirs.get("changed") or 0) > record.changed:
                 # In another group since: it went, and its word did not
@@ -354,11 +412,22 @@ class Group:
             raise GroupError("this player is in no group")
         return self.record
 
-    def _keep(self, new: Record) -> None:
-        """The change kept (under the lock), and queued to be put in force."""
+    def _keep(self, new: Record, left: Record | None = None) -> None:
+        """The change kept (under the lock), and queued to be put in force;
+        `left` is the group this player leaves for `new`."""
         old = self.record
         self.record = None if new.ended or not new.has(self.me or "") else new
         write(self.record, self._path)
+        if old is not None and (self.record is None or self.record.id != old.id):
+            gone = left if left is not None else new
+            self._left.pop(gone.id, None)
+            self._left[gone.id] = gone
+            while len(self._left) > LEFT_KEPT:
+                self._left.pop(next(iter(self._left)))
+            write_left(self._left, self._left_path)
+        elif self.record is not None and self._left.pop(self.record.id, None) is not None:
+            # Joined again to a group it had left.
+            write_left(self._left, self._left_path)
         logger.info("group: %s (revision %d, %d players, led by %s)",
                     "ended" if new.ended else ("left" if self.record is None else "now"),
                     new.revision, len(new.members), new.leader)
