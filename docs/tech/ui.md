@@ -216,6 +216,12 @@ buttons, nor on the equaliser's and room correction's quick changes
 (`armsAt`), so a tap meant for what was under it changes nothing; one opened
 from the panel is unaffected.
 
+The group's sliders (`group/panelSlider.js`: the panel's drawer and the
+bar's member cards) wait for 8 px of movement, as the tray's own slider does:
+mostly sideways is the slider, from where the finger landed; mostly up or
+down is not, and on the panel the list or the drawer scrolls; a tap sets the
+level as it lifts.
+
 ### The equaliser (ADR-0162)
 
 `screens/eq/`, from `design/source/20` (look 3a, Ridge): `Equaliser.svelte`

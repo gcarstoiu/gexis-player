@@ -122,7 +122,8 @@
     height: 52px;
     display: flex;
     align-items: center;
-    touch-action: none;
+    /* Up and down is the list's scroll (panelSlider.js). */
+    touch-action: pan-y;
   }
   .rail {
     width: 100%;

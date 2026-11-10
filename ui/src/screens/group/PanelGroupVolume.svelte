@@ -236,7 +236,8 @@
     display: flex;
     align-items: center;
     min-width: 0;
-    touch-action: none;
+    /* Up and down is the drawer's scroll (panelSlider.js). */
+    touch-action: pan-y;
   }
   .rail {
     width: 100%;
