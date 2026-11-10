@@ -332,6 +332,66 @@ def _snapshot(source: Path, into: Path) -> bool:
         return False
 
 
+#: Where `_snapshot_pinned` links a database for SQLite: root's own folder,
+#: on the card with the plugins' folders. Relative to the root.
+LINKS_BESIDE = "var/lib/gexis-core"
+LINKS = ".backup-db-"
+
+
+def _snapshot_pinned(folder_fd: int, name: str, fd: int, into: Path, beside: Path, arcname: str) -> bool:
+    """`_snapshot` of the database `fd`, `name` in `folder_fd`. **SQLite opens
+    by path, following links on the way** (the review of 1.16.1): the folder
+    swapped for a link just before, it copied whatever database the link
+    named. So the database and its WAL files are hard-linked from the folder
+    already open into a folder of root's own - the same files, under a path
+    nothing else can change - and SQLite reads them there. False when that
+    cannot be done; the files then go in as they are."""
+    try:
+        place = Path(tempfile.mkdtemp(prefix=LINKS, dir=beside))
+    except OSError as exc:
+        logger.warning("backup: %s could not be copied as a database (%s); taking its files", arcname, exc)
+        return False
+    try:
+        opened = os.fstat(fd)
+        for suffix in ("",) + WAL_FILES:
+            try:
+                os.link(name + suffix, place / f"db{suffix}", src_dir_fd=folder_fd, follow_symlinks=False)
+            except FileNotFoundError:
+                if suffix:
+                    continue
+                raise
+            linked = os.lstat(place / f"db{suffix}")
+            if not stat.S_ISREG(linked.st_mode) or \
+                    (not suffix and (linked.st_dev, linked.st_ino) != (opened.st_dev, opened.st_ino)):
+                logger.warning("backup: %s changed while it was copied; taking its files", arcname)
+                return False
+        return _snapshot(place / "db", into)
+    except OSError as exc:
+        logger.warning("backup: %s could not be copied as a database (%s); taking its files", arcname, exc)
+        return False
+    finally:
+        shutil.rmtree(place, ignore_errors=True)
+
+
+def _sweep_links(beside: Path, now: float | None = None) -> None:
+    """The folders `_snapshot_pinned` left when a backup was cut short (a
+    power cut): links to plugins' databases, kept alive. Once they are old
+    enough not to be another backup's."""
+    now = time.time() if now is None else now
+    try:
+        names = os.listdir(beside)
+    except OSError:
+        return
+    for name in names:
+        path = beside / name
+        try:
+            if not name.startswith(LINKS) or now - os.lstat(path).st_mtime < STALE_PART_S:
+                continue
+        except OSError:
+            continue
+        shutil.rmtree(path, ignore_errors=True)
+
+
 #: **An update's backup that failed says so** (sofapi, 2026-10-13): the
 #: updater watches the share for the new archive, and without this it waited
 #: two minutes for one that was never coming. The core writes the reason
@@ -375,27 +435,107 @@ def _give_to_pi(fd: int) -> None:
         pass
 
 
-def _add(archive: tarfile.TarFile, path: Path, arcname: str, filter) -> None:
-    """`path` and, for a folder, everything in it - one entry at a time, so
-    **a file that goes while the backup runs is left out, not the backup**
-    (sofapi, 2026-10-13: an uploaded plugin's SQLite `-shm` file was listed,
-    then deleted by its program before it was read; `tarfile.add`'s own walk
-    failed the whole backup with "No such file or directory", and the update
-    waiting for it stopped). A file gone has nothing in it to bring back."""
+#: A file or folder opened for a backup: never through a link, and a pipe
+#: swapped in for a file cannot hang it.
+_ENTRY = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC
+
+
+class _Opened:
+    """What `TarFile.gettarinfo` asks of a file object: its descriptor, and a
+    name it does not use for one."""
+
+    def __init__(self, fd: int, name: str) -> None:
+        self._fd, self.name = fd, name
+
+    def fileno(self) -> int:
+        return self._fd
+
+
+def _add(archive: tarfile.TarFile, folder_fd: int, name: str, arcname: str, keep) -> None:
+    """`name` in the open folder `folder_fd` and, for a folder, everything in
+    it - one entry at a time, so **a file that goes while the backup runs is
+    left out, not the backup** (sofapi, 2026-10-13: an uploaded plugin's
+    SQLite `-shm` file was listed, then deleted by its program before it was
+    read; `tarfile.add`'s own walk failed the whole backup with "No such file
+    or directory", and the update waiting for it stopped). A file gone has
+    nothing in it to bring back.
+
+    **Never by its path** (the review of 1.16.1): each entry is opened
+    relative to the folder already open, without following a link, and what
+    goes in - its kind, size, owner and bytes - comes from what was opened.
+    By path, a plugin that swapped one of its folders for a link to `/etc`
+    between the check and the listing had root's files archived under its
+    own name, in a backup it could download.
+
+    `keep(info, folder_fd, name, fd)`: the member to write, or None."""
     if NOT_BACKED_UP.match(arcname):
         return
     try:
-        archive.add(path, arcname=arcname, recursive=False, filter=filter)
+        seen = os.stat(name, dir_fd=folder_fd, follow_symlinks=False)
+        if not (stat.S_ISREG(seen.st_mode) or stat.S_ISDIR(seen.st_mode)):
+            logger.info("backup: %s is not a file or a folder, leaving it out", arcname)
+            return
+        fd = os.open(name, _ENTRY, dir_fd=folder_fd)
     except FileNotFoundError:
         logger.info("backup: %s went while it was read, skipping", arcname)
         return
-    if path.is_dir() and not path.is_symlink():
-        try:
-            names = sorted(os.listdir(path))
-        except FileNotFoundError:
+    except OSError as exc:
+        if exc.errno not in (errno.ELOOP, errno.ENXIO):
+            raise
+        logger.info("backup: %s is not a file or a folder, leaving it out", arcname)
+        return
+    try:
+        info = keep(archive.gettarinfo(arcname=arcname, fileobj=_Opened(fd, arcname)), folder_fd, name, fd)
+        if info is None:
             return
-        for name in names:
-            _add(archive, path / name, f"{arcname}/{name}", filter)
+        if not info.isdir():
+            settled = _read_settled(fd, arcname)
+            if settled is not None:
+                data, now = settled
+                with data:
+                    info.size, info.mtime = now.st_size, now.st_mtime
+                    archive.addfile(info, data)
+            return
+        archive.addfile(info)
+        for child in sorted(os.listdir(fd)):
+            _add(archive, fd, child, f"{arcname}/{child}", keep)
+    finally:
+        os.close(fd)
+
+
+#: How many times a file that changes while it is read is read, and what of
+#: it is held in memory before the rest goes to a temporary file.
+READ_TRIES = 3
+SPOOL_MAX = 1 << 20
+
+
+def _read_settled(fd: int, arcname: str):
+    """The open file's bytes, read whole, **and the file unchanged while they
+    were read** (the review of 1.16.1): a program that rewrote a file shorter
+    in place after its size was taken failed the whole backup - tarfile had
+    written that size, then read fewer bytes ("unexpected end of data") - and
+    the update waiting for it stopped. Read again when it changed; left out,
+    and said, when it keeps changing. `(spool, its stat)`, or None."""
+    for attempt in range(READ_TRIES):
+        if attempt:
+            time.sleep(0.2)
+        before = os.fstat(fd)
+        spool = tempfile.SpooledTemporaryFile(max_size=SPOOL_MAX)
+        try:
+            os.lseek(fd, 0, os.SEEK_SET)
+            while chunk := os.read(fd, 1 << 16):
+                spool.write(chunk)
+            after = os.fstat(fd)
+        except BaseException:
+            spool.close()
+            raise
+        if spool.tell() == after.st_size and \
+                (before.st_size, before.st_mtime_ns) == (after.st_size, after.st_mtime_ns):
+            spool.seek(0)
+            return spool, after
+        spool.close()
+    logger.info("backup: %s kept changing while it was read, leaving it out", arcname)
+    return None
 
 
 #: How old a partial archive is before the next backup takes it for one
@@ -508,9 +648,10 @@ def _fill(archive: tarfile.TarFile, work: str, root: Path) -> None:
     """Everything in `MEMBERS` into `archive`; `work`, a folder for the
     databases' copies."""
     copied: list[tuple[tarfile.TarInfo, Path]] = []
+    beside = root / LINKS_BESIDE
+    _sweep_links(beside)
 
-    def live_databases(info: tarfile.TarInfo) -> tarfile.TarInfo | None:
-        path = root / info.name
+    def live_databases(info: tarfile.TarInfo, folder_fd: int, name: str, fd: int) -> tarfile.TarInfo | None:
         if info.isdir():
             return info
         if not info.isfile():
@@ -519,19 +660,36 @@ def _fill(archive: tarfile.TarFile, work: str, root: Path) -> None:
         if any(info.name.endswith(s) for s in WAL_FILES) and \
                 any(c.name == info.name[:-4] for c, _ in copied):
             return None
-        if Path(f"{path}-wal").exists():
-            into = Path(work) / str(len(copied))
-            if _snapshot(path, into):
-                copied.append((info, into))
-                return None
+        try:
+            os.stat(f"{name}-wal", dir_fd=folder_fd, follow_symlinks=False)
+        except OSError:
+            return info
+        into = Path(work) / str(len(copied))
+        if _snapshot_pinned(folder_fd, name, fd, into, beside, info.name):
+            copied.append((info, into))
+            return None
         return info
 
-    for member in MEMBERS:
-        source = root / member
-        if not source.exists():
-            logger.info("backup: %s is not here, skipping", member)
-            continue
-        _add(archive, source, member, live_databases)
+    root_fd = os.open(root, _FOLDER)
+    try:
+        for member in MEMBERS:
+            *parents, name = member.split("/")
+            try:
+                folder = _open_folder(root_fd, parents, "backup", make=False)
+            except (FileNotFoundError, ValueError):
+                logger.info("backup: %s is not here, skipping", member)
+                continue
+            try:
+                try:
+                    os.stat(name, dir_fd=folder, follow_symlinks=False)
+                except FileNotFoundError:
+                    logger.info("backup: %s is not here, skipping", member)
+                    continue
+                _add(archive, folder, name, member, live_databases)
+            finally:
+                os.close(folder)
+    finally:
+        os.close(root_fd)
     # The copies, under the live files' names, owners and modes.
     for info, into in copied:
         info.size = into.stat().st_size
