@@ -1347,6 +1347,20 @@ def _add_upload(upload, part: Path, filename: str | None, known_migrations: int,
         # Its name was taken away meanwhile, and a file with none cannot be
         # linked again.
         raise Refused("The file did not arrive whole. Try again.") from None
+    except OSError as exc:
+        if exc.errno != errno.EXDEV:
+            raise
+        # **Where the descriptor's link is on another device** (an overlay: a
+        # container, GitHub's runners): by its name, never followed, and
+        # kept only if what was linked is the file checked.
+        try:
+            os.link(part, final, follow_symlinks=False)
+        except FileNotFoundError:
+            raise Refused("The file did not arrive whole. Try again.") from None
+        mine, linked = os.fstat(upload.fileno()), os.lstat(final)
+        if (linked.st_dev, linked.st_ino) != (mine.st_dev, mine.st_ino):
+            final.unlink(missing_ok=True)
+            raise Refused("The file did not arrive whole. Try again.") from None
     _sync_dir(directory)
     logger.info("backup: %s added from an upload (%s)", given, seen.get("name"))
     return {"name": given, "already": False}

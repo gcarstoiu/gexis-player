@@ -461,7 +461,9 @@ nothing there is followed through a link:
   share under any name is answered `already: true`. Nothing is restored.
   **The upload is opened once, without following a link**, and checked,
   compared, given to `pi` and linked in through that file
-  (`/proc/self/fd/N`), never by its name again (the review of 1.16.1: the
+  (`/proc/self/fd/N`; where that is on another device, an overlay, by its
+  name, never followed, and kept only if it is the same file), never read
+  or changed by its name again (the review of 1.16.1: the
   share is `pi`'s, and a link put under the name once it was checked had
   root hand `pi` the file it named); one whose name was taken meanwhile is
   refused.

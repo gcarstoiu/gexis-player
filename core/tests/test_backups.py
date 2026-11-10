@@ -1565,3 +1565,45 @@ def test_a_backup_compared_with_an_upload_is_never_read_through_a_link(tmp_path,
     (share / "gexis-kitchen-20260101-120000.tgz").symlink_to(secret)
     added = backups.add_upload(part, "gexis-kitchen-20260101-120000.tgz", 5, share)
     assert added["already"] is False and added["name"] != "gexis-kitchen-20260101-120000.tgz"
+
+
+def _no_magic_links(monkeypatch):
+    """A filesystem where a descriptor's `/proc/self/fd` link is on another
+    device: an overlay (a container, GitHub's runners)."""
+    import errno
+    real = os.link
+
+    def link(src, dst, *a, **k):
+        if str(src).startswith("/proc/self/fd/"):
+            raise OSError(errno.EXDEV, "Invalid cross-device link")
+        return real(src, dst, *a, **k)
+    monkeypatch.setattr(backups.os, "link", link)
+
+
+def test_an_upload_is_added_where_its_descriptor_cannot_be_linked(tmp_path, monkeypatch):
+    """Through its name then, never followed, and only if that name is still
+    the file checked."""
+    _no_magic_links(monkeypatch)
+    share, part, body = _uploaded(tmp_path)
+    added = backups.add_upload(part, None, 5, share)
+    assert (share / added["name"]).read_bytes() == body and not added["already"]
+
+
+def test_where_it_cannot_be_linked_an_upload_swapped_for_a_link_is_refused(tmp_path, monkeypatch):
+    _no_magic_links(monkeypatch)
+    share, part, body = _uploaded(tmp_path)
+    secret = tmp_path / "secret"
+    secret.write_text("root:$6$hash")
+    secret.chmod(0o600)
+    listed = backups.available
+
+    def swapped(directory):
+        part.rename(tmp_path / "aside")
+        part.symlink_to(secret)
+        return listed(directory)
+    monkeypatch.setattr(backups, "available", swapped)
+
+    with pytest.raises(backups.Refused, match="did not arrive whole"):
+        backups.add_upload(part, None, 5, share)
+    assert secret.stat().st_mode & 0o7777 == 0o600
+    assert [p.name for p in share.iterdir() if not p.name.startswith(".")] == []
