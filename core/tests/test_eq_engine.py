@@ -383,3 +383,26 @@ async def test_the_rooms_raises_are_lowered_for_and_given_back(monkeypatch, tmp_
     await rig.engine.configure("sndrpihifiberry", eq.FLAT, room=eq.RoomPlay(cuts=full.cuts, above=full.above))
     await rig.settle()
     assert ("SetFaderVolume", [1, 0.0]) in rig.camilla.sent, "no lift (a run's check): no headroom"
+
+
+async def test_the_adapter_s_missing_rates_are_converted_as_the_card_says(monkeypatch, tmp_path):
+    """A rate the card lacks converted, from what the card itself answers
+    (the review of 1.16.1): aplay gives the adapter's rates as a range, and
+    the range alone said it
+    took 88.2 and 176.4 kHz, so nothing was converted and the track was
+    silent with the equaliser on."""
+    from test_outputs import ADAPTER_DUMP, _Alsa, _asked
+
+    from gexis_core import outputs
+    _asked(monkeypatch, {"Adapter": ADAPTER_DUMP})
+    monkeypatch.setattr(outputs, "_libasound", lambda: _Alsa({44100, 48000, 96000, 192000}), raising=False)
+    assert outputs.needs_plug("Adapter") is False
+    rig = Rig(monkeypatch, tmp_path, takes_rate=outputs.takes_rate)
+    await rig.engine.configure("Adapter", eq.FLAT)
+    for rate, plays in ((88200, 192000), (176400, 192000), (96000, 96000), (44100, 44100)):
+        rig.amixer = contents(rate=rate)
+        await rig.engine._look()
+        d = json.loads([a for n, a in rig.camilla.sent if n == "SetConfigJson"][-1])["devices"]
+        assert d["samplerate"] == plays and d.get("capture_samplerate", rate) == rate, rate
+        rig.amixer = contents(active="off")
+        await rig.engine._look()
