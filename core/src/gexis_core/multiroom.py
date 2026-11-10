@@ -497,10 +497,13 @@ class Multiroom:
         """**Lyrion plays here in its own sync with the group's leader**, on
         one server, so Lyrion carries the group (D2) - not this player's own
         music to stop (C1). Stopping it paused the sync it plays in (the
-        bar, 2026-10-28: synced in a Lyrion app while it played)."""
+        bar, 2026-10-28: synced in a Lyrion app while it played). **So too
+        where the group can no longer be Lyrion's sync** (C3) until the
+        leader takes it out of the sync (`_lms_follow`; the review of 1.16.1:
+        a player off the group's Lyrion joined, and a member's stop paused
+        the leader's Lyrion)."""
         lms = self._lms
-        if (lms is None or self._local_active() != "lms"
-                or self._chain_for(record) != outputs.BUT_LYRION):
+        if lms is None or self._local_active() != "lms":
             return False
         leader = (self._lyrion_of(record.leader) or {}).get("player")
         master, others = lms.sync_group
@@ -748,11 +751,25 @@ class Multiroom:
 
     async def _lms_follow(self) -> None:
         """The leader keeps Lyrion's sync as the group is: every member's
-        player synced to its own, and switched on while Lyrion plays here."""
+        player synced to its own, and switched on while Lyrion plays here -
+        or, where Lyrion cannot sync the group (C3), none of them."""
         record = self.group.record
         lms = self._lms
         if (record is None or lms is None or not self._lms_on() or lms.player_id is None
-                or record.leader != self.group.me or self.chain != outputs.BUT_LYRION):
+                or record.leader != self.group.me):
+            return
+        if self.chain == outputs.ALL:
+            # Out of this one's sync, so a member's own stop - Lyrion's
+            # pause - does not pause the music here (the review of 1.16.1).
+            members = {(self._lyrion_of(m.id) or {}).get("player") for m in self._others(record)}
+            synced = set(lms.sync_group[1]) & members
+            if synced:
+                self._lms_commanded = time.monotonic()
+                for player in sorted(synced):
+                    await lms.unsync(player)
+                logger.info("multiroom: Lyrion cannot sync the group; %d out of its sync", len(synced))
+            return
+        if self.chain != outputs.BUT_LYRION:
             return
         wanted = set()
         for member in self._others(record):

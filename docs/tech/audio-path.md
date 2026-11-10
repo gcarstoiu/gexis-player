@@ -815,7 +815,11 @@ leader's snapserver → network (FLAC, 32 bits) → each member's snapclient →
   as the group is (`<leader> sync <member>`, and `<member> sync -` out), and
   switches every member's player on while Lyrion plays there. Each member's
   own Squeezelite plays to its own chain, and its client is stopped while
-  Lyrion is its active source, so Squeezelite has the card.
+  Lyrion is its active source, so Squeezelite has the card. Once a member
+  without Lyrion, or on another server, is in the group (C3), the leader
+  takes the members' players out of its sync; until then a member's Lyrion
+  still in it is not stopped, as Lyrion's pause there pauses the leader
+  too.
 - **The units are the player's own.** Debian's `snapserver.service` and
   `snapclient.service` enable and start themselves on install, and the
   client would play to ALSA's default, which is `output`: `gexis-system`

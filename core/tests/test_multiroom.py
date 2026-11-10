@@ -525,6 +525,87 @@ async def test_lyrion_playing_on_its_own_is_stopped_on_joining(tmp_path):
     assert kitchen.stopped == ["lms"], "C1: not synced with the leader, its own music stops"
 
 
+class LyrionServer:
+    """One Lyrion server, as far as a group needs it: its syncs, and a pause
+    on any synced player pausing every one (the bar, 2026-10-28)."""
+
+    def __init__(self):
+        self.syncs: list[set[str]] = []
+        self.paused: set[str] = set()
+        self.unsynced: list[str] = []
+
+    def sync_of(self, player):
+        return next((s for s in self.syncs if player in s), {player})
+
+    def take(self, room_player, player):
+        """`room_player`'s Lyrion on this server, as `player`; its stop is the
+        adapter's release, `pause 1` then `power 0`."""
+        server = self
+
+        class Lms:
+            player_id, server_id = player, "server-uuid"
+
+            @property
+            def sync_group(self):
+                others = tuple(sorted(server.sync_of(player) - {player}))
+                return (min(server.sync_of(player)) if others else None, others)
+
+            async def power_on(self, other):
+                return True
+
+            async def sync_with(self, other):
+                joined = server.sync_of(player) | server.sync_of(other)
+                server.syncs = [s for s in server.syncs if not s & joined] + [joined]
+                return True
+
+            async def unsync(self, other=None):
+                target = other or player
+                server.unsynced.append(target)
+                server.syncs = [s - {target} for s in server.syncs if len(s - {target}) > 1]
+                return True
+        room_player.room._lms = Lms()
+        stop = room_player.room._stop_source
+
+        async def stop_source():
+            if room_player.active == "lms":
+                server.paused |= server.sync_of(player)
+            return await stop()
+        room_player.room._stop_source = stop_source
+
+
+@pytest.mark.parametrize("study_lyrion", [None, ("another-server", "player-c")])
+async def test_a_player_off_the_groups_lyrion_joining_does_not_pause_the_group(tmp_path, study_lyrion):
+    """The review of 1.16.1 (C3): the group played Lyrion in Lyrion's own
+    sync; a player without Lyrion, or on another server, joined, and
+    Kitchen's Lyrion - still synced - was stopped as its own music, with
+    Lyrion's pause, which paused the leader's too."""
+    server = LyrionServer()
+    net = Net(tmp_path)
+    living = net.add("living", "Living Room", lyrion=("server-uuid", "player-a"))
+    kitchen = net.add("kitchen", "Kitchen", lyrion=("server-uuid", "player-b"))
+    net.add("study", "Study", lyrion=study_lyrion)
+    server.take(living, "player-a")
+    server.take(kitchen, "player-b")
+    await net.settle()
+    await living.room.join("kitchen")
+    await net.settle()
+    assert server.sync_of("player-a") == {"player-a", "player-b"}, "the group's own sync (D2)"
+    living.play("lms")
+    kitchen.room.peers.states["living"] = {"active": "lms"}
+    kitchen.play("lms")
+    await net.settle()
+    await living.room.join("study")
+    for _ in range(3):
+        await net.settle()
+    assert living.room.chain == kitchen.room.chain == outputs.ALL
+    assert "player-a" not in server.paused, "the leader's Lyrion plays on"
+    assert server.unsynced == ["player-b"], "out of Lyrion's sync, which cannot carry the group"
+    kitchen.room._changed()  # Lyrion's word that it stopped there
+    await net.settle()
+    assert kitchen.stopped == ["lms"], "C1, once out of the sync"
+    assert "player-a" not in server.paused and living.stopped == []
+
+
 def test_a_leaders_relative_pictures_are_made_reachable():
     assert mr.absolute("/music/1/cover.jpg", "http://living.local:8090/") == \
         "http://living.local:8090/music/1/cover.jpg"
