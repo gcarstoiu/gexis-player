@@ -870,13 +870,17 @@ def _settings_in(archive: tarfile.TarFile, member: tarfile.TarInfo) -> dict:
     return values
 
 
-def inspect(path: Path, known_migrations: int, schema_key: str = "_settings_schema") -> dict:
+def inspect(path: Path, known_migrations: int, schema_key: str = "_settings_schema",
+            fileobj=None) -> dict:
     """**What a backup would bring, without putting anything back** (ADR-0131
     §3-4): its settings as setup applies them, which plugins it has on, what
     else it carries, when and where it was made, and whether a newer version
-    of gexis made it. Raises `Refused` with the sentence for the phone."""
+    of gexis made it. Raises `Refused` with the sentence for the phone.
+    `fileobj`: the archive already open, read instead of `path`."""
     try:
-        archive = tarfile.open(path, "r:gz")
+        if fileobj is not None:
+            fileobj.seek(0)
+        archive = tarfile.open(path, "r:gz", fileobj=fileobj)
     except (tarfile.TarError, OSError, EOFError, zlib.error):
         raise Refused(NOT_A_BACKUP) from None
     with archive:
@@ -1043,55 +1047,84 @@ def add_upload(part: Path, filename: str | None, known_migrations: int,
     amended 2026-10-17; George: *"It should stay in the restore list"*):
     never restored by itself, never in place of a file already there.
     Returns `{"name", "already"}`; raises `Refused` with the sentence for the
-    page. `part` is gone afterwards either way."""
+    page. `part` is gone afterwards either way.
+
+    **Through the one file, opened once** (the review of 1.16.1). The share
+    is `pi`'s and not sticky, so `pi` can put a link under `part`'s name at
+    any moment; read, changed and linked in by name, root gave `pi` what
+    the link named and put it in the share. Opened without following a
+    link, everything after - the check, the comparisons, mode, owner and
+    the link into the share - is done to the file that was opened."""
     try:
-        seen = inspect(part, known_migrations)
-        if seen["newer"]:
-            raise Refused(NEWER)
-        # **The same backup under another name is already there** (a file
-        # renamed on the computer): said, not added twice.
-        size = part.stat().st_size
-        for listed in available(directory):
-            if listed.size == size and _same(part, directory / listed.name):
-                return {"name": listed.name, "already": True}
-        given = Path(filename or "").name
-        if given.endswith(".tgz.gz"):
-            given = given[:-3]
-        if not (NAME.match(given) and SAFE.match(given)):
-            stamp = time.strftime("%Y%m%d-%H%M%S", time.localtime(seen["made"] or time.time()))
-            given = f"gexis-{_slug(seen.get('name') or 'gexis')}-{stamp}.tgz"
-        final = directory / given
-        if final.exists() or final.is_symlink():
-            if _same(part, final):
-                return {"name": given, "already": True}
-            given = f"gexis-{_slug(seen.get('name') or 'gexis')}-{time.strftime('%Y%m%d-%H%M%S')}.tgz"
-            final = directory / given
-        with part.open("rb+") as f:
-            os.fchmod(f.fileno(), 0o644)
-            _give_to_pi(f.fileno())
-            os.fsync(f.fileno())
-        # A link, not a rename: it fails rather than replace whatever
-        # arrived under that name in the meantime.
-        os.link(part, final)
-        _sync_dir(directory)
-        logger.info("backup: %s added from an upload (%s)", given, seen.get("name"))
-        return {"name": given, "already": False}
+        try:
+            fd = os.open(part, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+        except OSError:
+            raise Refused(NOT_A_BACKUP) from None
+        with os.fdopen(fd, "rb") as upload:
+            if not stat.S_ISREG(os.fstat(upload.fileno()).st_mode):
+                raise Refused(NOT_A_BACKUP)
+            return _add_upload(upload, part, filename, known_migrations, directory)
     except FileExistsError as exc:
         raise Refused("A backup with that name arrived at the same moment. Try again.") from exc
     finally:
         part.unlink(missing_ok=True)
 
 
-def _same(a: Path, b: Path) -> bool:
+def _add_upload(upload, part: Path, filename: str | None, known_migrations: int, directory: Path) -> dict:
+    """`add_upload`, given the file opened."""
+    seen = inspect(part, known_migrations, fileobj=upload)
+    if seen["newer"]:
+        raise Refused(NEWER)
+    # **The same backup under another name is already there** (a file
+    # renamed on the computer): said, not added twice.
+    size = os.fstat(upload.fileno()).st_size
+    for listed in available(directory):
+        if listed.size == size and _same(upload, directory / listed.name):
+            return {"name": listed.name, "already": True}
+    given = Path(filename or "").name
+    if given.endswith(".tgz.gz"):
+        given = given[:-3]
+    if not (NAME.match(given) and SAFE.match(given)):
+        stamp = time.strftime("%Y%m%d-%H%M%S", time.localtime(seen["made"] or time.time()))
+        given = f"gexis-{_slug(seen.get('name') or 'gexis')}-{stamp}.tgz"
+    final = directory / given
+    if final.exists() or final.is_symlink():
+        if _same(upload, final):
+            return {"name": given, "already": True}
+        given = f"gexis-{_slug(seen.get('name') or 'gexis')}-{time.strftime('%Y%m%d-%H%M%S')}.tgz"
+        final = directory / given
+    os.fchmod(upload.fileno(), 0o644)
+    _give_to_pi(upload.fileno())
+    os.fsync(upload.fileno())
+    # A link, not a rename: it fails rather than replace whatever
+    # arrived under that name in the meantime. Of the open file, by its
+    # descriptor: whatever is under `part`'s name by now is not linked.
     try:
-        if not stat.S_ISREG(b.lstat().st_mode) or a.stat().st_size != b.stat().st_size:
-            return False
-        with a.open("rb") as x, b.open("rb") as y:
-            while True:
-                one, two = x.read(1 << 20), y.read(1 << 20)
-                if one != two:
-                    return False
-                if not one:
-                    return True
+        os.link(f"/proc/self/fd/{upload.fileno()}", final)
+    except FileNotFoundError:
+        # Its name was taken away meanwhile, and a file with none cannot be
+        # linked again.
+        raise Refused("The file did not arrive whole. Try again.") from None
+    _sync_dir(directory)
+    logger.info("backup: %s added from an upload (%s)", given, seen.get("name"))
+    return {"name": given, "already": False}
+
+
+def _same(upload, b: Path) -> bool:
+    """Whether the open `upload` holds what the file `b` does; `b` is never
+    read through a link."""
+    try:
+        fd = os.open(b, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
     except OSError:
         return False
+    with os.fdopen(fd, "rb") as y:
+        mine, theirs = os.fstat(upload.fileno()), os.fstat(y.fileno())
+        if not stat.S_ISREG(theirs.st_mode) or mine.st_size != theirs.st_size:
+            return False
+        upload.seek(0)
+        while True:
+            one, two = upload.read(1 << 20), y.read(1 << 20)
+            if one != two:
+                return False
+            if not one:
+                return True
