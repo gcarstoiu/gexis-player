@@ -134,7 +134,8 @@ flowchart LR
 
 The same `index.html` is served to everyone. On mount, `App.svelte` asks
 `GET /surface`. The core answers `panel` when the request comes from loopback
-with this boot's token (the kiosk loads `http://127.0.0.1:8090/#panel=…`, and
+with this boot's token (the kiosk loads `http://127.0.0.1:8090/#panel=…`,
+through a page of its own so that the token is not on Chromium's command line, and
 `lib/panel-token.js`, loaded first, adds it to every request as
 `X-Gexis-Panel`; ADR-0170) and `remote` for anything else.
 If the request fails it is asked again, backing off to every 5 s, and nothing

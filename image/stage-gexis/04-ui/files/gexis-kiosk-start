@@ -289,15 +289,27 @@ forget_window "${GEXIS_KIOSK_PROFILE}"
 # ADR-0170: the panel proves itself with this boot's token, which the core
 # makes at its start (the kiosk starts after it). The page sends it with its
 # requests; without it the core takes the page for a phone, so wait for it.
+# **Never on Chromium's command line** (the review of 1.16.1), which any
+# process on the player can read: Chromium opens a page in this user's own
+# runtime folder, which goes on to the panel's address with the token.
 panel_url="${GEXIS_KIOSK_URL}"
+token_file=${GEXIS_PANEL_TOKEN:-/run/gexis/panel-token}
 for _ in $(seq 1 30); do
-	token=$(cat /run/gexis/panel-token 2>/dev/null) && [ -n "${token}" ] && break
+	token=$(cat "${token_file}" 2>/dev/null) && [ -n "${token}" ] && break
 	sleep 1
 done
-if [ -n "${token:-}" ]; then
-	panel_url="${GEXIS_KIOSK_URL%%#*}#panel=${token}"
+if [[ "${token:-}" =~ ^[A-Za-z0-9_-]+$ ]]; then
+	opener="${XDG_RUNTIME_DIR:-}/gexis-panel.html"
+	[ -d "${XDG_RUNTIME_DIR:-}" ] || opener="$(mktemp -d)/gexis-panel.html"
+	if (umask 077 && printf '<!doctype html><meta name="color-scheme" content="dark"><style>html{background:#101a21}</style><script>location.replace("%s")</script>\n' \
+		"${GEXIS_KIOSK_URL%%#*}#panel=${token}" > "${opener}"); then
+		panel_url="file://${opener}"
+	else
+		echo "gexis-kiosk: the panel's opening page not written; its token in the address" >&2
+		panel_url="${GEXIS_KIOSK_URL%%#*}#panel=${token}"
+	fi
 else
-	echo "gexis-kiosk: no panel token in /run/gexis/panel-token" >&2
+	echo "gexis-kiosk: no panel token in ${token_file}" >&2
 fi
 echo "gexis-kiosk: exec chromium" >&2
 
