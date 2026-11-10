@@ -271,6 +271,20 @@ async def test_while_nothing_plays_the_headroom_is_given_back_at_once(monkeypatc
     assert rig.camilla.sent[-1] == ("give", 0.0), "off: taken back, after CamillaDSP stopped"
 
 
+async def test_a_restart_or_a_move_tells_the_volume_again_at_the_same_headroom(monkeypatch, tmp_path):
+    """**The review of 1.16.1.** A change of volume type restarts the stage
+    with the same headroom, and the volume was not told, so the give-back
+    stayed on the control it had left: Rock played 5 dB under Flat. Where
+    it goes is the volume's to work out, from the whole target."""
+    rig = Rig(monkeypatch, tmp_path, give=True)
+    rock = eq.PRESET["rock"].gains
+    await rig.engine.configure("sndrpihifiberry", rock)
+    await rig.engine.configure("sndrpihifiberry", rock, restart=True)
+    await rig.engine.configure("vc4hdmi0", rock)
+    await rig.engine.configure("vc4hdmi0", rock)
+    assert [s for s in rig.camilla.sent if s[0] == "give"] == [("give", 5.0)] * 3
+
+
 async def test_a_rising_headroom_is_given_back_after_the_lowering_and_a_falling_one_before(monkeypatch, tmp_path):
     """The quiet side of each change: the volume never gives back what the
     equaliser has not yet lowered, so a change is a short dip, never louder."""
