@@ -504,14 +504,20 @@ volume. An owner's own choice of Software or Fixed stands.
 
 **What a card takes is asked once per device** (Finding 125 #15,
 2026-10-14). `needs_plug` plays a second of zeroes to ask, so its answers -
-formats, lowest and highest rate - are kept by card id, with the device
-that gave them (`_asked_of`): for a USB card its sysfs path, bus number and
-device number, which the bus gives anew at every plug-in. Before
+formats, lowest and highest rate, the rates it takes - are kept by card id,
+with the device that gave them (`_asked_of`): for a USB card its sysfs path,
+bus number and device number, which the bus gives anew at every plug-in. Before
 `needs_plug`, `widens`, `squeezelite_options` or `native_dsd` read them,
 `_current()` drops them when that device has changed, so a DAC unplugged and
 another with the same card id plugged in is asked again rather than
 inheriting the first one's widening, rates and DSD. An I2S board or HDMI
 keeps its answers for the life of the core: only a reboot changes them.
+aplay prints a card's rates as a range even when it takes only some of
+them (the USB-to-optical adapter: 44.1, 48, 96 and 192 kHz), so a card
+not behind a conversion is then asked each standard rate in the range
+(`_probe_rates`: alsa-lib's `snd_pcm_hw_params_test_rate`, which sets and
+plays nothing); `takes_rate` answers from that list, the range standing
+only when the card cannot be asked.
 
 **Native DSD** (ADR-0144): `native_dsd()` names the card's DSD format from
 the same question (`DSD_U32_BE` first). With the volume Fixed (`write(...,
