@@ -620,7 +620,9 @@ pieces in code:
   ready, every 20 s after) and works out Starting, Adding its add-ons
   (until `lyrion-addons.done`), About to read your music, Reading your music
   (`rescan`, with Lyrion's own `progressname` and its count) or Ready (`info
-  total songs`).
+  total songs`), or Ready, no music yet with nowhere to read from - the
+  Music folder counts only while it holds a file (its `Playlists` folder and
+  hidden files aside), since Lyrion's scan of an empty one leaves no mark.
   It goes out as `components.lyrion.after` while the package is installed;
   in Settings as the Lyrion Server heading's indicator and the read-only
   `lyrion-server.library` row (`progress`, or `busy` with no count).

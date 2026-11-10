@@ -75,6 +75,20 @@ def music_space(music: Path = MUSIC) -> dict | None:
             "text": f"{size_text(usage.free)} free of {size_text(usage.total)}"}
 
 
+def holds_music(music: Path = MUSIC) -> bool:
+    """**Anything in the Music folder for Lyrion to read** (the review of
+    1.16.1): a file, Lyrion's Playlists folder and hidden files (a Mac
+    browsing the share leaves one) aside. A new player's folder is empty,
+    and Lyrion's scan of it leaves no mark to wait for. One that cannot be
+    read counts as holding music, as before."""
+    unread = []
+    for top, dirs, files in os.walk(music, onerror=unread.append):
+        dirs[:] = [d for d in dirs if not d.startswith(".") and Path(top, d) != music / "Playlists"]
+        if any(not f.startswith(".") for f in files):
+            return True
+    return any(not isinstance(e, FileNotFoundError) for e in unread)
+
+
 def usb_recent(mounted_now: list[str], path: Path = USB_SEEN, now: float | None = None,
                keep_s: float = USB_KEEP_S) -> list[str]:
     """The USB folders seen mounted in the last 7 days, mounted now or not;
