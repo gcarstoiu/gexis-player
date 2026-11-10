@@ -415,7 +415,8 @@ dashboard*.
   set.
 - **While it is up**, the music goes on; a new track or the idle screen does
   not take the dashboard down. The volume drawer still shows over it, and
-  display standby still turns the screen off.
+  display standby still turns the screen off. A link that would open a new
+  window does nothing on the panel; links within the dashboard work.
 - **The visualiser takes over from it**: opened from the phone, or coming on
   by itself after the visualiser's timeout while music plays, it takes the
   dashboard down and shows in its place.

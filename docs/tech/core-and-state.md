@@ -735,7 +735,8 @@ timer's - takes it down first (`PeppyController(before_show=...)`, ADR-0156
 as amended 2026-10-22), and the dashboard's own `show` takes the visualiser
 down. The panel draws it
 (`DashboardScreen.svelte`, an `<iframe>` at z-index 11, under the volume
-drawer); at the idle timeout inside a dashboard time it asks for the
+drawer, sandboxed without `allow-popups`: a link that would open a new window
+does nothing, ADR-0178 decision 3); at the idle timeout inside a dashboard time it asks for the
 dashboard instead of the idle screen, and when the schedule takes it down the
 idle screen follows at once. Home Assistant's side - framing and trusted
 networks - is the user's (decision 8, Finding 132).
