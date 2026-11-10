@@ -1861,12 +1861,13 @@
     if (holdFrame !== null || busy) return;
     event?.preventDefault?.();
     const from = performance.now();
+    const button = event?.currentTarget;
     const tick = (now) => {
       holdShare = Math.min(1, (now - from) / HOLD_MS);
       if (holdShare >= 1) {
         holdFrame = null;
         holdShare = 0;
-        confirmSheet();
+        if (button?.isConnected ?? true) confirmSheet();
         return;
       }
       holdFrame = requestAnimationFrame(tick);
@@ -1878,6 +1879,13 @@
     holdFrame = null;
     holdShare = 0;
   }
+  //: **A hold ends with its sheet, and with Settings** (the review of
+  //: 1.16.1): closed under the finger - a phone's Now playing - the button
+  //: and its release went, the hold ran on, and the reset came 3 s later.
+  $effect(() => {
+    sheetKey;
+    return holdStop;
+  });
   const holdKey = (down) => (event) => {
     if (event.key !== ' ' && event.key !== 'Enter') return;
     event.preventDefault();
