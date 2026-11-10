@@ -2615,6 +2615,19 @@ async def main() -> None:
             return f"DSI-{label.split(' ', 1)[1] if ' ' in label else '1'}"
         return f"HDMI-A-{label.rsplit(' ', 1)[-1]}"
 
+    def _screen_ports() -> list:
+        """**The ports *Screen port* offers and chooses from**: those there
+        are, and first a DSI panel an HDMI port was chosen over, whose driver
+        line went with it (`screen_apply.left_dark`; the review of 1.16.1) -
+        as connected, at its model's mode."""
+        ports = screen_detect.ports()
+        left = screen_apply.left_dark(ports)
+        model = screens.by_id(left.screen_id) if left is not None else None
+        if model is None:
+            return ports
+        size = (model.height, model.width) if model.rotation in (90, 270) else (model.width, model.height)
+        return [screen_detect.Seen(True, left.connector, preferred=size), *ports]
+
     def _screen_name(connector: str) -> str | None:
         """The screen's name when `connector` is the screen's port, else
         None: a listed model by its maker and model; a screen in no list -
@@ -2633,7 +2646,7 @@ async def main() -> None:
         *"Shouldn't we have two entries, similar to audio output?"*): the
         screen by its model, anything else by the name it gives, and the
         port's sound when the output is that port."""
-        port = next((p for p in screen_detect.ports() if p.connector == connector), None)
+        port = next((p for p in _screen_ports() if p.connector == connector), None)
         if port is None or not port.connected:
             return "Nothing connected"
         parts = [_screen_name(connector) or port.edid_name or port.edid_maker
@@ -2671,7 +2684,7 @@ async def main() -> None:
         goes: the row shows the port in use."""
         settings_store.delete("screen_port")
         connector = _port_connector(label)
-        port = next((p for p in screen_detect.ports() if p.connector == connector and p.connected), None)
+        port = next((p for p in _screen_ports() if p.connector == connector and p.connected), None)
         if port is None or port.preferred is None:
             logger.warning("screen: nothing on %s to choose", connector)
             return
@@ -2776,9 +2789,9 @@ async def main() -> None:
                "visualiser_skins": lambda: plugin_store.SKINS in _added(),
                # ADR-0141 D2: a choice only while both ports have something on them.
                "screen_port": lambda: not settings_store.get("headless")
-               and len(screen_detect.ports()) >= 2,
+               and len(_screen_ports()) >= 2,
                "screen_port_info": lambda: not settings_store.get("headless")
-               and len(screen_detect.ports()) == 1,
+               and len(_screen_ports()) == 1,
                # ADR-0158 D5: only where the player can set the backlight.
                "brightness": lambda: standby_module.screen_backlight() is not None},
         registry=Settings.with_plugins(load_registry(), installed_plugins, downloads,
@@ -2875,7 +2888,7 @@ async def main() -> None:
             # without a restart.
             "output_device": lambda: [o.option for o in outputs.discover()],
             # ADR-0158 D3: a DSI panel's port beside the HDMI ones.
-            "screen_port": lambda: [_port_label(p.connector) for p in screen_detect.ports()],
+            "screen_port": lambda: [_port_label(p.connector) for p in _screen_ports()],
         },
         # A line under a USB DAC: what it reports it can do (George,
         # 2026-10-12). Worked out with the outputs, so asking costs nothing.
@@ -2888,7 +2901,7 @@ async def main() -> None:
                       # ADR-0141 D4 (George, 2026-10-12: one tile, what is on
                       # each port beside its choice in the picker).
                       "screen_port": lambda: {_port_label(p.connector): _port_line(p.connector)
-                                              for p in screen_detect.ports()}},
+                                              for p in _screen_ports()}},
         # *Tested* beside an output tested here or reported working, and a
         # reported problem under it - as the screens and boards show them
         # (George, 2026-10-18).

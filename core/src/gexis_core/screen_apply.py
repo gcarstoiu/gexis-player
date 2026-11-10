@@ -426,6 +426,31 @@ def kept_on(connector: str, state: Path | None = None) -> Applied | None:
     return Applied(doc["screen"], int(doc.get("rotation", 0)), connector)
 
 
+def left_dark(ports, state: Path | None = None) -> Applied | None:
+    """**A DSI panel a port was chosen over, its driver line gone with it**
+    (ADR-0158 D3: an HDMI port chosen under *Screen port* wins, and choosing
+    *DSI* again goes back; the review of 1.16.1). A model whose overlay the
+    player writes has no driver without it, so no connector, and *DSI* was
+    not offered: the DSI model kept on that port, while the screen in use
+    was chosen on another and no connector of that name is there. A panel
+    the firmware finds has its connector whenever it is there."""
+    data = read_state(state or STATE)
+    current = data.get("current")
+    if not isinstance(current, dict) or not current.get("chosen"):
+        return None
+    found = data.get("kept_on") if isinstance(data.get("kept_on"), dict) else {}
+    previous = data.get("previous") if isinstance(data.get("previous"), dict) else {}
+    there = {p.connector for p in ports}
+    for connector in dict.fromkeys([*found, previous.get("connector")]):
+        if not str(connector or "").startswith("DSI-") or connector == current.get("connector") or connector in there:
+            continue
+        kept = kept_on(connector, state)
+        model = screens.by_id(kept.screen_id) if kept is not None else None
+        if model is not None and model.interface == "dsi" and model.overlays:
+            return kept
+    return None
+
+
 def refresh(*, state: Path = STATE, env: Path = SCREEN_ENV, cmdline: Path = CMDLINE, config: Path = CONFIG) -> bool:
     """**The kept screen's files as this version writes them** (2026-10-04:
     a bar's `video=` now carries the panel's orientation, and a bar set up
