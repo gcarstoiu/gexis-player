@@ -3901,7 +3901,8 @@ costs a Pi 4 beside Phase 29's filter.
 2026-11-10; George asked for the build to go ahead on its recommendations the
 same day, and accepted it the same day (decisions 1-4 as recommended: the
 bass's level from the line, nothing corrected above 14 kHz, one level for
-Bass, Full range and Without, the times).
+Bass, Full range and Without, the times). Built the same day, and **on Testing with 1.16.0** (2026-11-10, serial
+68) at George's word, before his own run at the full range.
 
 **Acceptance (draft):**
 

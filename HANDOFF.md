@@ -20,17 +20,13 @@ and the ideas as Must / Should / Could. It follows `docs/DEVELOPMENT.md`'s
 phases; change it when a phase opens, closes or moves, and show George first. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Testing: 1.15.0** (2026-11-08, serial 67): a page from Home Assistant on
-the screen (Phase 35), with zlib's Debian update. Built by run 42471673684
-(`verify-image.sh` all 151 checks passed, as 1.14.0); its downloads from the
-mirror and the published indexes took 26 and 20 minutes during GitHub's
-incident with unauthenticated downloads, and signing (on R2D2) waited until
-GitHub served the files again (a 503 first). The channel, each part, the
-notes and the history read back good. Notes approved by George; release PR #97 merged by George
-the same day. The integration's
-0.6.0 released the same day (its `main` fast-forwarded to `ha-page`, tag and
-release; notes approved by George); the Home Assistant session sent the
-final names and fields.
+**Testing: 1.16.0** (2026-11-10, serial 68): room correction for the full
+range (Phase 30, ADR-0177). Built by run 42852145429 (`verify-image.sh` all
+151 checks passed, as 1.15.0); signed on R2D2; the channel (a good
+signature, serial 68), the notes, the history and the parts read back good.
+Notes approved by George; **release PR #98 for George to merge**. The tag
+`v1.16.0` is lightweight (earlier ones annotated); `build.sh` reads tags
+with `--tags`, so the versions are right.
 
 **Stable: 1.13.0** (promoted by George 2026-11-06, serial 14; on Testing
 since 2026-11-03, serial 65): Plexamp and Beszel from the catalogue (Phase
@@ -183,12 +179,14 @@ for the build to go ahead on them). **Built** the same day on
 `ph-room-correction-full` (worktree `~/projects/gexis-player-ph30`): the
 broad corrections, the reach, the split chart, the grouped corrections, the
 drawer's three-way control, the new words; layouts checked with made-up data
-in `~/projects/scratch/ph30/harness` (`WT` set to the worktree). **Now:**
-George's tests of the preview on sofapi (installed 2026-11-10). sofapi's measurement of 10 Nov was
-kept by the research preview, which stored no range, so the new one reads it
-as the bass's: *Measure again for the full range*. **Owed:** the stage's
-cost at 44.1/96/192 kHz; acceptance 2 as a finding from a run checked at
-Full range; ADR-0022's last proposed row (six broad filters, Q 0.5-2). The
+in `~/projects/scratch/ph30/harness` (`WT` set to the worktree). **On
+Testing with 1.16.0** (2026-11-10, George's word, PR #98 to merge); sofapi
+runs the preview of the same commit's code. **Now:** George's run at the full
+range on sofapi. sofapi's measurement of 10 Nov was kept by the research
+preview, which stored no range, so the new one reads it as the bass's:
+*Measure again for the full range*. **Owed:** the stage's cost at
+44.1/96/192 kHz; acceptance 2 as a finding from a run checked at Full
+range. The
 throwaway `ph30-research` and the run's raw recordings (on sofapi and in
 scratch) were deleted when the ADR was accepted; the curves worked out from
 them stay in `scratch/ph30/measure/out`.
@@ -220,7 +218,8 @@ On Stable with work open: 22 (multiroom), 23 (AirPlay 2, limited testing),
 27 (releases built on GitHub; a card still to flash) and 28 (Plexamp and
 Beszel to the catalogue), both with 1.13.0. 29 (room correction for the
 bass) in progress, on Testing since 1.14.0; 35 (a page from Home Assistant)
-on Testing with 1.15.0; 30 in research (2026-11-07), then 31-34; MPD parked. `docs/DEVELOPMENT.md`
+on Testing with 1.15.0; 30 (room correction for the full range) on Testing
+with 1.16.0; then 31-34; MPD parked. `docs/DEVELOPMENT.md`
 holds each phase's acceptance criteria.
 
 ## Machines
