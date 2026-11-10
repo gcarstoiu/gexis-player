@@ -74,15 +74,22 @@ def published(cat: bytes, sign) -> dict[str, bytes]:
 
 
 class Response:
+    """A body as aiohttp hands it out: a read gives what has arrived, a piece
+    at a time, never more of a longer body (the review of 1.16.1)."""
+    PIECE = 1000
+
     def __init__(self, status: int, body: bytes):
-        self.status, self._body, self.content = status, body, self
+        self.status, self._body, self.content, self._at = status, body, self, 0
 
     async def read(self, n: int = -1) -> bytes:
-        return self._body if n < 0 else self._body[:n]
+        end = len(self._body) if n < 0 else self._at + min(n, self.PIECE)
+        piece = self._body[self._at:end]
+        self._at += len(piece)
+        return piece
 
     async def iter_chunked(self, size: int):
-        for i in range(0, len(self._body), size):
-            yield self._body[i:i + size]
+        while piece := await self.read(size):
+            yield piece
 
     async def __aenter__(self):
         return self
@@ -289,6 +296,47 @@ async def test_a_failed_read_keeps_the_last_good_catalogue(key, tmp_path):
     await svc.refresh()
     view = svc.view()
     assert view["available"] and view["serial"] == 2 and "404" in view["error"]
+
+
+async def test_a_catalogue_that_arrives_in_pieces_is_read_whole(key, tmp_path):
+    """The review of 1.16.1: one read took what had arrived - on a real
+    network one TLS record, about 16 KB - and a longer catalogue was refused
+    as not readable, every read after it."""
+    keyring, sign = key
+    data = archive()
+    cat = index(*(entry(listed(data), plugin_id=f"plugin-{n}") for n in range(60)))
+    assert len(cat) > 16 * 1024
+    svc, _ = service(key, tmp_path, published(cat, sign))
+    await svc.refresh()
+    assert svc.error is None and len(svc.catalogue.plugins) == 60
+
+
+async def test_a_catalogue_larger_than_one_can_be_is_refused():
+    with pytest.raises(pc.Unavailable, match="larger than a catalogue"):
+        await pc._get(Session({URL: b" " * 5001}), URL, 5000)
+    assert len(await pc._get(Session({URL: b" " * 5000}), URL, 5000)) == 5000
+
+
+async def test_a_body_sent_in_two_parts_is_read_to_its_end():
+    """aiohttp itself, over a local socket: the server sends part of the
+    body, waits, then the rest."""
+    from aiohttp import web
+    body = b"[" + b" " * 40000 + b"]"
+
+    async def handler(request):
+        response = web.StreamResponse(headers={"Content-Length": str(len(body))})
+        await response.prepare(request)
+        await response.write(body[:16384])
+        await asyncio.sleep(0.2)
+        await response.write(body[16384:])
+        await response.write_eof()
+        return response
+
+    app = web.Application()
+    app.router.add_get("/catalogue.json", handler)
+    async with TestClient(TestServer(app)) as client:
+        got = await pc._get(client.session, str(client.make_url("/catalogue.json")), pc.MAX_INDEX)
+    assert got == body
 
 
 async def test_a_release_without_the_key_reads_nothing_and_says_so(key, tmp_path):
