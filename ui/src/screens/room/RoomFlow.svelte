@@ -1,18 +1,18 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <!--
-  Room correction on the phone, from *Before* to *Keep it* (ADR-0175;
-  design/source/29 R05-R27; the flow George settled on 2026-11-04 and
-  2026-11-05). The run itself is the player's (`room.run`): this page shows
-  its step and sends the buttons, so a page closed and opened again picks up
-  where it is.
+  Room correction on the phone, from *Before* to *Keep it* (ADR-0175,
+  ADR-0177; design/source/29 R05-R27 and design/source/30 §5; the flow George
+  settled on 2026-11-04 and 2026-11-05). The run itself is the player's
+  (`room.run`): this page shows its step and sends the buttons, so a page
+  closed and opened again picks up where it is.
 
   The calibration is the owner's to give (decision 4 as changed, George
   2026-11-05): the 90° file from miniDSP's page, chosen here.
 -->
 <script>
-  import { BOTH, chartSpan, countWord, cutFreq, cutGain, cutRows, cutsHeading, sideName, sides, dips, dipsLine, giveCalibration, MOVES, outputShort,
-    peaksDown, POSITIONS,
-    runRoom, worseLine } from '../../lib/room.svelte.js';
+  import { BOTH, chartSpan, correctionGroups, correctionsHeading, correctionsWho, correctionTail, cutFreq, cutGain,
+    dips, giveCalibration, MOVES, outputShort, POSITIONS, resultWords, runRoom, sideName, sides,
+    worseLine } from '../../lib/room.svelte.js';
   import RoomChart from './RoomChart.svelte';
   import RoomSeat from './RoomSeat.svelte';
 
@@ -27,6 +27,8 @@
   let sending = $state(false);
   let ch = $state('L');
   let reading = $state(false);
+  //: A file refused (the design's *Choose another file* rows): which way.
+  let refused = $state(null);
   let fileInput = $state(null);
 
   //: The page opened onto a run already going (the design's R18).
@@ -119,10 +121,15 @@
     if (!file) return;
     reading = true;
     error = null;
+    refused = null;
     try {
       await giveCalibration(await file.text(), file.name);
     } catch (e) {
-      error = e.message;
+      // The core's sentence, sorted into the design's three refusals.
+      const said = e.message ?? '';
+      refused = /0°/.test(said) ? 'zero' : /which microphone|serial/i.test(said) ? 'noserial'
+        : /calibration file/i.test(said) ? 'bad' : null;
+      if (!refused) error = said;
     } finally {
       reading = false;
     }
@@ -146,8 +153,18 @@
       out.push({ kind: 'wait', name: 'Calibration', sub: 'Its file from miniDSP, once the microphone is found' });
     } else if (reading) {
       out.push({ kind: 'busy', name: 'Calibration', sub: 'Reading the file…' });
+    } else if (refused) {
+      const [name, sub] = {
+        bad: ['This is not a calibration file', "Choose the 90° file downloaded from miniDSP's page."],
+        zero: ['This is the 0° file', 'Choose the 90° one: the microphone points at the ceiling.'],
+        noserial: ['No serial in this file', "Choose the file miniDSP gives for your microphone's serial."],
+      }[refused];
+      out.push({ kind: 'warn', name, sub, again: true });
     } else if (!cal) {
       out.push({ kind: 'warn', name: 'Its calibration file', sub: "Get the 90° file for this microphone from miniDSP's page, then choose it here.", give: true });
+    } else if (cal.again) {
+      // Kept by Phase 29 to 2 kHz only (George, 2026-11-08).
+      out.push({ kind: 'warn', name: 'Choose its file again', sub: 'Needed now for the full range.', give: true });
     } else {
       out.push({ kind: 'ok', name: 'Calibration', sub: `From miniDSP for ${cal.serial} · ${cal.angle}°`, another: true });
     }
@@ -157,10 +174,11 @@
     } else if (why === 'busy') {
       out.push({ kind: 'warn', name: 'An update is installing', sub: 'Measure once it has finished.' });
     } else {
+      // ADR-0177 decision 4: the times from Finding 144's run.
       out.push({ kind: 'wait', name: 'A quiet room',
-        sub: playing?.dsd ? 'About four minutes. DSD is playing: it stops when you start.'
-          : playing?.source ? `About four minutes. ${playing.source} is playing: it stops when you start.`
-            : 'About four minutes, music stops' });
+        sub: playing?.dsd ? 'About five minutes. DSD is playing: it stops when you start.'
+          : playing?.source ? `About five minutes. ${playing.source} is playing: it stops when you start.`
+            : 'About five minutes, music stops' });
     }
     return out;
   });
@@ -168,9 +186,14 @@
   // ---- each screen's words -------------------------------------------------------
 
   const moveText = (k) => `${k === 1 ? 'Back where your head was' : MOVES[k]}, at the same height, still pointing at the ceiling. Step back, then tap Measure here.`;
+  //: The correction for the speaker shown (Both: the left's list says so).
+  const groups = $derived(correctionGroups(ch, speaker));
+  const counts = $derived(ch === BOTH ? correctionGroups('L', pending?.chart?.speakers?.L) : groups);
+  const resultPair = $derived(resultWords({ speaker, both: ch === BOTH, expectedMark: screenName === 'result' && !!run?.expected }));
+  const worse = $derived(screenName === 'result' && !run?.expected && pending?.worse?.length ? worseLine(pending.worse) : '');
   const head = $derived.by(() => {
     switch (screenName) {
-      case 'before': return ['Correct the bass your room adds', 'The player plays short sweeps through your speakers and listens with a measurement microphone at your seat. It then cuts the peaks the room makes below 250 Hz.'];
+      case 'before': return ['Correct what your room adds to the sound', "The player plays sweeps through your speakers and listens with a measurement microphone at your seat. It cuts the peaks your room adds to the bass, and above the bass evens out the room's broad bumps and dips by 3 dB at most, so your speakers keep their own balance."];
       case 'place': return ['Put the microphone where your head is', ''];
       case 'level': return tooQuiet
         ? [`Only ${run.level_db ?? '—'} dB at the seat`, "At the player's maximum level. Turn the amplifier up a little and try again."]
@@ -178,10 +201,10 @@
           : `Soft noise, getting louder until the microphone hears about ${run.aim_db} dB.`];
       case 'measure': return [`Position ${n} of ${count}`, ''];
       case 'move': return [checking && n === 1 ? 'Move it back to position 1' : `Move it to position ${n}`, ''];
-      case 'correction': return [cutsHeading(pending?.cuts), ''];
-      case 'nothing': return ['Nothing to cut', ''];
-      case 'checking': return ['Checking, with the correction on', ''];
-      case 'result': return run?.expected ? [`${peaksDown(pending?.peaks_down)}, expected`, ''] : [peaksDown(pending?.peaks_down), ''];
+      case 'correction': return [correctionsHeading(counts[0].rows.length, counts[1].rows.length), ''];
+      case 'nothing': return ['Nothing to correct', ''];
+      case 'checking': return [`Checking at position ${n}`, ''];
+      case 'result': return resultPair;
       case 'cancelled': return ['Measuring cancelled', 'Nothing changed: the output is as it was. Music can play again.'];
       default: return ['', ''];
     }
@@ -195,9 +218,9 @@
   const tail = $derived.by(() => {
     if (screenName === 'place') return { text: `Music stops now, on every source.${full?.screen ? " The player's screen shows that it is measuring." : ''}`, ink: 'quiet' };
     if (screenName === 'correction' && ch === BOTH) return { text: 'The two together, as you hear them. Check it measures them with the correction on.', ink: 'quiet' };
-    if (screenName === 'correction') return { text: dipsLine(dips(speaker, freqs)), ink: 'quiet' };
-    if (screenName === 'nothing') return { text: "Your room's bass is already near the target, so there is nothing worth cutting. Room correction stays off.", ink: 'body' };
-    if (screenName === 'result' && !run?.expected) return { text: worseLine(pending?.worse), ink: 'ink' };
+    if (screenName === 'correction') return { text: correctionTail(dips(speaker, freqs), speaker), ink: 'quiet' };
+    if (screenName === 'nothing') return { text: 'Your room is already near the target, in the bass and above it, so there is nothing worth correcting. Room correction stays off.', ink: 'body' };
+    if (screenName === 'result' && !run?.expected) return worse ? null : { text: 'No position is worse than before.', ink: 'ink' };
     if (screenName === 'result') return { text: 'The check was skipped: this is what the correction should do. Measure again to check it.', ink: 'body' };
     return null;
   });
@@ -299,6 +322,11 @@
                 <div class="check__sub">{c.sub}</div>
               </div>
             </div>
+            {#if c.again}
+              <div class="give">
+                <button type="button" class="chip chip--lit" onclick={() => fileInput?.click()}>Choose another file</button>
+              </div>
+            {/if}
             {#if c.give}
               <div class="give">
                 <a class="chip chip--quiet" href={MINIDSP} target="_blank" rel="noopener noreferrer">miniDSP's page</a>
@@ -341,11 +369,11 @@
       {/if}
 
       {#if screenName === 'place'}
-        <div class="after">On a stand at ear height, pointing at the ceiling. Then keep the room quiet: the measurement plays loud sweeps for a few seconds at a time.</div>
+        <div class="after">On a stand at ear height, pointing at the ceiling. Then keep the room quiet throughout: the sweeps rise from a low rumble to a high whistle.</div>
       {:else if screenName === 'move' && !counting}
         <div class="after">{moveText(n)}</div>
       {:else if screenName === 'checking'}
-        <div class="after">The same {countWord(count)} positions again, about three minutes more.</div>
+        <div class="after">Sweeps with the correction on, from each speaker and both together.</div>
       {/if}
 
       {#if screenName === 'measure'}
@@ -361,7 +389,7 @@
             </div>
           {/each}
         </div>
-        <div class="note">Nothing to do while it runs, about 45 seconds a position.</div>
+        <div class="note">Nothing to do while it runs, about a minute a position. Each sweep ends in a high whistle: keep quiet until it stops.</div>
       {/if}
 
       {#if counting}
@@ -383,21 +411,39 @@
           {/each}
         </div>
         <div class="card chartcard">
+          {#if screenName === 'correction'}
+            <div class="chartcard__head">
+              <div class="chartcard__title">{resultPair[0]}</div>
+              <div class="chartcard__line">{resultPair[1]}</div>
+            </div>
+          {/if}
           <RoomChart surface="phone" {freqs} {speaker} {span}
                      kind={screenName === 'nothing' ? '' : screenName === 'result' && !run?.expected ? 'measured' : 'expected'} />
         </div>
       {/if}
 
-      {#if screenName === 'correction' && pending && ch !== BOTH}
-        {@const list = cutRows(pending.cuts?.[ch])}
+      {#if screenName === 'correction' && pending}
         <div class="card cuts">
-          <div class="cuts__head"><span>{ch === 'L' ? 'Left' : 'Right'} speaker · {list.length} {list.length === 1 ? 'cut' : 'cuts'}</span><span class="rule"></span></div>
-          <div class="cuts__grid">
-            {#each list as c, i (i)}
-              <div class="cut"><span class="cut__f">{cutFreq(c)}</span><span class="cut__g">{cutGain(c)}</span></div>
-            {/each}
-          </div>
+          <span class="who">{correctionsWho(ch, groups[0].rows.length, groups[1]?.rows.length ?? 0)}</span>
+          {#each groups as g, i (g.name)}
+            <div class="group" class:group--first={i === 0}>
+              <span class="group__name">{g.name}</span><span class="rule"></span><span class="group__kind">{g.kind}</span>
+            </div>
+            {#if g.rows.length}
+              <div class="cuts__grid">
+                {#each g.rows as c, j (j)}
+                  <div class="cut"><span class="cut__f">{cutFreq(c)}</span><span class="cut__g" class:is-up={c.gain > 0}>{cutGain(c)}</span></div>
+                {/each}
+              </div>
+            {:else}
+              <div class="empty">{g.empty}</div>
+            {/if}
+          {/each}
         </div>
+      {/if}
+
+      {#if worse}
+        <div class="worse" role="status"><span class="worse__mark">!</span><span>{worse}</span></div>
       {/if}
 
       {#if tail}
@@ -965,23 +1011,56 @@
   }
   .chartcard {
     border-radius: var(--r-18);
-    padding: 14px 12px 12px 6px;
+    padding: 14px 12px 12px;
     box-sizing: border-box;
-  }
-  .cuts {
-    padding: 14px 18px;
     display: flex;
     flex-direction: column;
     gap: 10px;
   }
-  .cuts__head {
+  .chartcard__head {
+    padding: 0 4px;
+  }
+  .chartcard__title {
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .chartcard__line {
+    font-size: 14px;
+    line-height: 1.4;
+    color: var(--c-ink-78);
+    margin-top: 3px;
+    text-wrap: pretty;
+  }
+  /* The corrections in two groups (1g). */
+  .cuts {
+    padding: 14px 18px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .who {
+    font-size: 17px;
+    font-weight: 700;
+  }
+  .group {
     display: flex;
     align-items: center;
     gap: 12px;
+    margin-top: 8px;
+  }
+  .group--first {
+    margin-top: 4px;
+  }
+  .group__name {
     font-family: var(--font-mono);
     font-size: 12px;
     letter-spacing: 0.16em;
     text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--ink-quiet);
+  }
+  .group__kind {
+    font-size: 13px;
     white-space: nowrap;
     color: var(--ink-quiet);
   }
@@ -993,10 +1072,42 @@
   .cuts__grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px 16px;
+    gap: 8px 18px;
+  }
+  .empty {
+    font-size: 15px;
+    line-height: 1.4;
+    color: var(--c-ink-78);
+  }
+  .worse {
+    flex-shrink: 0;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 12px 14px;
+    border-radius: var(--r-md);
+    background: var(--rc-without-fill);
+    border: 1px solid var(--c-warn-40);
+    font-size: 15px;
+    line-height: 1.4;
+    text-wrap: pretty;
+  }
+  .worse__mark {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: var(--c-warn-16);
+    color: var(--rc-without);
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 13px;
+    line-height: 22px;
+    text-align: center;
   }
   .cut {
     display: flex;
+    align-items: baseline;
     white-space: nowrap;
     justify-content: space-between;
     gap: 8px;
@@ -1010,6 +1121,9 @@
   .cut__g {
     font-weight: 600;
     color: var(--rc-before);
+  }
+  .cut__g.is-up {
+    color: var(--rc-after);
   }
   .tail {
     font-size: 15px;

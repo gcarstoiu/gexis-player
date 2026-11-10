@@ -68,12 +68,22 @@ No. Native DSD plays untouched: the equaliser stands aside while a DSD track
 plays, and is back for the next PCM one. Room correction does the same.
 
 **Can the player correct my room?**
-The bass, yes: *Settings → Audio → Room correction*. With a measurement
-microphone at your seat, the player plays sweeps through your speakers at
-three positions around your head, and cuts the peaks the room adds below
-250 Hz, towards a gentle rise below about 80 Hz. It only cuts: a dip stays,
-since more power does not fill it. Each output keeps its own, and *Hear it
-without* compares at once. The rest of the range is a later phase.
+Yes: *Settings → Audio → Room correction*. With a measurement microphone at
+your seat, the player plays sweeps through your speakers at three positions
+around your head. In the bass it cuts the peaks the room adds below 250 Hz,
+towards a gentle rise below about 80 Hz - only cuts: a dip stays, since more
+power does not fill it. Above the bass it evens out the room's broad bumps
+and dips by 3 dB at most, up or down, and keeps the balance your speakers
+have. *Bass* or *Full range* chooses how far it reaches, heard at once;
+each output keeps its own, and *Hear it without* compares with none at all.
+
+**Why is the music quieter at full volume with room correction on?**
+Above the bass the correction may raise by up to 3 dB, so the player lowers
+the music that much first, as the equaliser does for a boost, and the volume
+gives it back - all of it, except near the top of the volume. With *Fixed*
+volume it cannot: the music plays up to 3 dB quieter, and the amplifier is
+turned up to match. The level is the same with *Bass*, *Full range* and
+*Without*, so the three compare fairly.
 
 **Which microphone does room correction take?**
 The miniDSP UMIK-1, for now, with its 90° calibration file from miniDSP's

@@ -1007,3 +1007,45 @@ the drawing differs, or says nothing:
 - **[S]** **The page's heading is the speaker shown**: *Peaks down by up to
   N dB* under the Left/Right tabs is that speaker's number; the drawing had
   one number for both, which read as the right's when it was the left's.
+
+## Room correction for the full range (Phase 30, 2026-11-10)
+
+Built from `source/30` (ADR-0177; George's picks 1a, 1d, 1g and 1l, the new
+words as drawn). Production wins where the drawing redraws what Phase 29
+built; what the build decided where it differs, or says nothing:
+
+- **[S]** **As built, not as redrawn**: the phone's Left · Right · Both tabs
+  stay above the chart's card, the result's heading inside it; the
+  calibration's buttons stay under its row. The drawing moved both.
+- **[S]** **A refused calibration file** is a row in Before with *Choose
+  another file*, in the drawing's words; the core's sentence is sorted into
+  its three (not a calibration file, the 0° file, no serial), and any other
+  is shown as it is.
+- **[S]** **The correction's heading counts the speaker shown** (*Four cuts
+  in the bass, three broad corrections above*); under *Both*, the left's.
+  The drawing has the same counts for both speakers.
+- **[S]** **Words the drawing has no state for**, to be confirmed: one of
+  either kind (*One cut in the bass*, *one broad correction above*, *Left
+  speaker · 1 correction*); the correction's tail with one dip (*In the bass
+  only cuts: the dip at 68 Hz stays, as more power does not fill it.*), with
+  none (*…nothing is raised, as more power does not fill a dip.*) and with
+  nothing cut in the bass (the part above the bass alone); a speaker with
+  nothing to cut while the other has (*Nothing to cut in the bass* as its
+  heading).
+- **[S]** **Times** from Finding 144's run (ADR-0177 decision 4, George to
+  confirm): *About five minutes* before a run, *about a minute a position*
+  while it measures. The drawing kept four minutes and 45 seconds until
+  that measurement. The check's *about three minutes more* goes with the
+  drawing's new line, *Sweeps with the correction on, from each speaker and
+  both together.*
+- **[S]** **The Settings row** says the reach as the drawing's Audio page
+  does: *Full range · measured 3 November*, *Bass · measured 3 November*,
+  *Bass · measured for the bass only*, *Without · comparing, no
+  correction*, *Off*.
+- **[S]** **The bass pane's reach** counts before, after and every position
+  below 250 Hz on every tab, as built; the drawing counted before and the
+  positions of the two speakers.
+- **[S]** **On the 1280-wide bar the result's heading is 22 px** (the
+  drawing: 24) and the tabs a little narrower, so the heading keeps its figure
+  beside them and the bar's control column, with the drawing's 360 px middle
+  column.

@@ -56,14 +56,16 @@ TAKE_ABOVE_NOISE = 15.0
 NOISE_S = 1.5
 #: The level step: from this, in these steps - the signal's part; the volume
 #: is at the output's maximum (`host.loud`). The noise goes no higher than
-#: its cap, where its peaks come near full scale; the sweeps, whose peaks are
-#: about 4.5 dB over their level in the band, up to theirs, set from the
-#: noise's last reading as the chain is linear (George, 2026-11-05: 60 dB;
-#: sofapi reached 50 at -18 dBFS).
+#: its cap, where its peaks come near full scale; the sweeps further, set
+#: from the noise's last reading as the chain is linear (George, 2026-11-05:
+#: 60 dB; sofapi reached 50 at -18 dBFS), until their peaks reach
+#: `SWEEP_PEAK_DBFS` - the level in the band that is depends on how much of
+#: the sweep lies in it (`Run._sweep_cap`: -6 dBFS for Phase 29's to 1 kHz,
+#: about -8 for one to 20 kHz).
 LEVEL_START_DBFS = -54.0
 LEVEL_STEP_DB = 3.0
 LEVEL_CAP_DBFS = -12.0
-SWEEP_CAP_DBFS = -6.0
+SWEEP_PEAK_DBFS = -1.5
 LEVEL_BURST_S = 1.0
 #: Where in a burst's recording the level is read: from the lead's end and
 #: the chain's start to before the burst's fade - the noise alone.
@@ -174,6 +176,9 @@ class Run:
         self._today = today or (lambda: datetime.date.today().isoformat())
         self._dsp = dsp or room_dsp
         self._sweep_s = sweep_s or self._dsp.SWEEP_S
+        #: The most a sweep's level in the band may be: its peaks at
+        #: `SWEEP_PEAK_DBFS`.
+        self._sweep_cap = SWEEP_PEAK_DBFS + self._dsp.band_level_db(self._dsp.log_sweep(seconds=self._sweep_s))
         self._taps: asyncio.Queue = asyncio.Queue()
         self._task: asyncio.Task | None = None
         self.state = RunState("place")
@@ -184,6 +189,10 @@ class Run:
         self._positions: dict[str, list] = {c: [] for c in rc.SWEPT}
         self._checked: dict[str, list] = {c: [] for c in rc.SWEPT}
         self._designs: dict = {}
+        #: How much lower the check's sweeps play: the broad corrections'
+        #: highest point (ADR-0177 item 7) - the stage takes no headroom for
+        #: them while a run measures, so the run's level stays the run's.
+        self._check_db = 0.0
         self._waiting = False
         self._prep: asyncio.Future | None = None
         self._finishing = False
@@ -293,7 +302,7 @@ class Run:
             await self._measure(n, checking=False)
         self._design()
         all_done = tuple(range(1, rc.POSITIONS + 1))
-        if self.pending.nothing_to_cut:
+        if self.pending.nothing_to_correct:
             self._set(RunState("nothing", position=rc.POSITIONS, progress=0.8, done=all_done,
                                level_db=self.state.level_db))
             await self._wait("done", "discard")
@@ -398,7 +407,7 @@ class Run:
                 if heard and unheard == 0:
                     # The noise at its cap and the microphone following it:
                     # the sweeps the rest of the way, up to their own cap.
-                    sweep = min(SWEEP_CAP_DBFS, level + aim - spl)
+                    sweep = min(self._sweep_cap, level + aim - spl)
                     logger.info("room: %.0f dB at the seat at %.0f dBFS, the noise's most; the sweeps at %.0f",
                                 spl, level, sweep)
                     spl, level = spl + sweep - level, sweep
@@ -422,8 +431,10 @@ class Run:
         sweep = dsp.log_sweep(seconds=self._sweep_s)
         # The sweep's level in the band, matched to the noise's; both
         # speakers 6 dB lower each, so the two adding in the bass are no
-        # louder than one.
+        # louder than one; in the check lower by what the corrections raise.
         scale = 10 ** (self._level_dbfs / 20) / 10 ** (dsp.band_level_db(sweep) / 20)
+        if self.state.checking:
+            scale *= 10 ** (-self._check_db / 20)
         both = channel == rc.BOTH
         played = sweep * scale * (0.5 if both else 1.0)
         recording = await self._audio.play(played, channel=(0, 1) if both else rc.CHANNELS.index(channel))
@@ -490,15 +501,25 @@ class Run:
             self._designs[channel] = d
             speakers[channel] = rc.Speaker(cuts=tuple((c.freq, c.gain, c.q) for c in d.cuts),
                                            before=tuple(d.before), target=tuple(d.target),
-                                           after=tuple(d.after), positions=tuple(tuple(p) for p in d.positions))
+                                           after=tuple(d.after), positions=tuple(tuple(p) for p in d.positions),
+                                           above=tuple((b.freq, b.gain, b.q) for b in d.broad),
+                                           after_bass=tuple(d.after_bass), within=d.within,
+                                           room_within=d.room_within)
         d = self._dsp.as_heard(self._positions[rc.BOTH])
         self._designs[rc.BOTH] = d
         speakers[rc.BOTH] = rc.Speaker(before=tuple(d.before), target=tuple(d.target),
                                        positions=tuple(tuple(p) for p in d.positions))
-        self.pending = rc.Measurement(self._today(), False, speakers)
+        self.pending = rc.Measurement(self._today(), False, speakers, range=rc.FULL)
 
     def _cuts(self):
-        return self.pending.cuts("L"), self.pending.cuts("R")
+        """**What the check plays** (ADR-0177 item 8): the full range, the
+        correction a new measurement starts with - with no headroom taken
+        for its raises; its sweeps play that much lower instead."""
+        from gexis_core import equaliser as eq
+        cuts = tuple(self.pending.cuts(c) for c in rc.CHANNELS)
+        above = tuple(self.pending.above(c) for c in rc.CHANNELS)
+        self._check_db = eq.headroom_db(eq.FLAT, tuple(c + a for c, a in zip(cuts, above)))
+        return eq.RoomPlay(cuts, above, None)
 
     def _result(self, skipped: bool) -> None:
         """The after, measured at every position (decision 5), or the
@@ -511,8 +532,13 @@ class Run:
             d = self._designs[channel]
             measured = [c - d.offset for c in self._checked[channel]]
             after = self._dsp.power_average(measured)
-            speakers[channel] = replace(self.pending.speakers[channel], after=tuple(after))
-            worse += self._dsp.worse_positions(d.positions, measured, d.target, d.cuts)
+            # *Bass*: the broad corrections taken out of what was measured,
+            # exact for filters one after another.
+            after_bass = after - self._dsp.cuts_db(d.broad, self._dsp.GRID)
+            speakers[channel] = replace(self.pending.speakers[channel], after=tuple(after),
+                                        after_bass=tuple(after_bass),
+                                        within=self._dsp.within_db(after, d.target))
+            worse += self._dsp.worse_positions(d.positions, measured, d.target, list(d.cuts) + list(d.broad))
         d = self._designs[rc.BOTH]
         after = self._dsp.power_average([c - d.offset for c in self._checked[rc.BOTH]])
         speakers[rc.BOTH] = replace(self.pending.speakers[rc.BOTH], after=tuple(after))

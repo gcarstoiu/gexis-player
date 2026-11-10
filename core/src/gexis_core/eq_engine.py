@@ -32,7 +32,9 @@ until the next PCM one.
 **Room correction's cuts run in the same stage** (ADR-0175 items 1-2): the
 stage is in the path when either is on, and its cuts are patched as the
 bands are - switched on or off, compared (*Hear it without*), or replaced by
-a new measurement, all heard at once.
+a new measurement, all heard at once. Its broad corrections above the bass
+may raise (ADR-0177 items 6-7): they join the curve the headroom is taken
+from, all of them as measured, whatever the reach or *Without* plays.
 """
 from __future__ import annotations
 
@@ -178,7 +180,7 @@ class EqEngine:
 
     `configure(card, gains, room)` is all the core calls: the card the
     stage is on for (None when it is not in the path), the bands, and room
-    correction's cuts (`equaliser.room_stage`'s argument). `on_change` hears
+    correction's filters (`equaliser.room_stage`'s argument). `on_change` hears
     the state worth showing (whether DSD is standing it aside)."""
 
     def __init__(self, *, camilla: Camilla | None = None,
@@ -199,6 +201,7 @@ class EqEngine:
         self._card: str | None = None
         self._gains: tuple[int, ...] = eq.FLAT
         self._room = eq.room_stage(None)
+        self._lift = None   # room correction's filters as measured, for the headroom
         self._watch: asyncio.Task | None = None
         self._stream: Stream | None = None
         self._applied: tuple | None = None   # (gains, headroom, room): what CamillaDSP has now
@@ -213,6 +216,7 @@ class EqEngine:
         CamillaDSP, which reads ALSA's configuration only when it starts."""
         gains = eq.gains_from(gains)
         self._room = eq.room_stage(room)
+        self._lift = eq.room_lift(room)
         if card is None:
             if self._card is not None or self._watch is not None:
                 self._card = None
@@ -227,7 +231,7 @@ class EqEngine:
         if self._applied is None:
             # Nothing plays through it: given back now, and the next stream
             # starts lowered by it.
-            await self._give(eq.headroom_db(gains))
+            await self._give(eq.headroom_db(gains, self._lift))
         else:
             self._kick()
 
@@ -329,7 +333,7 @@ class EqEngine:
 
     async def _start_stream(self, stream: Stream) -> None:
         gains = self._gains
-        headroom = eq.headroom_db(gains)
+        headroom = eq.headroom_db(gains, self._lift)
         room = self._room
         config = eq.camilla_config(stream.rate, stream.fmt, stream.channels, gains, outputs.EQ_OUT, room)
         if self._takes_rate(self._card, stream.rate) is False:
@@ -389,7 +393,7 @@ class EqEngine:
 
     async def _pushing(self) -> None:
         while self._applied is not None and self._stream is not None and not self._stream.dsd:
-            gains, headroom, room = self._gains, eq.headroom_db(self._gains), self._room
+            gains, headroom, room = self._gains, eq.headroom_db(self._gains, self._lift), self._room
             old_gains, old_headroom, old_room = self._applied
             if (gains, headroom, room) == (old_gains, old_headroom, old_room):
                 return

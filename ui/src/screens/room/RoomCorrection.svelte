@@ -1,9 +1,10 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <!--
-  Settings → Audio → Room correction (ADR-0175; design/source/29 R28-R35,
-  N01-N07, B01-B04, B07): on or off for the output in use, *Hear it
-  without* (the A/B: tagged, set apart, amber when set), the last
-  measurement and its chart, and Measure again.
+  Settings → Audio → Room correction (ADR-0175, ADR-0177; design/source/29
+  R28-R35, N01-N07, B01-B04, B07; design/source/30 1a, 1d, 1g): on or off for
+  the output in use, how far it reaches (*Bass* or *Full range*), *Hear it
+  without* (the A/B: tagged, set apart, amber when set), the last measurement
+  with its corrections and its chart, and Measure again.
 
   The phone measures (RoomFlow); the panel and the bars send the owner to
   the phone with a sheet - a QR code that opens this page there, and the
@@ -12,8 +13,8 @@
 <script>
   import { encode } from 'uqr';
   import { onDestroy } from 'svelte';
-  import { BOTH, capitalised, chartSpan, countWord, cutFreq, cutGain, cutRows, outputPhrase, outputShort, peaksDown,
-    room, RoomReader, setRoom, sideName, sides, worseLine } from '../../lib/room.svelte.js';
+  import { BOTH, capitalised, chartSpan, correctionGroups, correctionsWho, countWord, cutFreq, cutGain, cutRows,
+    outputPhrase, outputShort, rangeWord, resultWords, room, RoomReader, setRoom, sideName, sides } from '../../lib/room.svelte.js';
   import { screen } from '../../lib/family.svelte.js';
   import RoomChart from './RoomChart.svelte';
   import RoomFlow from './RoomFlow.svelte';
@@ -48,18 +49,27 @@
   //: The switches move from the press; the core's word wins in the end.
   let wantOn = $state(null);
   let wantAb = $state(null);
+  let wantReach = $state(null);
   const on = $derived(wantOn ?? !!full?.on);
   const ab = $derived((wantAb ?? !!full?.without) && on);
+  const reach = $derived(wantReach ?? full?.reach ?? 'full');
   $effect(() => {
     if (wantOn !== null && !!full?.on === wantOn) wantOn = null;
     if (wantAb !== null && !!full?.without === wantAb) wantAb = null;
+    if (wantReach !== null && full?.reach === wantReach) wantReach = null;
   });
   const dsd = $derived(!!full?.dsd);
   const abLive = $derived(on && !!measured && !dsd);
+  //: How far the measurement was made: one from before Phase 30 covers the
+  //: bass only, and holds the reach at Bass until the room is measured again.
+  const range = $derived(measured?.range ?? 'full');
+  const bassOnly = $derived(!!measured && range !== 'full');
+  const reachLive = $derived(on && !!measured && !dsd);
 
   async function change(key, value) {
     error = null;
     if (key === 'on') wantOn = value;
+    else if (key === 'reach') wantReach = value;
     else wantAb = value;
     try {
       reader.full = await setRoom({ [key]: value });
@@ -68,10 +78,24 @@
     } finally {
       wantOn = null;
       wantAb = null;
+      wantReach = null;
     }
   }
   const toggleOn = () => measured && change('on', !on);
   const toggleAb = () => abLive && change('without', !ab);
+  //: The Reaches chips (the design's 1a): a tap is heard at once. Full range
+  //: on a bass-only measurement asks for the room measured again - Before on
+  //: the phone, the phone's sheet on the panel and the bars.
+  function chooseReach(k) {
+    if (!reachLive) return;
+    if (k === 'full' && bassOnly) {
+      if (phone) view = 'flow';
+      else sheet = true;
+      return;
+    }
+    if (k !== reach) change('reach', k);
+  }
+  const REACHES = [['bass', 'Bass', 'Up to 250 Hz'], ['full', 'Full range', '15 Hz to 20 kHz']];
 
   const chart = $derived(full?.chart ?? null);
   //: A measurement from before both were swept has no Both tab.
@@ -83,21 +107,20 @@
   const bothAfter = $derived(both && !!speaker?.after?.length);
   const kind = $derived(chart?.after_kind ?? 'measured');
   const notChecked = $derived(!!measured && !measured.checked);
-  const cuts = $derived(cutRows(full?.cuts?.[ch]));
-  const cutsHead = $derived(both ? "Both speakers together · each speaker's cuts"
-    : `${ch === 'L' ? 'Left' : 'Right'} speaker · ${cuts.length} ${cuts.length === 1 ? 'cut' : 'cuts'}`);
-  //: The speaker shown: its own number, not the larger of the two.
-  const resultHead = $derived(both && !bothAfter ? 'Both speakers, before'
-    : peaksDown(speaker?.peaks_down ?? measured?.peaks_down));
+  //: The corrections in two groups (the design's 1g), for the speaker shown.
+  const groups = $derived(correctionGroups(ch, speaker, { range, reach }));
+  const cutsWho = $derived(correctionsWho(ch, groups[0]?.rows.length ?? 0, groups[1]?.rows.length ?? 0));
+  //: The speaker shown: its own numbers, not the larger of the two.
+  const words = $derived(resultWords({ speaker, both, range, reach, expectedMark: notChecked }));
+  const resultHead = $derived(words[0]);
+  const resultLine = $derived(words[1]);
   const span = $derived(chartSpan(chart));
   const positionsWord = $derived(countWord(measured?.positions ?? 0));
-  const resultLine = $derived(both ? (bothAfter ? 'The two together, as you hear them.'
-    : 'The two together, as you hear them. Measure again and check it to see them after.')
-    : notChecked ? 'Expected, not checked. Measure again to check it.' : worseLine(measured?.worse));
   const abSub = $derived(!on ? 'Only while room correction is on.'
-    : ab ? 'Now without: the cuts at 0 dB. Switch back to hear them.'
-      : 'Compare: the cuts at 0 dB, heard at once. Stays where you put it.');
-  const abShort = $derived(!on ? 'Only while room correction is on.' : ab ? 'Now without: the cuts at 0 dB' : 'Compare, heard at once');
+    : ab ? 'Now without: no correction at all. Switch back to hear it.'
+      : 'Compare: no correction at all, heard at once. Stays where you put it.');
+  const abShort = $derived(!on ? 'Only while room correction is on.' : ab ? 'Now without: no correction at all' : 'Compare, heard at once');
+  const againLabel = $derived(bassOnly ? 'Measure again for the full range' : 'Measure again');
   const powerNote = $derived(on ? `For ${outputPhrase(full?.output)}. Each output keeps its own.`
     : 'Off: the correction is taken out. With the equaliser also off, the sound is untouched, bit-perfect.');
 
@@ -111,6 +134,9 @@
   }
   const qr = $derived(full?.address ? qrPath(full.address.url) : null);
   const wideBar = $derived(screen.width > 1500);
+  //: The lead the design gives Before, the panel and the bars when never
+  //: measured.
+  const LEAD = "The player plays sweeps through your speakers and listens with a measurement microphone at your seat. It cuts the peaks your room adds to the bass, and above the bass evens out the room's broad bumps and dips by 3 dB at most, so your speakers keep their own balance.";
 </script>
 
 {#snippet sw(lit, amber)}
@@ -153,6 +179,37 @@
   </div>
 {/snippet}
 
+{#snippet reaches(size)}
+  <div class="reach reach--{size}" class:is-off={!reachLive} role="group" aria-label="How far it reaches">
+    {#each REACHES as [k, name, sub] (k)}
+      {@const locked = k === 'full' && bassOnly}
+      <button type="button" class="chip" class:is-sel={reach === k} class:is-locked={locked} aria-pressed={reach === k}
+              onclick={() => chooseReach(k)} disabled={!reachLive}>
+        <span class="chip__name">{name}</span>
+        <span class="chip__sub">{locked ? 'Measure again' : sub}</span>
+      </button>
+    {/each}
+  </div>
+{/snippet}
+
+{#snippet corrections(size)}
+  <span class="who who--{size}">{cutsWho}</span>
+  {#each groups as g, i (g.name)}
+    <div class="group group--{size}" class:group--first={i === 0}>
+      <span class="group__name">{g.name}</span><span class="rule"></span><span class="group__kind">{g.kind}</span>
+    </div>
+    {#if g.rows.length}
+      <div class="rows rows--{size}">
+        {#each g.rows as c, j (j)}
+          <div class="cut"><span class="cut__f">{cutFreq(c)}</span><span class="cut__g" class:is-up={c.gain > 0}>{cutGain(c)}</span></div>
+        {/each}
+      </div>
+    {:else}
+      <div class="empty empty--{size}">{g.empty}</div>
+    {/if}
+  {/each}
+{/snippet}
+
 {#snippet phoneGlyph()}
   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2.5"></rect><path d="M11 18.5h2"></path></svg>
 {/snippet}
@@ -186,18 +243,26 @@
         </div>
         <div class="scroll">
           {@render dsdBanner('phone')}
-          <button type="button" class="card power" aria-pressed={on} onclick={toggleOn}>
-            <span class="power__text">
-              <span class="power__title">Room correction</span>
-              <span class="power__note">{powerNote}</span>
-            </span>
-            {@render sw(on && !!measured, false)}
-          </button>
+          <div class="card powercard">
+            <button type="button" class="power" aria-pressed={on} onclick={toggleOn}>
+              <span class="power__text">
+                <span class="power__title">Room correction</span>
+                <span class="power__note">{powerNote}</span>
+              </span>
+              {@render sw(on && !!measured, false)}
+            </button>
+            <div class="powercard__rule"></div>
+            <span class="label label--phone">Reaches</span>
+            {@render reaches('phone')}
+            {#if bassOnly}
+              <div class="reach__note">This measurement covers the bass only. Measure again to reach the full range.</div>
+            {/if}
+          </div>
           {@render abCard('phone')}
           <div class="card measuredcard">
             <div class="power__text">
               <div class="power__title">Measured</div>
-              <div class="power__note">{measured?.year} · {positionsWord} positions</div>
+              <div class="power__note">{measured?.year} · {positionsWord} positions · {rangeWord(range)}</div>
             </div>
             {#if notChecked}<span class="flag">Not checked</span>{/if}
           </div>
@@ -207,9 +272,9 @@
               <div class="chartcard__title">{resultHead}</div>
               <div class="chartcard__line">{resultLine}</div>
             </div>
-            <RoomChart surface="phone" freqs={chart?.freqs ?? []} {speaker} {kind} {span} />
+            <RoomChart surface="phone" freqs={chart?.freqs ?? []} {speaker} {kind} {span} {reach} {range} />
           </div>
-          <button type="button" class="again" onclick={() => (view = 'flow')}>Measure again</button>
+          <button type="button" class="again" class:is-lit={bassOnly} onclick={() => (view = 'flow')}>{againLabel}</button>
           {#if error}<div class="error" role="status">{error}</div>{/if}
         </div>
       </div>
@@ -232,17 +297,18 @@
           </button>
         </div>
         <div class="mid" class:mid--narrow={!wideBar}>
+          {#if measured}{@render reaches('bar')}{/if}
           {@render abCard('bar')}
           <div class="mcard">
             <span class="mcard__text">
               <span class="mcard__title">{measured ? measured.year : 'Not measured yet'}</span>
-              <span class="mcard__sub">{measured ? `${capitalised(positionsWord)} positions` : 'Measure from your phone'}</span>
+              <span class="mcard__sub">{measured ? `${capitalised(positionsWord)} positions · ${rangeWord(range)}` : 'Measure from your phone'}</span>
             </span>
             {#if notChecked}<span class="flag flag--bar">Not checked</span>{/if}
           </div>
           <div class="spacer"></div>
-          <button type="button" class="againbtn againbtn--bar" class:is-lit={!measured} onclick={() => (sheet = true)}>
-            {@render phoneGlyph()}{measured ? 'Measure again' : 'Measure from your phone'}
+          <button type="button" class="againbtn againbtn--bar" class:is-lit={!measured || bassOnly} onclick={() => (sheet = true)}>
+            {@render phoneGlyph()}{!measured ? 'Measure from your phone' : bassOnly && wideBar ? againLabel : 'Measure again'}
           </button>
         </div>
         <div class="right" class:right--narrow={!wideBar}>
@@ -254,13 +320,13 @@
               </div>
               {@render segs('bar')}
             </div>
-            <div class="card chartcard chartcard--bar" class:is-dim={dsd || !on}>
-              <RoomChart surface="bar" freqs={chart?.freqs ?? []} {speaker} {kind} {span} />
+            <div class="chartbar" class:is-dim={dsd || !on}>
+              <RoomChart surface="bar" freqs={chart?.freqs ?? []} {speaker} {kind} {span} {reach} {range} />
             </div>
           {:else}
             <div class="never never--bar">
-              <div class="never__title">Correct the bass your room adds</div>
-              <div class="never__text">The player plays short sweeps through your speakers and listens with a measurement microphone at your seat, then cuts the peaks the room makes below 250 Hz. You measure from the phone.</div>
+              <div class="never__title">Correct what your room adds to the sound</div>
+              <div class="never__text">{LEAD} You measure from the phone.</div>
             </div>
           {/if}
         </div>
@@ -273,6 +339,9 @@
             <div class="title">Room correction</div>
             <div class="crumb">Audio · for {outputPhrase(full.output)} · each output keeps its own</div>
           </div>
+          {#if dsd}
+            <div class="dsdpill"><span class="dsd__tag">DSD</span><span>Plays untouched. Room correction stands aside.</span></div>
+          {/if}
           <button type="button" class="powerbtn" class:is-dim={!measured} aria-pressed={on} onclick={toggleOn} disabled={!measured}>
             <span class="powerbtn__state" class:is-on={on && measured}>{!measured ? 'Measure first' : on ? 'On' : 'Off · bit-perfect'}</span>
             {@render sw(on && !!measured, false)}
@@ -280,28 +349,27 @@
         </div>
         <div class="body">
           <div class="left">
-            {@render dsdBanner('panel')}
+            {#if measured}
+              <div class="rcard">
+                <span class="label">Reaches</span>
+                {@render reaches('panel')}
+              </div>
+            {/if}
             {@render abCard('panel')}
             <div class="lcard">
               <div class="label"><span>Last measurement</span><span class="rule"></span></div>
               {#if measured}
                 <div class="lcard__when">
-                  <span><span class="lcard__date">{measured.year}</span><span class="lcard__pos">{capitalised(positionsWord)} positions</span></span>
+                  <span class="lcard__text"><span class="lcard__date">{measured.year}</span><span class="lcard__pos">{capitalised(positionsWord)} positions · {rangeWord(range)}</span></span>
                   {#if notChecked}<span class="flag flag--panel">Not checked</span>{/if}
                 </div>
-                <div class="lcard__cuts">
-                  <span class="lcard__head">{cutsHead}</span>
-                  {#each cuts as c, i (i)}
-                    <div class="cut cut--panel"><span class="cut__f">{cutFreq(c)}</span><span class="cut__g">{cutGain(c)}</span></div>
-                  {/each}
-                </div>
+                {@render corrections('panel')}
               {:else}
                 <div class="lcard__never">Not measured yet</div>
               {/if}
             </div>
-            <div class="spacer"></div>
-            <button type="button" class="againbtn" class:is-lit={!measured} onclick={() => (sheet = true)}>
-              {@render phoneGlyph()}{measured ? 'Measure again' : 'Measure from your phone'}
+            <button type="button" class="againbtn" class:is-lit={!measured || bassOnly} onclick={() => (sheet = true)}>
+              {@render phoneGlyph()}{measured ? againLabel : 'Measure from your phone'}
             </button>
           </div>
           <div class="card chartpanel" class:is-dim={!!measured && (dsd || !on)}>
@@ -313,11 +381,11 @@
                 </div>
                 {@render segs('panel')}
               </div>
-              <RoomChart surface="panel" freqs={chart?.freqs ?? []} {speaker} {kind} {span} />
+              <RoomChart surface="panel" freqs={chart?.freqs ?? []} {speaker} {kind} {span} {reach} {range} />
             {:else}
               <div class="never">
-                <div class="never__title">Correct the bass your room adds</div>
-                <div class="never__text">The player plays short sweeps through your speakers and listens with a measurement microphone at your seat. It then cuts the peaks the room makes below 250 Hz.</div>
+                <div class="never__title">Correct what your room adds to the sound</div>
+                <div class="never__text">{LEAD}</div>
                 <div class="never__text">You measure from the phone, which you hold at the seat while you move the microphone. This screen shows that it is running.</div>
               </div>
             {/if}
@@ -624,9 +692,115 @@
     gap: 18px;
     padding: 14px 20px;
     width: 100%;
+    box-sizing: border-box;
   }
   .measuredcard {
     gap: 14px;
+  }
+  /* The phone's switch card holds the Reaches chips under on/off (1a). */
+  .powercard {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 14px 18px 16px;
+  }
+  .powercard .power {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+  }
+  .powercard__rule {
+    height: 1px;
+    background: var(--c-ink-08);
+  }
+  .label--phone {
+    letter-spacing: 0.16em;
+  }
+  .reach {
+    display: flex;
+    gap: 8px;
+    transition: opacity 160ms ease;
+  }
+  .reach.is-off {
+    opacity: 0.45;
+    pointer-events: none;
+  }
+  .chip {
+    flex: 1;
+    min-width: 0;
+    min-height: 64px;
+    padding: 10px 14px;
+    border-radius: var(--r-md);
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    font: inherit;
+    text-align: left;
+    color: var(--ink);
+    background: var(--c-ink-05);
+    border: 1px solid var(--c-ink-12);
+  }
+  .chip:active {
+    transform: scale(0.97);
+  }
+  .chip__name {
+    font-size: 16px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .chip__sub {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--ink-muted);
+  }
+  .chip.is-sel {
+    background: var(--c-lms-16);
+    border-color: var(--c-lms-55);
+  }
+  .chip.is-sel .chip__name {
+    color: var(--accent-lms);
+  }
+  .chip.is-sel .chip__sub {
+    color: var(--c-ink-78);
+  }
+  .chip.is-locked {
+    background: transparent;
+    border: 1.5px dashed var(--rc-reach-locked-line);
+  }
+  .chip.is-locked .chip__name {
+    color: var(--ink-quiet);
+  }
+  .chip.is-locked .chip__sub {
+    color: var(--rc-without);
+  }
+  .reach--panel .chip__name {
+    font-size: 17px;
+  }
+  .reach--bar .chip {
+    height: 64px;
+    padding: 0 14px;
+    border-radius: var(--r-14);
+    gap: 3px;
+  }
+  .reach--bar .chip__name {
+    font-size: 18px;
+  }
+  .reach--bar .chip__sub {
+    font-size: 13px;
+  }
+  .reach__note {
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--c-ink-78);
+    text-wrap: pretty;
   }
   .power__text {
     flex: 1;
@@ -672,14 +846,14 @@
   .ab--panel {
     flex-direction: column;
     align-items: stretch;
-    gap: 12px;
+    gap: 10px;
     border-radius: var(--r-20);
-    padding: 20px 20px 18px;
+    padding: 16px 18px;
   }
   .ab--bar {
-    min-height: 96px;
+    min-height: 84px;
     border-radius: var(--r-18);
-    padding: 14px 16px 14px 18px;
+    padding: 12px 16px 12px 18px;
   }
   .ab__row {
     display: flex;
@@ -882,11 +1056,14 @@
     color: var(--accent-lms);
   }
   .chartcard {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
     border-radius: var(--r-18);
-    padding: 14px 12px 12px 6px;
+    padding: 14px 12px 12px;
   }
   .chartcard__head {
-    padding: 0 4px 12px 10px;
+    padding: 0 4px;
   }
   .chartcard__title {
     font-size: 18px;
@@ -894,8 +1071,10 @@
   }
   .chartcard__line {
     font-size: 14px;
-    color: var(--ink-muted);
+    line-height: 1.4;
+    color: var(--c-ink-78);
     margin-top: 3px;
+    text-wrap: pretty;
   }
   .again {
     flex-shrink: 0;
@@ -912,6 +1091,11 @@
     color: inherit;
     background: var(--ink-fill);
     border: 1px solid var(--c-ink-14);
+  }
+  .again.is-lit {
+    background: var(--c-lms-16);
+    border-color: var(--c-lms-55);
+    color: var(--accent-lms);
   }
   .again:active {
     transform: scale(0.97);
@@ -939,12 +1123,24 @@
     gap: 12px;
     min-height: 0;
   }
-  .lcard {
+  .rcard {
+    flex-shrink: 0;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
     border-radius: var(--r-20);
-    padding: 18px 20px;
+    padding: 16px 18px;
+    box-sizing: border-box;
+    background: var(--c-white-05);
+    border: 1px solid var(--ink-line);
+  }
+  .lcard {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border-radius: var(--r-20);
+    padding: 16px 18px;
     box-sizing: border-box;
     background: var(--c-white-05);
     border: 1px solid var(--ink-line);
@@ -970,31 +1166,63 @@
   }
   .lcard__when {
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
     gap: 10px;
+  }
+  .lcard__text {
+    flex: 1;
+    min-width: 0;
   }
   .lcard__date {
     display: block;
-    font-size: 20px;
+    font-size: 19px;
     font-weight: 700;
     white-space: nowrap;
   }
   .lcard__pos {
     display: block;
-    font-size: 15px;
-    color: var(--ink-quiet);
-    margin-top: 3px;
-  }
-  .lcard__cuts {
-    display: flex;
-    flex-direction: column;
-    gap: 7px;
-    padding-top: 4px;
-  }
-  .lcard__head {
     font-size: 14px;
     color: var(--ink-quiet);
+    margin-top: 2px;
+  }
+  /* The corrections in two groups (1g). */
+  .who {
+    font-size: 15px;
+    font-weight: 700;
+    margin-top: 2px;
+  }
+  .group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 6px;
+  }
+  .group--first {
+    margin-top: 2px;
+  }
+  .group__name {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--ink-quiet);
+  }
+  .group__kind {
+    font-size: 12px;
+    white-space: nowrap;
+    color: var(--ink-quiet);
+  }
+  .rows {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px 16px;
+  }
+  .empty {
+    font-size: 14px;
+    line-height: 1.4;
+    color: var(--c-ink-78);
+    text-wrap: pretty;
   }
   .lcard__never {
     font-size: 20px;
@@ -1002,10 +1230,12 @@
   }
   .cut {
     display: flex;
+    align-items: baseline;
     white-space: nowrap;
     justify-content: space-between;
+    gap: 6px;
     font-family: var(--font-mono);
-    font-size: 16px;
+    font-size: 14px;
     font-variant-numeric: tabular-nums;
   }
   .cut__f {
@@ -1014,6 +1244,31 @@
   .cut__g {
     font-weight: 600;
     color: var(--rc-before);
+  }
+  .cut__g.is-up {
+    color: var(--rc-after);
+  }
+  /* The panel's header: DSD as a pill beside the power control (§5). */
+  .dsdpill {
+    flex-shrink: 0;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    height: 58px;
+    padding: 0 16px;
+    border-radius: var(--r-15);
+    box-sizing: border-box;
+    background: var(--c-ink-06);
+    border: 1px solid var(--c-ink-14);
+    font-size: 15px;
+    white-space: nowrap;
+  }
+  .dsdpill .dsd__tag {
+    height: 26px;
+    padding: 0 8px;
+    border-radius: var(--r-7);
+    box-sizing: border-box;
+    font-size: 12px;
   }
   .againbtn {
     height: 58px;
@@ -1045,14 +1300,14 @@
     min-width: 0;
     display: flex;
     flex-direction: column;
+    gap: 10px;
     border-radius: var(--r-xl);
-    padding: 20px 24px 16px 14px;
+    padding: 20px 22px 16px;
   }
   .chartpanel__head {
     display: flex;
     align-items: center;
-    gap: 16px;
-    padding-left: 10px;
+    gap: 8px 14px;
     flex-shrink: 0;
   }
   .chartpanel__text {
@@ -1125,21 +1380,21 @@
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    padding: 24px 20px 24px 24px;
+    gap: 10px;
+    padding: 22px 20px 22px 22px;
     box-sizing: border-box;
     border-right: 1px solid var(--c-ink-09);
   }
   .mid--narrow {
-    width: 330px;
+    width: 360px;
   }
   .mcard {
     display: flex;
     align-items: center;
     gap: 12px;
-    min-height: 72px;
+    min-height: 68px;
     border-radius: var(--r-18);
-    padding: 12px 18px;
+    padding: 10px 18px;
     box-sizing: border-box;
     background: var(--c-white-05);
     border: 1px solid var(--ink-line);
@@ -1161,6 +1416,9 @@
     font-size: 16px;
     color: var(--ink-quiet);
     margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .right {
     flex: 1;
@@ -1196,7 +1454,7 @@
     gap: 2px;
   }
   .right--narrow .right__title {
-    font-size: 24px;
+    font-size: 22px;
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1204,7 +1462,7 @@
   /* Three tabs (Both) beside the heading on the 1280-wide bar. */
   .right--narrow .segs--bar .segbtn {
     height: 46px;
-    padding: 0 14px;
+    padding: 0 12px;
     font-size: 16px;
   }
   .right--narrow .right__line {
@@ -1218,13 +1476,12 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .chartcard--bar {
+  .chartbar {
     flex: 1;
     min-height: 0;
     display: flex;
     flex-direction: column;
-    border-radius: var(--r-20);
-    padding: 12px 18px 6px 8px;
+    transition: opacity 160ms ease;
   }
 
   /* -- the sheet -- */

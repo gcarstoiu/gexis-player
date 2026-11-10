@@ -1,6 +1,7 @@
-"""A room made up for room correction's tests (ADR-0175): a speaker that
-rolls off below 30 Hz, and modes - peaks and dips - that move a little from
-one position to the next and differ between the speakers."""
+"""A room made up for room correction's tests (ADR-0175, ADR-0177): a speaker
+that rolls off below 30 Hz, modes - peaks and dips - that move a little from
+one position to the next and differ between the speakers, and broad bumps and
+dips above the bass."""
 import math
 
 import asyncio
@@ -11,9 +12,13 @@ from gexis_core import room_dsp as rd
 
 #: (frequency, dB at the mode, Q): peaks and two dips, as the design's room.
 MODES = ((42, 8.0, 6.0), (65, -8.0, 8.0), (87, 10.0, 7.0), (110, -5.0, 7.0), (126, 4.0, 6.0), (170, 6.0, 6.0))
+#: Above the bass (ADR-0177): broad, as a speaker in a room has them - a dip
+#: and two bumps, each about an octave or more wide.
+BROAD = ((450, -5.0, 1.4), (1800, 4.0, 1.2), (6000, -3.5, 1.0))
 
 
-def response(f, modes=MODES, seed: int = 0, spread: float = 0.03, delay_s: float = 0.003) -> np.ndarray:
+def response(f, modes=MODES, seed: int = 0, spread: float = 0.03, delay_s: float = 0.003,
+             broad=BROAD) -> np.ndarray:
     """The room's complex response at `f` for one speaker at one position."""
     rng = np.random.default_rng(seed)
     f = np.asarray(f, dtype=float)
@@ -27,25 +32,32 @@ def response(f, modes=MODES, seed: int = 0, spread: float = 0.03, delay_s: float
         g = 10 ** (db / 20) - 1
         band = (s / (q * fm)) / (1 + s / (q * fm) + (s / fm) ** 2)
         total += g * band
+    for fm, db, q in broad:
+        # Peaking filters, a little different at each position.
+        db = db * (0.9 + 0.2 * rng.random())
+        a = 10 ** (db / 40)
+        x = s / fm
+        total *= (x * x + x * a / q + 1) / (x * x + x / (a * q) + 1)
     return hp * total * np.exp(-2j * np.pi * f * delay_s)
 
 
-def impulse(seed: int = 0, fs: int = rd.FS, seconds: float = 1.4, modes=MODES, gain: float = 1.0) -> np.ndarray:
+def impulse(seed: int = 0, fs: int = rd.FS, seconds: float = 1.4, modes=MODES, gain: float = 1.0,
+            broad=BROAD) -> np.ndarray:
     n = 1 << int(math.ceil(math.log2(seconds * fs)))
     f = np.fft.rfftfreq(n, 1 / fs)
-    h = response(f, modes, seed)
+    h = response(f, modes, seed, broad=broad)
     h[0] = 0
     return gain * np.fft.irfft(h, n)
 
 
 def record(played, seed: int = 0, gain: float = 1.0, noise_db: float = -90.0, lead_s: float = 0.3,
            tail_s: float = 1.5, burst: tuple[float, float] | None = None, modes=MODES,
-           fs: int = rd.FS) -> np.ndarray:
+           fs: int = rd.FS, broad=BROAD) -> np.ndarray:
     """What a microphone would record of `played` through the room: a lead
     of silence, the room's answer and its tail, the floor's noise, and a
     burst (start s, dB of full scale) if asked."""
     played = np.asarray(played, dtype=float)
-    ir = impulse(seed, fs, modes=modes, gain=gain)
+    ir = impulse(seed, fs, modes=modes, gain=gain, broad=broad)
     n = len(played) + int((lead_s + tail_s) * fs)
     out = np.zeros(n)
     size = 1 << int(math.ceil(math.log2(len(played) + len(ir))))
@@ -70,12 +82,12 @@ def positions(n: int = 3, channel: int = 0, modes=MODES) -> list[int]:
     return [channel * 100 + k + 1 for k in range(n)]
 
 
-def curve(seed: int, modes=MODES, grid=rd.GRID) -> np.ndarray:
+def curve(seed: int, modes=MODES, grid=rd.GRID, broad=BROAD) -> np.ndarray:
     """The 1/6-octave curve a measurement at this seed should come to."""
     fs = rd.FS
     n = 1 << 18
     f = np.fft.rfftfreq(n, 1 / fs)
-    h = response(f, modes, seed)
+    h = response(f, modes, seed, broad=broad)
     return rd.response_db(np.fft.irfft(h, n)[: int(rd.WINDOW_S * fs)], fs, grid)
 
 
@@ -83,11 +95,13 @@ class Audio:
     """The microphone in a made-up room: where it is, how loud the system
     plays, and a noise when asked for."""
 
-    def __init__(self, offset=120.0, modes=MODES, bursts=(), noise_db=-110.0, gain=1.0):
+    def __init__(self, offset=120.0, modes=MODES, bursts=(), noise_db=-110.0, gain=1.0, broad=BROAD):
         self.offset = offset
         self.noise_db = noise_db
         self.gain = gain
         self.modes = modes
+        self.broad = broad
+        self.peaks = []     # each sweep's highest sample, as played
         self.position = 1
         self.plays = []
         self.bursts = list(bursts)    # the n-th sweep (1-based) gets a thump
@@ -103,6 +117,7 @@ class Audio:
         self.plays.append((channel, self.position))
         if channel is not None:
             self.sweeps += 1
+            self.peaks.append(float(np.max(np.abs(signal))))
         burst = (0.5, -20) if (channel is not None and self.sweeps in self.bursts) else None
         speakers = (0,) if channel is None else (channel,) if isinstance(channel, int) else tuple(channel)
         recording = None
@@ -110,10 +125,10 @@ class Audio:
             # The room's noise and a thump once, however many speakers play.
             part = record(signal, seed=c * 100 + self.position, modes=self.modes,
                           noise_db=self.noise_db if k == 0 else -300.0, burst=burst if k == 0 else None,
-                          tail_s=tail_s, gain=self.gain)
+                          tail_s=tail_s, gain=self.gain, broad=self.broad)
             if self.stage is not None and channel is not None:
-                # The stage's cuts, as CamillaDSP would play them.
-                cuts = [rd.Cut(f, g, q) for f, g, q in self.stage[c]]
+                # The stage's filters, as CamillaDSP would play them.
+                cuts = [rd.Cut(f, g, q) for f, g, q in tuple(self.stage.cuts[c]) + tuple(self.stage.above[c])]
                 n = 1 << int(math.ceil(math.log2(len(part))))
                 spec = np.fft.rfft(part, n)
                 f = np.fft.rfftfreq(n, 1 / rd.FS)

@@ -6,6 +6,20 @@
 Every release of Gexis Player and its notes, newest first. The player
 shows the last 10 under Settings → System → Change logs.
 
+## 1.16.0 — 10 November 2026
+
+### New
+
+- Room correction for the full range, in Settings → Audio: above the bass it evens out the room's broad bumps and dips by 3 dB at most, up or down, and keeps the speakers' own balance.
+- Bass or Full range, on its page and in the volume controls, heard at once; Hear it without compares with no correction at all.
+- The chart shows the bass and the range above it, with what is cut and what is raised.
+
+### Good to know
+
+- A measurement made before this release covers the bass only, and the microphone's calibration file is asked for once more; measuring again, in about five minutes and its check, reaches the full range.
+- With room correction on, the music is lowered by up to 3 dB so the correction cannot clip, and the volume gives it back; near the top of the volume, and with Fixed volume, it plays up to 3 dB quieter.
+- Nothing above 14 kHz is corrected.
+
 ## 1.15.0 — 8 November 2026
 
 ### New

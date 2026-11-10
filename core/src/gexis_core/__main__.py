@@ -740,7 +740,9 @@ async def main() -> None:
         # ADR-0162 D3 as amended: the control holds the level with the
         # equaliser's headroom given back, as the store has it (and the boot
         # step wrote it) - in force before anything reads or writes it.
-        set_give_back(eq_control.give_back_for(settings_store.get(eq_control.KEY), chosen_output))
+        set_give_back(eq_control.give_back_for(
+            settings_store.get(eq_control.KEY), chosen_output,
+            lift=room_correction.Room.from_settings(settings_store.get(room_correction.KEY)).lift(chosen_output.card)))
         if chosen_output.software:
             await _start_software_volume(card_output, settings_store)
         if chosen_output.control:
