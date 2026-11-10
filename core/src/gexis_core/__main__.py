@@ -808,10 +808,12 @@ async def main() -> None:
     shipped_ids = {p.id for p in shipped_plugins}
     # **ADR-0174: ours that moved to the catalogue, carried over** - their
     # data into their own folders, and the ones this player used recorded for
-    # the restore's path below to install from the catalogue.
+    # the restore's path below to install from the catalogue - once: the
+    # Plugins page's record loses their ids, so a Remove sticks.
     try:
         carry_over.carry(ours=shipped_ids, stored=settings_store.get,
                          added=plugin_store.read(settings_store.get(plugin_store.ADDED)),
+                         write_added=lambda ids: settings_store.set(plugin_store.ADDED, sorted(ids)),
                          installed_packages=carry_over.installed_packages)
     except OSError as exc:
         logger.warning("carry-over: %s", exc)

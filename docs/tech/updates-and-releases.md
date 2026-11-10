@@ -678,9 +678,10 @@ player that used them over at its next start (`carry_over.py`) - their old
 units stopped, their data moved into the plugins' own folders (Plexamp's
 store, its claim record, and its software with the stamp of its pin, so the
 same version is not fetched again), recorded for the catalogue's install,
-switched on again. Plexamp's plugin downloads Plexamp itself, from the pin in
-its archive, into its own folder, and reports it with the contract's
-`software` messages; a new Plexamp is a new plugin version.
+switched on again. It is carried once: its id leaves `_plugins_added`, so a
+plugin removed afterwards stays removed. Plexamp's plugin downloads Plexamp
+itself, from the pin in its archive, into its own folder, and reports it with
+the contract's `software` messages; a new Plexamp is a new plugin version.
 
 **Uploaded plugins** (ADR-0106, `core/src/gexis_core/uploads.py`) bypass the
 release entirely: a `.tar.gz` with `plugin.json` (plus `version` and `run`),

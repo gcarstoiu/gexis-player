@@ -478,3 +478,20 @@ async def test_a_level_kept_before_its_scale_was_goes_back_as_it_was(monkeypatch
     ns, _ = _room_level({"_room_volume_before": {"raw": 180, "muted": False}}, card)
     await ns["_room_volume_after_restart"]()
     assert card.written == [180]
+
+
+def test_the_carry_over_takes_carried_ids_out_of_the_plugins_page_record(tmp_path):
+    """The review of 1.16.1: a carried plugin's id stayed in `_plugins_added`,
+    so a Remove did not stick. The writer `main()` hands the carry-over, run
+    on a real store."""
+    from gexis_core import plugin_store
+    from gexis_core.settings import SettingsStore
+    [call] = [n for n in ast.walk(ast.Module(body=_main_body(), type_ignores=[]))
+              if isinstance(n, ast.Call) and ast.unparse(n.func) == "carry_over.carry"]
+    writer = next(k.value for k in call.keywords if k.arg == "write_added")
+    store = SettingsStore(tmp_path / "settings.db")
+    store.set(plugin_store.ADDED, ["beszel", "visualiser-skins"])
+    write = eval(compile(ast.Expression(writer), str(MAIN), "eval"),
+                 {"settings_store": store, "plugin_store": plugin_store})
+    write({"visualiser-skins"})
+    assert store.get(plugin_store.ADDED) == ["visualiser-skins"]
