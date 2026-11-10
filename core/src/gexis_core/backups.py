@@ -28,6 +28,7 @@ import subprocess
 import tarfile
 import tempfile
 import time
+import tomllib
 import zlib
 from dataclasses import dataclass
 from pathlib import Path
@@ -123,6 +124,60 @@ IDENTITIES = (
 #: so the whole plugin goes back to its defaults. Plexamp keeps its switch:
 #: on a second player it is claimed again.
 IDENTITY_SETTINGS = ("beszel.", "plexamp.claim_token")
+
+#: **Put back as values, never as the files** (the review of 1.16.1,
+#: 2026-11-10). `core.toml` is the root core's own configuration - where it
+#: writes, what it serves, where it listens - and one put back whole from a
+#: crafted backup pointed the moOde metadata file at `cmdline.txt`, which
+#: the core replaced at its first state. `device-name.env` is four units'
+#: environment, and a crafted one set `LD_PRELOAD` for them. What a backup
+#: carries of each is what the device was given: these keys of `core.toml`,
+#: over the device's own file, and the name.
+CORE_TOML = "etc/gexis/core.toml"
+CARRIED_CONFIG = {"idle_url": str, "lms_host": str, "lms_port": int, "lms_player_name": str}
+DEVICE_NAME_ENV = "etc/gexis/device-name.env"
+#: Larger than either file ever is; one larger is not read.
+_CARRIED_MAX = 64 * 1024
+_CONTROL = re.compile(r"[\x00-\x1f\x7f]")
+
+
+def _carried_config(brought: bytes, own: bytes | None) -> bytes | None:
+    """The device's own `core.toml` with `CARRIED_CONFIG` as the backup has
+    it, a key it leaves out left out as the whole file had it. None, to
+    leave the device's file: a file the core could not load stopped it at
+    every start."""
+    try:
+        theirs = tomllib.loads(brought.decode())
+        tomllib.loads((own or b"").decode())
+    except (UnicodeDecodeError, tomllib.TOMLDecodeError):
+        return None
+    setting = re.compile(rf"\s*({'|'.join(CARRIED_CONFIG)})\s*=")
+    lines = [line for line in (own or b"").decode().splitlines() if not setting.match(line)]
+    for key, kind in CARRIED_CONFIG.items():
+        value = theirs.get(key)
+        if type(value) is not kind or (kind is str and _CONTROL.search(value)):
+            continue
+        # A JSON string is a TOML basic one, control characters aside.
+        lines.append(f"{key} = {json.dumps(value, ensure_ascii=False)}")
+    text = "".join(line + "\n" for line in lines)
+    try:
+        tomllib.loads(text)
+    except tomllib.TOMLDecodeError:
+        return None
+    return text.encode()
+
+
+def _carried_name(brought: bytes, own: bytes | None) -> bytes | None:
+    """The backup's name, as a rename writes it; None to leave the
+    device's own file."""
+    from gexis_core import device_name
+
+    name = device_name.name_in(brought.decode(errors="replace"))
+    return device_name.env_text(name).encode() if name else None
+
+
+CARRIED = {CORE_TOML: _carried_config, DEVICE_NAME_ENV: _carried_name}
+
 
 #: **The databases the core holds open** (ADR-0131 §5). Put back by writing
 #: beside them and renaming, so an open connection keeps the file it had and
@@ -717,18 +772,20 @@ def _set_attributes(fd: int, member: tarfile.TarInfo) -> None:
 
 
 def _write_beside(archive: tarfile.TarFile, member: tarfile.TarInfo, kept: tarfile.TarInfo,
-                  folder: int, leaf: str) -> None:
+                  folder: int, leaf: str, data: bytes | None = None) -> None:
     """One file, written beside its place under a name nobody can guess and
     renamed over it. The rename replaces a link standing there instead of
     following it, and a program holding the old file open - the core its
-    databases (ADR-0131 §5.4) - keeps the one it had."""
+    databases (ADR-0131 §5.4) - keeps the one it had. `data`: written
+    instead of the member's own contents."""
     partial = f".{leaf}.{secrets.token_hex(4)}.restoring"
     fd = os.open(partial, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600,
                  dir_fd=folder)
     try:
         with os.fdopen(fd, "wb") as out:
-            source = archive.extractfile(member)
-            if source is not None:
+            if data is not None:
+                out.write(data)
+            elif (source := archive.extractfile(member)) is not None:
                 with source:
                     shutil.copyfileobj(source, out)
             out.flush()
@@ -771,6 +828,9 @@ def _put_back(archive: tarfile.TarFile, members: list[tarfile.TarInfo], root: Pa
                 continue
             folder = _open_folder(root_fd, parts[:-1], label)
             try:
+                if member.name in CARRIED:
+                    _carry(archive, member, kept, folder, parts[-1])
+                    continue
                 _write_beside(archive, member, kept, folder, parts[-1])
                 # A WAL the archive does not bring is not left beside the
                 # database it brings: the next open would apply it to the
@@ -794,6 +854,30 @@ def _put_back(archive: tarfile.TarFile, members: list[tarfile.TarInfo], root: Pa
                 os.close(fd)
     finally:
         os.close(root_fd)
+
+
+def _carry(archive: tarfile.TarFile, member: tarfile.TarInfo, kept: tarfile.TarInfo,
+           folder: int, leaf: str) -> None:
+    """`CARRIED`'s file: what the backup carries of it, over the device's
+    own, owned by root and readable by all whoever the archive says."""
+    def read(source) -> bytes | None:
+        if source is None:
+            return None
+        with source:
+            data = source.read(_CARRIED_MAX + 1)
+        return data if len(data) <= _CARRIED_MAX else None
+
+    brought = read(archive.extractfile(member))
+    try:
+        own = read(os.fdopen(os.open(leaf, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC, dir_fd=folder), "rb"))
+    except OSError:
+        own = None
+    data = CARRIED[member.name](brought, own) if brought is not None else None
+    if data is None:
+        logger.warning("backup: %s: left as it is, nothing in the backup's to carry", member.name)
+        return
+    kept = kept.replace(uid=0, gid=0, uname="root", gname="root", mode=0o644, deep=False)
+    _write_beside(archive, member, kept, folder, leaf, data)
 
 
 def write_settings(values: dict, root: Path = Path("/")) -> None:

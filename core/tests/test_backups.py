@@ -27,7 +27,7 @@ def _device(root):
     (root / "var/lib/gexis-core/settings.db").write_text("settings")
     (root / "var/lib/gexis-core/enrichment.db").write_text("enrichment")
     (root / "etc/gexis/core.toml").write_text('idle_url = "secret"')
-    (root / "etc/gexis/device-name.env").write_text("NAME=gexis")
+    (root / "etc/gexis/device-name.env").write_text("GEXIS_DEVICE_NAME=gexis\n")
     (root / "var/lib/bluetooth/11:22/info").write_text("paired")
     # ADR-0174: Beszel's agent and hub are catalogue plugins, their data in
     # their own folders - the fingerprint, and the hub's history.
@@ -1238,3 +1238,104 @@ def test_the_review_lists_what_a_backup_restores_by_section(tmp_path, monkeypatc
     assert by["Audio"] == ["Output"]
     assert "Lyrion Client · Navigation" in by["Sources"] and "Spotify sign-in" in by["Sources"]
     assert seen["brings"] == ["Spotify sign-in"]
+
+
+def _with_files(out, files, mode=0o644):
+    """A backup holding `files`, {member: bytes}, written as `pi` with `mode`."""
+    import io
+    out.mkdir(exist_ok=True)
+    name = "gexis-gexis-20261110-120000.tgz"
+    with tarfile.open(out / name, "w:gz") as archive:
+        for member, data in files.items():
+            info = tarfile.TarInfo(member)
+            info.size, info.mode, info.uname, info.uid = len(data), mode, "pi", 1000
+            archive.addfile(info, io.BytesIO(data))
+    return name
+
+
+def test_a_restored_core_toml_never_points_the_core_somewhere_else(tmp_path):
+    """**The review of 1.16.1** (critical): `core.toml` was put back whole,
+    and it names where the root core writes and what it serves - a crafted
+    backup set `metadata_file_path` to `cmdline.txt`, and the core replaced
+    that at its first state. Only the values a backup exists to carry come
+    back; the device's own file keeps the rest."""
+    from gexis_core.config import Config
+
+    root = tmp_path / "root"
+    (root / "etc/gexis").mkdir(parents=True)
+    (root / "etc/gexis/core.toml").write_text('# the image\'s comment\nidle_url = "https://old.example/clock"\n')
+    name = _with_files(tmp_path / "out", {"etc/gexis/core.toml": (
+        b'metadata_file_path = "/boot/firmware/cmdline.txt"\nui_dir = "/"\nstate_port = 22\n'
+        b'idle_url = "https://new.example/clock?id=\\"7\\""\nlms_host = "lms.example"\nlms_port = 9002\n')},
+        mode=0o666)
+
+    backups.restore(name, tmp_path / "out", root)
+
+    restored = root / "etc/gexis/core.toml"
+    config = Config.load(restored)
+    assert config.metadata_file_path == Config.metadata_file_path
+    assert config.ui_dir == Config.ui_dir and config.state_port == Config.state_port
+    assert config.idle_url == 'https://new.example/clock?id="7"'
+    assert (config.lms_host, config.lms_port) == ("lms.example", 9002)
+    assert restored.read_text().startswith("# the image's comment\n")
+    assert restored.stat().st_mode & 0o7777 == 0o644
+
+
+def test_a_carried_value_the_backup_does_not_have_goes_as_before(tmp_path):
+    """A key the backup leaves out is left out, as the whole file did."""
+    from gexis_core.config import Config
+
+    root = tmp_path / "root"
+    (root / "etc/gexis").mkdir(parents=True)
+    (root / "etc/gexis/core.toml").write_text('idle_url = "https://old.example/clock"\n')
+    name = _with_files(tmp_path / "out", {"etc/gexis/core.toml": b"# nothing set\n"})
+
+    backups.restore(name, tmp_path / "out", root)
+    assert Config.load(root / "etc/gexis/core.toml").idle_url == ""
+
+
+@pytest.mark.parametrize("brought", [b"not = toml = [[[", b"\xff\xfe", b'lms_port = "9000"\nidle_url = "a\\u0000b"\n'])
+def test_a_core_toml_the_core_could_not_read_leaves_the_device_s_own(tmp_path, brought):
+    """Put back whole, a file the core cannot load stopped it at every
+    start. Unreadable, it is left out; a value of the wrong kind or with a
+    control character in it is not carried."""
+    from gexis_core.config import Config
+
+    root = tmp_path / "root"
+    (root / "etc/gexis").mkdir(parents=True)
+    own = 'idle_url = "https://old.example/clock"\nlms_port = 9001\n'
+    (root / "etc/gexis/core.toml").write_text(own)
+    name = _with_files(tmp_path / "out", {"etc/gexis/core.toml": brought})
+
+    backups.restore(name, tmp_path / "out", root)
+    config = Config.load(root / "etc/gexis/core.toml")
+    if brought.startswith(b"lms_port"):
+        assert (config.idle_url, config.lms_port) == ("", Config.lms_port)
+    else:
+        assert (root / "etc/gexis/core.toml").read_text() == own
+
+
+def test_the_name_file_comes_back_as_the_name_alone(tmp_path):
+    """**The review of 1.16.1**: `device-name.env` is read by four units as
+    their environment; put back whole, a crafted one set `LD_PRELOAD` for
+    them. The name is carried, written the way a rename writes it."""
+    root = tmp_path / "root"
+    (root / "etc/gexis").mkdir(parents=True)
+    (root / "etc/gexis/device-name.env").write_text('GEXIS_DEVICE_NAME="Sofa"\n')
+    name = _with_files(tmp_path / "out", {"etc/gexis/device-name.env":
+                                         b'GEXIS_DEVICE_NAME="Kitchen \\"Pi\\""\nLD_PRELOAD=/var/lib/x.so\n'}, mode=0o666)
+
+    backups.restore(name, tmp_path / "out", root)
+    env = root / "etc/gexis/device-name.env"
+    assert env.read_text() == 'GEXIS_DEVICE_NAME="Kitchen \\"Pi\\""\n'
+    assert env.stat().st_mode & 0o7777 == 0o644
+
+
+def test_a_name_file_without_a_name_leaves_the_device_s_own(tmp_path):
+    root = tmp_path / "root"
+    (root / "etc/gexis").mkdir(parents=True)
+    (root / "etc/gexis/device-name.env").write_text('GEXIS_DEVICE_NAME="Sofa"\n')
+    name = _with_files(tmp_path / "out", {"etc/gexis/device-name.env": b"LD_PRELOAD=/var/lib/x.so\n"})
+
+    backups.restore(name, tmp_path / "out", root)
+    assert (root / "etc/gexis/device-name.env").read_text() == 'GEXIS_DEVICE_NAME="Sofa"\n'

@@ -448,6 +448,18 @@ nothing there is followed through a link:
   `var/lib/beszel-agent` and `var/lib/beszel-hub` are put back where they
   were (`RESTORED_ONLY`) and moved into the plugins' folders by the
   carry-over (ADR-0174).
+- **Two files come back as values, not as files** (`CARRIED`, the review of
+  1.16.1). `core.toml` names where the root core writes and what it serves,
+  and `device-name.env` is four units' environment, so neither is written
+  from the archive. Of `core.toml`, only `idle_url`, `lms_host`, `lms_port`
+  and `lms_player_name` are taken, over the device's own file
+  (`CARRIED_CONFIG`; a key the backup leaves out is removed, as the whole
+  file did; a value of the wrong type or with a control character is not
+  taken; a file that does not parse leaves the device's). Of
+  `device-name.env`, only the name, written as a rename writes it; without
+  one the device's file stays. Both are root's, mode 0644, whatever the
+  archive says. The moOde metadata file is written only inside
+  `/var/local/www` (`metadata_file.allowed()`), never through a link.
 
 **Setup's own screens are laid out for the attached screen** (ADR-0109
 amended 2026-10-07): `gexis-screen-check` runs before the kiosk during setup

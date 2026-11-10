@@ -35,6 +35,7 @@ from gexis_core.start_guard import StartGuard
 from gexis_core.idle_page import probe as probe_idle_page
 from gexis_core.wallpapers import Wallpapers
 from gexis_core.weather import Weather
+from gexis_core import metadata_file
 from gexis_core.metadata_file import MetadataFileWriter
 from gexis_core.artistinfo import PHOTO_LARGE, LmsArtistInfo
 from gexis_core.enrichment import (
@@ -870,7 +871,7 @@ async def main() -> None:
 
     # Criterion 4: moOde-compatible metadata file, subscribed the same way
     # StateServer is - a plain callback on every published state change.
-    metadata_file_writer = MetadataFileWriter(Path(config.metadata_file_path))
+    metadata_file_writer = MetadataFileWriter(metadata_file.allowed(Path(config.metadata_file_path)))
     state_store.subscribe(metadata_file_writer.write)
 
     # Criterion 3, 2026-09-12: which volume-bridging mechanism a renderer
