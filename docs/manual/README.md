@@ -899,7 +899,9 @@ On its page:
 - **Reaches**: **Bass** (up to 250 Hz) or **Full range** (15 Hz to 20 kHz),
   a tap heard at once, so the two compare by the choice itself. A
   measurement made before the full range could be measured reaches the bass
-  only: *Full range* asks for **Measure again for the full range**.
+  only: *Full range* asks for **Measure again for the full range**. *Full
+  range* is marked **Limited testing**: so far it has been tried in one
+  room. Problem reports help.
 - **Hear it without** (*A/B*): no correction at all, to compare, heard at
   once, and amber while set. It stays where you put it, after a restart
   too, until switched back.

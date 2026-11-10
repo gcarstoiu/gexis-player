@@ -8740,3 +8740,17 @@ visualiser's raise. sofapi's kept page cleared, its test files removed.
 Merged into `next` with George's OK; **on Testing with 1.15.0** (above).
 After PR #97's merge: `ph-ha-page` and the integration's `ha-page` deleted,
 the worktree `~/projects/gexis-player-ph35` removed.
+
+## 2026-11-10 — the Testing block for 1.15.0, superseded by 1.16.0 (moved verbatim)
+
+**Testing: 1.15.0** (2026-11-08, serial 67): a page from Home Assistant on
+the screen (Phase 35), with zlib's Debian update. Built by run 42471673684
+(`verify-image.sh` all 151 checks passed, as 1.14.0); its downloads from the
+mirror and the published indexes took 26 and 20 minutes during GitHub's
+incident with unauthenticated downloads, and signing (on R2D2) waited until
+GitHub served the files again (a 503 first). The channel, each part, the
+notes and the history read back good. Notes approved by George; release PR #97 merged by George
+the same day. The integration's
+0.6.0 released the same day (its `main` fast-forwarded to `ha-page`, tag and
+release; notes approved by George); the Home Assistant session sent the
+final names and fields.
