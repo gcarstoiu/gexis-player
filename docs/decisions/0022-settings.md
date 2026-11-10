@@ -658,12 +658,13 @@ Confirmed by George, 2026-11-07, [ADR-0176](0176-a-page-from-home-assistant-on-t
 
 ### Appended 2026-11-10 — room correction for the full range
 
-Confirmed by George, 2026-11-07 (Phase 30's decisions), [ADR-0177](0177-room-correction-for-the-full-range.md):
+Confirmed by George, 2026-11-07 (Phase 30's decisions) and 2026-11-10 (ADR-0177's decisions 1-2), [ADR-0177](0177-room-correction-for-the-full-range.md):
 
 | Setting | Mark | Notes |
 |---|---|---|
 | Room correction reach | [N] | *Bass* or *Full range*, kept for each output and in backups; a new measurement starts at *Full range*, one from before Phase 30 holds *Bass* until the room is measured again |
-| Measured range | [H] | Up to 20 kHz: the sweeps and the chart (where the broad corrections stop is ADR-0177's decision 2) |
+| Measured range | [H] | Up to 20 kHz: the sweeps and the chart; the broad corrections stop at 14 kHz (ADR-0177 decision 2, George 2026-11-10) |
 | Correction above the bass | [H] | At most 3 dB up or down, broad filters only |
 | Target above the bass | [H] | The speaker's own slope in the room, fitted from 300 Hz to 10 kHz |
 | Positions | [H] | The same three as the bass's (George, 2026-11-10: whether more help is checked later) |
+| Bass target level | [H] | From the speaker's slope line where it meets 250 Hz, for Bass and Full range alike (ADR-0177 decision 1, George 2026-11-10); a measurement from before Phase 30 keeps its own |
