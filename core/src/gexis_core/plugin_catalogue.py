@@ -180,13 +180,19 @@ def last(*, keyring: Path = KEYRING, state: Path = STATE) -> Catalogue | None:
 
 
 async def _get(session: aiohttp.ClientSession, url: str, limit: int) -> bytes:
+    """The whole body, up to `limit`. **Read to its end**: one read gives
+    only what has arrived, and a catalogue longer than one TLS record was
+    cut short (the review of 1.16.1)."""
+    chunks, size = [], 0
     async with session.get(url, timeout=TIMEOUT, headers=HEADERS) as response:
         if response.status != 200:
             raise Unavailable(f"GitHub answered {response.status}")
-        data = await response.content.read(limit + 1)
-    if len(data) > limit:
-        raise Unavailable("it is larger than a catalogue can be")
-    return data
+        async for chunk in response.content.iter_chunked(1 << 16):
+            size += len(chunk)
+            if size > limit:
+                raise Unavailable("it is larger than a catalogue can be")
+            chunks.append(chunk)
+    return b"".join(chunks)
 
 
 def signature_url(url: str, serial: int) -> str:
