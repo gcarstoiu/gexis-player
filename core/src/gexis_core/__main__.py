@@ -4551,8 +4551,9 @@ async def main() -> None:
             state_store.set_screen_confirm(None)
             logger.info("screen: kept")
             # ADR-0109, amended 2026-10-03: what a kept screen reports, so a
-            # different one is noticed at the next start.
-            await asyncio.to_thread(lambda: screen_watch.kept(screen_detect.seen()))
+            # different one is noticed at the next start - from the port it
+            # is on (the review of 1.16.1).
+            await asyncio.to_thread(lambda: screen_watch.kept(screen_detect.applied_port()))
             # ADR-0111 decision 2: the kept screen's pack, the old one out.
             _skins_kick()
             return {"kept": True}
