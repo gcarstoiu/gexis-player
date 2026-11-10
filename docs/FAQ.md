@@ -626,7 +626,10 @@ HTTP API at `http://<player>.local:8090`, with the player's name in place of
 against the player, so be careful with restart and reset. Routes marked
 *stable* are the ones meant for integrations; *internal* ones are the
 player's own and may change. Anyone on the home network can use the API, as
-they can the settings: there is no login.
+they can the settings: there is no login. A web page served from anywhere
+else cannot use it from a browser: the player takes changes from a browser
+only on its own pages, and a browser has to open it by its address, its
+name or `<player>.local`. Apps, scripts and Home Assistant are not affected.
 
 ## Network and Wi-Fi
 

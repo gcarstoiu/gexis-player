@@ -14,6 +14,14 @@ description is an OpenAPI 3.1 file,
 - **No login.** The API is open to the home network, as the player's
   settings are (ADR-0028, ADR-0022): anyone on it can call every route,
   restart and *Reset to factory settings* included.
+- **From a browser, only the player's own pages** (ADR-0178 decision 1,
+  `own_pages.py`). A request a browser makes (it sends `Origin`,
+  `Sec-Fetch-*` or a `Mozilla/` user agent) must name the player by an
+  address, a name without dots, `localhost` or a name under `.local`, or it
+  is refused with a 403 and a sentence; and a request that changes
+  something, or opens `/state` or `/touchpad`, is refused when its `Origin`
+  is not the page's own or it says `Sec-Fetch-Site: cross-site`. A program
+  that is not a browser - Home Assistant, curl, a plugin - is not affected.
 - **Commands are plain HTTP** (`GET` to read, `POST`/`PUT`/`DELETE` to act);
   **what changes arrives on the `/state` WebSocket**. A command's `200` means
   *sent*; the effect is read from the next state.
