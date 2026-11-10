@@ -125,9 +125,10 @@ player's.
 to `~/.gnupg-gexis-release`, which no longer exists.
 
 **The players** (2026-11-08): sofapi on 1.15.0 through its updater (George),
-then Phase 30's research preview (`~/preview-ph30`, 2026-11-08; the room
-measured again and kept 2026-11-10), *Pages from Home Assistant* on and no
-page kept loaded yet,
+then Phase 30's research preview (the room measured again and kept
+2026-11-10), then Phase 30's build (`~/preview-ph30b`, 1.15.0+git19.a1c989e,
+2026-11-10; that measurement reads as bass-only), *Pages from Home
+Assistant* on and no page kept loaded yet,
 Plexamp 0.5.1 and Beszel from the catalogue; `rpi-eeprom-update` reports a bootloader update
 available, not applied (not looked into). Roon's extension enabled in
 George's Roon; the other three last seen on 1.9.1 through their updaters
@@ -182,8 +183,8 @@ recommendations, its decisions 1-4 his to confirm. **Built** the same day on
 `ph-room-correction-full` (worktree `~/projects/gexis-player-ph30`): the
 broad corrections, the reach, the split chart, the grouped corrections, the
 drawer's three-way control, the new words; layouts checked with made-up data
-in `~/projects/scratch/ph30/harness` (`WT` set to the worktree). **Now:** a
-preview on sofapi for George's tests. sofapi's measurement of 10 Nov was
+in `~/projects/scratch/ph30/harness` (`WT` set to the worktree). **Now:**
+George's tests of the preview on sofapi (installed 2026-11-10). sofapi's measurement of 10 Nov was
 kept by the research preview, which stored no range, so the new one reads it
 as the bass's: *Measure again for the full range*. **Owed:** decisions 1-4;
 the stage's cost at 44.1/96/192 kHz; acceptance 2 as a finding from a run
