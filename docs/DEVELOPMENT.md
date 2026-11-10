@@ -3899,7 +3899,9 @@ above: the filters and their smoothing, how the two ranges join, and what it
 costs a Pi 4 beside Phase 29's filter.
 [ADR-0177](decisions/0177-room-correction-for-the-full-range.md), proposed
 2026-11-10; George asked for the build to go ahead on its recommendations the
-same day, its decisions 1-4 his to confirm.
+same day, and accepted it the same day (decisions 1-4 as recommended: the
+bass's level from the line, nothing corrected above 14 kHz, one level for
+Bass, Full range and Without, the times).
 
 **Acceptance (draft):**
 

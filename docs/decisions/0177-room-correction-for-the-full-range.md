@@ -1,9 +1,9 @@
 # ADR-0177 — Room correction for the full range
 
-**Status:** **Proposed** 2026-11-10 (Claude), Phase 30
-(`ph-room-correction-full`). George asked the same day for the build to go
-ahead on it; decisions 1-4 below are his to confirm, and the build follows
-the recommendations until he does. **Builds on:**
+**Status:** **Accepted** 2026-11-10 (George: decisions 1-4 as
+recommended), Phase 30 (`ph-room-correction-full`); proposed by Claude the
+same day, and built on its recommendations at George's word before he
+decided them. **Builds on:**
 [ADR-0175](0175-room-correction-for-the-bass.md) (the bass, as built),
 [ADR-0162](0162-a-simple-equaliser.md) (the stage and its headroom),
 [Finding 141](../findings/141-room-correction-above-the-bass-what-is-known.md)
@@ -138,6 +138,17 @@ probably with the next room-correction phase (34).
   for the check (three now), and *about a minute a position* (45 seconds
   now), from Finding 144's timings.
 
+## Decided (George)
+
+- **Decision 1, the bass's level** (2026-11-10), as recommended: from the
+  line, for both reaches - one target, one list of cuts.
+- **Decision 2, the top** (2026-11-10), as recommended: the filters stop at
+  14 kHz; the chip stays *Full range · 15 Hz to 20 kHz*.
+- **Decision 3, the comparison's level** (2026-11-10), as recommended: one
+  headroom for Bass, Full range and Without.
+- **Decision 4, the times** (2026-11-10), as recommended: *About five
+  minutes* before a run, *about a minute a position*.
+
 ## Settings (ADR-0022)
 
 Confirmed by George on 2026-11-07, to append with this ADR:
@@ -147,10 +158,12 @@ Confirmed by George on 2026-11-07, to append with this ADR:
 - **[H]** The speaker's own slope as the target above the bass.
 - **[H]** The same three positions.
 
+Appended with decisions 1 and 2 (George, 2026-11-10): the filters stop at
+14 kHz; the bass's target level taken from the line.
+
 Proposed, to append only once George confirms:
-- **[H]** Up to six broad filters above the bass, from 250 Hz to 14 kHz, Q 0.5
-  to 2; a gap under 1.5 dB left.
-- **[H]** The bass's target level taken from the line (decision 1).
+- **[H]** Up to six broad filters above the bass, Q 0.5 to 2; a gap under
+  1.5 dB left.
 
 ## While building
 
