@@ -388,13 +388,14 @@
         "operationId": "room_correction",
         "x-gexis-stability": "internal",
         "x-gexis-adr": [
-          "ADR-0175"
+          "ADR-0175",
+          "ADR-0177"
         ],
         "tags": [
           "Room correction"
         ],
         "summary": "Room correction for the output in use",
-        "description": "Whether room correction is on for the output in use and whether *Hear it without* is set (the cuts at 0 dB, to compare), the last measurement with its chart (each speaker's average before, its five positions, the target and the after, measured or expected), the measurement microphone and its calibration, whether a measurement can start, and a measurement in progress with what it has worked out so far. Each output keeps its own. The summary of it is `room` on `/state`. Off with the equaliser also off, the output is bit-perfect.",
+        "description": "Whether room correction is on for the output in use, how far it reaches (`reach`: the bass alone, or the full range) and whether *Hear it without* is set (every correction at 0 dB, to compare), the last measurement with its chart (each speaker's average before, its positions, the target and the after, measured or expected, from 15 Hz to 20 kHz - to 500 Hz for a measurement kept before ADR-0177, which reaches the bass only), the measurement microphone and its calibration, whether a measurement can start, and a measurement in progress with what it has worked out so far. Each output keeps its own. The summary of it is `room` on `/state`. Off with the equaliser also off, the output is bit-perfect.",
         "responses": {
           "200": {
             "description": "Room correction.",
@@ -432,13 +433,14 @@
         "operationId": "room_correction_set",
         "x-gexis-stability": "internal",
         "x-gexis-adr": [
-          "ADR-0175"
+          "ADR-0175",
+          "ADR-0177"
         ],
         "tags": [
           "Room correction"
         ],
-        "summary": "Switch room correction, or Hear it without",
-        "description": "For the output in use: `on` switches it (with the equaliser off, the output is reopened - a moment of silence); `without` sets the cuts to 0 dB to compare, heard at once, and is kept like `on`. Only after a measurement; `without` only while on; neither while the room is being measured.",
+        "summary": "Switch room correction, choose how far it reaches, or Hear it without",
+        "description": "For the output in use: `on` switches it (with the equaliser off, the output is reopened - a moment of silence); `reach` is `bass` (the cuts below 250 Hz alone) or `full` (the broad corrections above it too), heard at once and kept; `without` sets every correction to 0 dB to compare, heard at once, and is kept like `on`. Only after a measurement; `reach` and `without` only while on, `full` only from a measurement made to 20 kHz; none while the room is being measured.",
         "requestBody": {
           "required": true,
           "content": {
@@ -464,7 +466,7 @@
             }
           },
           "400": {
-            "description": "A request room correction refuses, with the sentence to show: not measured yet, not while on, while the room is being measured.",
+            "description": "A request room correction refuses, with the sentence to show: not measured yet, not while on, a measurement that covers the bass only, while the room is being measured.",
             "content": {
               "application/json": {
                 "schema": {
@@ -14306,11 +14308,12 @@
       },
       "RoomCorrection": {
         "type": "object",
-        "description": "Room correction for the output in use (ADR-0175).",
+        "description": "Room correction for the output in use (ADR-0175, ADR-0177).",
         "required": [
           "output",
           "on",
           "without",
+          "reach",
           "measured",
           "row",
           "dsd",
@@ -14327,18 +14330,26 @@
           },
           "without": {
             "type": "boolean",
-            "description": "*Hear it without*: the cuts at 0 dB, the stage still in the path."
+            "description": "*Hear it without*: every correction at 0 dB, the stage still in the path."
+          },
+          "reach": {
+            "type": "string",
+            "enum": [
+              "bass",
+              "full"
+            ],
+            "description": "How far it reaches (ADR-0177): `bass`, the cuts below 250 Hz alone; `full`, the broad corrections above it too. A new measurement starts at `full`; one kept before ADR-0177 holds it at `bass`."
           },
           "measured": {
             "type": [
               "object",
               "null"
             ],
-            "description": "The last measurement: `date`, `day`, `checked` (false when its check was skipped); in full also `year`, `positions`, `peaks_down` and `worse`."
+            "description": "The last measurement: `date`, `day`, `checked` (false when its check was skipped), `range` (`full`, or `bass` for one kept before ADR-0177); in full also `year`, `positions`, `peaks_down`, `within` and `room_within` (the design's *within N dB of the speaker's own balance*, after and before, the larger of the two speakers, null for a bass-only measurement), `nothing_to_cut`, `nothing_above` and `worse`."
           },
           "row": {
             "type": "string",
-            "description": "The Settings row's state: *Not measured yet*, *On \u00b7 measured 3 November*, *Without \u00b7 comparing, the cuts at 0 dB*, *Off*."
+            "description": "The Settings row's state: *Not measured yet*, *Full range \u00b7 measured 3 November*, *Bass \u00b7 measured 3 November*, *Bass \u00b7 measured for the bass only* (a measurement kept before ADR-0177), *Without \u00b7 comparing, no correction*, *Off*."
           },
           "dsd": {
             "type": "boolean",
@@ -14384,15 +14395,19 @@
               "object",
               "null"
             ],
-            "description": "Up to 300 Hz: `freqs`, `limit`, `after_kind` (measured or expected), and for L and R `before`, `target`, `after`, `positions`, `cuts`, `peaks_down` - dB relative to the target's level; `both`, the two speakers together as heard, the same with no cuts and `after` empty until the check measures it."
+            "description": "Over the measurement's grid (1/24 octave from 15 Hz, to 20 kHz; to 500 Hz for one kept before ADR-0177): `freqs`, `limit` (250), `range`, `after_kind` (measured or expected), and for L and R `before`, `target` (the bass's rise joined at the limit to the speaker's own slope), `after` (every correction), `after_bass` (the cuts alone, for `reach` bass), `positions`, `cuts`, `above`, `peaks_down`, `within`, `room_within` - dB relative to the target's level at the limit; `both`, the two speakers together as heard, the same with no corrections and `after` empty until the check measures it."
           },
           "cuts": {
             "type": "object",
-            "description": "Each speaker's cuts: `freq` in Hz, `gain` in dB."
+            "description": "Each speaker's cuts in the bass: `freq` in Hz, `gain` in dB."
+          },
+          "above": {
+            "type": "object",
+            "description": "Each speaker's broad corrections above the bass (ADR-0177), up or down by 3 dB at most: `freq` in Hz, `gain` in dB."
           },
           "pending": {
             "type": "object",
-            "description": "While a measurement shows its correction or result: its chart and cuts, before *Keep it*."
+            "description": "While a measurement shows its correction or result: its chart, cuts and broad corrections, and its figures as `measured` has them, before *Keep it*."
           },
           "address": {
             "type": [
@@ -14420,6 +14435,14 @@
           },
           "without": {
             "type": "boolean"
+          },
+          "reach": {
+            "type": "string",
+            "enum": [
+              "bass",
+              "full"
+            ],
+            "description": "How far it reaches (ADR-0177): the bass alone, or the full range."
           }
         }
       },
@@ -14464,11 +14487,12 @@
       },
       "RoomCorrectionSummary": {
         "type": "object",
-        "description": "The part of `RoomCorrection` every screen needs, on `/state`: everything but the microphone, the chart and the cuts.",
+        "description": "The part of `RoomCorrection` every screen needs, on `/state`: everything but the microphone, the chart and the corrections.",
         "required": [
           "output",
           "on",
           "without",
+          "reach",
           "measured",
           "row",
           "dsd",

@@ -92,13 +92,13 @@ _POINTS = 241
 _OCT_END = math.log2(20000 / CENTRES[0])
 
 
-def band_db(f0: float, gain: float, f: float, fs: float) -> float:
+def band_db(f0: float, gain: float, f: float, fs: float, q: float = Q) -> float:
     """One Peaking filter's response in dB at `f` (RBJ cookbook)."""
     if not gain:
         return 0.0
     a = 10 ** (gain / 40)
     w0 = 2 * math.pi * f0 / fs
-    alpha = math.sin(w0) / (2 * Q)
+    alpha = math.sin(w0) / (2 * q)
     c = math.cos(w0)
     b0, b1, b2 = 1 + alpha * a, -2 * c, 1 - alpha * a
     a0, a1, a2 = 1 + alpha / a, -2 * c, 1 - alpha / a
@@ -114,24 +114,32 @@ def response_db(gains, f: float, fs: float = 48000) -> float:
     return sum(band_db(c, g, f, fs) for c, g in zip(CENTRES, gains))
 
 
-def peak_db(gains, fs: float = 48000) -> float:
+def peak_db(gains, fs: float = 48000, extra=()) -> float:
+    """The highest point of the bands, and of `extra` filters (freq, gain,
+    q) beside them."""
     peak = 0.0
     for j in range(_POINTS):
         octave = -0.5 + (_OCT_END + 0.5) * j / (_POINTS - 1)
         f = CENTRES[0] * 2 ** octave
         if f < fs / 2:
-            peak = max(peak, response_db(gains, f, fs))
+            peak = max(peak, response_db(gains, f, fs) + sum(band_db(f0, g, f, fs, q) for f0, g, q in extra))
     return peak
 
 
 @functools.lru_cache(maxsize=256)
-def headroom_db(gains: tuple[int, ...]) -> float:
+def headroom_db(gains: tuple[int, ...], lift: tuple | None = None) -> float:
     """**How far the signal is lowered before the bands** (ADR-0162 D3):
     the combined curve's highest point at the worst rate, rounded up to
     0.5 dB; nothing when the curve does not rise. Rounded strictly up, so
     the lowering is never less than the boost (the design's drawing allows
-    0.05 dB the other way)."""
+    0.05 dB the other way).
+
+    `lift`: room correction's filters for each speaker as measured
+    (`room_lift`), joining the curve whatever of them plays (ADR-0177 item
+    7) - the bands alone are the most when the room's play less."""
     peak = max(peak_db(gains, fs) for fs in RATES)
+    for channel in lift or ():
+        peak = max(peak, max(peak_db(gains, fs, channel) for fs in RATES))
     if peak <= 0.05:
         return 0.0
     return math.ceil(peak * 2 - 1e-9) / 2
@@ -360,44 +368,78 @@ def filter_name(band: int) -> str:
     return f"band_{BANDS[band]}"
 
 
-#: **Room correction's cuts** (ADR-0175 item 1): up to eight Peaking filters
-#: for each speaker, in the same stage. All sixteen are in the pipeline
-#: whenever it runs, at 0 dB when unused, off, or set to *Hear it without*,
-#: so switching or comparing changes gains, never the pipeline's shape (as
-#: the bands do).
+#: **Room correction's filters** (ADR-0175 item 1, ADR-0177 item 6): for each
+#: speaker, eight Peaking slots for the bass's cuts, then six for the broad
+#: corrections above it, up or down. All in the pipeline whenever it runs, at
+#: 0 dB when unused, off, set to *Hear it without*, or (the six) under
+#: *Bass*, so switching or comparing changes gains, never the pipeline's
+#: shape (as the bands do).
 ROOM_SLOTS = 8
+ABOVE_SLOTS = 6
+ABOVE_DB = 3.0
 #: An unused slot: a Peaking filter at 0 dB passes its input unchanged.
 ROOM_IDLE = (100.0, 0.0, 1.0)
 ROOM_CHANNELS = ("l", "r")
+
+
+@dataclass(frozen=True)
+class RoomPlay:
+    """**What room correction plays on the stage**, (left, right) each: the
+    bass's cuts, the broad corrections above it, and `lift` - every filter
+    as measured, which the headroom is taken from whatever plays (ADR-0177
+    item 7). No `lift`: no headroom for it (a run's check plays its sweeps
+    lower instead)."""
+    cuts: tuple = ((), ())
+    above: tuple = ((), ())
+    lift: tuple | None = None
 
 
 def room_filter_name(channel: int, slot: int) -> str:
     return f"room_{ROOM_CHANNELS[channel]}_{slot + 1}"
 
 
-def room_slots(cuts) -> tuple[tuple[float, float, float], ...]:
-    """One speaker's cuts as the stage's eight slots: (freq, gain, q) each,
-    the rest idle."""
+def room_slots(cuts, above=()) -> tuple[tuple[float, float, float], ...]:
+    """One speaker's filters as the stage's fourteen slots, (freq, gain, q)
+    each: the cuts (never above 0 dB) in the first eight, the broad ones
+    (within ±3 dB) in the last six, the rest idle."""
     out = []
     for c in list(cuts or ())[:ROOM_SLOTS]:
         freq, gain, q = (float(v) for v in c)
         out.append((freq, min(gain, 0.0), q))
-    return tuple(out) + (ROOM_IDLE,) * (ROOM_SLOTS - len(out))
+    out += [ROOM_IDLE] * (ROOM_SLOTS - len(out))
+    for c in list(above or ())[:ABOVE_SLOTS]:
+        freq, gain, q = (float(v) for v in c)
+        out.append((freq, max(-ABOVE_DB, min(gain, ABOVE_DB)), q))
+    return tuple(out) + (ROOM_IDLE,) * (ROOM_SLOTS + ABOVE_SLOTS - len(out))
 
 
 def room_stage(room) -> tuple[tuple[tuple[float, float, float], ...], ...]:
-    """Both speakers' slots from `room`: None, or (left cuts, right cuts)."""
+    """Both speakers' slots from `room`: None, a `RoomPlay`, or (left cuts,
+    right cuts)."""
+    if isinstance(room, RoomPlay):
+        return room_slots(room.cuts[0], room.above[0]), room_slots(room.cuts[1], room.above[1])
     left, right = room if room is not None else ((), ())
+    if len(left) == len(right) == ROOM_SLOTS + ABOVE_SLOTS:
+        # The stage's slots already (the engine keeps them so): as they are.
+        return (room_slots(left[:ROOM_SLOTS], left[ROOM_SLOTS:]),
+                room_slots(right[:ROOM_SLOTS], right[ROOM_SLOTS:]))
     return room_slots(left), room_slots(right)
+
+
+def room_lift(room) -> tuple | None:
+    """The filters `headroom_db` lifts by, as a key it can cache on."""
+    if not isinstance(room, RoomPlay) or not room.lift:
+        return None
+    return tuple(tuple((float(f), float(g), float(q)) for f, g, q in channel) for channel in room.lift)
 
 
 def camilla_config(rate: int, fmt: str, channels: int, gains, playback: str, room=None) -> dict:
     """**CamillaDSP's configuration for one stream**: captured from the
     loopback at the stream's own rate, format and channels (the renderer
     opened it first and set them), lowered on the headroom fader, then the
-    ten bands, then room correction's cuts for each speaker (`room`: None,
-    or the left and right cuts as (freq, gain, q)), played to `playback`
-    (the rest of the output's chain).
+    ten bands, then room correction's filters for each speaker (`room`, as
+    `room_stage` takes it), played to `playback` (the rest of the output's
+    chain).
 
     Rate adjust tunes the loopback's clock to the card's (*PCM Rate Shift*),
     which passes the samples through unchanged; `stop_on_inactive` lets the

@@ -1,5 +1,6 @@
-"""Room correction's numbers (ADR-0175): the sweep and its recording, the
-curves, the target and the cuts, on a room made up in `room_sim`."""
+"""Room correction's numbers (ADR-0175, ADR-0177): the sweep and its
+recording, the curves, the target, the cuts in the bass and the broad
+corrections above it, on a room made up in `room_sim`."""
 import math
 
 import pytest
@@ -14,9 +15,9 @@ import room_sim as sim  # noqa: E402
 FIT = (rd.GRID >= rd.FIT_LO) & (rd.GRID <= rd.LIMIT)
 
 
-def test_the_grid_is_a_24th_of_an_octave_from_15_hz():
+def test_the_grid_is_a_24th_of_an_octave_from_15_hz_to_20_khz():
     assert rd.GRID[0] == 15
-    assert rd.GRID[-1] <= 500 < rd.GRID[-1] * 2 ** (1 / 24)
+    assert rd.GRID[-1] <= 20000 < rd.GRID[-1] * 2 ** (1 / 24)
     assert np.allclose(rd.GRID[1:] / rd.GRID[:-1], 2 ** (1 / 24))
 
 
@@ -26,17 +27,22 @@ def test_the_target_rises_3_db_below_80_hz():
     assert rd.target_db(250) < 0.02
 
 
-def test_the_sweep_is_five_seconds_and_never_clips():
+def test_the_sweep_is_eight_seconds_to_20_khz_and_never_clips():
+    """Phase 30: to 20 kHz, its time in each octave of the bass as Phase 29's
+    5 s to 1 kHz had it."""
     x = rd.log_sweep()
-    assert len(x) == 5 * rd.FS
+    assert len(x) == 8 * rd.FS and rd.SWEEP_HI == 20000
+    assert rd.SWEEP_S / math.log2(rd.SWEEP_HI / rd.SWEEP_LO) == pytest.approx(5 / math.log2(100), rel=0.05)
     assert np.max(np.abs(x)) <= 1
     assert abs(x[0]) < 1e-6 and abs(x[-1]) < 1e-3, "faded in and out"
 
 
 def test_a_recording_gives_the_rooms_curve():
+    """From the bass to the treble; the last sixth of an octave below 20 kHz
+    takes in where the sweep stops."""
     sweep = rd.log_sweep() * 0.1
     got = rd.response_db(rd.transfer(sim.record(sweep, seed=1, noise_db=-80), sweep))
-    inside = (rd.GRID >= 18) & (rd.GRID <= 450)
+    inside = (rd.GRID >= 18) & (rd.GRID <= 17000)
     assert np.max(np.abs(got - sim.curve(1))[inside]) < 0.5
 
 
@@ -71,8 +77,8 @@ def test_pink_noise_and_its_level():
     assert rd.band_level_db(np.sin(2 * np.pi * 2000 * t)) < -100, "outside the band"
 
 
-def _design(modes=sim.MODES):
-    return rd.design([sim.curve(s, modes) for s in sim.positions(modes=modes)])
+def _design(modes=sim.MODES, broad=sim.BROAD, channel=0):
+    return rd.design([sim.curve(s, modes, broad=broad) for s in sim.positions(channel=channel, modes=modes)])
 
 
 def test_the_cuts_land_on_the_peaks_and_leave_the_dips():
@@ -108,11 +114,40 @@ def test_above_the_limit_is_left_alone():
     assert np.max(np.abs(rd.cuts_db(d.cuts, rd.GRID)[above])) < 0.5
 
 
-def test_the_target_sits_on_the_level_an_octave_above():
+def test_one_target_the_bass_rise_joined_to_the_speakers_slope():
+    """ADR-0177 items 2-3: the line through the average from 300 Hz to
+    10 kHz above the limit, the bass's rise below it on the line's level
+    there - one curve, its 0 at the limit."""
     d = _design()
-    above = (rd.GRID > rd.LIMIT) & (rd.GRID <= 2 * rd.LIMIT)
-    assert float(np.mean(d.before[above])) == pytest.approx(0, abs=1e-6)
-    assert d.target[0] == pytest.approx(rd.target_db(rd.GRID[0]))
+    line = rd.slope(d.before)
+    above = rd.GRID > rd.LIMIT
+    assert np.allclose(d.target[above], line[above] + rd.target_db(rd.GRID[above]))
+    at = float(np.interp(math.log(rd.LIMIT), np.log(rd.GRID), d.target))
+    assert at == pytest.approx(0, abs=0.05)
+    assert d.target[0] == pytest.approx(rd.target_db(rd.GRID[0]), abs=0.05)
+    steps = np.abs(np.diff(d.target))
+    assert np.max(steps) < 0.3, "no step where the two meet"
+
+
+def test_the_slope_is_the_speakers_own():
+    """A speaker tilted 1 dB an octave down keeps its tilt as the target."""
+    tilt = -1.0 * np.log2(rd.GRID / 1000)
+    curves = [sim.curve(s, broad=()) + tilt for s in sim.positions()]
+    line = rd.slope(rd.power_average(curves))
+    fit = (rd.GRID >= 300) & (rd.GRID <= 10000)
+    a = np.polyfit(np.log2(rd.GRID[fit]), line[fit], 1)[0]
+    assert a == pytest.approx(-1.0, abs=0.1)
+    d = rd.design(curves)
+    assert d.broad == () and d.room_within <= rd.ABOVE_LEAVE_DB, "a tilt is the speaker's, left alone"
+
+
+def test_smoothing_is_a_power_average_a_third_of_an_octave_wide():
+    rng = np.random.default_rng(3)
+    c = rng.normal(0, 3, len(rd.GRID))
+    k = 4
+    p = 10 ** (c / 10)
+    slow = [10 * math.log10(p[max(0, i - k): i + k + 1].mean()) for i in range(len(p))]
+    assert np.allclose(rd.smooth(c), slow)
 
 
 def test_no_position_is_made_worse():
@@ -156,7 +191,89 @@ def test_one_position_in_a_dip_is_outvoted():
 def test_a_room_near_the_target_has_nothing_to_cut():
     d = _design(modes=())
     assert d.nothing_to_cut and d.cuts == ()
+    assert not d.nothing_to_correct, "the broad bumps above are still corrected"
+    bass = rd.GRID <= 150
+    assert np.allclose(d.after[bass], d.before[bass], atol=0.5)
+
+
+def test_a_room_near_the_target_throughout_has_nothing_to_correct():
+    d = _design(modes=(), broad=())
+    assert d.nothing_to_correct and d.cuts == () and d.broad == ()
+    assert d.room_within <= rd.ABOVE_LEAVE_DB
     assert np.allclose(d.after, d.before)
+
+
+# ---- above the bass (ADR-0177) -------------------------------------------------------
+
+
+def test_the_broad_corrections_raise_the_dip_and_lower_the_bump():
+    d = _design()
+    near = lambda f: [b for b in d.broad if abs(math.log2(b.freq / f)) < 0.5]  # noqa: E731
+    assert near(450) and all(b.gain > 0 for b in near(450)), d.broad
+    assert near(1800) and all(b.gain < 0 for b in near(1800)), d.broad
+    assert near(6000) and all(b.gain > 0 for b in near(6000)), d.broad
+
+
+def test_the_broad_corrections_keep_to_the_limits():
+    for channel in (0, 1):
+        d = _design(channel=channel)
+        assert 0 < len(d.broad) <= rd.MAX_ABOVE
+        for b in d.broad:
+            assert abs(b.gain) <= rd.ABOVE_DB + 1e-9 and abs(b.gain) >= rd.CUT_MIN_DB
+            assert rd.ABOVE_Q_MIN - 1e-9 <= b.q <= rd.ABOVE_Q_MAX + 1e-9
+            assert rd.LIMIT - 1e-6 <= b.freq <= rd.ABOVE_HI + 1e-6
+        freqs = [b.freq for b in d.broad]
+        assert freqs == sorted(freqs)
+        assert all(math.log2(b / a) >= rd.ABOVE_APART - 1e-6 for a, b in zip(freqs, freqs[1:])), freqs
+        total = rd.cuts_db(d.broad, rd.GRID)
+        assert np.max(np.abs(total)) <= rd.ABOVE_DB + 0.05, "the total within ±3 dB too"
+
+
+def test_above_the_bass_comes_closer_to_the_slope():
+    d = _design()
+    assert d.within < d.room_within - 1
+    assert d.within == rd.within_db(d.after, d.target)
+    after = d.positions + rd.cuts_db(list(d.cuts) + list(d.broad), rd.GRID)
+    inside = (rd.GRID >= 250) & (rd.GRID <= 14000)
+    for b, a in zip(d.positions, after):
+        rms = lambda c: float(np.sqrt(np.mean(((rd.smooth(c) - d.target)[inside]) ** 2)))  # noqa: E731
+        assert rms(a) < rms(b), "every position closer"
+
+
+def test_nothing_is_corrected_above_14_khz():
+    d = _design()
+    top = rd.GRID >= 16000
+    assert np.max(np.abs(rd.cuts_db(d.broad, rd.GRID)[top])) < 1.0
+
+
+def test_within_is_the_largest_gap_rounded_up_to_half_a_decibel():
+    target = np.zeros(len(rd.GRID))
+    curve = np.where((rd.GRID > 600) & (rd.GRID < 1600), 2.2, 0.0)
+    assert rd.within_db(curve, target) == 2.5
+    assert rd.within_db(np.zeros(len(rd.GRID)), target) == 0
+    far = np.where(rd.GRID > 16000, 9.0, 0.0)
+    assert rd.within_db(far, target) <= 0.5, "read from 300 Hz to 14 kHz"
+
+
+def test_less_where_the_positions_disagree():
+    """A dip at one position only, at 3 kHz, is not chased: the positions
+    disagree there, and the correction is held near none; shared by all
+    three, it is raised."""
+    i = (rd.GRID > 2500) & (rd.GRID < 3600)
+    at = int(np.argmin(np.abs(rd.GRID - 3000)))
+
+    def correction(which):
+        curves = [sim.curve(s) - np.where(i & (k in which), 9, 0) for k, s in enumerate(sim.positions())]
+        return rd.cuts_db(rd.design(curves).broad, rd.GRID)[at], curves
+    one, curves = correction({2})
+    every, _ = correction({0, 1, 2})
+    assert abs(one) < 0.5 and every > 1.5, (one, every)
+    assert rd.spread_weight(curves)[at] == 0
+
+
+def test_a_bass_alone_after_for_bass():
+    d = _design()
+    assert np.allclose(d.after_bass, rd.power_average(d.positions + rd.cuts_db(d.cuts, rd.GRID)))
 
 
 def test_a_worse_position_is_found():
@@ -171,6 +288,7 @@ def test_a_worse_position_is_found():
 
 def test_the_cut_dict_is_rounded_for_the_store():
     assert rd.Cut(86.234, -8.437, 5.6789).as_dict() == {"freq": 86.2, "gain": -8.4, "q": 5.68}
+    assert rd.Broad(1834.5, 2.46, 1.234).as_dict() == {"freq": 1834.5, "gain": 2.5, "q": 1.23}
 
 
 def test_band_level_of_nothing():

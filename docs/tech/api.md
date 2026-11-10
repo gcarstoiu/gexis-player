@@ -91,14 +91,19 @@ setting is heard at once; `on` reopens the output.
 
 ## Room correction
 
-ADR-0175, internal until Phase 29 closes. `GET /room-correction`: for the
-output in use, `on`, `without` (*Hear it without*), the last measurement
-(`measured`, with its `chart` - each speaker's `before`, `target`, `after`
-and five `positions` in dB about the target's level, `freqs` up to 300 Hz,
-`after_kind` measured or expected - and `cuts`), the `microphone` and its
-`calibration`, `can_measure` with `why_not`, and a measurement in progress
-(`run`, and its `pending` correction before *Keep it*). `/state` carries the
-summary as `room`. `PUT /room-correction` with `on` or `without`;
+ADR-0175 and ADR-0177, internal until Phase 30 closes. `GET
+/room-correction`: for the output in use, `on`, `reach` (`bass` or `full`),
+`without` (*Hear it without*), the last measurement (`measured`, with its
+`range` - `bass` for one from before Phase 30 - and figures: `peaks_down`,
+`within` and `room_within`; its `chart` - each speaker's `before`, `target`,
+`after`, `after_bass` and its `positions` in dB about the target's level at
+250 Hz, `cuts` and `above`, `freqs` on the measurement's grid (to 20 kHz, or
+500 Hz), `after_kind` measured or expected - and each speaker's `cuts` and
+`above`), the `microphone` and its `calibration` (`again` while the one kept
+stops at 2 kHz, from before Phase 30), `can_measure` with `why_not`, and a
+measurement in progress (`run`, and its `pending` correction before *Keep
+it*). `/state` carries the summary as `room`. `PUT /room-correction` with
+`on`, `reach` or `without`;
 `POST /room-correction/calibration {text, name}` gives the 90° file from
 miniDSP (checked, kept by its serial); `POST /room-correction/run {action}`
 begins a measurement (`measure`) and answers its steps (`start`, `next`,

@@ -1,9 +1,10 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <!--
   The panel and the bars while the room is measured (ADR-0175; design/source/29
-  N08-N12, B05, B06, B08): display only - the run is followed on the phone.
-  What it is doing, a progress bar, the positions, and that sources can
-  play again when it ends.
+  N08-N12, B05, B06, B08; the words of design/source/30 §5): display only - the
+  run is followed on the phone. What it is doing, a progress bar, the
+  positions, what the sweeps sound like, and that sources can play again when
+  it ends.
 -->
 <script>
   let { run, bar = false } = $props();
@@ -43,19 +44,19 @@
       <div class="left">
         <span class="mark">Room correction</span>
         <div class="head">{head}</div>
-        <div class="quiet">Please keep quiet</div>
+        <div class="quiet">Please keep quiet throughout</div>
       </div>
       <div class="right">
         <div class="line">{line}</div>
         <div class="bar"><div class="bar__fill" style="width:{pct}"></div></div>
-        <div class="follow">{@render phoneGlyph(22)}<span>Follow it on the phone. Sources can play again when it ends.</span></div>
+        <div class="follow">{@render phoneGlyph(22)}<span>The sweeps rise to a high whistle. Follow it on the phone.</span></div>
       </div>
     </div>
   {:else}
     <div class="stack">
       <span class="mark">Room correction</span>
       <div class="head">{head}</div>
-      <div class="quiet">Please keep quiet</div>
+      <div class="quiet">Please keep quiet throughout</div>
       <div class="block">
         <div class="line">{line}</div>
         <div class="bar"><div class="bar__fill" style="width:{pct}"></div></div>
@@ -65,7 +66,10 @@
           {/each}
         </div>
       </div>
-      <div class="follow">{@render phoneGlyph(24)}<span>Follow it on the phone. Sources can play again when it ends.</span></div>
+      <div class="notes">
+        <span>The sweeps rise from a low rumble to a high whistle.</span>
+        <span class="follow">{@render phoneGlyph(24)}<span>Follow it on the phone. Sources can play again when it ends.</span></span>
+      </div>
     </div>
   {/if}
 </div>
@@ -187,11 +191,22 @@
   .pos--now .pos__seg {
     background: var(--c-lms-50);
   }
+  .notes {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-top: 22px;
+    font-size: 20px;
+    color: var(--ink-muted);
+  }
+  .notes > span {
+    white-space: nowrap;
+  }
   .follow {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-top: 26px;
     font-size: 20px;
     color: var(--ink-muted);
   }

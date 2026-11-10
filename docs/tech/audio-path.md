@@ -653,28 +653,40 @@ by its card id, `on`, the setting (`sel`, `from`) and the bands; and the
 owner's list. `/state` carries it as `equaliser`; the routes are in
 [api.md](api.md).
 
-## Room correction for the bass
+## Room correction
 
-ADR-0175. **It shares the equaliser's stage**: the loopback and CamillaDSP
-are in the path when either is on for the output in use (`outputs.eq_in_path`
-asks both), and with both off nothing below exists - bit-perfect, as before.
+ADR-0175 (the bass) and ADR-0177 (the full range). **It shares the
+equaliser's stage**: the loopback and CamillaDSP are in the path when either
+is on for the output in use (`outputs.eq_in_path` asks both), and with both
+off nothing below exists - bit-perfect, as before.
 
 ```text
-hw:Loopback,1,0 → CamillaDSP (headroom fader, ten bands, then eight cuts on the left and eight on the right) → gexis_eq_out → card
+hw:Loopback,1,0 → CamillaDSP (headroom fader, ten bands, then fourteen filters on the left and fourteen on the right) → gexis_eq_out → card
 ```
 
-- **The cuts** are Peaking filters, eight slots for each speaker
-  (`room_l_1`…`room_r_8`, a `Filter` step on channel 0 and one on channel 1,
-  after the bands). All sixteen are in the pipeline whenever the stage runs,
-  at 0 dB when unused, so switching room correction on or off while the
-  equaliser is on, *Hear it without* (the cuts at 0 dB) and a new
-  measurement are each a `PatchConfig`, heard at once; with the equaliser
-  off, switching it on or off reopens the output as the equaliser's switch
-  does. Cuts need no headroom. Native DSD goes past it with the equaliser.
+- **The filters** are Peaking filters, fourteen slots for each speaker
+  (`room_l_1`…`room_r_14`, a `Filter` step on channel 0 and one on channel
+  1, after the bands): the first eight the bass's cuts, never above 0 dB;
+  the last six the broad corrections above the bass, within ±3 dB. All
+  twenty-eight are in the pipeline whenever the stage runs, at 0 dB when
+  unused, so switching room correction on or off while the equaliser is on,
+  the reach (*Bass* sets the six to 0 dB), *Hear it without* (all of them at
+  0 dB) and a new measurement are each a `PatchConfig`, heard at once; with
+  the equaliser off, switching it on or off reopens the output as the
+  equaliser's switch does. Native DSD goes past it with the equaliser.
+- **The headroom** (ADR-0177 item 7): the broad corrections may raise, so
+  every filter of the measurement joins the curve the signal is lowered by
+  before the bands (`equaliser.headroom_db(gains, lift)`, the same rule as
+  the bands' D3), whatever the reach or *Without* plays - so the three
+  compare at one level - and never less than the bands' own. The volume
+  gives it back as it gives the equaliser's, the equaliser on or off
+  (`eq_control.give_back_for(..., lift=)`); under Fixed the music plays that
+  much quieter. The equaliser's own note still says the bands' lowering
+  alone.
 - **The measurement** (`room_run.py`) holds the device as an update does
   (arbitration's `frozen`, then `stop_active`): nothing can play until it
   ends. It brings the stage into the path if it was not, with the bands flat
-  and the cuts at 0 dB - the room as it is - sets the output to its maximum
+  and no filters - the room as it is - sets the output to its maximum
   level (100 % of *Maximum volume*; Fixed stays fixed), and puts both back
   at the end. Its signals are played into `output`, as a renderer's music is
   (`aplay`, S32_LE, 48 kHz, one speaker at a time, then both), and recorded from the
@@ -686,35 +698,63 @@ hw:Loopback,1,0 → CamillaDSP (headroom fader, ten bands, then eight cuts on th
   does: the RMS level at 94 dB SPL at full capture volume). The noise goes
   no higher than −12 dBFS, where its peaks come near full scale; short of
   the aim there, with the microphone following it, the sweeps are set the
-  rest of the way from its last reading, up to −6 dBFS (their peaks about
-  4.5 dB over their level in the band). Short of the aim at that, a level
+  rest of the way from its last reading, until their peaks reach −1.5 dBFS
+  (about −8 dBFS in the band for a sweep to 20 kHz, which has less of itself
+  there than one to 1 kHz had). Short of the aim at that, a level
   from 45 dB and 15 dB above the noise is taken; below, *too quiet*. Once
   the noise is clearly heard, four steps that do not move the reading end
   it.
-- **The sweeps**: a logarithmic sweep from 10 Hz to 1 kHz, 5 s, at the
-  level found; the room's response is the recording's spectrum over the
-  sweep's, windowed to a second from the arrival, the calibration file
-  subtracted, smoothed to 1/6 octave on a 1/24-octave grid from 15 to 500 Hz
-  (`room_dsp.py`, numpy). Two sweeps per speaker and position that differ by
+- **The sweeps**: a logarithmic sweep from 10 Hz to 20 kHz (Phase 30), 8 s
+  so the bass keeps the time in each octave the 5 s to 1 kHz of Phase 29
+  gave it, at the level found; the room's response is the recording's
+  spectrum over the sweep's, windowed to a second from the arrival, the
+  calibration file subtracted, smoothed to 1/6 octave on a 1/24-octave grid
+  from 15 Hz to 20 kHz (`room_dsp.py`, numpy). Two sweeps per speaker and position that differ by
   more than 1.5 dB below 250 Hz are repeated, up to six. After each speaker
   alone, **both together** (George, 2026-11-05), 6 dB lower each so the two
   adding in the bass are no louder than one: shown as heard (`both` in the
   chart, `room_dsp.as_heard`), before in the run and after in the check,
-  never designed from - the cuts are each speaker's.
-- **The design** (`room_dsp.design`): the three positions' power average
-  (the head and 40 cm to either side; a measurement keeps its own number); the
-  target - +3 dB below about 80 Hz - on the average's level an octave above
-  250 Hz; a cut fitted to each peak above it in turn (up to eight, 12 dB at
-  most, Q 1 to 15, 20-250 Hz), then all fitted together by damped least
-  squares with dips and everything above 250 Hz left as they are; a cut that
-  leaves more than half the positions more than 1 dB further from the target
-  is made smaller (George, 2026-11-05: one position in a dip of its own held
-  sofapi's main peak to a 1 dB cut). The check measures the positions again
-  through the stage with the cuts on.
+  never designed from - the corrections are each speaker's.
+- **The target** (ADR-0177 items 2-3): above 250 Hz the speaker's own
+  slope, a straight line on a log axis fitted to the three positions' power
+  average at 1/3 octave from 300 Hz to 10 kHz; below it +3 dB below about
+  80 Hz on the line's level at 250 Hz, so the two meet. A measurement made
+  before Phase 30 keeps the level it took from its own average an octave
+  above 250 Hz.
+- **The bass's cuts** (`room_dsp.design`): the three positions' power
+  average (the head and 40 cm to either side; a measurement keeps its own
+  number); a cut fitted to each peak above the target in turn (up to eight,
+  12 dB at most, Q 1 to 15, 20-250 Hz), then all fitted together by damped
+  least squares with dips and everything above 250 Hz left as they are; a
+  cut that leaves more than half the positions more than 1 dB further from
+  the target is made smaller (George, 2026-11-05: one position in a dip of
+  its own held sofapi's main peak to a 1 dB cut).
+- **The broad corrections above the bass** (`room_dsp._broad`, ADR-0177
+  item 4): none when the average at 1/3 octave is within 1.5 dB of the line
+  from 300 Hz to 14 kHz; else up to six, from 250 Hz to 14 kHz, each and all
+  together within ±3 dB, Q 0.5 to 2, a third of an octave apart - one at a
+  time at the largest gap left, then all together by damped least squares;
+  where the three positions' standard deviation is above 1.5 dB the gap
+  counts for less, not at all from 3 dB, so the correction is held near
+  none there; and, as for the cuts, one that leaves most positions more
+  than 1 dB further from the target at its frequency is made smaller.
+  Nothing above 14 kHz.
+- **The check** measures the positions again through the stage with the
+  full range on - the correction a new measurement starts with - and its
+  sweeps lower by the broad corrections' highest point, since no headroom is
+  taken while a run measures (the response is the recording over what was
+  played, so its level is the room's). What *Bass* gives is the measured
+  after with the broad corrections' response taken out (`after_bass`). A
+  position more than 1 dB further from the target at any cut's or broad
+  correction's frequency (above the bass read at 1/3 octave) is named.
 
 The state is kept in the settings database (`_room_correction`): for each
-output `on`, `without` and the last measurement (its cuts and curves); and
-each microphone's calibration by its serial, the last given in use. `/state`
+output `on`, `without`, `reach` (`bass` or `full`) and the last measurement
+(its `range`, its cuts and broad corrections, its curves to a hundredth of a
+decibel); and each microphone's calibration by its serial, the last given in
+use - the whole file; one kept to 2 kHz before Phase 30 is asked for again
+(`calibration.again`). A measurement from before Phase 30 has no `range`: it
+is the bass's, curves to 500 Hz, and holds its output at `bass`. `/state`
 carries a summary as `room`; the curves and a measurement in progress are
 `GET /room-correction` ([api.md](api.md)).
 

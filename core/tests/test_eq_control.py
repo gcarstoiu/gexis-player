@@ -199,6 +199,12 @@ def test_given_back_at_the_level_control_of_an_output_with_the_equaliser_on():
     assert give_back_for(rock, HDMI) is None, "no control to give it back at"
     assert give_back_for(rock, outputs.Output(card="vc4hdmi0", label="HDMI", control="DAC")) is None, \
         "each output keeps its own"
+    lift = (((480.0, 3.0, 1.4),), ())
+    assert give_back_for(store.get(KEY), dac, lift=lift) == GiveBack("DAC", 3.0, mixer_scale.DAC2_HD), \
+        "room correction's raise, with the equaliser off (ADR-0177 item 7)"
+    assert give_back_for(rock, dac, lift=lift).db >= 5.0
+    assert give_back_for(store.get(KEY), dac, headroom=3.0) == GiveBack("DAC", 3.0, mixer_scale.DAC2_HD), \
+        "the engine's, whoever it is for"
 
 
 async def test_the_screens_are_told_whether_and_up_to_where_it_is_given_back():

@@ -71,7 +71,7 @@
   --rc-after: #1a47c4;
   --rc-target: rgba(20,20,20,0.883);
   --rc-position: rgba(20,20,20,0.22);
-  --rc-cut-fill: rgba(209,38,28,0.176);
+  --rc-cut-fill: rgba(209,38,28,0.22);
   --rc-limit-hatch: rgba(20,20,20,0.132);
   --rc-limit-edge: rgba(20,20,20,0.44);
   --rc-grid: rgba(20,20,20,0.077);
@@ -82,6 +82,10 @@
   --rc-without-switch: rgba(150,72,0,0.3);
   --rc-flag-fill: rgba(150,72,0,0.14);
   --rc-run-track: rgba(20,20,20,0.132);
+  --rc-raise-fill: rgba(26,71,196,0.22);
+  --rc-pane: rgba(251,250,246,0.34);
+  --rc-note-ground: rgba(242,239,232,0.9);
+  --rc-reach-locked-line: rgba(20,20,20,0.308);
   --cover-veil: radial-gradient(130% 105% at 20% 42%,rgba(242,239,232,0.88),rgba(242,239,232,0.97));
   --cover-veil-strong: radial-gradient(130% 105% at 20% 42%,rgba(242,239,232,0.88),rgba(242,239,232,0.97));
   --cover-veil-deep: radial-gradient(130% 105% at 20% 42%,rgba(242,239,232,0.88),rgba(242,239,232,0.97));
@@ -345,7 +349,7 @@
   --rc-after: #245a3d;
   --rc-target: rgba(27,36,30,0.883);
   --rc-position: rgba(27,36,30,0.22);
-  --rc-cut-fill: rgba(168,64,31,0.176);
+  --rc-cut-fill: rgba(168,64,31,0.22);
   --rc-limit-hatch: rgba(27,36,30,0.132);
   --rc-limit-edge: rgba(27,36,30,0.44);
   --rc-grid: rgba(27,36,30,0.077);
@@ -356,6 +360,10 @@
   --rc-without-switch: rgba(138,74,0,0.3);
   --rc-flag-fill: rgba(138,74,0,0.14);
   --rc-run-track: rgba(27,36,30,0.132);
+  --rc-raise-fill: rgba(36,90,61,0.22);
+  --rc-pane: rgba(246,243,234,0.34);
+  --rc-note-ground: rgba(236,232,220,0.9);
+  --rc-reach-locked-line: rgba(27,36,30,0.308);
   --cover-veil: radial-gradient(130% 105% at 20% 42%,rgba(236,232,220,0.88),rgba(236,232,220,0.97));
   --cover-veil-strong: radial-gradient(130% 105% at 20% 42%,rgba(236,232,220,0.88),rgba(236,232,220,0.97));
   --cover-veil-deep: radial-gradient(130% 105% at 20% 42%,rgba(236,232,220,0.88),rgba(236,232,220,0.97));
@@ -609,7 +617,7 @@
   --rc-after: #d9b45c;
   --rc-target: rgba(242,224,210,0.82);
   --rc-position: rgba(242,224,210,0.2);
-  --rc-cut-fill: rgba(242,147,154,0.16);
+  --rc-cut-fill: rgba(242,147,154,0.2);
   --rc-limit-hatch: rgba(242,224,210,0.12);
   --rc-limit-edge: rgba(242,224,210,0.4);
   --rc-grid: rgba(242,224,210,0.07);
@@ -620,6 +628,10 @@
   --rc-without-switch: rgba(255,154,85,0.3);
   --rc-flag-fill: rgba(255,154,85,0.14);
   --rc-run-track: rgba(242,224,210,0.12);
+  --rc-raise-fill: rgba(217,180,92,0.2);
+  --rc-pane: rgba(33,17,15,0.34);
+  --rc-note-ground: rgba(21,10,11,0.9);
+  --rc-reach-locked-line: rgba(242,224,210,0.28);
   --cover-veil: radial-gradient(130% 105% at 20% 42%,rgba(21,10,11,0.8),rgba(21,10,11,0.96));
   --cover-veil-strong: radial-gradient(130% 105% at 20% 42%,rgba(21,10,11,0.8),rgba(21,10,11,0.96));
   --cover-veil-deep: radial-gradient(130% 105% at 20% 42%,rgba(21,10,11,0.8),rgba(21,10,11,0.96));
@@ -848,7 +860,7 @@
   --rc-after: #7fc8ff;
   --rc-target: rgba(230,236,247,0.82);
   --rc-position: rgba(230,236,247,0.2);
-  --rc-cut-fill: rgba(255,143,168,0.16);
+  --rc-cut-fill: rgba(255,143,168,0.2);
   --rc-limit-hatch: rgba(230,236,247,0.12);
   --rc-limit-edge: rgba(230,236,247,0.4);
   --rc-grid: rgba(230,236,247,0.07);
@@ -859,6 +871,10 @@
   --rc-without-switch: rgba(255,194,77,0.3);
   --rc-flag-fill: rgba(255,194,77,0.14);
   --rc-run-track: rgba(230,236,247,0.12);
+  --rc-raise-fill: rgba(127,200,255,0.2);
+  --rc-pane: rgba(17,26,48,0.34);
+  --rc-note-ground: rgba(9,14,29,0.9);
+  --rc-reach-locked-line: rgba(230,236,247,0.28);
   --cover-veil: radial-gradient(130% 105% at 20% 42%,rgba(9,14,29,0.8),rgba(9,14,29,0.96));
   --cover-veil-strong: radial-gradient(130% 105% at 20% 42%,rgba(9,14,29,0.8),rgba(9,14,29,0.96));
   --cover-veil-deep: radial-gradient(130% 105% at 20% 42%,rgba(9,14,29,0.8),rgba(9,14,29,0.96));
@@ -1097,7 +1113,7 @@
   --rc-after: #3fd3e6;
   --rc-target: rgba(231,233,228,0.82);
   --rc-position: rgba(231,233,228,0.2);
-  --rc-cut-fill: rgba(255,210,31,0.16);
+  --rc-cut-fill: rgba(255,210,31,0.2);
   --rc-limit-hatch: rgba(231,233,228,0.12);
   --rc-limit-edge: rgba(231,233,228,0.4);
   --rc-grid: rgba(231,233,228,0.07);
@@ -1108,6 +1124,10 @@
   --rc-without-switch: rgba(255,122,46,0.3);
   --rc-flag-fill: rgba(255,122,46,0.14);
   --rc-run-track: rgba(231,233,228,0.12);
+  --rc-raise-fill: rgba(63,211,230,0.2);
+  --rc-pane: rgba(27,30,33,0.34);
+  --rc-note-ground: rgba(17,19,21,0.9);
+  --rc-reach-locked-line: rgba(231,233,228,0.28);
   --cover-veil: radial-gradient(130% 105% at 20% 42%,rgba(17,19,21,0.8),rgba(17,19,21,0.96));
   --cover-veil-strong: radial-gradient(130% 105% at 20% 42%,rgba(17,19,21,0.8),rgba(17,19,21,0.96));
   --cover-veil-deep: radial-gradient(130% 105% at 20% 42%,rgba(17,19,21,0.8),rgba(17,19,21,0.96));
@@ -1363,7 +1383,7 @@
   --rc-after: #7ed6bc;
   --rc-target: rgba(233,238,242,0.82);
   --rc-position: rgba(233,238,242,0.2);
-  --rc-cut-fill: rgba(242,164,143,0.16);
+  --rc-cut-fill: rgba(242,164,143,0.2);
   --rc-limit-hatch: rgba(233,238,242,0.12);
   --rc-limit-edge: rgba(233,238,242,0.4);
   --rc-grid: rgba(233,238,242,0.07);
@@ -1374,6 +1394,10 @@
   --rc-without-switch: rgba(224,167,88,0.3);
   --rc-flag-fill: rgba(224,167,88,0.14);
   --rc-run-track: rgba(233,238,242,0.12);
+  --rc-raise-fill: rgba(126,214,188,0.2);
+  --rc-pane: rgba(13,21,28,0.34);
+  --rc-note-ground: rgba(16,26,33,0.9);
+  --rc-reach-locked-line: rgba(233,238,242,0.28);
   --cover-veil: radial-gradient(130% 105% at 20% 42%, rgba(22, 36, 46, 0.3), rgba(14, 23, 30, 0.86));
   --cover-veil-strong: radial-gradient(130% 105% at 20% 42%, rgba(20, 33, 42, 0.62), rgba(13, 21, 28, 0.93));
   --cover-veil-deep: radial-gradient(130% 105% at 20% 42%, rgba(20, 33, 42, 0.72), rgba(13, 21, 28, 0.96));

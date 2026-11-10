@@ -195,7 +195,7 @@ def test_with_the_equaliser_on_the_control_is_written_as_the_core_writes_it(tmp_
     level = outputs.SOFTVOL_SCALE.raw(-30.0)
     given = volume.GiveBack(outputs.SOFTVOL_CONTROL, 5.0, outputs.SOFTVOL_SCALE)
     assert amixer.value("Gexis") == volume.to_control(level, given) == level + 20
-    assert "5.0 dB of the equaliser's given back" in outcome
+    assert "5.0 dB of the stage's headroom given back" in outcome
     off = eq.Equaliser().set_on("vc4hdmi0", False).choose("vc4hdmi0", "rock").to_settings()
     (tmp_path / "off").mkdir()
     softvol_boot.restore(_store(tmp_path / "off", output_device="HDMI 1", _software_level_db=-30.0,

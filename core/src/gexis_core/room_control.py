@@ -28,7 +28,7 @@ from gexis_core.room_correction import Room, RoomError
 
 logger = logging.getLogger("gexis_core.room_control")
 
-#: The month names for *On · measured 3 November*.
+#: The month names for *Full range · measured 3 November*.
 _MONTHS = ("January", "February", "March", "April", "May", "June", "July", "August", "September",
            "October", "November", "December")
 
@@ -138,19 +138,24 @@ class RoomControl:
         cal = self.state().calibration()
         out = {"state": status, "name": "miniDSP UMIK-1" if status == "found" else None,
                "gain_db": mic.gain_db if mic else None}
+        # `again`: kept by Phase 29 to 2 kHz only, so given again before a
+        # measurement (George, 2026-11-08).
         out["calibration"] = None if cal is None else {
-            "serial": rc.shown_serial(cal.serial), "angle": cal.angle, "date": cal.date}
+            "serial": rc.shown_serial(cal.serial), "angle": cal.angle, "date": cal.date, "again": not cal.full}
         return out
 
     def _row(self, here: rc.OutputRoom) -> str:
-        """The Settings row's state (the design's R01-R04)."""
-        if here.measured is None or here.measured.nothing_to_cut:
+        """The Settings row's state (design/source/29 R01-R04, worded as
+        design/source/30 draws it: the reach, or Without)."""
+        if here.measured is None or here.measured.nothing_to_correct:
             return "Not measured yet"
         if not here.on:
             return "Off"
         if here.without:
-            return "Without · comparing, the cuts at 0 dB"
-        return f"On · measured {day(here.measured.date)}"
+            return "Without · comparing, no correction"
+        if here.measured.range != rc.FULL:
+            return "Bass · measured for the bass only"
+        return f"{'Bass' if here.reach == rc.BASS else 'Full range'} · measured {day(here.measured.date)}"
 
     def summary(self) -> dict | None:
         """**What `/state` carries**: enough for the Settings row, the *Room*
@@ -159,14 +164,18 @@ class RoomControl:
         if output is None:
             return None
         here = self.state().output(output.card)
-        measured = here.measured if (here.measured and not here.measured.nothing_to_cut) else None
+        measured = here.measured if (here.measured and not here.measured.nothing_to_correct) else None
         run = self.run
         return {
             "output": {"card": output.card, "name": output.label, "kind": self._kind(output)},
             "on": here.on,
             "without": here.without,
+            # ADR-0177: how far it reaches, and how far the measurement was
+            # made (one from before Phase 30 holds it at the bass).
+            "reach": here.reach,
             "measured": None if measured is None else {
-                "date": measured.date, "day": day(measured.date), "checked": measured.checked},
+                "date": measured.date, "day": day(measured.date), "checked": measured.checked,
+                "range": measured.range},
             "row": self._row(here),
             "dsd": bool(here.on and self._dsd()),
             "run": run.state.as_dict() if self.running() else None,
@@ -182,7 +191,7 @@ class RoomControl:
             return None
         output = self._output()
         here = self.state().output(output.card)
-        measured = here.measured if (here.measured and not here.measured.nothing_to_cut) else None
+        measured = here.measured if (here.measured and not here.measured.nothing_to_correct) else None
         out["microphone"] = self._microphone()
         out["can_measure"], out["why_not"] = self._can_measure(out["microphone"])
         out["screen"] = bool(self._screen())
@@ -194,20 +203,28 @@ class RoomControl:
         out["eq_on"] = bool(self._eq_on(output.card))
         out["chart"] = rc.chart(measured)
         if measured is not None:
-            out["measured"].update(year=day(measured.date, year=True), positions=measured.positions,
-                                   peaks_down=round(measured.peaks_down()),
-                                   worse=[list(w) for w in measured.worse])
-            out["cuts"] = {k: [{"freq": round(f), "gain": round(g, 1)} for f, g, _ in measured.cuts(k)]
-                           for k in rc.CHANNELS}
+            out["measured"].update(self._figures(measured), year=day(measured.date, year=True),
+                                   positions=measured.positions)
+            out["cuts"] = {k: rc.shown(measured.cuts(k)) for k in rc.CHANNELS}
+            out["above"] = {k: rc.shown(measured.above(k)) for k in rc.CHANNELS}
         pending = getattr(self.run, "pending", None) if self.run is not None else None
         if pending is not None and self.running():
             out["pending"] = {
                 "chart": rc.chart(pending), "nothing_to_cut": pending.nothing_to_cut,
-                "peaks_down": round(pending.peaks_down()), "worse": [list(w) for w in pending.worse],
-                "checked": pending.checked,
-                "cuts": {k: [{"freq": round(f), "gain": round(g, 1)} for f, g, _ in pending.cuts(k)]
-                         for k in rc.CHANNELS}}
+                "nothing_to_correct": pending.nothing_to_correct, "checked": pending.checked,
+                **self._figures(pending),
+                "cuts": {k: rc.shown(pending.cuts(k)) for k in rc.CHANNELS},
+                "above": {k: rc.shown(pending.above(k)) for k in rc.CHANNELS}}
         return out
+
+    @staticmethod
+    def _figures(m: rc.Measurement) -> dict:
+        """The result's figures (the design's §2): *Peaks down by up to N
+        dB*, *within N dB of the speaker's own balance* after and the room's
+        own, the positions worse than before, and how far it was made."""
+        return {"peaks_down": round(m.peaks_down()), "within": m.within(), "room_within": m.within(room=True),
+                "nothing_to_cut": m.nothing_to_cut, "nothing_above": m.nothing_above, "range": m.range,
+                "worse": [list(w) for w in m.worse]}
 
     def _held(self) -> bool:
         """A run, or putting the player back after one."""
@@ -218,7 +235,7 @@ class RoomControl:
             return False, "running"
         if mic["state"] != "found":
             return False, "microphone"
-        if mic["calibration"] is None:
+        if mic["calibration"] is None or mic["calibration"]["again"]:
             return False, "calibration"
         if self._grouped():
             return False, "grouped"
@@ -238,15 +255,17 @@ class RoomControl:
         return output.card
 
     async def update(self, changes: dict) -> dict:
-        """`on` and `without`, for the output in use."""
+        """`on`, `without` and `reach` (ADR-0177), for the output in use."""
         if not isinstance(changes, dict) or not changes:
             raise RoomError("Nothing to change.")
-        unknown = set(changes) - {"on", "without"}
+        unknown = set(changes) - {"on", "without", "reach"}
         if unknown:
             raise RoomError(f"Unknown: {', '.join(sorted(unknown))}.")
         for key in ("on", "without"):
             if key in changes and not isinstance(changes[key], bool):
                 raise RoomError(f"{key.capitalize()} is true or false.")
+        if "reach" in changes and changes["reach"] not in rc.REACHES:
+            raise RoomError("Reach is bass or full.")
         async with self._lock:
             if self._held():
                 raise RoomError("Not while the room is being measured.")
@@ -256,9 +275,12 @@ class RoomControl:
             if "on" in changes:
                 new = new.set_on(card, changes["on"])
                 if not changes["on"]:
-                    new = new._with(card, rc.OutputRoom(False, False, new.output(card).measured))
+                    here = new.output(card)
+                    new = new._with(card, rc.OutputRoom(False, False, here.measured, here.reach))
             if "without" in changes:
                 new = new.set_without(card, changes["without"])
+            if "reach" in changes:
+                new = new.set_reach(card, changes["reach"])
             await self._commit(old, new, card)
         return self.snapshot()
 
@@ -294,7 +316,8 @@ class RoomControl:
                 raise RoomError({
                     "running": "The room is being measured already.",
                     "microphone": "Plug in the UMIK-1.",
-                    "calibration": "Give the player the microphone's calibration file first.",
+                    "calibration": "Choose the microphone's calibration file again: it is needed now for the full range."
+                    if mic_state["calibration"] else "Give the player the microphone's calibration file first.",
                     "grouped": "Leave the group to measure the room.",
                     "busy": "Not while an update installs.",
                 }[why])
