@@ -2,9 +2,10 @@
 from __future__ import annotations
 
 from pathlib import Path
+from unittest import mock
 
 import pytest
-from aiohttp.test_utils import TestClient, TestServer
+from aiohttp.test_utils import TestClient, TestServer, make_mocked_request
 
 from gexis_core import screen_detect, screens
 from gexis_core.setup_flow import screen_choices
@@ -131,7 +132,7 @@ async def test_a_phone_asking_the_setup_page_anything_is_noted(tmp_path):
     fake = FakeSetup()
     server = StateServer(StateStore({}), setup=fake, setup_flow=flow, ui_dir=tmp_path / "ui")
     phone = {"on": True}
-    server._from_panel = lambda request: not phone["on"]
+    server._from_phone = lambda request: phone["on"]
     async with TestClient(TestServer(server.make_app())) as client:
         for path in ("/", "/setup/status", "/setup/answers"):
             assert (await client.get(path)).status == 200
@@ -143,6 +144,27 @@ async def test_a_phone_asking_the_setup_page_anything_is_noted(tmp_path):
         await client.get("/")
         await client.get("/setup/status")
         assert fake.used == 3, "the panel is not somebody setting up"
+
+
+@pytest.mark.asyncio
+async def test_the_kiosk_loading_its_page_is_not_somebody_setting_up(tmp_path):
+    """The review of 1.16.1: since the panel's token (ADR-0170) the kiosk's
+    own load of the page - a navigation, which sends no header - counted as
+    a phone, and held a configured player off its Wi-Fi. Only a phone is
+    off loopback."""
+    flow, *_ = make(tmp_path, FakeNM(devices=NOTHING))
+    (tmp_path / "ui" / "assets").mkdir(parents=True)
+    (tmp_path / "ui" / "index.html").write_text("<html></html>")
+    fake = FakeSetup()
+    server = StateServer(StateStore({}), setup=fake, setup_flow=flow, ui_dir=tmp_path / "ui",
+                         panel_token="t" * 32)
+    async with TestClient(TestServer(server.make_app())) as client:
+        assert (await client.get("/")).status == 200
+        await client.get("/setup/status")
+    assert getattr(fake, "used", 0) == 0
+    lan = mock.Mock()
+    lan.get_extra_info.return_value = ("192.0.2.10", 50000)
+    assert server._from_phone(make_mocked_request("GET", "/", transport=lan))
 
 
 def test_each_screen_names_its_skin_pack():

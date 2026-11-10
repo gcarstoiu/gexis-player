@@ -2599,9 +2599,16 @@ class StateServer:
         network holds a configured player off its saved Wi-Fi only while
         this was recent (`setup_network.SETUP_ACTIVE_S`)."""
         if (self._setup is not None and (request.path == "/" or request.path.startswith("/setup/"))
-                and not self._from_panel(request)):
+                and self._from_phone(request)):
             self._setup.page_used()
         return await handler(request)
+
+    def _from_phone(self, request: web.Request) -> bool:
+        """Off loopback: the panel and the plugins are on it, a phone never
+        is. Not `_from_panel` (the review of 1.16.1): the kiosk's own load of
+        the page is a navigation, which sends no token, and since ADR-0170 it
+        counted as a phone setting the player up."""
+        return request.remote not in ("127.0.0.1", "::1")
 
     def _setup_closed(self) -> web.Response | None:
         """ADR-0104: the setup routes answer only while setup is on - the
