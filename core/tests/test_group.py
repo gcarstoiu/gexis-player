@@ -50,6 +50,11 @@ class Net:
         self.players[member.id] = player
         return player
 
+    def statuses(self, *ids):
+        """Each player's `/player/status`, as the half-minute round finds it."""
+        return {pid: {"id": pid, "host": f"{pid}.local", "group": g.summary(self.players[pid].record)}
+                for pid in ids}
+
 
 def test_a_record_survives_its_json():
     record = g.Record.new(LIVING, KITCHEN, clock=lambda: 5.0)
@@ -144,6 +149,85 @@ async def test_a_member_that_was_off_is_brought_up_to_date_when_seen(tmp_path):
     await living.reconcile({"study": {"id": "study", "group": g.summary(study.record)},
                             "kitchen": {"id": "kitchen", "group": None}})
     assert study.record == record
+
+
+async def _three(net):
+    living, kitchen, study = net.add(LIVING), net.add(KITCHEN), net.add(STUDY)
+    await living.join(KITCHEN)
+    await living.join(STUDY)
+    return living, kitchen, study
+
+
+async def _rounds(net, first):
+    """Every player's round, `first`'s before the others'."""
+    for _ in range(2):
+        for pid in (first, *[p for p in ("living", "kitchen", "study") if p != first]):
+            await net.players[pid].reconcile(net.statuses(*[p for p in ("living", "kitchen", "study") if p != pid]))
+    for player in net.players.values():
+        await player.settled()
+
+
+@pytest.mark.parametrize("first", ["study", "living"])
+@pytest.mark.parametrize("restarted", [False, True])
+async def test_an_undone_group_stays_undone_when_a_member_that_missed_it_comes_back(tmp_path, first, restarted):
+    """The review of 1.16.1: Study, off at the undo, came back with the
+    group it kept and sent it to the others, now in no group; they took it,
+    and Kitchen's own music was stopped for a group undone."""
+    net = Net(tmp_path)
+    living, kitchen, study = await _three(net)
+    net.off.add("study")
+    await living.undo()
+    await kitchen.settled()
+    if restarted:
+        net.add(LIVING)  # what it owed Study is gone with the restart
+    joined = len(net.applied["kitchen"])
+    net.off.clear()
+    await _rounds(net, first)
+    assert [p.record for p in net.players.values()] == [None, None, None]
+    assert net.applied["kitchen"][joined:] == [], "nothing put in force again on Kitchen"
+
+
+@pytest.mark.parametrize("first", ["living", "kitchen"])
+@pytest.mark.parametrize("restarted", [False, True])
+async def test_a_member_that_left_while_the_leader_was_off_stays_out(tmp_path, first, restarted):
+    """The review of 1.16.1 (C2): the leader off, Kitchen left to play on its
+    own; the leader, back with the group it kept, sent it to Kitchen, which
+    took it and stopped its own music."""
+    net = Net(tmp_path)
+    living, kitchen, study = await _three(net)
+    net.off.add("living")
+    left = await kitchen.leave()
+    await kitchen.settled()
+    if restarted:
+        net.add(KITCHEN)
+    joined = len(net.applied["kitchen"])
+    net.off.clear()
+    await _rounds(net, first)
+    kitchen, living, study = (net.players[p] for p in ("kitchen", "living", "study"))
+    assert kitchen.record is None and net.applied["kitchen"][joined:] == []
+    assert living.record == study.record == left and left.ids() == ["living", "study"]
+
+
+async def test_a_player_that_left_can_be_joined_to_the_same_group_again(tmp_path):
+    net = Net(tmp_path)
+    living, kitchen, study = await _three(net)
+    await kitchen.leave()
+    record = await living.join(KITCHEN)
+    assert kitchen.record == record and record.ids() == ["living", "study", "kitchen"]
+    await kitchen.leave()
+    assert kitchen.record is None and living.record.ids() == ["living", "study"]
+
+
+async def test_a_reflashed_member_is_given_the_group_again(tmp_path):
+    """B10: nothing of the group on it, as on a new card."""
+    net = Net(tmp_path)
+    living, kitchen, study = await _three(net)
+    for kept in tmp_path.glob("kitchen*"):
+        kept.unlink()
+    kitchen = net.add(KITCHEN)
+    assert kitchen.record is None
+    await living.reconcile(net.statuses("kitchen", "study"))
+    assert kitchen.record == living.record and kitchen.record.has("kitchen")
 
 
 async def test_the_leader_gone_leaves_the_others_grouped(tmp_path):

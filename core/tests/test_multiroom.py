@@ -376,6 +376,26 @@ async def test_a_source_taking_over_after_an_undo_is_not_restarted(tmp_path):
     assert not living.snap.serving and living.room.chain is None
 
 
+async def test_a_player_that_left_keeps_its_own_music_when_the_old_leader_returns(tmp_path):
+    """The review of 1.16.1 (C2): the leader off, Kitchen left the silent
+    group and played Spotify; the leader came back with the group it kept,
+    and Kitchen took it and stopped Spotify."""
+    net = Net(tmp_path)
+    living, kitchen, study = net.add("living", "Living Room"), net.add("kitchen", "Kitchen"), net.add("study", "Study")
+    await living.room.join("kitchen")
+    await living.room.join("study")
+    await net.settle()
+    net.off.add("living")
+    await kitchen.room.leave()
+    kitchen.play("spotify")
+    await net.settle()
+    net.off.clear()
+    statuses = {pid: p.status_for_others() for pid, p in net.players.items()}
+    await living.room._seen({k: v for k, v in statuses.items() if k != "living"})
+    await net.settle()
+    assert kitchen.room.record is None and kitchen.stopped == [] and kitchen.room.chain is None
+
+
 async def test_a_member_shows_the_leaders_now_playing_and_sends_it_the_controls(tmp_path):
     net = Net(tmp_path)
     living, kitchen = net.add("living", "Living Room"), net.add("kitchen", "Kitchen")
