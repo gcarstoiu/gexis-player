@@ -139,6 +139,8 @@ from gexis_core.volume import (
     fixed_output as volume_fixed_output,
     hardware_max,
     hardware_silence,
+    keep_level,
+    level_kept,
     publish_attenuation,
     use_scale,
     set_ceiling_reader,
@@ -4829,7 +4831,7 @@ async def main() -> None:
         100 and left the output at full level)."""
         volume = state_store.state.volume
         if volume is not None and settings_store.get(ROOM_VOLUME_KEY) is None:
-            settings_store.set(ROOM_VOLUME_KEY, {"raw": mute.audible_raw(volume.raw),
+            settings_store.set(ROOM_VOLUME_KEY, {**keep_level(mute.audible_raw(volume.raw)),
                                                  "muted": bool(volume.muted)})
         if fixed_now["value"]:
             return
@@ -4849,8 +4851,10 @@ async def main() -> None:
         try:
             if not isinstance(was, dict) or fixed_now["value"]:
                 return
-            raw = was.get("raw")
-            if isinstance(raw, bool) or not isinstance(raw, int):
+            # On the scale in force now, which a change of output or volume
+            # type during the run, or a restart, may have moved.
+            raw = level_kept(was)
+            if raw is None:
                 # Kept as a percentage, before 2026-11-05's fix.
                 raw = slider_percent_to_raw(float(was.get("percent", 0)))
             logger.info("room: volume back to raw %s/%s", raw, hardware_max())
