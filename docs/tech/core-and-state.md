@@ -185,8 +185,11 @@ also proves itself (ADR-0170): the core makes a token per boot in
 restarts), the kiosk opens its page with it (`#panel=…`), and the page sends it
 as `X-Gexis-Panel` with every request and as `?panel=` on `/touchpad`;
 `gexis-park.service`, the visualiser's touch report and the updater's stop
-before an install send it too. Plugins' units have `ProtectProc=invisible`,
-so the kiosk's command line is out of their sight. `_from_panel` checks both;
+before an install send it too. It is on no command line, which any process
+can read (the review of 1.16.1): Chromium opens a page in the kiosk user's
+runtime folder (`gexis-panel.html`, 0600) that goes on to the panel's
+address, and the park hands it to curl on its input. Plugins' units also have
+`ProtectProc=invisible`. `_from_panel` checks both;
 a server built without a token (the tests) goes by loopback alone. A few
 routes are the panel's only or behave differently by origin: `/surface`,
 `/touchpad`, `/setup/status` (the setup password goes to the panel only),
