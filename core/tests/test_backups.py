@@ -804,6 +804,52 @@ def test_a_file_that_goes_while_the_backup_runs_is_left_out_not_the_backup(tmp_p
     assert "var/lib/gexis-core/settings.db" in held, "the rest is all there"
 
 
+def _rewritten_while_read(monkeypatch, root):
+    """A plugin's state file a program rewrites shorter, in place, once the
+    backup has taken its size."""
+    state = root / "var/lib/private/gexis-uploaded/radiofoo/state"
+    state.write_text("x" * 4096)
+    real = tarfile.TarFile.gettarinfo
+
+    def gettarinfo(self, name=None, arcname=None, fileobj=None):
+        info = real(self, name, arcname, fileobj)
+        if str(arcname).endswith("radiofoo/state"):
+            state.write_text("{}")
+        return info
+
+    monkeypatch.setattr(tarfile.TarFile, "gettarinfo", gettarinfo)
+    return state
+
+
+def test_a_file_rewritten_shorter_while_it_is_read_does_not_fail_the_backup(tmp_path, monkeypatch):
+    """The review of 1.16.1: tarfile wrote the size it saw, read fewer bytes,
+    and the whole backup failed ("unexpected end of data") - and the update
+    waiting for it stopped."""
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    _rewritten_while_read(monkeypatch, root)
+    held = _held(out, backups.create("gexis", out, root, automatic=True))
+    assert held["var/lib/private/gexis-uploaded/radiofoo/state"] == b"{}"
+    assert held["var/lib/gexis-core/settings.db"] == b"settings", "the rest is all there"
+
+
+def test_a_file_that_keeps_changing_while_it_is_read_is_left_out(tmp_path, monkeypatch):
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    state = root / "var/lib/private/gexis-uploaded/radiofoo/state"
+    real, n = os.lseek, [0]
+
+    def lseek(fd, pos, how):
+        if os.readlink(f"/proc/self/fd/{fd}") == str(state):
+            n[0] += 1
+            state.write_text("x" * n[0])  # its program, in the middle of every read
+        return real(fd, pos, how)
+
+    monkeypatch.setattr(os, "lseek", lseek)
+    monkeypatch.setattr(backups.time, "sleep", lambda s: None)
+    held = _held(out, backups.create("gexis", out, root))
+    assert "var/lib/private/gexis-uploaded/radiofoo/state" not in held and n[0] == backups.READ_TRIES
+    assert held["var/lib/gexis-core/settings.db"] == b"settings"
+
+
 def test_an_update_backup_that_failed_leaves_its_reason_and_a_new_one_clears_it(tmp_path):
     backups.update_backup_failed("disk full", tmp_path)
     assert (tmp_path / backups.FAILED_MARK).read_text() == "disk full\n"

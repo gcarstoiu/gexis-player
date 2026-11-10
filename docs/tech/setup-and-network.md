@@ -412,7 +412,10 @@ nothing there is followed through a link:
   review of 1.16.1): each folder and file is opened relative to the folder
   above it with `O_NOFOLLOW`, and its kind, size and owner come from that
   descriptor, so a plugin swapping a folder of its own for a link mid-walk
-  cannot have root's files archived under its name. A live SQLite database
+  cannot have root's files archived under its name. A file is read whole
+  before its entry is written, and read again when it changed meanwhile (a
+  program rewriting it in place); one that keeps changing after three reads
+  is left out and logged, not the backup. A live SQLite database
   with a `-wal` beside it - the Beszel hub's - goes in as one consistent
   file, copied with SQLite's own backup, without its `-wal` and `-shm`;
   SQLite opens by path, so it reads hard links to them made from the open

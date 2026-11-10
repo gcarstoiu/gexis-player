@@ -434,14 +434,53 @@ def _add(archive: tarfile.TarFile, folder_fd: int, name: str, arcname: str, keep
         if info is None:
             return
         if not info.isdir():
-            with open(fd, "rb", closefd=False) as data:
-                archive.addfile(info, data)
+            settled = _read_settled(fd, arcname)
+            if settled is not None:
+                data, now = settled
+                with data:
+                    info.size, info.mtime = now.st_size, now.st_mtime
+                    archive.addfile(info, data)
             return
         archive.addfile(info)
         for child in sorted(os.listdir(fd)):
             _add(archive, fd, child, f"{arcname}/{child}", keep)
     finally:
         os.close(fd)
+
+
+#: How many times a file that changes while it is read is read, and what of
+#: it is held in memory before the rest goes to a temporary file.
+READ_TRIES = 3
+SPOOL_MAX = 1 << 20
+
+
+def _read_settled(fd: int, arcname: str):
+    """The open file's bytes, read whole, **and the file unchanged while they
+    were read** (the review of 1.16.1): a program that rewrote a file shorter
+    in place after its size was taken failed the whole backup - tarfile had
+    written that size, then read fewer bytes ("unexpected end of data") - and
+    the update waiting for it stopped. Read again when it changed; left out,
+    and said, when it keeps changing. `(spool, its stat)`, or None."""
+    for attempt in range(READ_TRIES):
+        if attempt:
+            time.sleep(0.2)
+        before = os.fstat(fd)
+        spool = tempfile.SpooledTemporaryFile(max_size=SPOOL_MAX)
+        try:
+            os.lseek(fd, 0, os.SEEK_SET)
+            while chunk := os.read(fd, 1 << 16):
+                spool.write(chunk)
+            after = os.fstat(fd)
+        except BaseException:
+            spool.close()
+            raise
+        if spool.tell() == after.st_size and \
+                (before.st_size, before.st_mtime_ns) == (after.st_size, after.st_mtime_ns):
+            spool.seek(0)
+            return spool, after
+        spool.close()
+    logger.info("backup: %s kept changing while it was read, leaving it out", arcname)
+    return None
 
 
 #: How old a partial archive is before the next backup takes it for one
