@@ -1,6 +1,10 @@
 {
  "_about": "Every release's notes, newest first, exactly as published and signed (ADR-0116). publish.sh reads a release's notes from here; Settings -> Change logs shows the last 10.",
  "releases": {
+  "1.16.1": {
+   "date": "2026-11-10",
+   "notes": "Good to know\n• Room correction's Full range is marked Limited testing: so far it has been tried in one room, and problem reports help."
+  },
   "1.16.0": {
    "date": "2026-11-10",
    "notes": "New\n• Room correction for the full range, in Settings → Audio: above the bass it evens out the room's broad bumps and dips by 3 dB at most, up or down, and keeps the speakers' own balance.\n• Bass or Full range, on its page and in the volume controls, heard at once; Hear it without compares with no correction at all.\n• The chart shows the bass and the range above it, with what is cut and what is raised.\n\nGood to know\n• A measurement made before this release covers the bass only, and the microphone's calibration file is asked for once more; measuring again, in about five minutes and its check, reaches the full range.\n• With room correction on, the music is lowered by up to 3 dB so the correction cannot clip, and the volume gives it back; near the top of the volume, and with Fixed volume, it plays up to 3 dB quieter.\n• Nothing above 14 kHz is corrected."

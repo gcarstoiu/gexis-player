@@ -77,6 +77,13 @@ and dips by 3 dB at most, up or down, and keeps the balance your speakers
 have. *Bass* or *Full range* chooses how far it reaches, heard at once;
 each output keeps its own, and *Hear it without* compares with none at all.
 
+**What does *Limited testing* beside Full range mean?**
+Room correction above the bass has so far been tried in one room. It is
+designed to change little - 3 dB at most, broad - and the check after a
+measurement says if any position ends further from the target, but it has
+not yet met many rooms and speakers. *Bass* keeps the bass correction alone,
+and a problem report (*Settings → System*) helps.
+
 **Why is the music quieter at full volume with room correction on?**
 Above the bass the correction may raise by up to 3 dB, so the player lowers
 the music that much first, as the equaliser does for a boost, and the volume

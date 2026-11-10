@@ -185,6 +185,9 @@
       {@const locked = k === 'full' && bassOnly}
       <button type="button" class="chip" class:is-sel={reach === k} class:is-locked={locked} aria-pressed={reach === k}
               onclick={() => chooseReach(k)} disabled={!reachLive}>
+        <!-- George, 2026-11-10: Full range is marked as being tested, in
+             AirPlay's words and the Tested tag's look (ADR-0167). -->
+        {#if k === 'full'}<span class="testing">Limited testing</span>{/if}
         <span class="chip__name">{name}</span>
         <span class="chip__sub">{locked ? 'Measure again' : sub}</span>
       </button>
@@ -729,6 +732,7 @@
     pointer-events: none;
   }
   .chip {
+    position: relative;
     flex: 1;
     min-width: 0;
     min-height: 64px;
@@ -795,6 +799,23 @@
   }
   .reach--bar .chip__sub {
     font-size: 13px;
+  }
+  /* On the chip's top edge, so it fits the chip at every width. */
+  .testing {
+    position: absolute;
+    top: -8px;
+    right: 10px;
+    padding: 1px 6px;
+    border-radius: var(--r-6);
+    border: 1px solid var(--c-ink-14);
+    background: var(--bg-panel);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    line-height: 13px;
+    letter-spacing: var(--track-label);
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--ink-quiet);
   }
   .reach__note {
     font-size: 14px;
