@@ -34,6 +34,30 @@ def test_choosing_writes_one_block_and_leaves_the_rest(tmp_path):
     assert not ba.choose("Found by itself", config=config, state=state), "nothing to change"
 
 
+def test_config_txt_is_on_the_card_before_and_after_its_rename(tmp_path, monkeypatch):
+    """The review of 1.16.1: the choice and its go-back renamed an unsynced
+    copy over config.txt on the FAT boot partition; a power cut before the
+    kernel's writeback could leave it unreadable. Synced, as the screen's
+    block and cmdline.txt are (ADR-0158)."""
+    import os
+    config, state = tmp_path / "boot" / "config.txt", tmp_path / "board.json"
+    config.parent.mkdir()
+    config.write_text(CONFIG)
+    synced, real_fsync = [], os.fsync
+
+    def fsync(fd):
+        synced.append(os.readlink(f"/proc/self/fd/{fd}"))
+        real_fsync(fd)
+
+    monkeypatch.setattr(os, "fsync", fsync)
+    ba.choose("IQaudIO/DAC Plus", config=config, state=state)
+    assert synced == [str(config) + ".tmp", str(config.parent)]
+    synced.clear()
+    assert ba.check(["Headphones"], config=config, state=state) == "iqaudio-dacplus"
+    assert synced == [str(config) + ".tmp", str(config.parent)]
+    assert config.read_text() == CONFIG and list(config.parent.iterdir()) == [config]
+
+
 def test_a_board_whose_card_appears_is_kept(tmp_path):
     config, state = tmp_path / "config.txt", tmp_path / "board.json"
     config.write_text(CONFIG)
