@@ -1,0 +1,180 @@
+/* gexis — Phase 30 room correction tokens, default theme (Deep Teal).
+   Phase 29's --rc-* names stand; these are new or changed. */
+:root {
+  --rc-before: #f2a48f;                         /* before, average of three; cut values in the list */
+  --rc-after: #7ed6bc;                          /* after (solid measured, dashed expected); raise values */
+  --rc-target: rgba(233,238,242,0.82);          /* one dotted target, bass rise joined to the speaker's slope */
+  --rc-position: rgba(233,238,242,0.2);         /* each position, hairline */
+  --rc-cut-fill: rgba(242,164,143,0.2);         /* where before is above after (was 0.16) */
+  --rc-raise-fill: rgba(126,214,188,0.2);       /* new: where after is above before */
+  --rc-pane: rgba(13,21,28,0.34);               /* new: each pane's ground, radius 8 */
+  --rc-pane-gap: 8px;  --rc-pane-gap-lg: 12px;  /* new: gap at 250 Hz, phone / panel and bars */
+  --rc-limit-hatch: rgba(233,238,242,0.12);     /* Bass chosen: the upper pane, 135deg, 1px every 6px */
+  --rc-limit-edge: rgba(233,238,242,0.4);       /* dashed 1px at 250 Hz */
+  --rc-grid: rgba(233,238,242,0.07);
+  --rc-zero: rgba(233,238,242,0.26);
+  --rc-note-ground: rgba(16,26,33,0.9);         /* new: the label on a hatched pane */
+  --rc-reach-locked-line: rgba(233,238,242,0.28); /* new: Full range chip on a bass-only measurement, 1.5px dashed */
+  --rc-without: #e0a758;
+  --rc-without-fill: rgba(224,167,88,0.1);
+  --rc-without-line: rgba(224,167,88,0.5);
+  --rc-without-switch: rgba(224,167,88,0.3);
+  --rc-flag-fill: rgba(224,167,88,0.14);
+  --rc-run-track: rgba(233,238,242,0.12);
+  --rc-stroke-before: 2.25px;  --rc-stroke-before-lg: 2.75px;
+  --rc-stroke-after: 3.25px;   --rc-stroke-after-lg: 4px;
+  --rc-stroke-target: 2px;     --rc-stroke-target-lg: 2.5px;
+  --rc-stroke-position: 1px;   --rc-stroke-position-lg: 1.25px;
+  --rc-dash-expected: 7 5;     --rc-dash-expected-lg: 8 6;
+  --rc-dash-target: 0.5 5;     --rc-dash-target-lg: 0.5 6;
+}
+
+/* Bauhaus */
+:root[data-theme="bauhaus"] {
+  --rc-before: #d1261c;
+  --rc-after: #1a47c4;
+  --rc-target: rgba(20,20,20,0.883);
+  --rc-position: rgba(20,20,20,0.22);
+  --rc-cut-fill: rgba(209,38,28,0.22);
+  --rc-raise-fill: rgba(26,71,196,0.22);
+  --rc-pane: rgba(251,250,246,0.34);
+  --rc-pane-gap: 8px;  --rc-pane-gap-lg: 12px;
+  --rc-limit-hatch: rgba(20,20,20,0.132);
+  --rc-limit-edge: rgba(20,20,20,0.44);
+  --rc-grid: rgba(20,20,20,0.077);
+  --rc-zero: rgba(20,20,20,0.286);
+  --rc-note-ground: rgba(242,239,232,0.9);
+  --rc-reach-locked-line: rgba(20,20,20,0.308);
+  --rc-without: #964800;
+  --rc-without-fill: rgba(150,72,0,0.1);
+  --rc-without-line: rgba(150,72,0,0.5);
+  --rc-without-switch: rgba(150,72,0,0.3);
+  --rc-flag-fill: rgba(150,72,0,0.14);
+  --rc-run-track: rgba(20,20,20,0.132);
+  --rc-stroke-before: 2.25px;  --rc-stroke-before-lg: 2.75px;
+  --rc-stroke-after: 3.25px;   --rc-stroke-after-lg: 4px;
+  --rc-stroke-target: 2px;     --rc-stroke-target-lg: 2.5px;
+  --rc-stroke-position: 1px;   --rc-stroke-position-lg: 1.25px;
+  --rc-dash-expected: 7 5;     --rc-dash-expected-lg: 8 6;
+  --rc-dash-target: 0.5 5;     --rc-dash-target-lg: 0.5 6;
+}
+
+/* Sage */
+:root[data-theme="sage"] {
+  --rc-before: #a8401f;
+  --rc-after: #245a3d;
+  --rc-target: rgba(27,36,30,0.883);
+  --rc-position: rgba(27,36,30,0.22);
+  --rc-cut-fill: rgba(168,64,31,0.22);
+  --rc-raise-fill: rgba(36,90,61,0.22);
+  --rc-pane: rgba(246,243,234,0.34);
+  --rc-pane-gap: 8px;  --rc-pane-gap-lg: 12px;
+  --rc-limit-hatch: rgba(27,36,30,0.132);
+  --rc-limit-edge: rgba(27,36,30,0.44);
+  --rc-grid: rgba(27,36,30,0.077);
+  --rc-zero: rgba(27,36,30,0.286);
+  --rc-note-ground: rgba(236,232,220,0.9);
+  --rc-reach-locked-line: rgba(27,36,30,0.308);
+  --rc-without: #8a4a00;
+  --rc-without-fill: rgba(138,74,0,0.1);
+  --rc-without-line: rgba(138,74,0,0.5);
+  --rc-without-switch: rgba(138,74,0,0.3);
+  --rc-flag-fill: rgba(138,74,0,0.14);
+  --rc-run-track: rgba(27,36,30,0.132);
+  --rc-stroke-before: 2.25px;  --rc-stroke-before-lg: 2.75px;
+  --rc-stroke-after: 3.25px;   --rc-stroke-after-lg: 4px;
+  --rc-stroke-target: 2px;     --rc-stroke-target-lg: 2.5px;
+  --rc-stroke-position: 1px;   --rc-stroke-position-lg: 1.25px;
+  --rc-dash-expected: 7 5;     --rc-dash-expected-lg: 8 6;
+  --rc-dash-target: 0.5 5;     --rc-dash-target-lg: 0.5 6;
+}
+
+/* Velvet */
+:root[data-theme="velvet"] {
+  --rc-before: #f2939a;
+  --rc-after: #d9b45c;
+  --rc-target: rgba(242,224,210,0.82);
+  --rc-position: rgba(242,224,210,0.2);
+  --rc-cut-fill: rgba(242,147,154,0.2);
+  --rc-raise-fill: rgba(217,180,92,0.2);
+  --rc-pane: rgba(33,17,15,0.34);
+  --rc-pane-gap: 8px;  --rc-pane-gap-lg: 12px;
+  --rc-limit-hatch: rgba(242,224,210,0.12);
+  --rc-limit-edge: rgba(242,224,210,0.4);
+  --rc-grid: rgba(242,224,210,0.07);
+  --rc-zero: rgba(242,224,210,0.26);
+  --rc-note-ground: rgba(21,10,11,0.9);
+  --rc-reach-locked-line: rgba(242,224,210,0.28);
+  --rc-without: #ff9a55;
+  --rc-without-fill: rgba(255,154,85,0.1);
+  --rc-without-line: rgba(255,154,85,0.5);
+  --rc-without-switch: rgba(255,154,85,0.3);
+  --rc-flag-fill: rgba(255,154,85,0.14);
+  --rc-run-track: rgba(242,224,210,0.12);
+  --rc-stroke-before: 2.25px;  --rc-stroke-before-lg: 2.75px;
+  --rc-stroke-after: 3.25px;   --rc-stroke-after-lg: 4px;
+  --rc-stroke-target: 2px;     --rc-stroke-target-lg: 2.5px;
+  --rc-stroke-position: 1px;   --rc-stroke-position-lg: 1.25px;
+  --rc-dash-expected: 7 5;     --rc-dash-expected-lg: 8 6;
+  --rc-dash-target: 0.5 5;     --rc-dash-target-lg: 0.5 6;
+}
+
+/* Ink */
+:root[data-theme="ink"] {
+  --rc-before: #ff8fa8;
+  --rc-after: #7fc8ff;
+  --rc-target: rgba(230,236,247,0.82);
+  --rc-position: rgba(230,236,247,0.2);
+  --rc-cut-fill: rgba(255,143,168,0.2);
+  --rc-raise-fill: rgba(127,200,255,0.2);
+  --rc-pane: rgba(17,26,48,0.34);
+  --rc-pane-gap: 8px;  --rc-pane-gap-lg: 12px;
+  --rc-limit-hatch: rgba(230,236,247,0.12);
+  --rc-limit-edge: rgba(230,236,247,0.4);
+  --rc-grid: rgba(230,236,247,0.07);
+  --rc-zero: rgba(230,236,247,0.26);
+  --rc-note-ground: rgba(9,14,29,0.9);
+  --rc-reach-locked-line: rgba(230,236,247,0.28);
+  --rc-without: #ffc24d;
+  --rc-without-fill: rgba(255,194,77,0.1);
+  --rc-without-line: rgba(255,194,77,0.5);
+  --rc-without-switch: rgba(255,194,77,0.3);
+  --rc-flag-fill: rgba(255,194,77,0.14);
+  --rc-run-track: rgba(230,236,247,0.12);
+  --rc-stroke-before: 2.25px;  --rc-stroke-before-lg: 2.75px;
+  --rc-stroke-after: 3.25px;   --rc-stroke-after-lg: 4px;
+  --rc-stroke-target: 2px;     --rc-stroke-target-lg: 2.5px;
+  --rc-stroke-position: 1px;   --rc-stroke-position-lg: 1.25px;
+  --rc-dash-expected: 7 5;     --rc-dash-expected-lg: 8 6;
+  --rc-dash-target: 0.5 5;     --rc-dash-target-lg: 0.5 6;
+}
+
+/* Gauge */
+:root[data-theme="gauge"] {
+  --rc-before: #ffd21f;
+  --rc-after: #3fd3e6;
+  --rc-target: rgba(231,233,228,0.82);
+  --rc-position: rgba(231,233,228,0.2);
+  --rc-cut-fill: rgba(255,210,31,0.2);
+  --rc-raise-fill: rgba(63,211,230,0.2);
+  --rc-pane: rgba(27,30,33,0.34);
+  --rc-pane-gap: 8px;  --rc-pane-gap-lg: 12px;
+  --rc-limit-hatch: rgba(231,233,228,0.12);
+  --rc-limit-edge: rgba(231,233,228,0.4);
+  --rc-grid: rgba(231,233,228,0.07);
+  --rc-zero: rgba(231,233,228,0.26);
+  --rc-note-ground: rgba(17,19,21,0.9);
+  --rc-reach-locked-line: rgba(231,233,228,0.28);
+  --rc-without: #ff7a2e;
+  --rc-without-fill: rgba(255,122,46,0.1);
+  --rc-without-line: rgba(255,122,46,0.5);
+  --rc-without-switch: rgba(255,122,46,0.3);
+  --rc-flag-fill: rgba(255,122,46,0.14);
+  --rc-run-track: rgba(231,233,228,0.12);
+  --rc-stroke-before: 2.25px;  --rc-stroke-before-lg: 2.75px;
+  --rc-stroke-after: 3.25px;   --rc-stroke-after-lg: 4px;
+  --rc-stroke-target: 2px;     --rc-stroke-target-lg: 2.5px;
+  --rc-stroke-position: 1px;   --rc-stroke-position-lg: 1.25px;
+  --rc-dash-expected: 7 5;     --rc-dash-expected-lg: 8 6;
+  --rc-dash-target: 0.5 5;     --rc-dash-target-lg: 0.5 6;
+}

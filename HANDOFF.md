@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-11-08 (on R2D2).
+Last updated: 2026-11-10 (on R2D2).
 
 ## Start here
 
@@ -125,7 +125,9 @@ player's.
 to `~/.gnupg-gexis-release`, which no longer exists.
 
 **The players** (2026-11-08): sofapi on 1.15.0 through its updater (George),
-*Pages from Home Assistant* on and no page kept loaded yet, Phase 29's cuts on it,
+then Phase 30's research preview (`~/preview-ph30`, 2026-11-08; the room
+measured again and kept 2026-11-10), *Pages from Home Assistant* on and no
+page kept loaded yet,
 Plexamp 0.5.1 and Beszel from the catalogue; `rpi-eeprom-update` reports a bootloader update
 available, not applied (not looked into). Roon's extension enabled in
 George's Roon; the other three last seen on 1.9.1 through their updaters
@@ -170,10 +172,18 @@ research in [Finding 141](docs/findings/141-room-correction-above-the-bass-what-
 the level only - the time-domain part is Phase 34 (George), which may end
 without being built. George's decisions the same day are in
 `docs/DEVELOPMENT.md` (the main seat, to 20 kHz, the speaker's own slope, at
-most 3 dB, *Bass* or *Full range*, in groups as the bass). The brief
-`design/briefs/30-room-correction-full.md` is George's to hand to Claude
-Design. Next: a full-range measurement of the room once sofapi is on 1.14.0,
-then the ADR.
+most 3 dB, *Bass* or *Full range*, in groups as the bass). **The design**
+arrived 2026-11-08 (`design/source/30/`; George's answers in
+`docs/DEVELOPMENT.md`). **The measurement** (George, 2026-11-10, one run
+with its check): [Finding 144](docs/findings/144-room-correction-above-the-bass-one-room-measured.md);
+three positions kept (George). **[ADR-0177](docs/decisions/0177-room-correction-for-the-full-range.md)
+proposed** the same day; George asked for the build to go ahead on its
+recommendations, its decisions 1-4 his to confirm. **Now: the build** on
+`ph-room-correction-full` (worktree `~/projects/gexis-player-ph30`). The
+throwaway `ph30-research` on top kept the run's recordings on sofapi
+(`/var/lib/gexis-core/room-research`, copied to `scratch/ph30/measure`);
+the branch and both copies go once the ADR is accepted. sofapi runs that
+preview, with the correction kept from the run (curves to 20 kHz).
 
 **Phase 35** (a page from Home Assistant on the screen, ADR-0176 as amended;
 Findings 142-143) **on Testing with 1.15.0** (2026-11-08), with the

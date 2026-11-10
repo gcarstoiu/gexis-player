@@ -3874,9 +3874,32 @@ recommendations unless marked):
 The brief for Claude Design: `design/briefs/30-room-correction-full.md`
 (2026-11-07).
 
+**The design** (Claude Design, 2026-11-08, `design/source/30/`; George's
+picks 1a, 1d, 1g and 1l), and George's answers on it the same day:
+- **The measurement first**, as decided on 2026-11-07: a preview with the
+  sweeps to 20 kHz, the curves and the calibration kept that far, the
+  correction still the bass's; George measures at the three positions and at
+  three more around the head; then the finding, the ADR and the rest of the
+  build as drawn.
+- **The sweeps' recordings kept for the analysis**, outside the repository,
+  deleted once the ADR is accepted (George).
+- **A calibration kept before this phase**, to 2 kHz only, is given again:
+  *Choose its file again* · *Needed now for the full range.* (George, over a
+  longer line saying why).
+- **The design's new words as drawn.**
+
+**The measurement** (George, 2026-11-10, one run on sofapi with its check):
+[Finding 144](findings/144-room-correction-above-the-bass-one-room-measured.md).
+**Three positions kept** (George, the same day), without the three planned
+around the head; whether more positions help is checked separately later,
+probably with Phase 34.
+
 **An ADR before anything is built.** It must settle what is not decided
 above: the filters and their smoothing, how the two ranges join, and what it
 costs a Pi 4 beside Phase 29's filter.
+[ADR-0177](decisions/0177-room-correction-for-the-full-range.md), proposed
+2026-11-10; George asked for the build to go ahead on its recommendations the
+same day, its decisions 1-4 his to confirm.
 
 **Acceptance (draft):**
 
@@ -4017,6 +4040,10 @@ sound at the seat (Finding 124's second tier). It is kept apart from Phase
 test that prefers it over level-only correction from several positions, and
 found that corrections inverting a response in detail were rated below none.
 Research comes first, and what it shows decides whether anything is built.
+
+**More positions** (George, 2026-11-10): whether more than Phase 30's three
+help, in sofapi's room and others, is checked separately, probably with this
+phase.
 
 **An ADR before anything is built**, if the research supports building. It
 must settle:
