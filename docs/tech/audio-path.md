@@ -795,6 +795,9 @@ leader's snapserver → network (FLAC, 32 bits) → each member's snapclient →
   (`Snapcast.ensure_card`). It is never an output (`outputs.OURS`); in a
   group arbitration asks who holds *its* playback node, and with Lyrion's
   own sync also the chain Squeezelite plays to (`alsa.set_also_card`).
+  Where it cannot be made (the module held), the player's own chain takes
+  the group's music (`outputs.WITHOUT_LOOPBACK`), arbitration asks about
+  that chain, and a source started there plays there alone.
 - **`output.conf` in a group** (`outputs._grouped`): `output` pads every
   integer format to 32 bits into the group's loopback (float refused, as the
   equaliser's chain refuses it). The chain the player had alone becomes
