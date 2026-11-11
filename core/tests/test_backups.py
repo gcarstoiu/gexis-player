@@ -73,6 +73,21 @@ def test_it_holds_the_spotify_pairing(tmp_path):
     assert "var/lib/go-librespot/state.json" in held
 
 
+def test_the_spotify_sign_in_is_archived_as_pi_s(tmp_path):
+    """ADR-0179: go-librespot has an account of its own, and its unit gives
+    it the folder at every start. The archive names `pi` and `audio` for the
+    sign-in, as every backup before had it, so an older release - whose
+    go-librespot runs as pi - restores it to a user who can read it."""
+    import pwd
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    name = backups.create("gexis", out, root)
+    with tarfile.open(out / name) as archive:
+        sign_in = archive.getmember("var/lib/go-librespot/state.json")
+        other = archive.getmember("var/lib/gexis-core/settings.db")
+    assert (sign_in.uname, sign_in.gname) == ("pi", "audio")
+    assert other.uname == pwd.getpwuid(os.getuid()).pw_name, "the rest as it is on disk"
+
+
 def test_it_leaves_go_librespots_config_to_the_image(tmp_path):
     """**ADR-0095.** `config.yml` is the image's; restored over a newer image it
     would name the device the renderer used to use."""

@@ -78,6 +78,12 @@ MEMBERS = (
     "var/lib/gexis/plugins-known.json",
 )
 
+#: **Owners an archive keeps naming** (ADR-0179): go-librespot has an account
+#: of its own, which its unit gives the folder at every start; the sign-in is
+#: archived as every backup before had it, so an older release, whose
+#: go-librespot runs as pi, restores it to a user who can read it.
+ARCHIVED_OWNER = {"var/lib/go-librespot/state.json": ("pi", "audio")}
+
 #: **A plugin's `~/.cache` stays out** (ADR-0174): what it downloads and what
 #: it can build again. Plexamp's software and its engine's cache are 200 MB
 #: and more in its folder (sofapi, 2026-11-03), where a backup was 1 MB.
@@ -644,6 +650,20 @@ def _sync_dir(directory: Path) -> None:
         os.close(fd)
 
 
+def _archived_as(info: tarfile.TarInfo, user: str, group: str) -> None:
+    """`info` named as `user` and `group`'s, by name and, where this system
+    has them, by number."""
+    info.uname, info.gname = user, group
+    try:
+        info.uid = pwd.getpwnam(user).pw_uid
+    except KeyError:
+        pass
+    try:
+        info.gid = grp.getgrnam(group).gr_gid
+    except KeyError:
+        pass
+
+
 def _fill(archive: tarfile.TarFile, work: str, root: Path) -> None:
     """Everything in `MEMBERS` into `archive`; `work`, a folder for the
     databases' copies."""
@@ -657,6 +677,8 @@ def _fill(archive: tarfile.TarFile, work: str, root: Path) -> None:
         if not info.isfile():
             logger.info("backup: %s is not a file or a folder, leaving it out", info.name)
             return None
+        if info.name in ARCHIVED_OWNER:
+            _archived_as(info, *ARCHIVED_OWNER[info.name])
         if any(info.name.endswith(s) for s in WAL_FILES) and \
                 any(c.name == info.name[:-4] for c, _ in copied):
             return None

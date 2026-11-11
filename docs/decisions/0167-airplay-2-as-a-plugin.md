@@ -185,3 +185,12 @@ AirPlay (AP1), which the AirPlay 2 build takes - clock steady at about 2.6 ms
 a round trip, ALAC at 44.1 kHz, 16 bits, heard by George on the DAC (an
 earlier silence was the output on HDMI 2). With Roon's *Compatibility mode*
 on for the device it goes to classic AirPlay at once. The FAQ says so.
+
+## Amended 2026-11-11: an account of its own (ADR-0179)
+
+T3's reason for `pi` - the output chain's meter pipes - no longer holds (the
+core makes them open to every writer), and `pi` is the screen's. Shairport
+Sync and the plugin run as `gexis-airplay`, in `audio` and `gexis-plugins`
+respectively; the plugin's own unit still names `pi`, so a drop-in from this
+repository's package sets the account. The D-Bus policy names
+`gexis-airplay`.
