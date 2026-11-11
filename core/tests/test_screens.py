@@ -91,10 +91,15 @@ def test_a_four_lane_model_is_offered_only_where_the_board_has_four_lanes(tmp_pa
     assert len(dsi) == 50 and sum(bool(s.overlays) for s in dsi) == 27
     assert screens.by_id("waveshare-dsi-v2-10.1a-4lane").label.endswith("4-lane (800x1280)"), \
         "a choice already made keeps its name"
-    for board in ("Raspberry Pi 5 Model B Rev 1.0", "Raspberry Pi Compute Module 4 Rev 1.0",
-                  "Raspberry Pi Compute Module 5 Rev 1.0"):
+    for board in ("Raspberry Pi Compute Module 4 Rev 1.0", "Raspberry Pi Compute Module 5 Rev 1.0"):
         model.write_text(board + "\x00")
         assert screens.board_lanes(model) == 4 and screens.offered(model) == screens.all_screens(), board
+    # **The JDI 7" on a Compute Module only**, as Raspberry Pi's overlay notes
+    # say (the review of 1.16.1); the other four-lane models on a Pi 5 too.
+    model.write_text("Raspberry Pi 5 Model B Rev 1.0\x00")
+    pi5 = {s.id for s in screens.offered(model)}
+    assert screens.board_lanes(model) == 4
+    assert {s.id for s in screens.all_screens()} - pi5 == {"jdi-lt070me05000", "jdi-lt070me05000-v2"}
     model.write_text("Raspberry Pi 500 Rev 1.0\x00")
     assert screens.board_lanes(model) == 2, "the keyboard Pi 5 is not a Pi 5 Model B"
     model.write_text("Some other board\x00")
