@@ -225,6 +225,7 @@ starting it again. **Not yet seen:** a drop and a first press with both in.
 
 ## Amended 2026-11-11: a TV off at a start (the review of 1.16.1)
 
+Decided by George the same day, as recommended (ADR-0178, decision 5).
 D1 held a chosen port while something was connected to it. A TV on standby
 at a start - a power cut at night - is not, and the player restarted onto
 the panel at 0°, asked *Keep this screen?* there, and went back to the TV
