@@ -1079,7 +1079,8 @@
     <!-- ADR-0176: over the idle screen and the dashboard; a touch or a key
          closes it, and what was there is under it still. Mounted, hidden,
          while a page is kept loaded (K3). -->
-    <PageScreen shown={pageUp} seq={$panel.page.seq} onclose={closePage} />
+    <PageScreen shown={pageUp} seq={$panel.page.seq} onclose={closePage}
+                covered={updateLock || $resetting || settlingShown || setupShown || !!$pairing} />
   {/if}
 
   <!-- ADR-0175: while the room is measured, the screen says so - over the

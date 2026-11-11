@@ -19,7 +19,9 @@
   page to keep.
 -->
 <script>
-  let { shown, seq, onclose } = $props();
+  //: `covered`: a screen that moves is drawn over this one (the update, a
+  //: reset, settling, setup, a pairing request).
+  let { shown, seq, onclose, covered = false } = $props();
 
   let url = $state(null);
   let loaded = $state(false);
@@ -62,9 +64,12 @@
 
   // What the page covers stops moving, as under the idle screen: a running
   // animation underneath keeps the Pi's browser compositing (Finding 118),
-  // and live video needs the processor (Finding 142).
+  // and live video needs the processor (Finding 142). **Not while a screen
+  // that moves is over it** (the review of 1.16.1): the rule pauses all but
+  // the page, and the update's turning mark stood still under "Don't switch
+  // off."
   $effect(() => {
-    if (!shown) return;
+    if (!shown || covered) return;
     document.documentElement.classList.add('page-up');
     return () => document.documentElement.classList.remove('page-up');
   });
