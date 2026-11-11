@@ -8,7 +8,11 @@
 (decision 2; for a player already set up, the 2026-10-18 amendment's one
 password), [ADR-0156](0156-home-assistant-dashboard-on-the-screen.md)
 (decision 3), [ADR-0106](0106-plugins-you-install-and-update.md)
-(decision 4).
+(decision 4). Decisions 5-8 appended 2026-11-11 (George: options A, as
+recommended); they change [ADR-0147](0147-a-tv-as-the-screen.md) (5),
+[ADR-0115](0115-the-lyrion-server-as-a-plugin.md) (6),
+[ADR-0105](0105-updates-over-the-network.md) (7) and
+[ADR-0168](0168-a-plugin-catalogue.md) (8).
 
 ## Context
 
@@ -52,3 +56,28 @@ changes what a user sees or does to be put to him first. Four did.
 - A player opened by another name in a browser answers with a short sentence
   naming the ways that work.
 - No setting is added.
+
+## Appended 2026-11-11: found while fixing (decisions 5-8)
+
+Fixing the 55 turned up eight more defects. Four changed nothing seen and
+were fixed; these four did, and George chose option A for each.
+
+5. **A TV chosen as the screen stays the screen while it is off.** On
+   standby at a start it is not connected, and the player restarted onto
+   the panel at 0°, asked *Keep this screen?* there and went back with
+   another restart. A screen without touch chosen under *Screen port* now
+   stays; its picture comes when it is switched on. A touch panel chosen and
+   then unplugged gives way as before (ADR-0147's amendment of this date).
+6. **Folders chosen that hold no music end *Getting ready*** with *Ready,
+   no music found* and a line pointing to Lyrion's own rescan. Before, an
+   empty Music folder said *Ready, no music yet* and to add a folder, and a
+   share or USB folder with nothing in it waited on *About to read your
+   music* for ever. With nothing chosen, *Ready, no music yet* stays.
+7. **An update that answers late where going back cannot be done stays
+   installed.** Its packages verified and the core answering within another
+   minute, it counts as done (*Updated to …*) instead of *Did not update …
+   restore the backup*.
+8. **A Remove or an upload from a file waits for a catalogue download under
+   way** before restarting the core, and the page says so (*Restarting once
+   … has downloaded*); one restart for both. Before, the restart cut the
+   download off without a word.
