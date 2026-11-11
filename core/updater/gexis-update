@@ -1093,6 +1093,20 @@ def restart(changes: list[tuple[str, str | None, str]]) -> str:
     return "services: " + (", ".join(sorted(units)) or "none")
 
 
+#: **How long a core that was late gets once more**, where going back could
+#: not be done: it has had its two minutes and the attempt at going back.
+LATE_S = 60
+
+
+def _stays(target: str) -> bool:
+    """The release going in, whole, and the core answering on it."""
+    try:
+        verify(target)
+    except Stop:
+        return False
+    return core_answers(LATE_S)
+
+
 def go_back(about: dict, channel: str, target: str, current: str, back_repos, back_pins,
             backup, failure: str, changes) -> int:
     """**Put the release that was there back** (ADR-0105 §4 step 6): from the
@@ -1108,6 +1122,19 @@ def go_back(about: dict, channel: str, target: str, current: str, back_repos, ba
     # Gone back: nothing left for a boot to check or finish.
     pending().unlink(missing_ok=True)
     ok = installed("gexis-player") == current
+    if not ok and changes is not None and _stays(target):
+        # **Late, not broken** (the review of 1.16.1): going back could not
+        # be done - its packages could not be fetched - and the release that
+        # went in is whole and answers now. It said *Did not update* and to
+        # restore the backup of a player working on the new release. Not
+        # after a failed install (`changes` None): the old core still runs
+        # then, and its answer says nothing of the new one.
+        for name in STEPS:
+            step(name, "done")
+        prune_cache()
+        report("done", **about, backup=backup, changed=len(changes),
+               message=f"{target} installed; it answered late ({failure}), and going back was not possible")
+        return 0
     # Remembered, so a night's Automatic run does not try it again
     # (Finding 105); "Update now" still does - it is asked for.
     (STATE / f"failed-{channel}").write_text(target)

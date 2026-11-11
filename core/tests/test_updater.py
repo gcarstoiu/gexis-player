@@ -805,6 +805,50 @@ def test_a_player_that_does_not_answer_after_the_update_goes_back(up, monkeypatc
     assert (up.STATE / "failed-testing").read_text() == "2"
 
 
+def _late(up, monkeypatch, answers):
+    """An update that goes in, a core that answers as `answers` says, and a
+    way back that apt cannot take (its packages not fetched)."""
+    seen, order = fake_install(up, monkeypatch, answers=False)
+    said = iter(answers)
+    monkeypatch.setattr(up, "core_answers", lambda timeout=120: next(said))
+    versions = {"gexis-player": "1"}
+    monkeypatch.setattr(up, "installed", lambda p: versions.get(p, "1"))
+
+    def apt(opts, *args, prefix=None):
+        if "--allow-downgrades" in args and "--no-download" in args:
+            return subprocess.CompletedProcess(args, 100, "", "E: Unable to fetch some archives")
+        if "--no-download" in args:
+            versions["gexis-player"] = "2"
+        return subprocess.CompletedProcess(args, 0, "", "")
+    monkeypatch.setattr(up, "apt", apt)
+
+    def apt_progress(opts, *args, state, report_as, reporter=None, prefix=None, span=(0.0, 1.0), sizes=None):
+        return apt(opts, *args, prefix=prefix)
+    monkeypatch.setattr(up, "apt_progress", apt_progress)
+    return seen, order
+
+
+def test_an_update_that_answers_late_and_cannot_go_back_stays_installed(up, monkeypatch):
+    """The review of 1.16.1: the core slow past its two minutes, and the way
+    back not possible - the old release's packages could not be fetched. The
+    new release was whole and working, and the screen said *Did not update*
+    and to restore the backup. Checked again, it is installed."""
+    seen, order = _late(up, monkeypatch, [False, True])
+    assert up.install(None) == 0
+    last = seen[-1]
+    assert last["state"] == "done" and set(last["steps"].values()) == {"done"}
+    assert "answered late" in last["message"] and "restore" not in last["message"]
+    assert any(s["state"] == "going-back" for s in seen), "going back was tried"
+    assert not (up.STATE / "failed-testing").exists(), "not a release to skip"
+
+
+def test_an_update_still_silent_where_going_back_cannot_says_so(up, monkeypatch):
+    seen, order = _late(up, monkeypatch, [False, False])
+    assert up.install(None) == 1
+    last = seen[-1]
+    assert last["state"] == "failed" and "Going back did not complete: restore the backup." in last["message"]
+
+
 def reboot_install(up, monkeypatch, *, answers=True):
     seen, order = fake_install(up, monkeypatch, answers=answers)
     ran = []
