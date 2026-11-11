@@ -608,3 +608,44 @@ def test_screen_port_lists_and_names_the_ports_it_can_choose():
     assert "and len(_screen_ports()) >= 2" in main and "and len(_screen_ports()) == 1" in main
     for name in ("_port_line", "_choose_screen_port"):
         assert "for p in _screen_ports() if p.connector == connector" in _closure(name), name
+
+
+# --- A TV chosen and off at a start (the review of 1.16.1, E1) ---------------
+
+def _tv_chosen(tmp_path, screen="other-1920x1080-capped", connector="HDMI-A-2"):
+    from gexis_core import screen_watch
+    f = {"state": tmp_path / "screen.json", "env": tmp_path / "screen.env", "cmdline": tmp_path / "cmdline.txt",
+         "config": tmp_path / "config.txt"}
+    f["cmdline"].write_text(f"console=tty1 video={connector}:1920x1080\n")
+    f["config"].write_text("[all]\n")
+    screen_apply.write_state({"current": Applied(screen, 0, connector, chosen=True).to_json(), "previous": None,
+                              "pending": False,
+                              "kept_on": {"DSI-1": {"screen": "hosyond-7-dsi", "rotation": 180}}}, f["state"])
+    seen = tmp_path / "seen.json"
+    screen_watch.kept(screen_detect.Seen(True, connector, "GSM", "LG TV", (1920, 1080), ()), seen)
+    return f, seen
+
+
+def test_a_tv_chosen_and_off_at_a_start_stays_the_screen(tmp_path):
+    """The TV on standby when the player starts - a power cut at night -
+    leaves only the panel connected. The player restarted onto the panel at
+    0 deg, asked Keep there, and went back with another restart two minutes
+    later. The TV stays the screen; its picture comes when it is switched on."""
+    from gexis_core import screen_watch
+    f, seen = _tv_chosen(tmp_path)
+    before = f["state"].read_text(), f["cmdline"].read_text()
+    panel = screen_detect.Seen(True, "DSI-1", None, None, (800, 480), (), ("edt_ft5x06",))
+    assert screen_watch.at_start(panel, headless=False, setup_needed=False, path=seen, files=f) == "same"
+    assert (f["state"].read_text(), f["cmdline"].read_text()) == before
+    nothing = screen_detect.Seen(False)
+    assert screen_watch.at_start(nothing, headless=False, setup_needed=False, path=seen, files=f) == "same"
+
+
+def test_a_touch_panel_chosen_and_gone_still_gives_way(tmp_path):
+    """A screen with touch of its own chosen and then unplugged: the screen
+    attached is switched to, as before."""
+    from gexis_core import screen_watch
+    f, seen = _tv_chosen(tmp_path, screen="waveshare-10.1-hdmi-b", connector="HDMI-A-1")
+    screen_watch.kept(screen_detect.Seen(True, "HDMI-A-1", "WAV", "WaveShare", (1280, 800), ("0712:0010",)), seen)
+    monitor = screen_detect.Seen(True, "HDMI-A-2", "ABC", "M", (1024, 600), ())
+    assert screen_watch.at_start(monitor, headless=False, setup_needed=False, path=seen, files=f) != "same"

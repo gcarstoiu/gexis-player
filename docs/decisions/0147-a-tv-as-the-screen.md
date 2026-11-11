@@ -222,3 +222,15 @@ window was being given its size as the core looked for it, wlrctl found none,
 and the core started the visualiser again; the second press worked. A show
 that finds no window now asks again three times, half a second apart, before
 starting it again. **Not yet seen:** a drop and a first press with both in.
+
+## Amended 2026-11-11: a TV off at a start (the review of 1.16.1)
+
+D1 held a chosen port while something was connected to it. A TV on standby
+at a start - a power cut at night - is not, and the player restarted onto
+the panel at 0°, asked *Keep this screen?* there, and went back to the TV
+with another restart two minutes later. A screen without touch chosen
+under *Screen port* (a TV, a monitor) now stays the screen while it is not
+connected (`screen_watch.at_start`); its picture comes when it is switched
+on, the panel staying dark as it does while the TV is on. A touch panel
+chosen and then unplugged gives way as before. **Unverified:** a start with
+sofapi's TV off, then the TV switched on.
