@@ -571,7 +571,10 @@ pieces in code:
   `restrictions`, so the row says why and a write of on is a 409). A
   release built without the key reads nothing and says `keyed: false`;
   *Add plugins* offers only ours there. Catalogue installs that overlap
-  restart the core once, when the last under way ends.
+  restart the core once, when the last under way ends; so does the restart
+  an upload from a file or a Remove owes (`Service.restart_once_idle`), and
+  its answer names the downloads it waits for (`waits_for`), which the page
+  says.
 - **One store for every plugin** (`plugin_store.py`, ADR-0169): ours that may
   be added (not the Lyrion client, Spotify, Bluetooth), the visualiser skins
   among them as `visualiser-skins`, are added or not, recorded in the

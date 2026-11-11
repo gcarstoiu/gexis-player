@@ -4651,15 +4651,18 @@ async def main() -> None:
         # never starts a plugin.
         unit = uploads.unit_for(checked.id, checked.kind)
         await restart_if_enabled(unit)
+        # **After any catalogue install under way** (the review of 1.16.1):
+        # the restart cut its download off, and it was lost.
+        waits = catalogue.under_way() if restart else []
         if restart:
-            asyncio.ensure_future(_restart_core_soon())
+            asyncio.ensure_future(catalogue.restart_once_idle())
         # What the page tells the user: a first install arrives off; an update
         # keeps the switch as it was (George, 2026-09-30: the page said
         # "switched off" of an update that was running).
         return {"installed": checked.id, "version": checked.version, "kind": checked.kind,
                 "previous": checked.previous,
                 "enabled": await asyncio.to_thread(_unit_is_enabled, unit),
-                "restarting": True}
+                "restarting": True, "waits_for": waits}
 
     async def _install_from_catalogue(archive: bytes, plugin_id: str, restart: bool = True,
                                       permissions: tuple[str, ...] = ()) -> dict:
@@ -4703,7 +4706,7 @@ async def main() -> None:
             await asyncio.to_thread(uploads.remove_data, plugin_id)
             await asyncio.to_thread(uploads.forget, plugin_id)
             settings_store.delete(f"{plugin_id}.enabled")
-            asyncio.ensure_future(_restart_core_soon())
+            asyncio.ensure_future(catalogue.restart_once_idle())
             return True
         if plugin is None:
             return False
@@ -4716,7 +4719,8 @@ async def main() -> None:
                 if row.get("key"):
                     settings_store.delete(f"{plugin_id}.{row['key']}")
         settings_store.delete(plugin.enabled_row or f"{plugin_id}.enabled")
-        asyncio.ensure_future(_restart_core_soon())
+        # After any catalogue install under way, as an upload's.
+        asyncio.ensure_future(catalogue.restart_once_idle())
         return True
 
     def _store_view() -> dict:

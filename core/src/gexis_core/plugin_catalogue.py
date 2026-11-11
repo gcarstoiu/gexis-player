@@ -551,6 +551,16 @@ class Service:
                 await self._restart_when_idle()
         return False
 
+    def under_way(self) -> list[str]:
+        """The names of the installs downloading or installing, for a page
+        to say what a restart waits for."""
+        names = []
+        for job in self.jobs.values():
+            if job.phase in ("downloading", "installing"):
+                entry = self.catalogue.entry(job.plugin_id) if self.catalogue else None
+                names.append(entry["name"] if entry else job.plugin_id)
+        return names
+
     async def restart_once_idle(self) -> None:
         """**A restart owed for something else** (a plugin blocked; the
         review of 1.16.1): at once with no install under way, else when the
