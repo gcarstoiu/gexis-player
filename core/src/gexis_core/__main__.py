@@ -469,6 +469,13 @@ def lyrion_located(value: Callable[[str], object], shares, usb) -> bool:
             or (value("lyrion-server.music_folder") is True and lyrion_folders.holds_music(lyrion_folders.MUSIC)))
 
 
+def lyrion_chosen(value: Callable[[str], object], shares, usb) -> bool:
+    """Whether anywhere is chosen for the Lyrion server to read, music in it
+    or not: an empty Music folder is read and found empty, not left to be
+    chosen (the review of 1.16.1)."""
+    return lyrion_located(value, shares, usb) or value("lyrion-server.music_folder") is True
+
+
 def _lyrion_note(on: bool) -> str | None:
     """The Lyrion server's switch, in order: a player too small for it; a scan
     stopped for memory; the first start under way (ADR-0115 decision 18)."""
@@ -3886,6 +3893,7 @@ async def main() -> None:
 
     lyrion_wake = asyncio.Event()
     lyrion_watch = lyrion_memory.Watch()
+    lyrion_reads = lyrion_stage.Reads()
     #: ADR-0115 decision 12: asked once, through Lyrion's own plugin page; a
     #: restart loads them; asked again if they are still missing ten minutes
     #: on. Once they are all in, never again - one removed later stays removed.
@@ -3964,7 +3972,12 @@ async def main() -> None:
         if not LYRION_ADDONS_DONE.exists():
             # Material only once Lyrion serves it (`_lyrion_addons_in`).
             addons["MaterialSkin"] = addons["MaterialSkin"] and bool(lyrion_asked.get("served"))
-        now_stage = lyrion_stage.stage(status is not None, addons, status, located)
+        now_stage = lyrion_stage.stage(status is not None, addons, status, located,
+                                       chosen=lyrion_chosen(settings.value, lyrion_shares, lyrion_usb))
+        # **A read that ends, or never comes, with nothing found** (the
+        # review of 1.16.1): an empty share or USB folder leaves no mark.
+        if status is not None and lyrion_reads.nothing_found(now_stage["phase"]):
+            now_stage = lyrion_stage.found_nothing(now_stage)
         # **A slow answer is not a new start** (George, 2026-10-19: the
         # checklist went back and forth between steps 2 and 3): once
         # Lyrion has answered, a missed answer - its add-ons' restart, a
