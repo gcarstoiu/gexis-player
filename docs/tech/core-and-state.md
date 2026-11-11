@@ -566,7 +566,8 @@ pieces in code:
   *withdrawn* plugin is marked on its row (its note is worked out with every
   settings read, so a withdrawal read during a run shows at once); a
   *blocked* one is switched off at once (the core restarts once, so its row
-  says why) and its switch refuses to turn it on (the registry's
+  says why - after any catalogue install under way, which a restart would
+  cut off) and its switch refuses to turn it on (the registry's
   `restrictions`, so the row says why and a write of on is a 409). A
   release built without the key reads nothing and says `keyed: false`;
   *Add plugins* offers only ours there. Catalogue installs that overlap

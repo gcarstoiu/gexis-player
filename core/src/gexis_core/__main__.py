@@ -4680,7 +4680,8 @@ async def main() -> None:
 
     async def _switch_off_blocked(plugin_id: str, why: str) -> None:
         """ADR-0168 decision 5: off now, and the core restarted once so the
-        plugin's row says why - unless it was blocked when this core started."""
+        plugin's row says why - unless it was blocked when this core started.
+        The restart waits for a catalogue install under way."""
         plugin = next((p for p in installed_plugins if p.id == plugin_id), None)
         if plugin is None or plugin_id in blocked_at_start:
             return
@@ -4689,7 +4690,7 @@ async def main() -> None:
         await set_unit_enabled(plugin.unit, False)
         if not block_restart["scheduled"]:
             block_restart["scheduled"] = True
-            asyncio.ensure_future(_restart_core_soon())
+            asyncio.ensure_future(catalogue.restart_once_idle())
 
     async def _uninstall_plugin(plugin_id: str, keep: bool = False) -> bool:
         """Remove an uploaded or catalogue plugin. ADR-0169: with `keep`, its
