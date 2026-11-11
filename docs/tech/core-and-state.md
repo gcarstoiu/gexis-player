@@ -809,7 +809,9 @@ and the dashboard, under setup, pairing and *Keep this screen?*): an
 under a layer that takes any touch and calls `hide?by=touch`; a keyboard's
 key calls `hide?by=key`, and `data-dpad-cover` keeps the D-pad's ring off.
 The idle countdown and the takeover wait while it is up, and what it covers
-stops animating (`html.page-up`).
+stops animating (`html.page-up`) - except while a screen that moves is drawn
+over it (the update, a factory reset, settling, setup, a pairing request),
+since the rule pauses everything but the page.
 
 **A page kept loaded** (the amendment, K1-K8). `POST /panel/page/preload`
 (`{url}`; `{url: null}` or `""` clears it, allowed with the switch off) is
