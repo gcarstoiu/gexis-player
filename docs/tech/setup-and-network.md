@@ -559,7 +559,9 @@ restarts, asks Keep, and a go-back takes the block out. The list offered
 its overlay's `…_4lane` parameter, or an overlay four-lane by itself,
 `screens.FOUR_LANE_OVERLAYS`: the JDI 7") on a board whose connector carries two:
 `screens.board_lanes()` reads `/proc/device-tree/model`, four on a Pi 5 or a
-Compute Module, two on any other Pi, every model off a Pi. Display standby on a
+Compute Module, two on any other Pi, every model off a Pi. The JDI 7" is
+offered on a Compute Module only (`screens.COMPUTE_MODULE_OVERLAYS`), as
+Raspberry Pi's overlay notes say. Display standby on a
 DSI connector turns `bl_power` off and leaves the output on
 (`standby.backlight`), and `read_output` reads the backlight back;
 *Screen brightness* writes `brightness` as a share of `max_brightness`, at
