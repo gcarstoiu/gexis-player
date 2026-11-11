@@ -41,7 +41,8 @@ script calls (`imager_custom`, `userconf`), each only if its variable is set:
 `userconf pi ""` always runs: it finalises the `pi` account and cancels the
 stock first-boot wizard. The script then deletes itself and its `cmdline.txt`
 entry. **The public image gives `pi` no sudo** (ADR-0139): `pi` runs the kiosk
-and Squeezelite, and a flaw in either would otherwise be a flaw as root.
+(the music services have accounts of their own, ADR-0179), and a flaw in it
+would otherwise be a flaw as root.
 Nothing in the player calls sudo; `verify-image.sh` asserts the image has no
 sudoers rule for `pi`, and only `DEV_SUDO="yes"` puts one on a test card.
 

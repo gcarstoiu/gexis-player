@@ -4,8 +4,8 @@
     "sha256": "1932d9d2d33877af2dc59c6463c1ebadb8d31a272b97942ed2a3b5d698983f40"
   },
   "go-librespot": {
-    "revision": 3,
-    "sha256": "fabbbe1d92256e92fb3b5f3dff3c69eb5f1b7245285cce65ff81a72848ac6dbb"
+    "revision": 4,
+    "sha256": "f9e4aeb11bbc855ecb2672039c9133c7517f52f98bb912df80dc704ce62a0504"
   },
   "nqptp": {
     "revision": 2,

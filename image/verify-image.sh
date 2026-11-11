@@ -232,6 +232,13 @@ for unit in gexis-snapserver gexis-snapclient; do
 	fi
 done
 
+# ADR-0179: the music services' accounts, made by their packages; none of
+# them runs as pi, the screen's user.
+passwd=$(dfs "cat /etc/passwd")
+for account in gexis-squeezelite gexis-spotify gexis-airplay gexis-snap; do
+	printf '%s\n' "$passwd" | grep -q "^${account}:" && ok "account ${account}" || bad "account ${account} missing"
+done
+
 # Every built-in manifest. A plugin the core cannot read is a
 # source the panel cannot draw (ADR-0086).
 # **Whatever is installed, not a list written here.** The first version of this

@@ -34,6 +34,8 @@ put 644 "$S/00-alsa/files/output.conf" "$DEF/output.conf"
 # --- Multiroom (12-multiroom, ADR-0166) ----------------------------------------
 put 644 "$S/12-multiroom/files/gexis-snapserver.service" "$U/gexis-snapserver.service"
 put 644 "$S/12-multiroom/files/gexis-snapclient.service" "$U/gexis-snapclient.service"
+# ADR-0179: their account, made by postinst.
+put 644 "$S/12-multiroom/files/snap-sysusers.conf" /usr/lib/sysusers.d/gexis-snap.conf
 # Debian's own units masked before they can start (Finding 139 #8): their
 # postinst enables and starts them, and the client would play to the output.
 # Shipped as the masks themselves, so they are there before the packages'
@@ -45,6 +47,7 @@ ln -s /dev/null "$STAGE/etc/systemd/system/snapclient.service"
 # --- Renderers (02-renderers) -------------------------------------------------
 put 644 "$S/02-renderers/files/squeezelite.service" "$U/squeezelite.service"
 put 755 "$S/02-renderers/files/squeezelite-mixer-check.sh" /usr/lib/gexis/squeezelite-mixer-check.sh
+put 644 "$S/02-renderers/files/squeezelite-sysusers.conf" /usr/lib/sysusers.d/gexis-squeezelite.conf
 put 644 "$S/02-renderers/files/bluealsa-aplay-override.conf" "$U/bluealsa-aplay.service.d/override.conf"
 put 644 "$S/02-renderers/files/bluealsa-override.conf" "$U/bluealsa.service.d/override.conf"
 put 755 "$S/02-renderers/files/gexis-bluetooth-setup.sh" /usr/lib/gexis/bluetooth-setup.sh
@@ -125,6 +128,13 @@ cat > "$STAGE/DEBIAN/postinst" <<'POSTINST'
 set -e
 [ "$1" = configure ] || exit 0
 DEF=/usr/share/gexis/defaults
+
+# ADR-0179: Squeezelite's and Snapcast's accounts, before anything starts
+# them. Not `|| true`: without them the units cannot start, and a failed
+# install goes back.
+if command -v systemd-sysusers >/dev/null; then
+	systemd-sysusers gexis-squeezelite.conf gexis-snap.conf
+fi
 
 # PeppyMeter's config comes with each version, but five of its keys are the
 # device's: the core writes the pack and screen it draws (ADR-0111) and the

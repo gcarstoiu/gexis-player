@@ -89,7 +89,14 @@ two waiters can never deadlock each other (ADR-0095 as amended).
 Renderers are upstream binaries, run as shipped; we configure them but do
 not build or patch them (ADR-0093). Each is a systemd unit. The core talks to
 each through that renderer's own control API, via an **adapter**
-(`core/src/gexis_core/adapters/`).
+(`core/src/gexis_core/adapters/`). **Each runs under an account of its own**
+(ADR-0179), none as `pi`, the screen's: `gexis-squeezelite`,
+`gexis-spotify` (go-librespot), `gexis-airplay` (Shairport Sync and its
+plugin), `gexis-snap` (the Snapcast server and client), `roonbridge`; each
+package makes its account with `systemd-sysusers`, and a unit that opens a
+sound device adds `audio`. go-librespot's unit gives its folder to its
+account at every start, since a restore puts the Spotify sign-in back as
+`pi`'s, as archives name it.
 
 | Renderer | Unit | Control channel (adapter) | Acquisition event | Release |
 |---|---|---|---|---|
@@ -163,7 +170,7 @@ Notes per renderer:
   (ADR-0119).
 - **AirPlay** (ADR-0167): Shairport Sync 5.6.2 and NQPTP 1.2.9, built by
   us for AirPlay 2 (`packaging/shairport-sync`, `packaging/nqptp`; Debian
-  trixie's is classic AirPlay only), run as `pi` like every renderer, with
+  trixie's is classic AirPlay only), run as `gexis-airplay` with its plugin, with
   `output_device = "output"` and `ignore_volume_control`: the sender's
   slider (`pvol` on the metadata pipe) is reported by the plugin and applied
   by the core. Its `run_this_before_entering_active_state` hook is waited
