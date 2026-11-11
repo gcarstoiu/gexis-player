@@ -2744,7 +2744,9 @@ class StateServer:
         plugin_id = request.match_info["id"]
         if not await self._store_remove(plugin_id, keep):
             return web.json_response({"error": f"{plugin_id} is not one to remove"}, status=404)
-        return web.json_response({"removed": plugin_id, "kept": keep})
+        # A restart it owes waits for these (the review of 1.16.1).
+        waits = self._catalogue.under_way() if self._catalogue is not None else []
+        return web.json_response({"removed": plugin_id, "kept": keep, "waits_for": waits})
 
     async def _handle_catalogue(self, request: web.Request) -> web.Response:
         """ADR-0168: what *Add plugins* shows of the catalogue. `?refresh=1` reads the

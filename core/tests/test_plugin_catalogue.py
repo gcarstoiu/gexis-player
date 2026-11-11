@@ -821,3 +821,17 @@ async def test_what_part_two_may_install_without_a_question(key, tmp_path):
     await svc.refresh()
     assert svc.offered("hello")["id"] == "hello"
     assert [svc.offered(i) for i in ("tv", "later", "spotify", "absent")] == [None] * 4
+
+
+async def test_the_installs_under_way_are_named(key, tmp_path):
+    keyring, sign = key
+    served, held_url = _two(sign)
+    release = asyncio.Event()
+    svc, calls = service(key, tmp_path, served)
+    svc.session = lambda: Held(served, held_url, release)
+    await svc.refresh()
+    assert svc.under_way() == []
+    svc.start_install("hub")
+    assert svc.under_way() == [svc.catalogue.entry("hub")["name"]]
+    release.set()
+    await _until(lambda: not svc.under_way())
