@@ -310,6 +310,34 @@ async def test_installs_that_overlap_restart_the_core_once_none_is_under_way(key
     assert calls["restarted"] == 1
 
 
+async def test_a_restart_owed_elsewhere_waits_for_an_install_under_way(key, tmp_path):
+    """The review of 1.16.1: a plugin blocked by a read of the catalogue
+    restarted the core at once, under another plugin's download, which was
+    lost. Owed with an install under way, the restart comes when it ends;
+    with none, at once."""
+    keyring, sign = key
+    served, held_url = _two(sign)
+    release = asyncio.Event()
+    svc, calls = service(key, tmp_path, served)
+    svc.session = lambda: Held(served, held_url, release)
+    await svc.refresh()
+    hub = svc.start_install("hub")
+    await svc.restart_once_idle()
+    assert hub.phase == "downloading" and calls["restarted"] == 0
+    release.set()
+    await _until(lambda: hub.phase == "installed")
+    await asyncio.sleep(0.05)
+    assert calls["restarted"] == 1
+    await svc.restart_once_idle()
+    assert calls["restarted"] == 2, "nothing under way: at once"
+
+
+def test_a_blocked_plugin_restarts_the_core_once_no_install_is_under_way():
+    from test_main_wiring import _closure
+    body = _closure("_switch_off_blocked")
+    assert "catalogue.restart_once_idle()" in body and "_restart_core_soon()" not in body
+
+
 async def test_a_restore_during_an_install_leaves_the_restart_to_the_last(key, tmp_path):
     keyring, sign = key
     served, held_url = _two(sign)

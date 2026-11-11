@@ -551,6 +551,13 @@ class Service:
                 await self._restart_when_idle()
         return False
 
+    async def restart_once_idle(self) -> None:
+        """**A restart owed for something else** (a plugin blocked; the
+        review of 1.16.1): at once with no install under way, else when the
+        last ends - it was cut off and lost."""
+        self._restart_owed = True
+        await self._restart_when_idle()
+
     async def _restart_when_idle(self) -> None:
         busy = any(j.phase in ("downloading", "installing") for j in self.jobs.values())
         if self._restart_owed and not busy and self.restart_core:
