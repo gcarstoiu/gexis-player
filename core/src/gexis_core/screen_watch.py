@@ -261,6 +261,17 @@ def at_start(seen: screen_detect.Seen | None = None, *, headless: bool | None = 
     current = screen_apply.read_state(state).get("current") or {}
     if current.get("chosen") and seen.connector == current.get("connector"):
         return "same"
+    # **A TV chosen is the screen while it is off** (the review of 1.16.1):
+    # on standby at a start - a power cut at night - it is not connected,
+    # and the panel took over at 0 deg, asked Keep there and went back with
+    # another restart. A screen without touch chosen stays; its picture
+    # comes when it is switched on. A touch panel chosen and then unplugged
+    # still gives way.
+    if current.get("chosen") and seen.connector != current.get("connector") \
+            and not screen_detect.has_touch(current.get("screen") or ""):
+        logger.info("screen: %s chosen on %s, not connected now; it stays the screen",
+                    current.get("screen"), current.get("connector"))
+        return "same"
     q = question(seen, headless=headless, path=path)
     if q is None:
         return moved(seen, headless=headless, files=files)
