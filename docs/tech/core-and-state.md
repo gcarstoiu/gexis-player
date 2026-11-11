@@ -628,9 +628,13 @@ pieces in code:
   ready, every 20 s after) and works out Starting, Adding its add-ons
   (until `lyrion-addons.done`), About to read your music, Reading your music
   (`rescan`, with Lyrion's own `progressname` and its count) or Ready (`info
-  total songs`), or Ready, no music yet with nowhere to read from - the
-  Music folder counts only while it holds a file (its `Playlists` folder and
-  hidden files aside), since Lyrion's scan of an empty one leaves no mark.
+  total songs`), or Ready, no music yet with nowhere chosen to read from.
+  **Ready, no music found** where folders are chosen and hold nothing
+  Lyrion reads, since its read of an empty folder leaves no mark: at once
+  for the Music folder alone and empty (it counts as somewhere to read only
+  while it holds a file, its `Playlists` folder and hidden files aside);
+  for a share or USB folder, once a read is seen to start and end with no
+  song, or none has started for 3 minutes (`lyrion_stage.Reads`, per core).
   It goes out as `components.lyrion.after` while the package is installed;
   in Settings as the Lyrion Server heading's indicator and the read-only
   `lyrion-server.library` row (`progress`, or `busy` with no count).
