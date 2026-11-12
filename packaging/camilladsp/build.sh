@@ -13,8 +13,9 @@ STAGE_DIR=/src/image/stage-gexis/11-equaliser
 : "${CAMILLADSP_VERSION:?} ${CAMILLADSP_ASSET:?} ${CAMILLADSP_URL:?} ${CAMILLADSP_SHA256:?}"
 # The revision after the dash is ours: raise it whenever what this package
 # carries besides CamillaDSP changes (its unit), or apt keeps the old one.
-# Back to -1 with each new CamillaDSP version.
-VERSION="${CAMILLADSP_VERSION#v}-1"
+# Back to -1 with each new CamillaDSP version. -2: the unit sandboxed and
+# its websocket on the chain's own address (the review of 1.16.1).
+VERSION="${CAMILLADSP_VERSION#v}-2"
 
 PKG=gexis-camilladsp
 STAGE=/tmp/stage/$PKG

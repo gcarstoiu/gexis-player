@@ -8,8 +8,9 @@ After=network-online.target
 
 [Service]
 ExecStart=/usr/bin/snapserver -c /run/gexis/snapserver.conf
-User=pi
-Group=audio
+# ADR-0179: an account of its own, not the screen's (pi).
+User=gexis-snap
+Group=gexis-snap
 # Its pipes, one per rate, and its own data, gone with it.
 RuntimeDirectory=gexis-snap
 # Off the system bus, so it announces nothing on the network (Finding 139):

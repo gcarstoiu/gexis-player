@@ -343,3 +343,41 @@ def test_a_screen_without_touch_on_the_dsi_connector_leaves_the_panel_s_touch_al
     screen_apply.write_state({"current": {"screen": "other-1920x1080-capped", "rotation": 0,
                                           "connector": "HDMI-A-2", "chosen": True}}, state)
     assert "i2c:edt_ft5x06" in sw.touch_rules(state, rules, run=lambda args, check=False: None)
+
+
+def test_a_dsi_panel_kept_beside_a_known_hdmi_panel_stays_the_screen(tmp_path, monkeypatch):
+    """The review of 1.16.1: the Waveshare 10.1" DSI-TOUCH-A (its overlay
+    written, no fingerprint) chosen and kept while the recognised 10.1" HDMI
+    (B) stayed on HDMI 1. Keep remembered the HDMI panel, and every start
+    moved the screen back to it and took the overlay out; with nobody to
+    keep that, it went back, restarted, and moved again (ADR-0158 D3: with
+    a DSI panel connected it is the screen)."""
+    from gexis_core import screen_apply, screens
+    from test_screen_detect import waveshare_dsi_and_hdmi
+    path, files = tmp_path / "seen.json", _files(tmp_path)
+    files["config"] = tmp_path / "config.txt"
+    files["config"].write_text("display_auto_detect=1\n")
+    current = lambda: screen_apply.read_state(files["state"]).get("current") or {}  # noqa: E731
+    monkeypatch.setattr(screen_detect, "_applied_connector", lambda: current().get("connector"))
+    monkeypatch.setattr(screen_detect, "_chosen_connector",
+                        lambda: current().get("connector") if current().get("chosen") else None)
+    drm, usb, i2c = waveshare_dsi_and_hdmi(tmp_path / "sys")
+    real_ports = screen_detect.ports
+    monkeypatch.setattr(screen_detect, "ports", lambda *a, **k: real_ports(drm, usb, i2c))
+    hdmi = next(p for p in real_ports(drm, usb, i2c) if p.connector == "HDMI-A-1")
+    screen_apply.choose(screen_apply.Applied("waveshare-10.1-hdmi-b", 0, "HDMI-A-1"), **files, now=1)
+    screen_apply.keep(state=files["state"])
+    sw.kept(hdmi, path)
+    # Attached screen -> the DSI model, as Settings applies it; the restart.
+    model = screens.by_id("waveshare-dsi-v2-10.1a")
+    applied = screen_apply.applied_on(model.id, 0, screen_apply.connector_for(model, ports=[]), state=files["state"])
+    assert screen_apply.choose(applied, **files, now=2), "a new overlay: Keep is asked"
+    assert sw.at_start(headless=False, setup_needed=False, path=path, files=files) == "pending"
+    # Keep, on the DSI panel.
+    screen_apply.keep(state=files["state"])
+    sw.kept(screen_detect.applied_port(), path)
+    assert sw.key(screen_detect.applied_port()) == ["DSI", None, "800x1280"]
+    for _ in range(2):
+        assert sw.at_start(headless=False, setup_needed=False, path=path, files=files) == "same"
+    assert screen_apply.read_state(files["state"])["current"]["connector"] == "DSI-1"
+    assert screen_apply.overlays_in(files["config"].read_text()) == model.overlays

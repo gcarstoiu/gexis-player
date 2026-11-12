@@ -126,12 +126,18 @@ def _write_hostname(host: str) -> None:
     _replace_line(HOSTS_PATH, r"^127\.0\.1\.1\s+.*$", f"127.0.1.1\t{names}")
 
 
-def _write_env(name: str) -> None:
+def env_text(name: str) -> str:
+    """`device-name.env` for `name`: the one line, and nothing else - four
+    units read the file as their environment."""
     # Quoted the way systemd documents for an EnvironmentFile: unquoted, a
     # backslash is an escape there too, and 'AC\\DC' reached squeezelite as
     # 'ACDC' while the core looked for the name as typed.
+    return f"{ENV_KEY}={plugin_env.quote(UNWRITABLE.sub(' ', name).strip())}\n"
+
+
+def _write_env(name: str) -> None:
     ENV_PATH.parent.mkdir(parents=True, exist_ok=True)
-    ENV_PATH.write_text(f"{ENV_KEY}={plugin_env.quote(name)}\n")
+    ENV_PATH.write_text(env_text(name))
 
 
 def _write_librespot(name: str) -> None:
@@ -219,14 +225,19 @@ def lms_player(fallback: str, path: Path | None = None) -> str:
     """
     path = path or ENV_PATH
     try:
-        for line in path.read_text().splitlines():
-            key, _, value = line.partition("=")
-            value = _unquoted(value.strip())
-            if key.strip() == ENV_KEY and value.strip():
-                return value.strip()
+        return name_in(path.read_text()) or fallback
     except OSError:
-        pass
-    return fallback
+        return fallback
+
+
+def name_in(text: str) -> str | None:
+    """The name a `device-name.env`'s text holds, or None."""
+    for line in text.splitlines():
+        key, _, value = line.partition("=")
+        value = _unquoted(value.strip())
+        if key.strip() == ENV_KEY and value.strip():
+            return value.strip()
+    return None
 
 
 def _unquoted(value: str) -> str:

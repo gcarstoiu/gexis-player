@@ -84,6 +84,87 @@ def test_paths_that_escape_the_package_are_refused(tmp_path):
         uploads.install(package(extra=[link]), ours=set(), root=tmp_path)
 
 
+def _shaped(*members) -> bytes:
+    """An archive member by member: (name, data) for a file, (name, None,
+    type, target) for a link."""
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w:gz") as tar:
+        for name, data, *link in members:
+            info = tarfile.TarInfo(name)
+            if data is None:
+                info.type, info.linkname = link
+                tar.addfile(info)
+            else:
+                info.size, info.mode = len(data), 0o755
+                tar.addfile(info, io.BytesIO(data))
+    return buf.getvalue()
+
+
+def _manifest(kind: str, version: str) -> bytes:
+    return json.dumps({"id": "quiet", "name": "Quiet", "kind": kind, "version": version, "run": "run"}).encode()
+
+
+RUN = ("run", b"#!/bin/sh\nexec sleep 1\n")
+
+
+@pytest.mark.parametrize("members, reason", [
+    # A second manifest after the first, read by the check in its place.
+    ([("plugin.json", _manifest("renderer", "9.9")), (".plugin.json", _manifest("service", "1.0"))], None),
+    ([("plugin.json", _manifest("renderer", "9.9")), ("./plugin.json", _manifest("service", "1.0"))], "twice"),
+    # The manifest a hard link to a file the archive writes again later.
+    ([("x.json", _manifest("service", "1.0")), ("plugin.json", None, tarfile.LNKTYPE, "x.json"),
+      ("x.json", _manifest("renderer", "9.9"))], "twice"),
+    # The manifest written again through a link to the package's own folder.
+    ([("plugin.json", _manifest("service", "1.0")), ("sub", None, tarfile.SYMTYPE, "."),
+      ("sub/plugin.json", _manifest("renderer", "9.9"))], "inside a link"),
+])
+def test_the_manifest_checked_is_the_one_installed(tmp_path, members, reason):
+    """The review of 1.16.1: each of these was checked as a service at 1.0
+    and installed as a renderer at 9.9, with the sound card."""
+    archive = _shaped(*members, RUN)
+    try:
+        checked = uploads.check(archive, ours=set(), installed={})
+    except uploads.Refused as exc:
+        assert reason and reason in str(exc)
+    else:
+        assert reason is None and (checked.kind, checked.version) == ("renderer", "9.9")
+        return
+    with pytest.raises(uploads.Refused):
+        uploads.install(archive, ours=set(), root=tmp_path)
+    assert uploads.installed(tmp_path) == []
+
+
+def test_a_package_made_from_its_folder_still_installs(tmp_path):
+    """`tar -C folder .` names every member from `./`."""
+    archive = _shaped(("./", None, tarfile.DIRTYPE, ""), ("./plugin.json", _manifest("service", "1.0")),
+                      ("./run", RUN[1]))
+    assert uploads.install(archive, ours=set(), root=tmp_path).kind == "service"
+    assert [p.id for p in uploads.installed(tmp_path)] == ["quiet"]
+
+
+def test_a_file_listed_twice_the_same_still_installs(tmp_path):
+    """`tar -czf p.tar.gz plugin.json run .` lists each file twice, the same."""
+    manifest = _manifest("service", "1.0")
+    archive = _shaped(("plugin.json", manifest), RUN, ("./", None, tarfile.DIRTYPE, ""),
+                      ("./plugin.json", manifest), ("./run", RUN[1]))
+    assert uploads.install(archive, ours=set(), root=tmp_path).kind == "service"
+
+
+def test_a_manifest_that_unpacks_other_than_checked_is_not_installed(tmp_path, monkeypatch):
+    """Whatever the archive's trick: what is unpacked is read again, and
+    installed only if it is what the check read."""
+    real = uploads.check
+
+    def checked_as_a_service(archive, **kw):
+        found = real(archive, **kw)
+        return uploads.replace(found, manifest={**found.manifest, "kind": "service"})
+    monkeypatch.setattr(uploads, "check", checked_as_a_service)
+    with pytest.raises(uploads.Refused, match="other than the one checked"):
+        uploads.install(_shaped(("plugin.json", _manifest("renderer", "1.0")), RUN), ours=set(), root=tmp_path)
+    assert uploads.installed(tmp_path) == []
+    assert not any((tmp_path / "quiet").iterdir()), "nothing left unpacked"
+
+
 def test_a_program_for_another_machine_is_refused(tmp_path):
     with pytest.raises(uploads.Refused, match="aarch64"):
         uploads.install(package(files={"bin/radiofoo": ELF_X86}), ours=set(), root=tmp_path)
@@ -214,3 +295,27 @@ def test_what_a_plugin_downloads_into_its_folder_can_run():
         lines = (files / unit).read_text().splitlines()
         assert "StateDirectory=gexis-uploaded/%i" in lines
         assert "ExecPaths=/var/lib/private/gexis-uploaded/%i" in lines, unit
+
+
+@pytest.mark.parametrize("rows, reason", [
+    ([{"key": "interval", "type": "number", "label": "Every (s)"}], "a number row needs min and max"),
+    ([{"key": "mode", "type": "choice", "label": "Mode"}], "a choice row needs options"),
+    ([{"key": "a", "type": "text", "label": "A"}, {"key": "a", "type": "text", "label": "A"}], "duplicate setting key"),
+    ([{"key": "a", "type": "text", "label": "A", "onlyWhen": ["nowhere", True]}], "onlyWhen names unknown setting"),
+])
+def test_settings_the_registry_would_refuse_are_refused_at_upload(tmp_path, rows, reason):
+    """ADR-0178 decision 4: a package whose rows Settings would leave out -
+    and once stopped the core with - is refused before anything is written,
+    with the registry's reason."""
+    m = {"id": "radiofoo", "name": "Radio Foo", "kind": "renderer", "version": "1.0.0", "run": "bin/radiofoo",
+         "settings": rows}
+    with pytest.raises(uploads.Refused, match=f"plugin.json: .*{reason}"):
+        uploads.install(package(m), ours={"lms"}, root=tmp_path)
+    assert not (tmp_path / "radiofoo").exists(), "nothing written"
+
+
+def test_usable_settings_still_install(tmp_path):
+    m = {"id": "radiofoo", "name": "Radio Foo", "kind": "renderer", "version": "1.0.0", "run": "bin/radiofoo",
+         "settings": [{"key": "interval", "type": "number", "label": "Every (s)", "min": 1, "max": 60},
+                      {"key": "enabled", "type": "toggle", "label": "On"}]}
+    assert uploads.install(package(m), ours={"lms"}, root=tmp_path).id == "radiofoo"

@@ -44,6 +44,9 @@ CONTRACTS = (1,)
 #: Read by itself once a day, and when *Add plugins* opens if older than this.
 EVERY_S = 24 * 3600
 FRESH_S = 15 * 60
+#: While a restore's plugin is not in yet: read again this soon, then twice
+#: as long after each miss, up to the daily read.
+RETRY_S = 60
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
 TIMEOUT = aiohttp.ClientTimeout(total=30)
 ARCHIVE_TIMEOUT = aiohttp.ClientTimeout(total=None, sock_connect=30, sock_read=60)
@@ -180,13 +183,19 @@ def last(*, keyring: Path = KEYRING, state: Path = STATE) -> Catalogue | None:
 
 
 async def _get(session: aiohttp.ClientSession, url: str, limit: int) -> bytes:
+    """The whole body, up to `limit`. **Read to its end**: one read gives
+    only what has arrived, and a catalogue longer than one TLS record was
+    cut short (the review of 1.16.1)."""
+    chunks, size = [], 0
     async with session.get(url, timeout=TIMEOUT, headers=HEADERS) as response:
         if response.status != 200:
             raise Unavailable(f"GitHub answered {response.status}")
-        data = await response.content.read(limit + 1)
-    if len(data) > limit:
-        raise Unavailable("it is larger than a catalogue can be")
-    return data
+        async for chunk in response.content.iter_chunked(1 << 16):
+            size += len(chunk)
+            if size > limit:
+                raise Unavailable("it is larger than a catalogue can be")
+            chunks.append(chunk)
+    return b"".join(chunks)
 
 
 def signature_url(url: str, serial: int) -> str:
@@ -372,7 +381,7 @@ class Service:
     state: Path = STATE
     url: str = URL
     session: Callable[[], aiohttp.ClientSession] | None = None
-    #: Restart the core once after installs that did not.
+    #: Restart the core for the installs that went in, once none is under way.
     restart_core: Callable[[], Awaitable[None]] | None = None
     #: ADR-0170: what each plugin's person agreed to (`uploads.granted`).
     granted: Callable[[], dict[str, tuple[str, ...]]] | None = None
@@ -391,6 +400,7 @@ class Service:
         except OSError:
             self.checked = None
         self._lock = asyncio.Lock()
+        self._restart_owed = False
 
     def _session(self) -> aiohttp.ClientSession:
         return self.session() if self.session else aiohttp.ClientSession()
@@ -516,14 +526,19 @@ class Service:
         return job, version, False
 
     async def _install(self, job: Job, version: dict, *, restart: bool = True) -> bool:
+        """**One restart for installs that overlap** (the review of 1.16.1):
+        the first in restarted the core under another's download, which was
+        lost. The core restarts when the last under way ends."""
         def progress(done: int, total: int) -> None:
             job.done, job.total = done, total
         try:
             async with self._session() as session:
                 archive = await fetch_archive(session, version, progress)
             job.phase = "installing"
-            await self.install_archive(archive, job.plugin_id, restart, version_permissions(version) or ())
+            await self.install_archive(archive, job.plugin_id, restart and self.restart_core is None,
+                                       version_permissions(version) or ())
             job.phase = "installed"
+            self._restart_owed = True
             return True
         except (Unavailable, uploads.Refused) as exc:
             job.phase, job.error = "failed", str(exc)
@@ -531,7 +546,33 @@ class Service:
         except Exception as exc:  # noqa: BLE001 - the row says it failed, whatever the cause
             job.phase, job.error = "failed", "it could not be installed"
             logger.exception("catalogue: %s %s not installed: %s", job.plugin_id, job.version, exc)
+        finally:
+            if restart:
+                await self._restart_when_idle()
         return False
+
+    def under_way(self) -> list[str]:
+        """The names of the installs downloading or installing, for a page
+        to say what a restart waits for."""
+        names = []
+        for job in self.jobs.values():
+            if job.phase in ("downloading", "installing"):
+                entry = self.catalogue.entry(job.plugin_id) if self.catalogue else None
+                names.append(entry["name"] if entry else job.plugin_id)
+        return names
+
+    async def restart_once_idle(self) -> None:
+        """**A restart owed for something else** (a plugin blocked; the
+        review of 1.16.1): at once with no install under way, else when the
+        last ends - it was cut off and lost."""
+        self._restart_owed = True
+        await self._restart_when_idle()
+
+    async def _restart_when_idle(self) -> None:
+        busy = any(j.phase in ("downloading", "installing") for j in self.jobs.values())
+        if self._restart_owed and not busy and self.restart_core:
+            self._restart_owed = False
+            await self.restart_core()
 
     async def restore(self, missing: list[dict]) -> list[str]:
         """After a restore, the plugins from the catalogue are installed from
@@ -568,17 +609,25 @@ class Service:
             if await self._install(job, version, restart=False):
                 logger.info("catalogue: %s %s installed again after a restore", job.plugin_id, job.version)
                 done.append(job.plugin_id)
-        if done and self.restart_core:
-            await self.restart_core()
+        await self._restart_when_idle()
         return done
 
     async def run(self, *, first_delay: float = 60, restore: list[dict] | None = None) -> None:
         """Read it a minute after the start, then once a day; after a
-        restore, sooner, and install from it what the restore needs."""
-        await asyncio.sleep(20 if restore else first_delay)
-        await self.refresh()
-        if restore:
-            await self.restore(restore)
+        restore, sooner, and install from it what the restore needs.
+        **Tried again until it is in** (the review of 1.16.1: once per start,
+        so a first read without the network left it to the next start), at
+        each read, and the reads sooner while it is not."""
+        owed = list(restore or [])
+        await asyncio.sleep(20 if owed else first_delay)
+        retry = RETRY_S
         while True:
-            await asyncio.sleep(EVERY_S)
             await self.refresh()
+            if owed:
+                done = set(await self.restore(owed)) | set(self.installed())
+                owed = [m for m in owed if m["id"] not in done]
+            if owed:
+                await asyncio.sleep(retry)
+                retry = min(retry * 2, EVERY_S)
+            else:
+                await asyncio.sleep(EVERY_S)

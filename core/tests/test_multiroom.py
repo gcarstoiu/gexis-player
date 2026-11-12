@@ -7,6 +7,7 @@ import asyncio
 
 import pytest
 
+from gexis_core import group as groups
 from gexis_core import multiroom as mr
 from gexis_core import outputs
 from gexis_core.adapters.base import Capabilities, VolumeMechanism
@@ -262,6 +263,25 @@ async def test_joining_another_group_is_refused_when_grouped_or_not_a_leader(tmp
         await garage.room.enter("office")
 
 
+async def test_a_leader_joined_to_another_group_leaves_its_own_led_by_a_member(tmp_path):
+    """The review of 1.16.1: the members it led were left silent, following
+    a leader no longer in their group."""
+    net = Net(tmp_path)
+    living, kitchen, study = net.add("living", "Living Room"), net.add("kitchen", "Kitchen"), net.add("study", "Study")
+    office = net.add("office", "Office")
+    await living.room.join("kitchen")
+    await living.room.join("study")
+    living.play("spotify")
+    await net.settle()
+    await office.room.join("living")
+    await net.settle()
+    assert living.room.record.leader == "office" and living.stopped == ["spotify"], "C1"
+    assert living.snap.host == "office.local"
+    for p in (kitchen, study):
+        assert p.room.record.ids() == ["kitchen", "study"] and p.room.record.leader == "kitchen"
+    assert kitchen.snap.host == "127.0.0.1" and study.snap.host == "kitchen.local"
+
+
 async def test_a_source_started_on_a_member_makes_it_the_leader_and_stops_the_old_ones(tmp_path):
     net = Net(tmp_path)
     living, kitchen = net.add("living", "Living Room"), net.add("kitchen", "Kitchen")
@@ -354,6 +374,45 @@ async def test_undo_keeps_the_music_on_the_leader_until_nothing_holds_the_device
     assert not living.snap.serving and living.room.chain is None
 
 
+@pytest.mark.parametrize("asked", ["kitchen", "living"])
+async def test_undo_while_the_leader_is_paused_waits_until_nothing_holds_the_device(tmp_path, asked):
+    """B3 as amended, the review of 1.16.1: paused, the stream into the
+    loopback has ended and Spotify still holds the device; going alone at
+    the undo restarted it under the paused session."""
+    net = Net(tmp_path)
+    living, kitchen = net.add("living", "Living Room"), net.add("kitchen", "Kitchen")
+    await living.room.join("kitchen")
+    living.play("spotify")
+    living.snap.rate = 44100
+    await net.settle()
+    living.store.set_metadata("spotify", TrackMetadata(transport="paused", source_type="spotify"))
+    living.snap.rate = None
+    await net.settle()
+    rechains = living.rechains
+    await net.players[asked].room.undo()
+    await net.settle()
+    assert living.room.record is None
+    assert living.rechains == rechains and living.snap.serving, "paused, Spotify still holds the device"
+    living.play(None)
+    await net.settle()
+    assert not living.snap.serving and living.room.chain is None and living.rechains == rechains + 1
+
+
+async def test_undo_while_lyrion_plays_on_the_leaders_own_chain_goes_alone_at_once(tmp_path):
+    # B2: Squeezelite keeps its chain going alone, so nothing waits for it.
+    net = Net(tmp_path)
+    living = net.add("living", "Living Room", lyrion=("server-uuid", "player-a"))
+    kitchen = net.add("kitchen", "Kitchen", lyrion=("server-uuid", "player-b"))
+    await net.settle()
+    await living.room.join("kitchen")
+    await net.settle()
+    living.play("lms")
+    await net.settle()
+    await living.room.undo()
+    await net.settle()
+    assert living.room.chain is None and not living.snap.serving
+
+
 async def test_a_source_taking_over_after_an_undo_is_not_restarted(tmp_path):
     """sofapi, 2026-10-28: the group undone while Bluetooth played; a cast
     took over, the stream ended between the two, and going alone restarted
@@ -374,6 +433,26 @@ async def test_a_source_taking_over_after_an_undo_is_not_restarted(tmp_path):
     living.play(None)
     await net.settle()
     assert not living.snap.serving and living.room.chain is None
+
+
+async def test_a_player_that_left_keeps_its_own_music_when_the_old_leader_returns(tmp_path):
+    """The review of 1.16.1 (C2): the leader off, Kitchen left the silent
+    group and played Spotify; the leader came back with the group it kept,
+    and Kitchen took it and stopped Spotify."""
+    net = Net(tmp_path)
+    living, kitchen, study = net.add("living", "Living Room"), net.add("kitchen", "Kitchen"), net.add("study", "Study")
+    await living.room.join("kitchen")
+    await living.room.join("study")
+    await net.settle()
+    net.off.add("living")
+    await kitchen.room.leave()
+    kitchen.play("spotify")
+    await net.settle()
+    net.off.clear()
+    statuses = {pid: p.status_for_others() for pid, p in net.players.items()}
+    await living.room._seen({k: v for k, v in statuses.items() if k != "living"})
+    await net.settle()
+    assert kitchen.room.record is None and kitchen.stopped == [] and kitchen.room.chain is None
 
 
 async def test_a_member_shows_the_leaders_now_playing_and_sends_it_the_controls(tmp_path):
@@ -476,6 +555,42 @@ async def test_a_chain_changed_on_a_round_keeps_the_member_hearing_the_group(tmp
     assert kitchen.snap.host == "living.local", "the client back after the rewrite"
 
 
+@pytest.mark.parametrize("kept", [None, outputs.WITHOUT_LOOPBACK])
+async def test_a_group_kept_without_its_chain_is_put_in_force_at_the_start(tmp_path, kept):
+    """The review of 1.16.1: a member started again after the fallback (its
+    chain not read at a start) or stopped between keeping the group and its
+    chain came up with `output.conf` written for a player alone and the
+    group's chain only written down: silent in the group."""
+    record = groups.Record.new(Member("living", "Living Room", "living.local"),
+                               Member("kitchen", "Kitchen", "kitchen.local"))
+    groups.write(record, tmp_path / "kitchen.json")
+    if kept:
+        mr.write_chain(kept, tmp_path / "kitchen-chain.json")
+    net = Net(tmp_path)
+    net.add("living", "Living Room")
+    kitchen = net.add("kitchen", "Kitchen")
+    assert kitchen.room.chain is None, "as `output.conf` was written at this start"
+    await kitchen.room.start()
+    await net.settle()
+    assert kitchen.room.chain == outputs.ALL and kitchen.rechains == 1
+    assert mr.read_chain(tmp_path / "kitchen-chain.json") == outputs.ALL
+    assert kitchen.snap.host == "living.local"
+
+
+async def test_a_group_kept_with_its_chain_is_not_written_again_at_the_start(tmp_path):
+    record = groups.Record.new(Member("living", "Living Room", "living.local"),
+                               Member("kitchen", "Kitchen", "kitchen.local"))
+    groups.write(record, tmp_path / "kitchen.json")
+    mr.write_chain(outputs.ALL, tmp_path / "kitchen-chain.json")
+    net = Net(tmp_path)
+    net.add("living", "Living Room")
+    kitchen = net.add("kitchen", "Kitchen")
+    await kitchen.room.start()
+    await net.settle()
+    assert kitchen.room.chain == outputs.ALL and kitchen.rechains == 0
+    assert kitchen.snap.host == "living.local"
+
+
 async def test_a_member_silent_for_a_round_does_not_change_the_chain(tmp_path):
     """The bar, 2026-10-28: sofapi, starting a 192 kHz stream, missed one
     round, and the bar's chain went to `all` and back half a minute later."""
@@ -525,6 +640,87 @@ async def test_lyrion_playing_on_its_own_is_stopped_on_joining(tmp_path):
     assert kitchen.stopped == ["lms"], "C1: not synced with the leader, its own music stops"
 
 
+class LyrionServer:
+    """One Lyrion server, as far as a group needs it: its syncs, and a pause
+    on any synced player pausing every one (the bar, 2026-10-28)."""
+
+    def __init__(self):
+        self.syncs: list[set[str]] = []
+        self.paused: set[str] = set()
+        self.unsynced: list[str] = []
+
+    def sync_of(self, player):
+        return next((s for s in self.syncs if player in s), {player})
+
+    def take(self, room_player, player):
+        """`room_player`'s Lyrion on this server, as `player`; its stop is the
+        adapter's release, `pause 1` then `power 0`."""
+        server = self
+
+        class Lms:
+            player_id, server_id = player, "server-uuid"
+
+            @property
+            def sync_group(self):
+                others = tuple(sorted(server.sync_of(player) - {player}))
+                return (min(server.sync_of(player)) if others else None, others)
+
+            async def power_on(self, other):
+                return True
+
+            async def sync_with(self, other):
+                joined = server.sync_of(player) | server.sync_of(other)
+                server.syncs = [s for s in server.syncs if not s & joined] + [joined]
+                return True
+
+            async def unsync(self, other=None):
+                target = other or player
+                server.unsynced.append(target)
+                server.syncs = [s - {target} for s in server.syncs if len(s - {target}) > 1]
+                return True
+        room_player.room._lms = Lms()
+        stop = room_player.room._stop_source
+
+        async def stop_source():
+            if room_player.active == "lms":
+                server.paused |= server.sync_of(player)
+            return await stop()
+        room_player.room._stop_source = stop_source
+
+
+@pytest.mark.parametrize("study_lyrion", [None, ("another-server", "player-c")])
+async def test_a_player_off_the_groups_lyrion_joining_does_not_pause_the_group(tmp_path, study_lyrion):
+    """The review of 1.16.1 (C3): the group played Lyrion in Lyrion's own
+    sync; a player without Lyrion, or on another server, joined, and
+    Kitchen's Lyrion - still synced - was stopped as its own music, with
+    Lyrion's pause, which paused the leader's too."""
+    server = LyrionServer()
+    net = Net(tmp_path)
+    living = net.add("living", "Living Room", lyrion=("server-uuid", "player-a"))
+    kitchen = net.add("kitchen", "Kitchen", lyrion=("server-uuid", "player-b"))
+    net.add("study", "Study", lyrion=study_lyrion)
+    server.take(living, "player-a")
+    server.take(kitchen, "player-b")
+    await net.settle()
+    await living.room.join("kitchen")
+    await net.settle()
+    assert server.sync_of("player-a") == {"player-a", "player-b"}, "the group's own sync (D2)"
+    living.play("lms")
+    kitchen.room.peers.states["living"] = {"active": "lms"}
+    kitchen.play("lms")
+    await net.settle()
+    await living.room.join("study")
+    for _ in range(3):
+        await net.settle()
+    assert living.room.chain == kitchen.room.chain == outputs.ALL
+    assert "player-a" not in server.paused, "the leader's Lyrion plays on"
+    assert server.unsynced == ["player-b"], "out of Lyrion's sync, which cannot carry the group"
+    kitchen.room._changed()  # Lyrion's word that it stopped there
+    await net.settle()
+    assert kitchen.stopped == ["lms"], "C1, once out of the sync"
+    assert "player-a" not in server.paused and living.stopped == []
+
+
 def test_a_leaders_relative_pictures_are_made_reachable():
     assert mr.absolute("/music/1/cover.jpg", "http://living.local:8090/") == \
         "http://living.local:8090/music/1/cover.jpg"
@@ -543,3 +739,42 @@ async def test_without_the_groups_loopback_a_member_still_hears_the_group(tmp_pa
     assert kitchen.room.chain == outputs.WITHOUT_LOOPBACK
     assert kitchen.snap.host == "living.local", "it plays the group's music through its own chain"
     assert living.room.chain == outputs.ALL
+
+
+async def test_without_the_groups_loopback_arbitration_asks_about_the_players_own_chain(tmp_path, monkeypatch):
+    """The review of 1.16.1: without the group's loopback, arbitration was
+    still pointed at it - the card missing - so every look at who holds the
+    device raised, and a joining member's change stopped before its client
+    started."""
+    from gexis_core import __main__ as core_main
+    from gexis_core import alsa
+    cards = tmp_path / "cards"
+    cards.write_text(" 0 [sndrpihifiberry]: HifiberryDac - snd_rpi_hifiberry_dac\n"
+                     "                      snd_rpi_hifiberry_dac\n"
+                     " 1 [Loopback       ]: Loopback - Loopback\n"
+                     "                      Loopback 1\n")
+    resolve = alsa.resolve_card_number
+    monkeypatch.setattr(alsa, "resolve_card_number", lambda card_id=None, cards_file=None: resolve(card_id, cards))
+    monkeypatch.setattr(alsa, "_card", "sndrpihifiberry")
+    monkeypatch.setattr(alsa, "_renderers_card", None)
+    monkeypatch.setattr(alsa, "_also_card", None)
+    monkeypatch.setattr(outputs, "eq_in_path", lambda card: False)
+    net = Net(tmp_path)
+    living, kitchen = net.add("living", "Living Room"), net.add("kitchen", "Kitchen")
+    kitchen.snap.card = False
+    monkeypatch.setattr(outputs, "group_in_path", lambda: kitchen.room.chain)
+
+    async def rechain():
+        # As `_group_rechain`: who holds the device first, then the cards
+        # watched (`_equaliser_follows`) and the client back.
+        kitchen.rechains += 1
+        alsa.playback_pcm_node()
+        core_main._watch_renderers_cards("sndrpihifiberry")
+        await kitchen.room.relisten()
+    kitchen.room._rechain = rechain
+    await living.room.join("kitchen")
+    await net.settle()
+    assert kitchen.room.chain == outputs.WITHOUT_LOOPBACK
+    assert alsa.renderers_card() == "sndrpihifiberry"
+    assert kitchen.snap.host == "living.local", "it hears the group"
+    assert kitchen.rechains == 1, "the fallback's chain written once"

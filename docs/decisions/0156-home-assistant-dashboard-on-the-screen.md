@@ -122,3 +122,11 @@ player's hands. Read from Home Assistant's documentation, not tried here.
 - How Chromium keeps a framed Home Assistant's sign-in (third-party storage
   is partitioned by the top-level site): whether it survives a reboot. Not
   needed with trusted networks.
+
+## Amended 2026-11-10 (ADR-0178)
+
+A link in the dashboard that opens a new window does nothing on the panel:
+the frame no longer allows pop-ups. Such a window opened over the player,
+with no way back by touch
+([ADR-0178](0178-fixes-from-the-review-of-1-16-1-that-change-what-is-seen.md)
+decision 3, George).

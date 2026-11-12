@@ -146,6 +146,49 @@ def test_a_plugin_s_queue_is_published_as_a_queue():
     assert "plugin_queue(session.id" in _closure("_plugin_event")
 
 
+def test_a_plugin_s_metadata_drops_what_cannot_be_published():
+    """The review of 1.16.1: a character UTF-8 cannot encode - half an emoji,
+    cut by its sender - and numbers that are not finite were kept. The first
+    stopped every broadcast; the second reached the screens as JSON they
+    refuse, or raised."""
+    import json
+
+    from gexis_core.__main__ import plugin_metadata
+
+    line = ('{"title": "Song \\ud83c", "artist": "A\\udcff B", "position": NaN, "duration": "Infinity", '
+            '"sample_rate": 1e400, "bit_depth": 24, "unavailable": ["next\\ud800"]}')
+    m = plugin_metadata("plexamp", json.loads(line))
+    assert (m.title, m.artist, m.unavailable) == ("Song ", "A B", frozenset({"next"}))
+    assert (m.position, m.duration, m.sample_rate, m.bit_depth) == (None, None, None, 24)
+    json.dumps(m.to_json(), allow_nan=False, ensure_ascii=False).encode("utf-8")
+
+
+def test_a_plugin_title_cut_mid_emoji_reaches_the_screens(tmp_path):
+    """As `main()` wires them: the moOde file's writer first, the broadcast
+    after it."""
+    import json
+
+    from gexis_core.__main__ import plugin_metadata
+    from gexis_core.adapters.base import Capabilities, VolumeMechanism
+    from gexis_core.metadata_file import MetadataFileWriter
+    from gexis_core.state import StateStore
+
+    caps = Capabilities(audio_connection="output", acquisition_events=frozenset(), supports_artwork=False,
+                        supports_sample_rate=False, volume_managed=False,
+                        volume_mechanism=VolumeMechanism.DUMMY_MIXER)
+    store = StateStore({"lms": caps})
+    store.add_renderer("plexamp", caps)
+    store.subscribe(MetadataFileWriter(tmp_path / "currentsong.txt").write)
+    broadcasts = []
+    store.subscribe(broadcasts.append)
+    store.set_active("plexamp")
+    message = json.loads('{"t": "metadata", "metadata": {"title": "Song \\ud83c", "artist": "A"}}')
+    store.set_metadata("plexamp", plugin_metadata("plexamp", message["metadata"]))
+    store.set_volume_raw(100)
+    assert broadcasts[-2].metadata.title == "Song " and broadcasts[-1].volume.raw == 100
+    assert "title=Song \n" in (tmp_path / "currentsong.txt").read_text()
+
+
 class _Stop(BaseException):
     """Ends a `run()` loop from inside a test, as a cancel would."""
 
@@ -382,3 +425,116 @@ def test_a_visualiser_not_running_with_skins_installed_is_started():
     assert up.index("visualiser_held['settling']") < up.index("await _restart_visualiser()"), \
         "held while the settling screen is up, as the restart itself is"
     assert "asyncio.ensure_future(_visualiser_running())" in MAIN.read_text()
+
+
+class _Card:
+    """The level control, as the room run writes it through the bridge."""
+
+    def __init__(self) -> None:
+        self.written: list[int] = []
+
+    async def write_hardware(self, raw: int) -> None:
+        self.written.append(raw)
+
+
+def _room_level(store: dict, card: _Card) -> tuple[dict, object]:
+    """`_room_loud`, `_room_quiet` and the restart's put-back as `main()`
+    defines them, over a store and the volume module's own scale."""
+    import logging
+    import types
+
+    from gexis_core import volume as vol
+
+    state = types.SimpleNamespace(volume=None)
+    ns = dict(vol.__dict__)
+    ns.update(
+        settings_store=types.SimpleNamespace(get=store.get, set=store.__setitem__),
+        state_store=types.SimpleNamespace(state=state), volume_bridge=card,
+        mute=vol.Mute(card.write_hardware, lambda: None),
+        fixed_now={"value": False}, room_level_up={"value": False},
+        ROOM_VOLUME_KEY="_room_volume_before", logger=logging.getLogger("test"),
+    )
+    for name in ("_room_loud", "_room_quiet", "_room_volume_after_restart"):
+        exec(_closure(name), ns)
+    return ns, state
+
+
+def _jack():
+    from gexis_core import mixer_scale
+    return mixer_scale.Scale(raw_min=-10239, raw_max=400, db_min=-102.39, db_step=0.01)
+
+
+async def test_the_level_before_a_measurement_goes_back_on_the_scale_in_force(monkeypatch):
+    """**The review of 1.16.1.** The level before a run was kept as a bare
+    raw and written back on whatever scale was in force at the end: the jack
+    standing in for HDMI mid-run got the software stage's -30 dB (raw 240)
+    as its own raw 240, above 0 dB."""
+    import types
+
+    from gexis_core import outputs
+    from gexis_core import volume as vol
+
+    soft, jack = outputs.SOFTVOL_SCALE, _jack()
+    monkeypatch.setattr(vol, "_scale", soft)
+    store, card = {}, _Card()
+    ns, state = _room_level(store, card)
+    state.volume = types.SimpleNamespace(raw=soft.raw(-30.0), muted=False)
+    await ns["_room_loud"]()
+    assert card.written[-1] == soft.top
+    vol.use_scale(jack)
+    await ns["_room_quiet"]()
+    assert jack.db(card.written[-1]) == -30.0
+    assert store["_room_volume_before"] is None
+
+
+async def test_a_run_cut_short_goes_back_on_the_output_the_restart_came_up_on(monkeypatch):
+    """A restart mid-run that comes up on another output (the review of
+    1.16.1): the software stage's -30 dB was written to the DAC2 HD as its
+    raw 240, its 0 dB."""
+    import types
+
+    from gexis_core import mixer_scale, outputs
+    from gexis_core import volume as vol
+
+    soft = outputs.SOFTVOL_SCALE
+    monkeypatch.setattr(vol, "_scale", soft)
+    store = {}
+    ns, state = _room_level(store, _Card())
+    state.volume = types.SimpleNamespace(raw=soft.raw(-30.0), muted=False)
+    await ns["_room_loud"]()
+    # The next start, on the DAC2 HD.
+    vol.use_scale(mixer_scale.DAC2_HD)
+    card = _Card()
+    ns, _ = _room_level(store, card)
+    await ns["_room_volume_after_restart"]()
+    assert mixer_scale.DAC2_HD.db(card.written[-1]) == -30.0
+
+
+async def test_a_level_kept_before_its_scale_was_goes_back_as_it_was(monkeypatch):
+    """A run cut short on 1.16.1 kept no scale: its raw is the scale's in
+    force, as it was taken then."""
+    from gexis_core import mixer_scale
+    from gexis_core import volume as vol
+
+    monkeypatch.setattr(vol, "_scale", mixer_scale.DAC2_HD)
+    card = _Card()
+    ns, _ = _room_level({"_room_volume_before": {"raw": 180, "muted": False}}, card)
+    await ns["_room_volume_after_restart"]()
+    assert card.written == [180]
+
+
+def test_the_carry_over_takes_carried_ids_out_of_the_plugins_page_record(tmp_path):
+    """The review of 1.16.1: a carried plugin's id stayed in `_plugins_added`,
+    so a Remove did not stick. The writer `main()` hands the carry-over, run
+    on a real store."""
+    from gexis_core import plugin_store
+    from gexis_core.settings import SettingsStore
+    [call] = [n for n in ast.walk(ast.Module(body=_main_body(), type_ignores=[]))
+              if isinstance(n, ast.Call) and ast.unparse(n.func) == "carry_over.carry"]
+    writer = next(k.value for k in call.keywords if k.arg == "write_added")
+    store = SettingsStore(tmp_path / "settings.db")
+    store.set(plugin_store.ADDED, ["beszel", "visualiser-skins"])
+    write = eval(compile(ast.Expression(writer), str(MAIN), "eval"),
+                 {"settings_store": store, "plugin_store": plugin_store})
+    write({"visualiser-skins"})
+    assert store.get(plugin_store.ADDED) == ["visualiser-skins"]

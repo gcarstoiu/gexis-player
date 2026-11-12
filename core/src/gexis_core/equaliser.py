@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import functools
 import math
+from array import array
 from dataclasses import dataclass, field, replace
 
 #: The bands' labels, low to high, and their centres (31.25 × 2ⁿ Hz).
@@ -80,16 +81,19 @@ def gains_from(value) -> tuple[int, ...]:
 
 # ---- the curve and the headroom (D3) ---------------------------------------
 
-#: The headroom is the worse of the two lowest rates, so the figure shown is
-#: one number whatever plays (decision, 2026-10-25). The higher rates come
-#: within 0.01 dB of them for every preset: the peak is in the bass and
-#: middle, where the rate changes nothing; near half the rate the top band
-#: narrows, which only lowers it.
-RATES = (44100, 48000)
+#: The headroom is the worst of every rate the stage runs at - a stream's, up
+#: to the loopback's 192 kHz, and a card's highest it converts to - so the
+#: figure shown is one number whatever plays (decision, 2026-10-25). It was
+#: the two lowest: for every preset the others come within 0.01 dB, the peak
+#: being in the bass and middle, but near half those rates the top bands
+#: narrow, and a treble boost of one's own rose up to 1.6 dB above its
+#: headroom at 96 kHz and higher (the review of 1.16.1).
+RATES = (44100, 48000, 88200, 96000, 176400, 192000, 352800, 384000, 705600, 768000)
 #: As the design samples it: 241 points from half an octave below the first
 #: band to 20 kHz.
 _POINTS = 241
 _OCT_END = math.log2(20000 / CENTRES[0])
+_FREQS = tuple(CENTRES[0] * 2 ** (-0.5 + (_OCT_END + 0.5) * j / (_POINTS - 1)) for j in range(_POINTS))
 
 
 def band_db(f0: float, gain: float, f: float, fs: float, q: float = Q) -> float:
@@ -114,16 +118,20 @@ def response_db(gains, f: float, fs: float = 48000) -> float:
     return sum(band_db(c, g, f, fs) for c, g in zip(CENTRES, gains))
 
 
+@functools.lru_cache(maxsize=1024)
+def _curve(f0: float, gain: float, q: float, fs: float) -> array:
+    """One filter's response at the curve's points below half the rate,
+    kept: a band takes 25 gains, and ten rates made each new setting cost
+    five times what two did."""
+    return array("d", (band_db(f0, gain, f, fs, q) for f in _FREQS if f < fs / 2))
+
+
 def peak_db(gains, fs: float = 48000, extra=()) -> float:
     """The highest point of the bands, and of `extra` filters (freq, gain,
     q) beside them."""
-    peak = 0.0
-    for j in range(_POINTS):
-        octave = -0.5 + (_OCT_END + 0.5) * j / (_POINTS - 1)
-        f = CENTRES[0] * 2 ** octave
-        if f < fs / 2:
-            peak = max(peak, response_db(gains, f, fs) + sum(band_db(f0, g, f, fs, q) for f0, g, q in extra))
-    return peak
+    curves = [_curve(c, g, Q, fs) for c, g in zip(CENTRES, gains) if g]
+    curves += [_curve(f0, g, q, fs) for f0, g, q in extra if g]
+    return max(0.0, max(map(sum, zip(*curves)), default=0.0))
 
 
 @functools.lru_cache(maxsize=256)
@@ -346,6 +354,14 @@ FORMATS = {
     "FLOAT_LE": "F32_LE",
     "FLOAT64_LE": "F64_LE",
 }
+
+
+def runs_at(rate: int) -> bool:
+    """**Whether the stage runs at `rate`**: CamillaDSP refuses a filter at
+    or above half the rate, so the 16 kHz band needs more than 32 kHz (room
+    correction's stop at 14 kHz). A 32 kHz radio stream was refused, and
+    played silence (the review of 1.16.1)."""
+    return rate > 2 * CENTRES[-1]
 
 
 def chunksize(rate: int) -> int:

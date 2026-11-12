@@ -40,7 +40,8 @@
   import BarUndoConfirm from '../group/BarUndoConfirm.svelte';
 
   //: `armsAt`: before this (performance.now()), a tray that came down by
-  //: itself takes no touch on its level or mute (App.svelte, VOLUME_ARM_MS).
+  //: itself takes no touch on its level or mute (App.svelte, VOLUME_ARM_MS),
+  //: nor on the quick changes (the review of 1.16.1).
   let { open, armsAt = 0, volume, active, onclose, onexternal, onactivity, onsettled, onhome, onvisualisation, ondashboard = null, onequaliser = null, onroom = null, rootless = false } = $props();
 
   //: ADR-0162 (design/source/20, Q06-Q09): the EQ button opens a second band
@@ -355,7 +356,7 @@
       <span class="eqbtn__chev" class:is-open={eqBand}></span>
     </button>
     <!-- ADR-0175 (design/source/29, Q05-Q08): room correction's, after it. -->
-    <RoomQuick host="bartray" onopen={goRoom} />
+    <RoomQuick host="bartray" {armsAt} onopen={goRoom} />
   {/if}
   {#if groupOffered}
     <!-- ADR-0166: beside the equaliser's, built as it is. -->
@@ -425,7 +426,7 @@
   </div>
   {#if eqBand}
     <div class="eqband">
-      <EqQuick host="bartray" onedit={goEqualiser} />
+      <EqQuick host="bartray" {armsAt} onedit={goEqualiser} />
     </div>
   {:else if second === 'group' && $group}
     <BarGroupBand g={$group} onadd={openAdd} onundo={() => (confirming = true)} onerror={(text) => vol.flash(text)} />

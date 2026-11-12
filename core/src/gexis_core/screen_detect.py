@@ -274,11 +274,11 @@ def seen(drm: Path = DRM, usb: Path = USB, prefer: str | None = "applied", i2c: 
     """**The screen's port**, and the USB devices. With one port connected,
     that one. With both (ADR-0141 D2: a panel on one, a sound bar on the
     other), in this order: the port the screen was applied on, if a known
-    panel is there; any port a known panel is on (a panel moved to HDMI 2
-    with a receiver now on HDMI 1); the port applied on, if anything is
-    there; else the first connected. Until 2026-10-12 it was always the
-    first connected, so a chosen second port could not hold. `prefer` is a
-    connector, or "applied" for screen.json's."""
+    panel is there or it is a DSI port; any port a known panel is on (a
+    panel moved to HDMI 2 with a receiver now on HDMI 1); the port applied
+    on, if anything is there; else the first connected. Until 2026-10-12 it
+    was always the first connected, so a chosen second port could not hold.
+    `prefer` is a connector, or "applied" for screen.json's."""
     connected = [p for p in ports(drm, usb, i2c) if p.connected]
     if not connected:
         return Seen(usb=usb_devices(usb))
@@ -301,11 +301,28 @@ def seen(drm: Path = DRM, usb: Path = USB, prefer: str | None = "applied", i2c: 
             prefer = None
     known = [p for p in connected if suggest(p) is not None]
     chosen = next((p for p in connected if p.connector == prefer), None)
-    if chosen is not None and chosen in known:
+    # **A DSI panel applied on is the screen while it is connected**
+    # (ADR-0158 D3; the review of 1.16.1): one whose overlay the player
+    # writes has no fingerprint, and a known panel on HDMI took its place at
+    # every start, taking the overlay out with it.
+    if chosen is not None and (chosen in known or chosen.dsi):
         return chosen
     if known:
         return known[0]
     return chosen or connected[0]
+
+
+def applied_port(drm: Path = DRM, usb: Path = USB, i2c: Path = I2C) -> Seen:
+    """**What is on the port the screen was applied on**, while something is
+    connected there; else `seen()`. What Keep remembers for the next start's
+    comparison: the screen kept, not another one `seen()` would name (the
+    review of 1.16.1)."""
+    try:
+        connector = _applied_connector()
+    except OSError:
+        connector = None
+    on = next((p for p in ports(drm, usb, i2c) if p.connected and p.connector == connector), None)
+    return on if on is not None else seen(drm, usb, i2c=i2c)
 
 
 def suggest(report: Seen) -> screens.Screen | None:

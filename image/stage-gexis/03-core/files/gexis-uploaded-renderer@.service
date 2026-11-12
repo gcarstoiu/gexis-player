@@ -70,6 +70,10 @@ RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
 # asks (the `announce` event).
 SocketBindDeny=ipv4:udp:5353
 SocketBindDeny=ipv6:udp:5353
+# The audio chain's control ports, CamillaDSP's and snapserver's, which take
+# orders from anyone (the review of 1.16.1): they listen on this loopback
+# address alone. 127.0.0.1, the player's own API included, stays open.
+IPAddressDeny=127.0.0.2
 # Limits (George, 2026-09-29: "Limit of 1gb"). MemoryMax holds only with
 # cgroup_enable=memory on the kernel command line, which the image sets.
 MemoryMax=1G

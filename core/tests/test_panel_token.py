@@ -7,6 +7,7 @@ import json
 import os
 import re
 import stat
+import subprocess
 from pathlib import Path
 
 from aiohttp.test_utils import TestClient, TestServer
@@ -105,3 +106,21 @@ def test_every_script_on_the_device_that_calls_the_panel_s_routes_sends_the_toke
         if calls and "/run/gexis/panel-token" not in text:
             missing.append((str(path.relative_to(REPO)), sorted(calls)))
     assert missing == []
+
+
+def test_the_park_at_shutdown_sends_the_token_on_curl_s_input_not_its_arguments(tmp_path):
+    """The review of 1.16.1: a command line is anyone's to read, even for the
+    moment a shutdown's curl runs."""
+    unit = (REPO / "image/stage-gexis/03-core/files/gexis-park.service").read_text()
+    stop = next(l for l in unit.splitlines() if l.startswith("ExecStop="))[len("ExecStop="):]
+    assert stop.startswith("/bin/sh -c '") and stop.endswith("'") and "%" not in stop and "\\" not in stop
+    (tmp_path / "token").write_text("the-token\n")
+    curl = tmp_path / "curl"
+    curl.write_text('#!/bin/bash\nprintf "%s\\n" "$@" > "$OUT.args"\ncat > "$OUT.input"\n')
+    curl.chmod(0o755)
+    script = stop[len("/bin/sh -c '"):-1].replace("/run/gexis/panel-token", str(tmp_path / "token")) \
+        .replace("/usr/bin/curl", str(curl))
+    subprocess.run(["sh", "-c", script], env={"OUT": str(curl), "PATH": os.environ["PATH"]}, check=True, timeout=10)
+    args = (tmp_path / "curl.args").read_text()
+    assert "the-token" not in args and "/renderers/park" in args
+    assert "X-Gexis-Panel: the-token" in (tmp_path / "curl.input").read_text()

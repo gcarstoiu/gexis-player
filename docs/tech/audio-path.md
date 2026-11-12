@@ -89,7 +89,14 @@ two waiters can never deadlock each other (ADR-0095 as amended).
 Renderers are upstream binaries, run as shipped; we configure them but do
 not build or patch them (ADR-0093). Each is a systemd unit. The core talks to
 each through that renderer's own control API, via an **adapter**
-(`core/src/gexis_core/adapters/`).
+(`core/src/gexis_core/adapters/`). **Each runs under an account of its own**
+(ADR-0179), none as `pi`, the screen's: `gexis-squeezelite`,
+`gexis-spotify` (go-librespot), `gexis-airplay` (Shairport Sync and its
+plugin), `gexis-snap` (the Snapcast server and client), `roonbridge`; each
+package makes its account with `systemd-sysusers`, and a unit that opens a
+sound device adds `audio`. go-librespot's unit gives its folder to its
+account at every start, since a restore puts the Spotify sign-in back as
+`pi`'s, as archives name it.
 
 | Renderer | Unit | Control channel (adapter) | Acquisition event | Release |
 |---|---|---|---|---|
@@ -163,7 +170,7 @@ Notes per renderer:
   (ADR-0119).
 - **AirPlay** (ADR-0167): Shairport Sync 5.6.2 and NQPTP 1.2.9, built by
   us for AirPlay 2 (`packaging/shairport-sync`, `packaging/nqptp`; Debian
-  trixie's is classic AirPlay only), run as `pi` like every renderer, with
+  trixie's is classic AirPlay only), run as `gexis-airplay` with its plugin, with
   `output_device = "output"` and `ignore_volume_control`: the sender's
   slider (`pvol` on the metadata pipe) is reported by the plugin and applied
   by the core. Its `run_this_before_entering_active_state` hook is waited
@@ -504,14 +511,20 @@ volume. An owner's own choice of Software or Fixed stands.
 
 **What a card takes is asked once per device** (Finding 125 #15,
 2026-10-14). `needs_plug` plays a second of zeroes to ask, so its answers -
-formats, lowest and highest rate - are kept by card id, with the device
-that gave them (`_asked_of`): for a USB card its sysfs path, bus number and
-device number, which the bus gives anew at every plug-in. Before
+formats, lowest and highest rate, the rates it takes - are kept by card id,
+with the device that gave them (`_asked_of`): for a USB card its sysfs path,
+bus number and device number, which the bus gives anew at every plug-in. Before
 `needs_plug`, `widens`, `squeezelite_options` or `native_dsd` read them,
 `_current()` drops them when that device has changed, so a DAC unplugged and
 another with the same card id plugged in is asked again rather than
 inheriting the first one's widening, rates and DSD. An I2S board or HDMI
 keeps its answers for the life of the core: only a reboot changes them.
+aplay prints a card's rates as a range even when it takes only some of
+them (the USB-to-optical adapter: 44.1, 48, 96 and 192 kHz), so a card
+not behind a conversion is then asked each standard rate in the range
+(`_probe_rates`: alsa-lib's `snd_pcm_hw_params_test_rate`, which sets and
+plays nothing); `takes_rate` answers from that list, the range standing
+only when the card cannot be asked.
 
 **Native DSD** (ADR-0144): `native_dsd()` names the card's DSD format from
 the same question (`DSD_U32_BE` first). With the volume Fixed (`write(...,
@@ -552,7 +565,9 @@ when Software is in force, and starts the renderers again. Renderer plugins
 through the same `output`; only sources that are switched on are restarted
 (`_restart_renderers()`), so a switched-off source stays off. Every level kept
 as a raw number - the one shown, Mute's, and the one before Fixed - is carried
-to the new output's scale through dB (`carry_raw()`, `_carry_levels()`); in
+to the new output's scale through dB (`carry_raw()`, `_carry_levels()`); the
+one a measurement keeps is stored with its scale and carried when it is put
+back, after a restart too (`keep_level()`, `level_kept()`); in
 Hardware the new card is given the level shown, in Fixed it is set to full
 scale. For 30 s afterwards
 the start guard answers a renderer's report above the level playing
@@ -597,7 +612,14 @@ renderer → pcm.output (meter, peppyalsa; integers only) → hw:Loopback,0,0
   card.
 - **CamillaDSP** (`gexis-camilladsp`, upstream's aarch64 release) runs as
   `gexis-equaliser.service`, started and stopped by the core only, waiting
-  on a websocket at `127.0.0.1:1234`. `eq_engine.py` drives it.
+  on a websocket at `127.0.0.2:1234`. `eq_engine.py` drives it. Its unit
+  can write nothing (`ProtectSystem=strict`, `ProtectHome`, `PrivateTmp`)
+  and opens only the sound devices (`DevicePolicy=closed`). The websocket
+  takes any configuration from whoever reaches it, so it listens on
+  `outputs.CONTROL_HOST`, a loopback address of the chain's own that
+  plugins' units are denied (`IPAddressDeny=`; the review of 1.16.1), and
+  so are the panel's browser, the Lyrion server, Roon Bridge, go-librespot,
+  Squeezelite and Shairport Sync.
 - **One stream at a time, at its own rate.** Whoever opens the loopback
   first sets its rate, format and channels, and it cannot be held across a
   change of rate (a 96 kHz stream opened while 44.1 kHz was held is given
@@ -610,15 +632,21 @@ renderer → pcm.output (meter, peppyalsa; integers only) → hw:Loopback,0,0
   rate and every resume after a pause (Squeezelite lets the device go 1 s
   into one). A rate the card lacks is converted to its highest
   (`AsyncSinc`), as Squeezelite's own resampler would, since Squeezelite
-  now sees the loopback, which takes every rate.
+  now sees the loopback, which takes every rate. One of 32 kHz or below,
+  where the 16 kHz band would sit at half the rate, which CamillaDSP refuses,
+  is converted to 48 kHz where the card takes it, else to its highest
+  (`eq_engine.playing_rate()`; a card's highest can be 768 kHz, where the
+  stage's cost is not measured).
 - **The bands** are ten Peaking filters (Q √2, 31.25 × 2ⁿ Hz), all in the
   pipeline at 0 dB too. A change is a `PatchConfig` of the bands that moved,
   heard at once; CamillaDSP's GraphicEqualizer is not used, because it
   rebuilds its filters on each change and clicks (Finding 138).
-- **The headroom** (D3) is the combined curve's peak at 44.1 and 48 kHz,
-  rounded up to 0.5 dB, on the fader Aux1 of a `Volume` filter that ramps
-  over 200 ms. It is set before each stream starts; when it rises the fader
-  moves first and the bands follow the ramp.
+- **The headroom** (D3) is the combined curve's peak at the worst of every
+  rate the stage runs at (`equaliser.RATES`, 44.1 to 768 kHz: near half the
+  lower rates the top bands narrow, so a treble boost peaks higher at the
+  higher ones), rounded up to 0.5 dB, on the fader Aux1 of a `Volume`
+  filter that ramps over 200 ms. It is set before each stream starts; when
+  it rises the fader moves first and the bands follow the ramp.
 - **The volume gives the headroom back** (D3 as amended): the level control
   after CamillaDSP - the card's own or the software stage - cuts that much
   less, so a setting plays as loud as Flat at the same level. Within twice
@@ -632,8 +660,10 @@ renderer → pcm.output (meter, peppyalsa; integers only) → hw:Loopback,0,0
   back on the quiet side of each change (after the lowering when it rises,
   before it when it falls) in 0.5 dB steps, and at once while nothing plays;
   the start, the boot step (`softvol_boot`) and a change of output put it in
-  force before the level is read or written. Not under Fixed, where the
-  control holds full scale under any give-back.
+  force before the level is read or written; a change of output or volume
+  type restarts the stage, which tells the volume again even at the same
+  headroom, and the volume moves it to the control now in use. Not under
+  Fixed, where the control holds full scale under any give-back.
 - **The meter** stays before it, over the loopback (D4): the visualiser
   shows the music as it arrives, on every output, HDMI included. `output`
   reaches the loopback through `copy` and `linear` to S32_LE, so float is
@@ -688,8 +718,11 @@ hw:Loopback,1,0 → CamillaDSP (headroom fader, ten bands, then fourteen filters
   ends. It brings the stage into the path if it was not, with the bands flat
   and no filters - the room as it is - sets the output to its maximum
   level (100 % of *Maximum volume*; Fixed stays fixed), and puts both back
-  at the end. Its signals are played into `output`, as a renderer's music is
-  (`aplay`, S32_LE, 48 kHz, one speaker at a time, then both), and recorded from the
+  at the end: the chain is written again whenever it is not the one wanted
+  then, as when the equaliser was switched on or off during the run (which
+  only syncs while a run needs the stage). Its signals are played into
+  `output`, as a renderer's music is (`aplay`, S32_LE, 48 kHz, one speaker
+  at a time, then both), and recorded from the
   UMIK-1 (`arecord` through `plughw`, mono 48 kHz), found by its USB
   identity `2752:0007` and its capture volume set to the full.
 - **The level step**: the quiet room recorded first; then band-limited pink
@@ -776,6 +809,9 @@ leader's snapserver → network (FLAC, 32 bits) → each member's snapclient →
   (`Snapcast.ensure_card`). It is never an output (`outputs.OURS`); in a
   group arbitration asks who holds *its* playback node, and with Lyrion's
   own sync also the chain Squeezelite plays to (`alsa.set_also_card`).
+  Where it cannot be made (the module held), the player's own chain takes
+  the group's music (`outputs.WITHOUT_LOOPBACK`), arbitration asks about
+  that chain, and a source started there plays there alone.
 - **`output.conf` in a group** (`outputs._grouped`): `output` pads every
   integer format to 32 bits into the group's loopback (float refused, as the
   equaliser's chain refuses it). The chain the player had alone becomes
@@ -787,7 +823,8 @@ leader's snapserver → network (FLAC, 32 bits) → each member's snapclient →
 - **The server** (`gexis-snapserver.service`, Debian's `snapserver`
   0.31.0) runs on every member, so whichever a source starts on leads at
   once. Its configuration is the core's (`/run/gexis/snapserver.conf`): no
-  HTTP, its JSON-RPC on `127.0.0.1:1705` only, the stream port 1704 for the
+  HTTP, its JSON-RPC on `127.0.0.2:1705` only (`outputs.CONTROL_HOST`, out
+  of plugins' reach as CamillaDSP's is), the stream port 1704 for the
   members, and one pipe stream per rate, 44.1 to 384 kHz at 32 bits. Its own
   ALSA source cannot be used: it holds the capture, which fixes the next
   stream's rate, and removing such a stream at runtime ends the server
@@ -815,7 +852,11 @@ leader's snapserver → network (FLAC, 32 bits) → each member's snapclient →
   as the group is (`<leader> sync <member>`, and `<member> sync -` out), and
   switches every member's player on while Lyrion plays there. Each member's
   own Squeezelite plays to its own chain, and its client is stopped while
-  Lyrion is its active source, so Squeezelite has the card.
+  Lyrion is its active source, so Squeezelite has the card. Once a member
+  without Lyrion, or on another server, is in the group (C3), the leader
+  takes the members' players out of its sync; until then a member's Lyrion
+  still in it is not stopped, as Lyrion's pause there pauses the leader
+  too.
 - **The units are the player's own.** Debian's `snapserver.service` and
   `snapclient.service` enable and start themselves on install, and the
   client would play to ALSA's default, which is `output`: `gexis-system`

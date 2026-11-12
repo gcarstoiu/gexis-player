@@ -18,7 +18,8 @@
   import PanelUndoConfirm from './group/PanelUndoConfirm.svelte';
 
   //: `armsAt`: before this (performance.now()), a drawer that opened by
-  //: itself takes no touch on its level or mute (App.svelte, VOLUME_ARM_MS).
+  //: itself takes no touch on its level or mute (App.svelte, VOLUME_ARM_MS),
+  //: nor on the group's or the quick changes (the review of 1.16.1).
   let { open, armsAt = 0, volume, active, onclose, onexternal, onactivity, onsettled, onequaliser = null, onroom = null } = $props();
 
   //: The level, dragging, mute and the changes from elsewhere: one copy,
@@ -88,7 +89,7 @@
   <div class="drawer__title">Controls</div>
   {#if g}
     <!-- ADR-0166 D6: grouped, the volume is the group's. -->
-    <PanelGroupVolume {g} onadd={() => (page = 'add')} onundo={() => (confirming = true)} onflash={flash} />
+    <PanelGroupVolume {g} {armsAt} onadd={() => (page = 'add')} onundo={() => (confirming = true)} onflash={flash} />
   {:else if $fixedOutput}
     <!--
       ADR-0046: the drawer still opens, so the answer is where the question
@@ -149,9 +150,9 @@
   {/if}
   <!-- ADR-0162 (design/source/20, Q01-Q05): the equaliser's quick change. -->
   <div class="eq">
-    <EqQuick host="drawer" onedit={() => { onclose?.(); onequaliser?.(); }} />
+    <EqQuick host="drawer" {armsAt} onedit={() => { onclose?.(); onequaliser?.(); }} />
     <!-- ADR-0175 (design/source/29, Q01-Q04): room correction's, under it. -->
-    <RoomQuick host="drawer" onopen={() => { onclose?.(); onroom?.(); }} />
+    <RoomQuick host="drawer" {armsAt} onopen={() => { onclose?.(); onroom?.(); }} />
   </div>
 </div>
 

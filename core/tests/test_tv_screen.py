@@ -401,3 +401,251 @@ def test_a_dsi_panel_counts_as_a_screen_for_the_boot_gap_and_setup(tmp_path):
     assert setup_network.panel_attached(drm)
     (drm / "card1-DSI-1" / "status").write_text("disconnected\n")
     assert not setup_network.panel_attached(drm)
+
+
+# --- Back from a TV: the port's own screen (the review of 1.16.1) -----------
+
+class _ScreenPort:
+    """`_choose_screen_port` as main() defines it - the closure itself, not
+    its source - run on files in a folder, with `ports` attached (a list a
+    test may change, as a restart does) and a TV on `tv`."""
+
+    def __init__(self, tmp_path, monkeypatch, ports, tv):
+        import functools
+        import inspect
+        import logging
+        import types
+        from gexis_core import screen_watch
+        from test_main_wiring import _closure
+        files = self.files = {"state": tmp_path / "screen.json", "env": tmp_path / "screen.env",
+                              "cmdline": tmp_path / "cmdline.txt", "config": tmp_path / "config.txt"}
+        files["cmdline"].write_text("console=tty1 root=PARTUUID=x rootwait\n")
+        files["config"].write_text("display_auto_detect=1\n")
+        self.ports = ports
+        monkeypatch.setattr(screen_detect, "ports", lambda *a, **k: list(self.ports))
+        monkeypatch.setattr(screen_detect, "tv_mode", lambda connector, drm=None: (1920, 1080) if connector == tv else None)
+
+        class Bound:
+            """screen_apply with its files in the folder."""
+            def __getattr__(self, name):
+                value = getattr(screen_apply, name)
+                if not inspect.isfunction(value):
+                    return value
+                params = inspect.signature(value).parameters
+                where = {k: v for k, v in files.items() if k in params}
+                if "path" in params and "state" not in params:
+                    where["path"] = files["state"]
+                return functools.partial(value, **where)
+
+        async def reboot():
+            return True
+
+        self.ns = dict(settings_store=types.SimpleNamespace(delete=lambda key: None), screen_detect=screen_detect,
+                       screen_apply=Bound(), screen_watch=screen_watch, screens=screens,
+                       state_store=types.SimpleNamespace(state=types.SimpleNamespace(setup=None)),
+                       _setup_running=lambda setup: False, _systemctl_reboot=reboot,
+                       asyncio=types.SimpleNamespace(sleep=None, ensure_future=lambda c: c.close()),
+                       logger=logging.getLogger("test"))
+        for name in ("_port_connector", "_port_label", "_screen_ports", "_choose_screen_port"):
+            exec(_closure(name), self.ns)
+
+    def choose(self, label):
+        self.ns["_choose_screen_port"](label)
+
+    def keep(self):
+        screen_apply.keep(state=self.files["state"])
+
+    def current(self):
+        return screen_apply.read_state(self.files["state"])["current"]
+
+
+DSI_PANEL = screen_detect.Seen(True, "DSI-1", None, None, (800, 480), (), ("edt_ft5x06", "rpi_touchscreen_attiny"))
+TV_ON_1 = screen_detect.Seen(True, "HDMI-A-1", "GSM", "LG TV", (3840, 2160), ())
+
+
+def test_back_from_a_tv_the_dsi_panel_is_its_model_at_its_rotation(tmp_path, monkeypatch):
+    """The Hosyond 7" picked and turned 180°, a TV chosen on HDMI 1, then
+    DSI again: it came back as the class at 0°, upside down on its stand
+    (ADR-0147 How D1: the panel's rotation goes back with it to its port;
+    ADR-0158 D2: a model picked keeps its name)."""
+    port = _ScreenPort(tmp_path, monkeypatch, [DSI_PANEL, TV_ON_1], tv="HDMI-A-1")
+    screen_apply.choose(Applied("hosyond-7-dsi", 180, "DSI-1"), **port.files, now=1)
+    port.keep()
+    port.choose("HDMI 1")
+    assert port.current() == {"screen": "other-1920x1080-capped", "rotation": 0, "connector": "HDMI-A-1",
+                              "chosen": True}
+    port.keep()
+    port.choose("DSI")
+    assert port.current() == {"screen": "hosyond-7-dsi", "rotation": 180, "connector": "DSI-1", "chosen": True}
+    assert "GEXIS_SCREEN_TRANSFORM=180\n" in port.files["env"].read_text()
+    assert screen_apply.settings_of(port.files["state"]) == {"screen": 'Hosyond/7" DSI Display (800x480)',
+                                                             "rotation": "180°"}
+
+
+def test_back_from_a_tv_the_hdmi_panel_keeps_its_rotation(tmp_path, monkeypatch):
+    """The same with the 10.1" (B) on HDMI 1 and a TV on HDMI 2."""
+    panel = screen_detect.Seen(True, "HDMI-A-1", "WAV", "WaveShare", (1280, 800), ("0712:0010",))
+    tv = screen_detect.Seen(True, "HDMI-A-2", "GSM", "LG TV", (3840, 2160), ("0712:0010",))
+    port = _ScreenPort(tmp_path, monkeypatch, [panel, tv], tv="HDMI-A-2")
+    screen_apply.choose(Applied("waveshare-10.1-hdmi-b", 180, "HDMI-A-1"), **port.files, now=1)
+    port.keep()
+    port.choose("HDMI 2")
+    port.keep()
+    port.choose("HDMI 1")
+    assert port.current() == {"screen": "waveshare-10.1-hdmi-b", "rotation": 180, "connector": "HDMI-A-1",
+                              "chosen": True}
+
+
+def test_the_panel_s_own_screen_outlasts_a_change_on_the_tv(tmp_path, monkeypatch):
+    """Kept per port, not only as the screen before: the TV turned in
+    between, or a state from before this was kept (the panel only in
+    `previous`), still brings the panel back as it was."""
+    port = _ScreenPort(tmp_path, monkeypatch, [DSI_PANEL, TV_ON_1], tv="HDMI-A-1")
+    screen_apply.choose(Applied("hosyond-7-dsi", 180, "DSI-1"), **port.files, now=1)
+    port.keep()
+    port.choose("HDMI 1")
+    port.keep()
+    screen_apply.choose(screen_apply.applied_on("other-1920x1080-capped", 180, "HDMI-A-1", state=port.files["state"]),
+                        **port.files, now=2)
+    port.keep()
+    assert screen_apply.read_state(port.files["state"])["previous"]["connector"] == "HDMI-A-1"
+    port.choose("DSI")
+    assert port.current()["screen"] == "hosyond-7-dsi" and port.current()["rotation"] == 180
+    screen_apply.write_state({"current": Applied("other-1920x1080-capped", 0, "HDMI-A-1", chosen=True).to_json(),
+                              "previous": Applied("hosyond-7-dsi", 180, "DSI-1").to_json(), "pending": False},
+                             port.files["state"])
+    port.choose("DSI")
+    assert port.current()["screen"] == "hosyond-7-dsi" and port.current()["rotation"] == 180
+
+
+def test_a_port_s_kept_screen_comes_back_only_while_it_is_the_one_there():
+    """Another panel recognised on the DSI port that needs other overlays,
+    or another screen on HDMI: what is there, at 0°."""
+    from gexis_core import screen_watch
+    hosyond = Applied("hosyond-7-dsi", 180, "DSI-1")
+    cls = screens.by_id(screens.TOUCH_DISPLAY_CLASS)
+    assert screen_watch.for_port(DSI_PANEL, cls, hosyond) == (screens.by_id("hosyond-7-dsi"), 180)
+    waveshare = Applied("waveshare-dsi-v2-10.1a", 180, "DSI-1")
+    assert screen_watch.for_port(DSI_PANEL, cls, waveshare) == (cls, 0), "the class needs no overlay"
+    goodix = screen_detect.Seen(True, "DSI-1", None, None, (800, 1280), (), ("goodix",))
+    laid_out = screen_watch.target(goodix)
+    assert screen_watch.for_port(goodix, laid_out, waveshare) == (screens.by_id("waveshare-dsi-v2-10.1a"), 180)
+    panel = screen_detect.Seen(True, "HDMI-A-1", "WAV", "WaveShare", (1280, 800), ("0712:0010",))
+    ten = screens.by_id("waveshare-10.1-hdmi-b")
+    assert screen_watch.for_port(panel, ten, Applied("waveshare-13.3-hdmi-h", 180, "HDMI-A-1")) == (ten, 0)
+    # A model picked for a screen nothing recognises: back while the size is its own.
+    monitor = screen_detect.Seen(True, "HDMI-A-1", "ABC", "M", (1024, 600), ())
+    picked = Applied("hmtech-10.1-hdmi-monitor", 180, "HDMI-A-1")
+    other = screen_watch.target(monitor)
+    assert screen_watch.for_port(monitor, other, picked) == (screens.by_id("hmtech-10.1-hdmi-monitor"), 180)
+    bigger = screen_detect.Seen(True, "HDMI-A-1", "ABC", "M", (1280, 720), ())
+    assert screen_watch.for_port(bigger, screen_watch.target(bigger), picked)[1] == 0
+    assert screen_watch.for_port(panel, ten, None) == (ten, 0)
+
+
+# --- A DSI panel whose driver line goes with a TV chosen over it -------------
+
+GOODIX = screen_detect.Seen(True, "DSI-1", None, None, (800, 1280), (), ("goodix",))
+HDMI_2_EMPTY = screen_detect.Seen(False, "HDMI-A-2")
+
+
+def test_dsi_is_still_offered_after_a_tv_took_its_driver_line(tmp_path, monkeypatch):
+    """ADR-0158 D3: an HDMI port chosen under Screen port wins, and choosing
+    DSI again goes back. The Waveshare 10.1" DSI-TOUCH-A needs its overlay
+    written; the TV's choice took it out, so after the restart the panel had
+    no driver, no connector, and DSI was not offered (the review of 1.16.1).
+    It is offered from the model kept there, and choosing it writes the
+    overlay back and asks Keep on the panel."""
+    port = _ScreenPort(tmp_path, monkeypatch, [GOODIX, TV_ON_1, HDMI_2_EMPTY], tv="HDMI-A-1")
+    model = screens.by_id("waveshare-dsi-v2-10.1a")
+    screen_apply.choose(Applied(model.id, 180, "DSI-1"), **port.files, now=1)
+    port.keep()
+    port.choose("HDMI 1")
+    port.keep()
+    assert screen_apply.overlays_in(port.files["config"].read_text()) == (), "the panel is dark: no driver"
+    port.ports = [TV_ON_1, HDMI_2_EMPTY]                         # the restart: no DSI connector
+    offered = port.ns["_screen_ports"]()
+    assert [port.ns["_port_label"](p.connector) for p in offered] == ["DSI", "HDMI 1", "HDMI 2"]
+    assert offered[0].connected and offered[0].dsi, "its line is the DSI panel's, not Nothing connected"
+    port.choose("DSI")
+    assert port.current() == {"screen": model.id, "rotation": 180, "connector": "DSI-1", "chosen": True}
+    assert screen_apply.overlays_in(port.files["config"].read_text()) == model.overlays
+    assert screen_apply.read_state(port.files["state"])["pending"], "Keep this screen? on the panel"
+
+
+def test_dsi_is_offered_from_memory_only_for_a_panel_a_port_was_chosen_over(tmp_path, monkeypatch):
+    """Not for the Touch Display class, whose connector the firmware makes
+    whenever the panel is there; not once DSI is the screen again or nothing
+    was chosen over it; not with its connector there."""
+    port = _ScreenPort(tmp_path, monkeypatch, [TV_ON_1, HDMI_2_EMPTY], tv="HDMI-A-1")
+    labels = lambda: [port.ns["_port_label"](p.connector) for p in port.ns["_screen_ports"]()]  # noqa: E731
+    state = port.files["state"]
+    screen_apply.write_state({"current": Applied("other-1920x1080-capped", 0, "HDMI-A-1", chosen=True).to_json(),
+                              "kept_on": {"DSI-1": {"screen": "hosyond-7-dsi", "rotation": 180}}}, state)
+    assert labels() == ["HDMI 1", "HDMI 2"], "found by the firmware: its port is there whenever it is"
+    screen_apply.write_state({"current": Applied("other-1920x1080-capped", 0, "HDMI-A-1").to_json(),
+                              "kept_on": {"DSI-1": {"screen": "waveshare-dsi-v2-10.1a", "rotation": 0}}}, state)
+    assert labels() == ["HDMI 1", "HDMI 2"], "not chosen over it"
+    screen_apply.write_state({"current": Applied("other-1920x1080-capped", 0, "HDMI-A-1", chosen=True).to_json(),
+                              "kept_on": {"DSI-1": {"screen": "waveshare-dsi-v2-10.1a", "rotation": 0}}}, state)
+    assert labels() == ["DSI", "HDMI 1", "HDMI 2"]
+    port.ports = [GOODIX, TV_ON_1, HDMI_2_EMPTY]
+    assert labels() == ["DSI", "HDMI 1", "HDMI 2"], "once, from the port itself"
+    # A state from before `kept_on`: the panel as the screen before the TV.
+    port.ports = [TV_ON_1, HDMI_2_EMPTY]
+    screen_apply.write_state({"current": Applied("other-1920x1080-capped", 0, "HDMI-A-1", chosen=True).to_json(),
+                              "previous": Applied("waveshare-dsi-v2-10.1a", 0, "DSI-1").to_json()}, state)
+    assert labels() == ["DSI", "HDMI 1", "HDMI 2"]
+
+
+def test_screen_port_lists_and_names_the_ports_it_can_choose():
+    """The options, their lines and whether the row shows come from the same
+    list `_choose_screen_port` chooses from."""
+    from test_main_wiring import _closure, MAIN
+    main = MAIN.read_text()
+    assert '"screen_port": lambda: [_port_label(p.connector) for p in _screen_ports()]' in main
+    assert "for p in _screen_ports()}}," in main
+    assert "and len(_screen_ports()) >= 2" in main and "and len(_screen_ports()) == 1" in main
+    for name in ("_port_line", "_choose_screen_port"):
+        assert "for p in _screen_ports() if p.connector == connector" in _closure(name), name
+
+
+# --- A TV chosen and off at a start (the review of 1.16.1, E1) ---------------
+
+def _tv_chosen(tmp_path, screen="other-1920x1080-capped", connector="HDMI-A-2"):
+    from gexis_core import screen_watch
+    f = {"state": tmp_path / "screen.json", "env": tmp_path / "screen.env", "cmdline": tmp_path / "cmdline.txt",
+         "config": tmp_path / "config.txt"}
+    f["cmdline"].write_text(f"console=tty1 video={connector}:1920x1080\n")
+    f["config"].write_text("[all]\n")
+    screen_apply.write_state({"current": Applied(screen, 0, connector, chosen=True).to_json(), "previous": None,
+                              "pending": False,
+                              "kept_on": {"DSI-1": {"screen": "hosyond-7-dsi", "rotation": 180}}}, f["state"])
+    seen = tmp_path / "seen.json"
+    screen_watch.kept(screen_detect.Seen(True, connector, "GSM", "LG TV", (1920, 1080), ()), seen)
+    return f, seen
+
+
+def test_a_tv_chosen_and_off_at_a_start_stays_the_screen(tmp_path):
+    """The TV on standby when the player starts - a power cut at night -
+    leaves only the panel connected. The player restarted onto the panel at
+    0 deg, asked Keep there, and went back with another restart two minutes
+    later. The TV stays the screen; its picture comes when it is switched on."""
+    from gexis_core import screen_watch
+    f, seen = _tv_chosen(tmp_path)
+    before = f["state"].read_text(), f["cmdline"].read_text()
+    panel = screen_detect.Seen(True, "DSI-1", None, None, (800, 480), (), ("edt_ft5x06",))
+    assert screen_watch.at_start(panel, headless=False, setup_needed=False, path=seen, files=f) == "same"
+    assert (f["state"].read_text(), f["cmdline"].read_text()) == before
+    nothing = screen_detect.Seen(False)
+    assert screen_watch.at_start(nothing, headless=False, setup_needed=False, path=seen, files=f) == "same"
+
+
+def test_a_touch_panel_chosen_and_gone_still_gives_way(tmp_path):
+    """A screen with touch of its own chosen and then unplugged: the screen
+    attached is switched to, as before."""
+    from gexis_core import screen_watch
+    f, seen = _tv_chosen(tmp_path, screen="waveshare-10.1-hdmi-b", connector="HDMI-A-1")
+    screen_watch.kept(screen_detect.Seen(True, "HDMI-A-1", "WAV", "WaveShare", (1280, 800), ("0712:0010",)), seen)
+    monitor = screen_detect.Seen(True, "HDMI-A-2", "ABC", "M", (1024, 600), ())
+    assert screen_watch.at_start(monitor, headless=False, setup_needed=False, path=seen, files=f) != "same"

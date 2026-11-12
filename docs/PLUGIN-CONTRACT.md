@@ -190,6 +190,9 @@ Taken from `Adapter` and `Capabilities` as they are. The prose for each is in
   absent and draws nothing. `track_id`, `title`, `artist`, `album`, `year`,
   `artwork`, `artwork_small`, `sample_rate` (Hz), `bit_depth` (bits; added 2026-10-02), `codec`, `position`, `duration`,
   `transport`, `source_type`, `shuffle`, `repeat`, `unavailable`.
+  *Noted 2026-11-10:* a number that is not one, or not finite (`NaN`,
+  `Infinity`), is dropped, and so is a character UTF-8 cannot encode (half
+  of a surrogate pair) in the text.
 - **`queue`** — only a renderer that has one (ADR-0038 §5). Others send a
   stream and no queue. *Noted 2026-10-12:* each entry of the list has the
   same fields as `metadata`, read the same way; anything but a list is no
@@ -327,9 +330,11 @@ had.
 
 A renderer's rows land in **Sources**, under a sub-heading carrying its name,
 which is the shape the three built-ins already have. A service's land in
-**System**, same shape. Rows that fail the registry's own validation are dropped
-with the reason logged rather than taking the device down: one badly packaged
-plugin must not cost the others.
+**System**, same shape. A package whose rows fail the registry's own
+validation is refused at upload, with the registry's reason (ADR-0178); one
+already installed that fails it is left out of Settings, its switch with
+them, and the reason logged, rather than taking the device down: one badly
+packaged plugin must not cost the others.
 
 **A row may hide behind another with `onlyWhen`** (ADR-0044's vocabulary), and
 **it names your rows, not the core's**: the key is prefixed exactly as `key` is,

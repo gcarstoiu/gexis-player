@@ -210,7 +210,8 @@ class Multiroom:
 
     async def start(self) -> None:
         """At the core's start: a group kept from before is put back in force
-        (decision 3). The chain was written with it already (`chain`)."""
+        (decision 3). The chain was written with it already (`chain`) - or,
+        where none was read, it is put in force here."""
         self.watch()
         record = self.group.record
         if record is None:
@@ -219,9 +220,14 @@ class Multiroom:
                     len(record.members), record.leader)
         self.peers.follow(self._others(record))
         if self.chain is None:
-            self.chain = outputs.ALL
-            write_chain(self.chain, self._chain_path)
-        await self._card_or_fallback()
+            # **`output.conf` was written for a player alone** at this start
+            # (the fallback's chain is not read, or none was kept): with the
+            # group's only written down, the member was silent (the review
+            # of 1.16.1).
+            if await self._card_or_fallback():
+                await self._set_chain(self._chain_for(record))
+        else:
+            await self._card_or_fallback()
         await self.snap.serve(True)
         await self._listen()
         self._changed()
@@ -497,10 +503,13 @@ class Multiroom:
         """**Lyrion plays here in its own sync with the group's leader**, on
         one server, so Lyrion carries the group (D2) - not this player's own
         music to stop (C1). Stopping it paused the sync it plays in (the
-        bar, 2026-10-28: synced in a Lyrion app while it played)."""
+        bar, 2026-10-28: synced in a Lyrion app while it played). **So too
+        where the group can no longer be Lyrion's sync** (C3) until the
+        leader takes it out of the sync (`_lms_follow`; the review of 1.16.1:
+        a player off the group's Lyrion joined, and a member's stop paused
+        the leader's Lyrion)."""
         lms = self._lms
-        if (lms is None or self._local_active() != "lms"
-                or self._chain_for(record) != outputs.BUT_LYRION):
+        if lms is None or self._local_active() != "lms":
             return False
         leader = (self._lyrion_of(record.leader) or {}).get("player")
         master, others = lms.sync_group
@@ -582,8 +591,9 @@ class Multiroom:
 
     async def _enter(self, record: Record) -> None:
         self._alone_when_idle = False
-        made = await self._card_or_fallback()
-        await self._set_chain(self._chain_for(record) if made else outputs.WITHOUT_LOOPBACK)
+        if await self._card_or_fallback():
+            await self._set_chain(self._chain_for(record))
+        # Else the fallback's chain is in force already.
         await self.snap.serve(True)
         await self._listen()
 
@@ -598,11 +608,15 @@ class Multiroom:
         if self._lms is not None and self._lms_on() and self._lms.sync_group[1]:
             self._lms_commanded = time.monotonic()
             await self._lms.unsync()
-        if old.leader == self.group.me and self.snap.rate is not None:
-            # The music stays on the leader: through its own server until the
-            # stream ends, so nothing is cut.
+        active = self._local_active()
+        # Lyrion on this player's own chain is not restarted by it (B2).
+        holds = active is not None and not (active == "lms" and self.chain == outputs.BUT_LYRION)
+        if old.leader == self.group.me and (self.snap.rate is not None or holds):
+            # The music stays on the leader: through its own server until
+            # nothing holds the device, a pause included (B3 as amended; the
+            # review of 1.16.1: a paused source was restarted at the undo).
             self._alone_when_idle = True
-            logger.info("multiroom: the group is undone; playing on alone once this stream ends")
+            logger.info("multiroom: the group is undone; playing on alone once nothing holds the device")
             return
         await self._alone()
 
@@ -748,11 +762,25 @@ class Multiroom:
 
     async def _lms_follow(self) -> None:
         """The leader keeps Lyrion's sync as the group is: every member's
-        player synced to its own, and switched on while Lyrion plays here."""
+        player synced to its own, and switched on while Lyrion plays here -
+        or, where Lyrion cannot sync the group (C3), none of them."""
         record = self.group.record
         lms = self._lms
         if (record is None or lms is None or not self._lms_on() or lms.player_id is None
-                or record.leader != self.group.me or self.chain != outputs.BUT_LYRION):
+                or record.leader != self.group.me):
+            return
+        if self.chain == outputs.ALL:
+            # Out of this one's sync, so a member's own stop - Lyrion's
+            # pause - does not pause the music here (the review of 1.16.1).
+            members = {(self._lyrion_of(m.id) or {}).get("player") for m in self._others(record)}
+            synced = set(lms.sync_group[1]) & members
+            if synced:
+                self._lms_commanded = time.monotonic()
+                for player in sorted(synced):
+                    await lms.unsync(player)
+                logger.info("multiroom: Lyrion cannot sync the group; %d out of its sync", len(synced))
+            return
+        if self.chain != outputs.BUT_LYRION:
             return
         wanted = set()
         for member in self._others(record):

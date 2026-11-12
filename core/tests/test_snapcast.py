@@ -28,11 +28,20 @@ IDLE = PLAYING_44.replace(": values=on", ": values=off")
 def test_the_server_answers_this_player_only_and_has_a_pipe_per_rate(tmp_path):
     conf = snapcast.server_config(400, run_dir=tmp_path)
     assert "[http]\nenabled = false" in conf, "no web page, no HTTP control"
-    assert "bind_to_address = 127.0.0.1\nport = 1705" in conf, "control on loopback only"
+    # Control on loopback only, and on the address plugins are kept off
+    # (the review of 1.16.1: it takes orders from whoever reaches it).
+    assert f"bind_to_address = {outputs.CONTROL_HOST}\nport = 1705" in conf
     assert "port = 1704" in conf and "buffer = 400" in conf
     for rate in snapcast.RATES:
         assert f"pipe://{tmp_path}/{rate}?name=r{rate}&mode=create&sampleformat={rate}:32:2" in conf
     assert "initial_volume = 100" in conf, "D6: Snapcast's own volume never scales"
+
+
+def test_the_buffer_is_a_second(tmp_path):
+    # George, 2026-11-12: at 400 ms the bar, on Wi-Fi, came in seconds after
+    # the leader at a start, and lost its connection at 88.2 kHz and above.
+    assert snapcast.BUFFER_MS == 1000
+    assert "buffer = 1000" in snapcast.server_config(run_dir=tmp_path)
 
 
 def test_the_client_is_told_the_leader_its_id_and_only_a_format_its_card_needs():
@@ -177,7 +186,7 @@ async def test_the_control_connection_is_kept_and_passes_the_servers_notices_on(
             writer.write((json.dumps({"id": request["id"], "jsonrpc": "2.0",
                                       "result": {"echo": request["method"]}}) + "\r\n").encode())
             await writer.drain()
-    server = await asyncio.start_server(serve, "127.0.0.1", 0)
+    server = await asyncio.start_server(serve, outputs.CONTROL_HOST, 0)
     port = server.sockets[0].getsockname()[1]
     control = snapcast.Control(port=port)
     notices = []
@@ -190,3 +199,26 @@ async def test_the_control_connection_is_kept_and_passes_the_servers_notices_on(
     await control.close()
     server.close()
     await server.wait_closed()
+
+
+@pytest.mark.parametrize("args", [("192.0.2.1\nLD_PRELOAD=/x.so", "abc"), ("192.0.2.1", "abc\nX=1"),
+                                  ("192.0.2.1", "abc", "*:16:*\nX=1"), ("a b", "abc")])
+def test_the_client_s_environment_takes_no_line_of_anyone_else_s(args):
+    """**The review of 1.16.1** (high): the leader's host was written as it
+    came, and a line break in it was a variable of its own for systemd."""
+    host, host_id, *fmt = args
+    with pytest.raises(ValueError):
+        snapcast.client_env(host, host_id, 0, fmt[0] if fmt else None)
+
+
+def test_a_host_the_client_cannot_take_stops_it_rather_than_writing_it(tmp_path, monkeypatch):
+    ran = []
+    monkeypatch.setattr(snapcast, "CLIENT_ENV", tmp_path / "snapclient.env")
+
+    async def run(*argv, **_):
+        ran.append(argv)
+        return 0, ""
+    snap = snapcast.Snapcast(run=run)
+    asyncio.run(snap.listen("192.0.2.1\nLD_PRELOAD=/x.so", "abc"))
+    assert not (tmp_path / "snapclient.env").exists()
+    assert not any("restart" in argv for argv in ran)

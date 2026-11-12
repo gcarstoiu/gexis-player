@@ -654,24 +654,27 @@
   }
   //: The core restarts 1.5 s after it answers. Back is a `/settings` that
   //: answers after one that did not - or, if the restart was never seen,
-  //: after 10 s.
-  async function waitForRestart() {
+  //: after 10 s. **A restart that waits for a download** (the review of
+  //: 1.16.1: it cut a catalogue install off) is waited for until it is seen.
+  async function waitForRestart(waiting = false) {
     const started = Date.now();
     let seenDown = false;
-    while (Date.now() - started < 90000) {
+    while (Date.now() - started < (waiting ? 600000 : 90000)) {
       await new Promise((r) => setTimeout(r, 1000));
       const up = await askPlayer('/settings', { cache: 'no-store' }).then(({ response: r }) => r.ok, () => false);
       if (!up) seenDown = true;
-      else if (seenDown || Date.now() - started > 10000) {
+      else if (seenDown || (!waiting && Date.now() - started > 10000)) {
         await loadSettings();
         return true;
       }
     }
     return false;
   }
-  async function restarted(done) {
+  //: `waits`: the downloads from Add plugins the restart waits for.
+  async function restarted(done, waits = []) {
     task.phase = 'restarting';
-    const back = await waitForRestart();
+    task.waits = waits;
+    const back = await waitForRestart(waits.length > 0);
     task = back
       ? { ...task, phase: 'done', text: done }
       : { ...task, phase: 'failed', text: 'The player has not come back yet. Reload this page in a minute.' };
@@ -707,7 +710,8 @@
           ? 'Installed, and switched off. Its switch is on the Plugins page.'
           : b.enabled
             ? `Updated from ${b.previous}, and restarted with the new version.`
-            : `Updated from ${b.previous}. It stays switched off.`
+            : `Updated from ${b.previous}. It stays switched off.`,
+        b.waits_for ?? []
       );
     };
     ask = { title: `Install ${file.name}?`, text: UPLOAD_NOTICE, confirm: 'Install', run: () => upload() };
@@ -755,7 +759,7 @@
           await loadSettings();
           await readStore();
         } else {
-          await restarted('Removed.');
+          await restarted('Removed.', body.waits_for ?? []);
         }
       }
     };
@@ -1861,12 +1865,13 @@
     if (holdFrame !== null || busy) return;
     event?.preventDefault?.();
     const from = performance.now();
+    const button = event?.currentTarget;
     const tick = (now) => {
       holdShare = Math.min(1, (now - from) / HOLD_MS);
       if (holdShare >= 1) {
         holdFrame = null;
         holdShare = 0;
-        confirmSheet();
+        if (button?.isConnected ?? true) confirmSheet();
         return;
       }
       holdFrame = requestAnimationFrame(tick);
@@ -1878,6 +1883,13 @@
     holdFrame = null;
     holdShare = 0;
   }
+  //: **A hold ends with its sheet, and with Settings** (the review of
+  //: 1.16.1): closed under the finger - a phone's Now playing - the button
+  //: and its release went, the hold ran on, and the reset came 3 s later.
+  $effect(() => {
+    sheetKey;
+    return holdStop;
+  });
   const holdKey = (down) => (event) => {
     if (event.key !== ' ' && event.key !== 'Enter') return;
     event.preventDefault();
@@ -3578,6 +3590,7 @@
           <div class="task__text">
             {#if task.phase === 'sending'}Uploading… {Math.round((task.share ?? 0) * 100)} %
             {:else if task.phase === 'checking'}Checking and installing…
+            {:else if task.waits?.length}Restarting once {task.waits.join(' and ')} {task.waits.length > 1 ? 'have' : 'has'} downloaded…
             {:else}The player is restarting…{/if}
           </div>
           <span class="task__bar" class:task__bar--busy={task.phase !== 'sending'}>

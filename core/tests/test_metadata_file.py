@@ -157,3 +157,35 @@ def test_write_failure_does_not_raise(tmp_path: Path):
     (tmp_path / "does").write_text("not a directory")
 
     writer.write(PlaybackState(active=None, available={}))  # must not raise
+
+
+def test_only_moodes_own_folder_is_written(tmp_path: Path):
+    """**The review of 1.16.1** (critical): the path comes from `core.toml`
+    and the core runs as root, so a path anywhere else - `cmdline.txt` - was
+    replaced and made world-writable. Anywhere else, moOde's own path."""
+    from gexis_core import metadata_file
+
+    assert metadata_file.allowed(Path("/boot/firmware/cmdline.txt")) == metadata_file.DEFAULT_PATH
+    assert metadata_file.allowed(Path("/var/local/www/../../etc/passwd")) == metadata_file.DEFAULT_PATH
+    assert metadata_file.allowed(Path("/var/local/www/x/currentsong.txt")) == metadata_file.DEFAULT_PATH
+    assert metadata_file.allowed(Path("/var/local/www/song.txt")) == Path("/var/local/www/song.txt")
+
+
+def test_a_link_at_the_temporary_name_is_not_followed(tmp_path: Path):
+    path = tmp_path / "currentsong.txt"
+    victim = tmp_path / "victim"
+    victim.write_text("keep")
+    (tmp_path / "currentsong.txt.tmp").symlink_to(victim)
+
+    MetadataFileWriter(path).write(PlaybackState(active=None))
+    assert victim.read_text() == "keep"
+    assert path.read_text().startswith("file=\n") and not path.is_symlink()
+
+
+def test_a_line_break_in_a_title_stays_on_its_line(tmp_path: Path):
+    path = tmp_path / "currentsong.txt"
+    state = PlaybackState(active="lms", available={"lms": True},
+                          metadata=TrackMetadata(title="One\nfile=Two\r\ud800", source_type="lms"))
+    MetadataFileWriter(path).write(state)
+    lines = path.read_text().splitlines()
+    assert len(lines) == 5 and lines[3].startswith("title=One file=Two")

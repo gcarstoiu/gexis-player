@@ -67,6 +67,26 @@ ALSA_FORMATS = {
     48: "DSD_U8", 49: "DSD_U16_LE", 50: "DSD_U32_LE", 51: "DSD_U16_BE", 52: "DSD_U32_BE",
 }
 
+#: **Where a stream the stage cannot run at goes**: 48 kHz, where the card
+#: takes it - its highest may be 768 kHz, where the stage's cost has never
+#: been measured (ADR-0162 D1 stops at 192 kHz) - else the card's highest.
+LOW_RATE_TO = 48000
+
+
+def playing_rate(card: str | None, rate: int, takes_rate=None) -> int:
+    """**The rate CamillaDSP plays a stream at**: its own, unless the card
+    lacks it (ADR-0155, ADR-0162 C3: then the card's highest, as Squeezelite's
+    own resampler would - it sees the loopback now, which takes every rate)
+    or the stage cannot run at it (`equaliser.runs_at`: then `LOW_RATE_TO`)."""
+    takes = takes_rate or outputs.takes_rate
+    if eq.runs_at(rate):
+        if not card or takes(card, rate) is not False:
+            return rate
+    elif not card or takes(card, LOW_RATE_TO) is not False:
+        return LOW_RATE_TO
+    top = outputs.top_rate(card) if card else None
+    return top or (rate if eq.runs_at(rate) else LOW_RATE_TO)
+
 
 @dataclass(frozen=True)
 class Stream:
@@ -126,7 +146,7 @@ async def _systemctl(*args: str) -> None:
 class Camilla:
     """CamillaDSP's websocket: one connection, re-made when it drops."""
 
-    def __init__(self, url: str = f"ws://127.0.0.1:{PORT}"):
+    def __init__(self, url: str = f"ws://{outputs.CONTROL_HOST}:{PORT}"):
         self.url = url
         self._session: aiohttp.ClientSession | None = None
         self._ws = None
@@ -195,7 +215,9 @@ class EqEngine:
         self._run = run
         self._on_change = on_change
         self._give_back = give_back
-        self._given = 0.0   # the headroom the volume was last told to give back
+        #: The headroom the volume was last told to give back; None: tell it
+        #: whatever it is (`_start`).
+        self._given: float | None = 0.0
         self._takes_rate = takes_rate
         self._cards = cards
         self._card: str | None = None
@@ -247,6 +269,11 @@ class EqEngine:
     # -- running -------------------------------------------------------------
 
     async def _start(self, restart: bool) -> None:
+        # **The volume told again, whatever the headroom** (the review of
+        # 1.16.1): a change of output or volume type restarts the stage, and
+        # the same number was not passed on, so the give-back stayed on the
+        # control it had left; the volume compares the whole target.
+        self._given = None
         await self._end_stream()
         await self._camilla.close()
         if not self._loopback_loaded():
@@ -336,15 +363,12 @@ class EqEngine:
         headroom = eq.headroom_db(gains, self._lift)
         room = self._room
         config = eq.camilla_config(stream.rate, stream.fmt, stream.channels, gains, outputs.EQ_OUT, room)
-        if self._takes_rate(self._card, stream.rate) is False:
-            # A rate the card lacks (ADR-0155): to its highest, as
-            # Squeezelite's own resampler would - which sees the loopback
-            # now, and the loopback takes every rate.
-            top = outputs.top_rate(self._card)
-            if top:
-                config["devices"].update(samplerate=top, capture_samplerate=stream.rate,
-                                         chunksize=eq.chunksize(top),
-                                         resampler={"type": "AsyncSinc", "profile": "Balanced"})
+        to = playing_rate(self._card, stream.rate, self._takes_rate)
+        if to != stream.rate:
+            config["devices"].update(samplerate=to, capture_samplerate=stream.rate,
+                                     chunksize=eq.chunksize(to),
+                                     resampler={"type": "AsyncSinc", "profile": "Balanced"})
+            logger.info("equaliser: %d Hz converted to %d Hz for %s", stream.rate, to, self._card)
         # Nothing is heard before CamillaDSP runs, so the order does not
         # matter here - only that a change still walking has ended.
         await self._give(headroom)

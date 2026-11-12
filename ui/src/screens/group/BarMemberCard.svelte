@@ -8,6 +8,7 @@
 <script>
   import VolumeIcon from '../../lib/VolumeIcon.svelte';
   import { LevelSender, removePlayer, setMemberMute, setMemberVolume } from '../../lib/group.svelte.js';
+  import { track } from './panelSlider.js';
 
   //: `onerror(text)`: a refusal, for the tray's toast.
   let { m, g, onerror = () => {} } = $props();
@@ -18,36 +19,27 @@
 
   //: The level while a finger moves it, drawn before the member's answer.
   let local = $state(null);
-  let rail = $state(null);
-  let held = null;
+  let held = false;
   const sender = new LevelSender((percent) => setMemberVolume(m.id, percent),
     (error) => onerror(`Volume not changed: ${error.message}`));
   const level = $derived(local ?? m.volume ?? 0);
   const muted = $derived(m.muted);
 
-  function at(event) {
-    const r = rail.getBoundingClientRect();
-    return Math.round(Math.max(0, Math.min(1, (event.clientX - r.left) / r.width)) * 100);
-  }
-  function down(event) {
-    held = event.pointerId;
-    event.currentTarget.setPointerCapture?.(event.pointerId);
+  //: A tap, or a move along the slider, sets the level - not a swipe up
+  //: or down that began on it (panelSlider.js).
+  const drag = track((percent, first) => {
+    held = true;
     // Moving a muted member's level unmutes it (the design's `setOne`).
-    if (muted) setMemberMute(m.id, false).catch(() => {});
-    local = at(event);
+    if (first && muted) setMemberMute(m.id, false).catch(() => {});
+    local = percent;
     sender.send(local);
-  }
-  function move(event) {
-    if (held !== event.pointerId) return;
-    local = at(event);
-    sender.send(local);
-  }
+  }, () => up());
   let upTimer;
   function up() {
-    held = null;
+    held = false;
     // The member's own report takes over once it arrives.
     clearTimeout(upTimer);
-    upTimer = setTimeout(() => { if (held === null) local = null; }, 1200);
+    upTimer = setTimeout(() => { if (!held) local = null; }, 1200);
   }
   function step(delta) {
     local = Math.max(0, Math.min(100, level + delta));
@@ -97,8 +89,8 @@
         <div class="slider" role="slider" tabindex="-1" aria-label={`${m.name} volume`}
           aria-valuemin="0" aria-valuemax="100" aria-valuenow={level} data-step="2"
           ondpadstep={(event) => step(event.detail.step * 2)}
-          onpointerdown={down} onpointermove={move} onpointerup={up} onpointercancel={up}>
-          <div class="rail" bind:this={rail} data-dpad-box>
+          onpointerdown={drag.down} onpointermove={drag.move} onpointerup={drag.up} onpointercancel={drag.up}>
+          <div class="rail" data-dpad-box>
             <div class="fill" class:is-muted={muted} style:width={`${level}%`}></div>
             <div class="knob" style:left={`${level}%`} data-dpad-knob></div>
           </div>

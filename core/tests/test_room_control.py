@@ -208,6 +208,21 @@ async def test_while_it_runs_the_player_is_held_and_the_equaliser_flat():
     assert rig.control.summary()["ended"] is None
 
 
+async def test_the_end_shown_before_the_player_is_put_back_stays_shown():
+    """*Done* (or Back) on *Measuring cancelled* at once: the run's last
+    publish, as it lets the player go, does not bring the end back (the
+    review of 1.16.1: the page went back to *Measuring cancelled*)."""
+    rig = Rig()
+    await rig.control.calibration(CAL, "x_90deg.txt")
+    await rig.control.start()
+    await rig.run_to("place")
+    await rig.control.tap("cancel")
+    await rig.control.tap("done")
+    assert rig.control.frozen() is not None, "before the player is put back"
+    await rig.control.run.wait()
+    assert rig.control.frozen() is None and rig.control.summary()["ended"] is None
+
+
 async def test_with_the_equaliser_on_the_path_never_changes():
     rig = Rig()
     rig.eq = True
@@ -228,6 +243,29 @@ async def test_discarded_nothing_changes():
     s = rig.control.snapshot()
     assert s["measured"] is None and not s["on"]
     assert rig.control.summary()["ended"]["how"] == "discarded"
+
+
+async def test_done_on_nothing_to_correct_ends_the_run():
+    """*Done* is the only button on *Nothing to correct*; as the phone sends
+    it, through the control, it ends the run (the review of 1.16.1: the
+    player was held for the ten minutes' timeout)."""
+    rig = Rig()
+    rig.audio = Audio(modes=(), broad=())
+    await rig.control.calibration(CAL, "x_90deg.txt")
+    await rig.control.start()
+    await rig.run_to("place")
+    await rig.control.tap("start")
+    for n in range(2, rc.POSITIONS + 1):
+        await rig.run_to("move", n)
+        rig.audio.position = n
+        await rig.control.tap("next")
+    await rig.run_to("nothing")
+    await rig.control.tap("done")
+    await asyncio.wait_for(rig.control.run.wait(), 5)
+    assert rig.control.frozen() is None and rig.names()[-1] == "release"
+    assert rig.control.summary()["ended"]["how"] == "done" and rig.control.snapshot()["measured"] is None
+    await rig.control.tap("done")
+    assert rig.control.summary()["ended"] is None, "the end shown"
 
 
 async def test_off_and_on_and_without():
@@ -300,3 +338,128 @@ async def test_the_pending_measurement_is_shown_before_it_is_kept():
     assert s["pending"]["within"] is not None and s["pending"]["nothing_to_correct"] is False
     assert s["measured"] is None, "nothing stored before Keep it"
     await rig.control.tap("cancel")
+
+
+class _Engine:
+    """What `EqualiserControl.sync` drives: the card it runs CamillaDSP for."""
+
+    def __init__(self):
+        self.card = None
+
+    async def configure(self, card, gains, restart=False, room=None):
+        self.card = card
+
+    def status(self):
+        return {}
+
+
+@pytest.mark.parametrize("before, after", [(True, False), (False, True), (True, True), (False, False)])
+async def test_the_chain_after_a_run_is_the_one_wanted_whatever_the_equaliser_did_during_it(before, after):
+    """**The review of 1.16.1.** The equaliser on, switched off from the
+    phone while the room was measured (its controller only syncs while a run
+    needs the stage), and the run cancelled: the run had not taken the path,
+    so it only synced too - CamillaDSP stopped and `output.conf` still sent
+    every source into the loopback. Silent until a restart."""
+    from gexis_core import eq_control
+    from gexis_core.equaliser import Equaliser
+
+    store, engine, audio, chain, room = Store(), _Engine(), Audio(), {}, {}
+    out = SimpleNamespace(card=DAC.card, label=DAC.label, control=None, usb_id=None, scale=None)
+
+    def eq_on(card):
+        return Equaliser.from_settings(store.get(eq_control.KEY)).output(card).on
+
+    def written():
+        # `_rewrite_output_conf`: the loopback while `outputs.eq_in_path`.
+        chain["to"] = "loopback" if (eq_on(DAC.card) or room["control"].in_path(DAC.card)) else "card"
+
+    async def reopen(reason):
+        written()
+        await equaliser.sync(restart=True)
+        audio.stage = room["control"].stage(DAC.card)
+
+    async def sync():
+        await equaliser.sync()
+        audio.stage = room["control"].stage(DAC.card)
+
+    async def nothing():
+        pass
+
+    async def fast(_s):
+        await asyncio.sleep(0)
+
+    equaliser = eq_control.EqualiserControl(
+        store, engine, output=lambda: out, fixed=lambda: False, reopen=reopen,
+        room_in_path=lambda card: room["control"].in_path(card),
+        room_stage=lambda card: room["control"].stage(card),
+        bypassed=lambda card: room["control"].eq_bypassed(card))
+    room["control"] = control = RoomControl(
+        store, output=lambda: out, kind=lambda o: "DAC", reopen=reopen, sync=sync,
+        take=nothing, release=nothing, loud=nothing, quiet=nothing, eq_on=eq_on,
+        find_mic=lambda: ("found", Microphone("U18dB", 18.0)), audio=lambda mic, cal: audio,
+        today=lambda: "2026-11-05", run_options={"sleep": fast, "sweep_s": 1.0})
+    store.set(eq_control.KEY, Equaliser.from_settings(None).set_on(DAC.card, before).to_settings())
+    written()
+    await equaliser.sync()
+    await control.calibration(CAL, "7071234_90deg.txt")
+    await control.start()
+    run = control.run
+    for _ in range(6000):
+        if run.state.step == "place" and run.waiting:
+            break
+        await asyncio.sleep(0.01)
+    assert chain["to"] == "loopback" and engine.card == DAC.card, "measured through the stage"
+    await equaliser.update({"on": after})
+    await control.tap("cancel")
+    await asyncio.wait_for(run.wait(), 10)
+    assert chain["to"] == ("loopback" if after else "card")
+    assert engine.card == (DAC.card if after else None)
+
+
+async def _until(rig, done):
+    for _ in range(5000):
+        if done(rig.control.run.state, rig.control.run):
+            return
+        await asyncio.sleep(0.001)
+    raise AssertionError(f"at {rig.control.run.state}")
+
+
+@pytest.mark.parametrize("when", ["at_once", "countdown", "measure"])
+async def test_a_second_measure_here_is_not_kept_for_the_next_position(when):
+    """A tap is for the screen it was sent on: a second *Measure here* (a
+    double tap, or a second phone) never answers the next position's (the
+    review of 1.16.1: position 3 was swept where position 2 was)."""
+    rig = Rig()
+    await rig.control.calibration(CAL, "x_90deg.txt")
+    await rig.control.start()
+    await rig.run_to("place")
+    await rig.control.tap("start")
+    await rig.run_to("move", 2)
+    rig.audio.position = 2
+    await rig.control.tap("next")
+    if when != "at_once":
+        await _until(rig, lambda s, _run: (s.step, s.position) == (when, 2))
+    await rig.control.tap("next")
+    await _until(rig, lambda s, run: s.position == 3 and (s.step != "move" or run.waiting))
+    s = rig.control.run.state
+    assert (s.step, s.position, rig.control.run.waiting) == ("move", 3, True), "waits for Measure here"
+    await rig.control.tap("cancel")
+    await rig.control.run.wait()
+
+
+async def test_a_second_try_again_is_not_kept_for_the_next_too_quiet():
+    rig = Rig()
+    rig.audio = Audio(offset=45.0)
+    await rig.control.calibration(CAL, "x_90deg.txt")
+    await rig.control.start()
+    await rig.run_to("place")
+    await rig.control.tap("start")
+    await _until(rig, lambda s, run: s.too_quiet and run.waiting)
+    once = len(rig.audio.plays)
+    await rig.control.tap("again")
+    await rig.control.tap("again")
+    await _until(rig, lambda s, run: s.too_quiet and run.waiting)
+    await asyncio.sleep(0.05)
+    assert rig.control.run.waiting and len(rig.audio.plays) == 2 * once, "one more try, not two"
+    await rig.control.tap("cancel")
+    await rig.control.run.wait()
