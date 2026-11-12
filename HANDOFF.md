@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-11-10 (on R2D2).
+Last updated: 2026-11-11 (on R2D2).
 
 ## Start here
 
@@ -31,6 +31,19 @@ and signature. Notes approved by George; PRs #98 and #99 merged by George
 (README names 1.16.1). `v1.16.0` is
 a lightweight tag (the others annotated); `build.sh` reads tags with
 `--tags`, so its versions are right.
+
+**In progress: the fixes from the review of 1.16.1** (2026-11-10/11).
+All 55 findings fixed, each on a local `fix-*` branch with a test that
+failed first, merged one at a time into **`review-fixes`** (worktree
+`~/projects/gexis-review-fixes`, pushed) with the full suite after each:
+3346 passed. Four changed what users see and were decided by George as
+recommended (ADR-0178). sofapi runs its preview (run 42924770173, restarted
+2026-11-11 00:47). **Next:** George's regression pass (to-do
+`review-1161-regression`); then 1.16.2 from `review-fixes` with notes George
+approves; then Finding 145; then the worktrees (`gexis-player-fixes`,
+`gexis-player-fixes-b`, `gexis-fix-*`, `gexis-review`, `gexis-review-fixes`)
+and the local `fix-*` branches removed. `publish.sh` now keeps a serial floor
+in `out/serials/`: seed it (Testing 69, Stable 15) before that publish.
 
 **The plugin catalogue** (Phase 24, closed 2026-10-31):
 `gcarstoiu/gexis-plugins` (local `~/projects/gexis-plugins`; `tools/publish.sh`

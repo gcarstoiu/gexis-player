@@ -1,7 +1,9 @@
 # ADR-0166 — Multiroom for every source
 
 **Status:** **Accepted** 2026-10-27 (George: his answers, and C1-C6
-confirmed the same day; C3 he called an edge case). Amended 2026-10-28:
+confirmed the same day; C3 he called an edge case). Amended 2026-11-12
+(George): D7's buffer is a second, and decision 8 holds for a member on
+Wi-Fi too - no resampling to spare the link. Amended 2026-10-28:
 the design back from Claude Design (`design/source/22/`), decision 10 and
 where it is measured, George's answers that day; D1 as Finding 139 found
 it, and C5's wording mended. Phase 22
@@ -57,7 +59,8 @@ of rate) and [ADR-0164](0164-the-phone-remote.md) (the phone remote).
    about a second that rides out a weak Wi-Fi link.
 8. **The source's own rate.** Grouped, a source plays at its own rate,
    unchanged; a change of rate between tracks costs a short gap, as the
-   equaliser's does.
+   equaliser's does. *Confirmed 2026-11-12 (George):* never resampled to
+   suit a member's link, a member on Wi-Fi at 192 kHz included.
 9. **Home Assistant too**: the integration offers Home Assistant's own join
    and unjoin for media players, in its release after the player's.
 10. **Lyrion's syncs are Gexis groups** (George, 2026-10-28, after the
@@ -138,6 +141,15 @@ its own travel, and leaves Fixed members alone. A source's own app volume
 `buffer` and each client's latency set from the phase's measurement on the
 test players' Wi-Fi, aiming at about a third of a second.
 
+*As amended 2026-11-12:* **a second.** At 400 ms, with sofapi leading
+over Wi-Fi, George heard the bar come in a few seconds after the leader at
+the start of a track, then catch up. The leader's server log showed the bar
+dropping its connection and reconnecting after six of twelve stream
+starts, at 44.1 to 192 kHz, and at 192 kHz 36 s of FLAC decoding errors on
+the bar; the bar's client logs nothing at a start, so the start itself was
+not seen. George chose to go to a second at once and listen again, ahead of
+the measurement below.
+
 **D8 — A change of rate restarts the group's stream at the new rate**
 (decision 8), as CamillaDSP is restarted for the equaliser (ADR-0162 C2):
 the core already sees the loopback's rate change; members' clients reopen
@@ -210,8 +222,8 @@ play control. Its rules, beyond the decisions above:
   plays on through the server too.
 - **B4 — Every member runs its server**, idle (about 1.5 % of a core
   measured), so a source started on any of them leads at once.
-- **B5 — The buffer is 400 ms** until the measurement (D7); the manual and
-  the FAQ say *about 0.4 seconds*.
+- **B5 — The buffer is a second** (D7 as amended 2026-11-12; 400 ms
+  before); the manual and the FAQ say *about a second*.
 - **B6 — A member's card that cannot take the stream's rate** is given its
   highest by the client's resampler, as the equaliser and Squeezelite's
   own do; one that cannot take 32 bits, its widest (padding undone exactly).
