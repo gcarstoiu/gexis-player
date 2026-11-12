@@ -53,9 +53,10 @@ RATES = (44100, 48000, 88200, 96000, 176400, 192000, 352800, 384000)
 #: `output` pads every integer format to this on the way in (as the
 #: equaliser's chain does), so one width per rate: 32 bits, bit-perfect.
 BITS = 32
-#: **The buffer: as short as measured safe** (D7, decision 7) - the end-to-end
-#: delay from the loopback to every card. Measured before it is called done.
-BUFFER_MS = 400
+#: **The buffer** (D7 as amended 2026-11-12) - the end-to-end delay from the
+#: loopback to every card. A second: at 400 ms a member on Wi-Fi came in
+#: seconds late at a start, and lost its connection at 88.2 kHz and above.
+BUFFER_MS = 1000
 #: FLAC needs about 26 ms a chunk (snapserver's own note).
 CHUNK_MS = 26
 #: Where the server's pipes and its own data live (the unit's

@@ -37,6 +37,13 @@ def test_the_server_answers_this_player_only_and_has_a_pipe_per_rate(tmp_path):
     assert "initial_volume = 100" in conf, "D6: Snapcast's own volume never scales"
 
 
+def test_the_buffer_is_a_second(tmp_path):
+    # George, 2026-11-12: at 400 ms the bar, on Wi-Fi, came in seconds after
+    # the leader at a start, and lost its connection at 88.2 kHz and above.
+    assert snapcast.BUFFER_MS == 1000
+    assert "buffer = 1000" in snapcast.server_config(run_dir=tmp_path)
+
+
 def test_the_client_is_told_the_leader_its_id_and_only_a_format_its_card_needs():
     env = snapcast.client_env("192.0.2.7", "abc123", 0, None)
     assert "GEXIS_SNAP_HOST=192.0.2.7\n" in env and "GEXIS_SNAP_ID=abc123\n" in env

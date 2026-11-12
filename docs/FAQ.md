@@ -206,8 +206,8 @@ Every one: Lyrion, Spotify, Bluetooth, Plexamp, and what plugins add. A
 plugin has nothing to do for it.
 
 **Why does a group play a moment late?**
-To play together, every player of a group holds the music for about 0.4
-seconds before it plays it, so a pause or a skip is heard that much later.
+To play together, every player of a group holds the music for about a
+second before it plays it, so a pause or a skip is heard that much later.
 The player that leads waits too, so all the rooms are heard at once. A player
 playing alone does not wait.
 

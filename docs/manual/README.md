@@ -361,7 +361,7 @@ sync does.
 first, and the music stays on the player that leads. The player that leads
 cannot be removed or leave: *Undo group* ends its group.
 
-**A moment late.** In a group every player plays the music about 0.4 seconds
+**A moment late.** In a group every player plays the music about a second
 after it arrives, so that all play it together; a pause or a skip is heard
 that much later. A player playing alone has no such delay.
 
