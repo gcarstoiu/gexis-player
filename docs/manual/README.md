@@ -361,7 +361,7 @@ sync does.
 first, and the music stays on the player that leads. The player that leads
 cannot be removed or leave: *Undo group* ends its group.
 
-**A moment late.** In a group every player plays the music about 0.4 seconds
+**A moment late.** In a group every player plays the music about a second
 after it arrives, so that all play it together; a pause or a skip is heard
 that much later. A player playing alone has no such delay.
 
@@ -415,7 +415,8 @@ dashboard*.
   set.
 - **While it is up**, the music goes on; a new track or the idle screen does
   not take the dashboard down. The volume drawer still shows over it, and
-  display standby still turns the screen off.
+  display standby still turns the screen off. A link that would open a new
+  window does nothing on the panel; links within the dashboard work.
 - **The visualiser takes over from it**: opened from the phone, or coming on
   by itself after the visualiser's timeout while music plays, it takes the
   dashboard down and shows in its place.
@@ -930,8 +931,8 @@ On its page:
 | Setting | What it does |
 | --- | --- |
 | Personalise | Asks again, on your phone, how you listen, whether the phone's touchpad works the screen, and what the screen shows - the questions after first-time setup - starting from what the player has now. The player's screen shows a code to the page. |
-| Attached screen | The display in use, by its name (a TV by the name it gives). **Change** picks the screen's model from the list, by maker; it sets the layout, Standard or Bar, and which visualiser skins are offered. A screen not in the list is shown as *Other screen* with its size. A DSI screen the Pi finds by itself - the Raspberry Pi Touch Display and those built to answer as one - is shown as *Raspberry Pi Touch Display or compatible* until its model is picked. Another DSI model needs a line in the Pi's boot settings, which choosing it writes: the player restarts and asks *Keep this screen?*, and goes back by itself if the screen stays dark. A four-lane DSI model is listed only on a Pi 5 or a Compute Module: a Pi 4's display connector carries two lanes. |
-| Screen port | Which port the screen is on: *DSI*, the Pi's own display connector, when a DSI screen is connected, and the HDMI ports. A DSI screen is the screen unless an HDMI port is chosen here, which leaves the DSI screen black. The tile and its list show what is plugged into each port - the screen, another device by its name (a sound bar or receiver), *sound* when the sound goes to that port; a port with nothing connected is greyed. A change that alters the picture restarts the player and asks *Keep this screen?*. The port chosen stays the screen, even with a touch panel on the other port. **A TV can be the screen**: it runs at 1920 x 1080 (or the largest 16:9 size below it that it offers), and since it has no touch, *Keep this screen?* is answered on the phone page, as for any screen not in the list. A listed touch screen is answered on itself, and on the phone page too when the player cannot tell that its touch works. A touch panel left on the other port is switched off. A port that is not the screen shows black. If the TV crops the edges of the picture, set its picture size to *Just Scan* or *Original*. When the TV's port also carries the sound, display standby only blacks the picture, so the music goes on. On a board with one HDMI port, the row only says what is on it. |
+| Attached screen | The display in use, by its name (a TV by the name it gives). **Change** picks the screen's model from the list, by maker; it sets the layout, Standard or Bar, and which visualiser skins are offered. A screen not in the list is shown as *Other screen* with its size. A DSI screen the Pi finds by itself - the Raspberry Pi Touch Display and those built to answer as one - is shown as *Raspberry Pi Touch Display or compatible* until its model is picked. Another DSI model needs a line in the Pi's boot settings, which choosing it writes: the player restarts and asks *Keep this screen?*, and goes back by itself if the screen stays dark. A four-lane DSI model is listed only on a Pi 5 or a Compute Module (the JDI 7" on a Compute Module only): a Pi 4's display connector carries two lanes. |
+| Screen port | Which port the screen is on: *DSI*, the Pi's own display connector, when a DSI screen is connected or was left black by choosing an HDMI port here, and the HDMI ports. A DSI screen is the screen unless an HDMI port is chosen here, which leaves the DSI screen black. The tile and its list show what is plugged into each port - the screen, another device by its name (a sound bar or receiver), *sound* when the sound goes to that port; a port with nothing connected is greyed. A change that alters the picture restarts the player and asks *Keep this screen?*. The port chosen stays the screen, even with a touch panel on the other port, and a TV chosen stays the screen while it is off: its picture comes when it is switched on. Choosing a port again brings back the screen kept there, with its model and rotation. **A TV can be the screen**: it runs at 1920 x 1080 (or the largest 16:9 size below it that it offers), and since it has no touch, *Keep this screen?* is answered on the phone page, as for any screen not in the list. A listed touch screen is answered on itself, and on the phone page too when the player cannot tell that its touch works. A touch panel left on the other port is switched off. A port that is not the screen shows black. If the TV crops the edges of the picture, set its picture size to *Just Scan* or *Original*. When the TV's port also carries the sound, display standby only blacks the picture, so the music goes on. On a board with one HDMI port, the row only says what is on it. |
 | Text size | How large the writing on the player's screen is: 90 % to 130 %, 100 % as it comes. The screen changes at once; Home's tiles grow with larger text. Pictures, buttons and the layout keep their size, so long titles are cut short sooner at large sizes. A phone keeps its own size. |
 | Theme | How the player looks: Deep Teal, as it comes, or one of five others - Bauhaus and Sage (light), Velvet, Ink and Gauge (dark). A theme changes the colours, the corners and the typeface of figures and labels; nothing moves or changes size. It applies at once, on the player's screen and on every phone showing this player; each player has its own. The idle screen keeps its own look, white over its picture, as do the visualiser's skins and the boot screen. |
 | Screen rotation | For a screen mounted the other way up. |
@@ -1016,7 +1017,8 @@ to *Add plugins*; its settings and sign-in stay, for when it is added again,
 unless *Keep its settings and sign-in* is turned off. After a restore, plugins
 from the catalogue are installed from it again, unless it has withdrawn them
 since; an uploaded one needs uploading again. The player reads the catalogue
-from GitHub once a day and when *Add plugins* opens.
+from GitHub once a day and when *Add plugins* opens, and more often while a
+plugin waits to be installed again.
 
 ### System — *The player, its network, updates and maintenance*
 

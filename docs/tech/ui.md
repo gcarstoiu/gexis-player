@@ -134,7 +134,8 @@ flowchart LR
 
 The same `index.html` is served to everyone. On mount, `App.svelte` asks
 `GET /surface`. The core answers `panel` when the request comes from loopback
-with this boot's token (the kiosk loads `http://127.0.0.1:8090/#panel=…`, and
+with this boot's token (the kiosk loads `http://127.0.0.1:8090/#panel=…`,
+through a page of its own so that the token is not on Chromium's command line, and
 `lib/panel-token.js`, loaded first, adds it to every request as
 `X-Gexis-Panel`; ADR-0170) and `remote` for anything else.
 If the request fails it is asked again, backing off to every 5 s, and nothing
@@ -210,8 +211,16 @@ strip; Artists and Lyrion's lettered lists share it.
 
 A volume drawer or bar tray that opened by itself, for a change made
 elsewhere, takes no touch on its level or mute for 400 ms
-(`VOLUME_ARM_MS` in `App.svelte`), so a tap meant for what was under it does
-not set the level; one opened from the panel is unaffected.
+(`VOLUME_ARM_MS` in `App.svelte`), nor, grouped, on the group's sliders and
+buttons, nor on the equaliser's and room correction's quick changes
+(`armsAt`), so a tap meant for what was under it changes nothing; one opened
+from the panel is unaffected.
+
+The group's sliders (`group/panelSlider.js`: the panel's drawer and the
+bar's member cards) wait for 8 px of movement, as the tray's own slider does:
+mostly sideways is the slider, from where the finger landed; mostly up or
+down is not, and on the panel the list or the drawer scrolls; a tap sets the
+level as it lifts.
 
 ### The equaliser (ADR-0162)
 
@@ -396,7 +405,8 @@ Details worth knowing:
   testing. The panel wakes from idle on a takeover, a pairing request, the
   visualiser being raised, or the end of setup. All of these also count as a
   touch, so the panel does not drop straight back to idle. The idle screen is
-  suppressed while setup is shown.
+  suppressed while setup, the update lock, a factory reset or the settling
+  screen is shown (its rule pauses every animation but its own).
 - **Handoff (ADR-0094).** When `$handoff` appears, `HandoffScreen` shows for
   at least `handoff_duration` seconds (default 1.5), or for as long as the
   takeover lasts if that is longer. The `show_transition` setting turns it
@@ -406,7 +416,10 @@ Details worth knowing:
   be shown or hidden (`POST /panel/idle/{show|hide}`). The asks come back to
   the panel in `panel.view_request` / `panel.idle_request`. Each ask is
   numbered, applied once, and ignored if it is older than 60 s, so a panel
-  that reloads does not replay it.
+  that reloads does not replay it. A view ask closes what covers Now Playing
+  (Settings, the equaliser's editor, room correction's page; a measurement's
+  own screen stays), and the panel reports Now Playing as shown only with
+  none of them up.
 
 ### Library structure
 

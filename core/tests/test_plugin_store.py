@@ -62,3 +62,28 @@ async def test_the_routes_add_and_remove_keeping_unless_told_not_to():
         assert (await client.post("/plugins/plexamp/remove")).status == 200
         assert (await client.post("/plugins/plexamp/remove", json={"keep": False})).status == 200
     assert calls == [("add", "plexamp"), ("add", "nope"), ("remove", "plexamp", True), ("remove", "plexamp", False)]
+
+
+async def test_a_removal_says_which_downloads_its_restart_waits_for():
+    """The review of 1.16.1: a Remove restarted the core under a
+    catalogue download, which was lost. The restart waits for it, and the
+    page is told which, to say so."""
+    async def remove(pid, keep):
+        return True
+
+    class Catalogue:
+        def under_way(self):
+            return ["Beszel hub"]
+
+    server = StateServer(StateStore({}), store_view=lambda: {"ours": []}, store_remove=remove, catalogue=Catalogue())
+    async with TestClient(TestServer(server.make_app())) as client:
+        body = await (await client.post("/plugins/plexamp/remove")).json()
+    assert body["waits_for"] == ["Beszel hub"]
+
+
+def test_an_upload_or_a_removal_restarts_once_no_catalogue_install_is_under_way():
+    from test_main_wiring import _closure
+    for name in ("_upload_plugin", "_uninstall_plugin"):
+        body = _closure(name)
+        assert "catalogue.restart_once_idle()" in body and "_restart_core_soon()" not in body, name
+    assert "'waits_for': waits" in _closure("_upload_plugin")

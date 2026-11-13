@@ -8,10 +8,12 @@ from __future__ import annotations
 import asyncio
 import functools
 import logging
+import math
 import re
 import shutil
 import subprocess
 import time
+from collections.abc import Callable
 from pathlib import Path
 
 import aiohttp
@@ -35,6 +37,7 @@ from gexis_core.start_guard import StartGuard
 from gexis_core.idle_page import probe as probe_idle_page
 from gexis_core.wallpapers import Wallpapers
 from gexis_core.weather import Weather
+from gexis_core import metadata_file
 from gexis_core.metadata_file import MetadataFileWriter
 from gexis_core.artistinfo import PHOTO_LARGE, LmsArtistInfo
 from gexis_core.enrichment import (
@@ -138,6 +141,8 @@ from gexis_core.volume import (
     fixed_output as volume_fixed_output,
     hardware_max,
     hardware_silence,
+    keep_level,
+    level_kept,
     publish_attenuation,
     use_scale,
     set_ceiling_reader,
@@ -240,6 +245,27 @@ async def restart_if_enabled(unit: str) -> None:
     `set_unit_enabled` is: it stops a process, and how long that takes is the
     process's business, not ours."""
     await asyncio.to_thread(functools.partial(_restart_if_enabled, unit))
+
+
+def _row_keys(plugin) -> list[str]:
+    """The keys of the rows a plugin brought, as the registry stores them -
+    less an `enabled` of its own where the core gives it the switch: the
+    registry keeps the switch, and wired after it the row's callback took
+    its place, so switching never started or stopped the unit."""
+    return [f"{plugin.id}.{row['key']}" for row in plugin.settings
+            if row.get("key") and not (row["key"] == "enabled" and plugin.enabled_row is None)]
+
+
+def _settled(installed: list, registry: list[dict]) -> list:
+    """**The plugins whose rows the registry took** (the review of 1.16.1).
+    `Settings.with_plugins` drops a plugin whose rows it refuses, so that
+    one badly packaged plugin stops nothing else; wired all the same, its
+    keys made `Settings` refuse to start - the core with it, at every boot,
+    and no screen left to remove the plugin from."""
+    registered = {row["key"] for group in registry for row in group["rows"] if row.get("key")}
+    return [p for p in installed
+            if (p.enabled_row or f"{p.id}.enabled") in registered
+            and all(key in registered for key in _row_keys(p))]
 
 
 def _chosen_server(config: Config, store: SettingsStore) -> Config:
@@ -434,6 +460,22 @@ def _lyrion_setup_note(marker: Path = LYRION_ADDONS_DONE) -> str | None:
             f"the way. This takes about 3 minutes. Then open http://{device_name.hostname() or 'gexis'}.local:9000")
 
 
+def lyrion_located(value: Callable[[str], object], shares, usb) -> bool:
+    """Whether the Lyrion server has somewhere to read music from: a saved
+    share, the USB folders while switched on, or the Music folder while it
+    holds some (the review of 1.16.1: a new player's, empty, was waited on
+    for a scan that leaves no mark)."""
+    return (bool(shares.points()) or (value("lyrion-server.usb") is True and bool(usb.all()))
+            or (value("lyrion-server.music_folder") is True and lyrion_folders.holds_music(lyrion_folders.MUSIC)))
+
+
+def lyrion_chosen(value: Callable[[str], object], shares, usb) -> bool:
+    """Whether anywhere is chosen for the Lyrion server to read, music in it
+    or not: an empty Music folder is read and found empty, not left to be
+    chosen (the review of 1.16.1)."""
+    return lyrion_located(value, shares, usb) or value("lyrion-server.music_folder") is True
+
+
 def _lyrion_note(on: bool) -> str | None:
     """The Lyrion server's switch, in order: a player too small for it; a scan
     stopped for memory; the first start under way (ADR-0115 decision 18)."""
@@ -512,17 +554,28 @@ def plugin_metadata(renderer_id: str, raw) -> TrackMetadata:
     `source_type` is **ours to set**, not the plugin's: it says which
     renderer supplied the metadata, and a plugin naming a different one
     would be lying about attribution the panel draws.
+
+    **What cannot be published is dropped** (the review of 1.16.1): a
+    character UTF-8 cannot encode (half an emoji, cut by its sender) stopped
+    every broadcast, and a number that is not finite reached the screens as
+    JSON they refuse.
     """
+    def _text(value) -> str:
+        return str(value).encode("utf-8", "ignore").decode("utf-8")
+
     raw = raw if isinstance(raw, dict) else {}
     text = ("track_id", "title", "artist", "album", "year", "artwork",
             "artwork_small", "codec", "transport", "repeat")
-    fields = {k: str(raw[k]) for k in text if raw.get(k) is not None}
+    fields = {k: _text(raw[k]) for k in text if raw.get(k) is not None}
     for number, cast in (("position", float), ("duration", float),
                          ("sample_rate", int), ("bit_depth", int)):
         try:
             if raw.get(number) is not None:
-                fields[number] = cast(raw[number])
-        except (TypeError, ValueError):
+                value = cast(raw[number])
+                if not math.isfinite(value):
+                    raise ValueError(value)
+                fields[number] = value
+        except (TypeError, ValueError, OverflowError):
             logger.warning(
                 "plugins: %s sent %s=%r, which is not a number",
                 renderer_id, number, raw.get(number),
@@ -531,7 +584,7 @@ def plugin_metadata(renderer_id: str, raw) -> TrackMetadata:
         fields["shuffle"] = raw["shuffle"]
     unavailable = raw.get("unavailable")
     if isinstance(unavailable, list):
-        fields["unavailable"] = frozenset(str(u) for u in unavailable)
+        fields["unavailable"] = frozenset(_text(u) for u in unavailable)
     return replace(BLANK_METADATA, source_type=renderer_id, **fields)
 
 
@@ -602,10 +655,12 @@ def _watch_renderers_cards(card: str) -> None:
     """**Which cards arbitration asks about** (ADR-0162, ADR-0166): the
     output's, or the equaliser's loopback while it is in the path - or, in a
     group, the group's loopback, and with Lyrion's own sync also the chain
-    Squeezelite plays to."""
+    Squeezelite plays to. **Not where the group's loopback could not be
+    made** (`WITHOUT_LOOPBACK`): the renderers play to the player's own
+    chain, and asking about the missing card raised (the review of 1.16.1)."""
     chain = outputs.LOOPBACK if outputs.eq_in_path(card) else None
     group = outputs.group_in_path()
-    if group:
+    if group and group != outputs.WITHOUT_LOOPBACK:
         alsa.set_renderers_card(outputs.GROUP_CARD)
         alsa.set_also_card((chain or card) if group == outputs.BUT_LYRION else None)
     else:
@@ -784,10 +839,12 @@ async def main() -> None:
     shipped_ids = {p.id for p in shipped_plugins}
     # **ADR-0174: ours that moved to the catalogue, carried over** - their
     # data into their own folders, and the ones this player used recorded for
-    # the restore's path below to install from the catalogue.
+    # the restore's path below to install from the catalogue - once: the
+    # Plugins page's record loses their ids, so a Remove sticks.
     try:
         carry_over.carry(ours=shipped_ids, stored=settings_store.get,
                          added=plugin_store.read(settings_store.get(plugin_store.ADDED)),
+                         write_added=lambda ids: settings_store.set(plugin_store.ADDED, sorted(ids)),
                          installed_packages=carry_over.installed_packages)
     except OSError as exc:
         logger.warning("carry-over: %s", exc)
@@ -870,7 +927,7 @@ async def main() -> None:
 
     # Criterion 4: moOde-compatible metadata file, subscribed the same way
     # StateServer is - a plain callback on every published state change.
-    metadata_file_writer = MetadataFileWriter(Path(config.metadata_file_path))
+    metadata_file_writer = MetadataFileWriter(metadata_file.allowed(Path(config.metadata_file_path)))
     state_store.subscribe(metadata_file_writer.write)
 
     # Criterion 3, 2026-09-12: which volume-bridging mechanism a renderer
@@ -2354,12 +2411,16 @@ async def main() -> None:
             _apply_plugin_unit(p, on is not False)
         )
 
+    registry = Settings.with_plugins(load_registry(), installed_plugins, downloads,
+                                     missing=restored_missing)
+    settled = _settled(installed_plugins, registry)
+
     #: The switch every plugin gets unless its manifest names a row that
     #: already exists - which the three built-ins do, because theirs predate
     #: this and do more than manage a unit.
     plugin_switches = {
         f"{plugin.id}.enabled": _plugin_switch(plugin)
-        for plugin in installed_plugins
+        for plugin in settled
         if plugin.enabled_row is None
     }
 
@@ -2380,7 +2441,7 @@ async def main() -> None:
     #: value takes over the moment the switch is used.
     plugin_switch_defaults = {
         key: (lambda on=_unit_is_enabled(plugin.unit): on)
-        for plugin in installed_plugins
+        for plugin in settled
         if plugin.enabled_row is None
         for key in (f"{plugin.id}.enabled",)
     }
@@ -2390,11 +2451,9 @@ async def main() -> None:
     #: bound per row rather than passed: `Settings.set` calls a wired callback
     #: with the value and nothing else, as it does for every other row.
     plugin_rows = {
-        f"{plugin.id}.{row['key']}":
-            (lambda value, key=f"{plugin.id}.{row['key']}": _plugin_setting(key, value))
-        for plugin in installed_plugins
-        for row in plugin.settings
-        if row.get("key")
+        key: (lambda value, key=key: _plugin_setting(key, value))
+        for plugin in settled
+        for key in _row_keys(plugin)
     }
 
     # **ADR-0111: the visualiser's skins follow the screen.** One pack per
@@ -2615,6 +2674,19 @@ async def main() -> None:
             return f"DSI-{label.split(' ', 1)[1] if ' ' in label else '1'}"
         return f"HDMI-A-{label.rsplit(' ', 1)[-1]}"
 
+    def _screen_ports() -> list:
+        """**The ports *Screen port* offers and chooses from**: those there
+        are, and first a DSI panel an HDMI port was chosen over, whose driver
+        line went with it (`screen_apply.left_dark`; the review of 1.16.1) -
+        as connected, at its model's mode."""
+        ports = screen_detect.ports()
+        left = screen_apply.left_dark(ports)
+        model = screens.by_id(left.screen_id) if left is not None else None
+        if model is None:
+            return ports
+        size = (model.height, model.width) if model.rotation in (90, 270) else (model.width, model.height)
+        return [screen_detect.Seen(True, left.connector, preferred=size), *ports]
+
     def _screen_name(connector: str) -> str | None:
         """The screen's name when `connector` is the screen's port, else
         None: a listed model by its maker and model; a screen in no list -
@@ -2633,7 +2705,7 @@ async def main() -> None:
         *"Shouldn't we have two entries, similar to audio output?"*): the
         screen by its model, anything else by the name it gives, and the
         port's sound when the output is that port."""
-        port = next((p for p in screen_detect.ports() if p.connector == connector), None)
+        port = next((p for p in _screen_ports() if p.connector == connector), None)
         if port is None or not port.connected:
             return "Nothing connected"
         parts = [_screen_name(connector) or port.edid_name or port.edid_maker
@@ -2663,14 +2735,15 @@ async def main() -> None:
         them**, and since ADR-0147 **the choice wins** (George, 2026-10-13:
         the LG TV chosen on HDMI 2 went back to the panel at every start).
         The screen applied is the one on that port - the panel recognised
-        there, else the device by its own mode, a TV held to 1920 x 1080 -
+        there, else the device by its own mode, a TV held to 1920 x 1080; the
+        screen kept there last as it was, while it is still the one there -
         marked as chosen, so the start honours it over a known panel on the
         other port. A change of picture restarts and asks Keep; on a screen
         without touch, the phone answers (ADR-0147 D3). The stored setting
         goes: the row shows the port in use."""
         settings_store.delete("screen_port")
         connector = _port_connector(label)
-        port = next((p for p in screen_detect.ports() if p.connector == connector and p.connected), None)
+        port = next((p for p in _screen_ports() if p.connector == connector and p.connected), None)
         if port is None or port.preferred is None:
             logger.warning("screen: nothing on %s to choose", connector)
             return
@@ -2682,10 +2755,13 @@ async def main() -> None:
             # A TV, run at 1080p from its own list and held there by the
             # kernel's mode, whatever a receiver says at a start (ADR-0147).
             model = screens.other(*size, capped=True)
+        # The panel's own model and rotation go with it back to its port:
+        # the screen in use there, else the one kept there last (the review
+        # of 1.16.1: back from a TV, the class at 0°).
+        kept = was if was is not None and was.connector == connector else screen_apply.kept_on(connector)
+        model, rotation = screen_watch.for_port(port, model, kept)
         if was is not None and was.connector == connector and was.screen_id == model.id and was.chosen:
             return
-        # The panel's own rotation goes with it back to its port.
-        rotation = was.rotation if was is not None and was.screen_id == model.id else 0
         in_setup = _setup_running(state_store.state.setup)
         applied = screen_apply.Applied(model.id, rotation, connector, chosen=True)
         asks = screen_apply.choose(applied, after_setup=in_setup)
@@ -2772,13 +2848,12 @@ async def main() -> None:
                "visualiser_skins": lambda: plugin_store.SKINS in _added(),
                # ADR-0141 D2: a choice only while both ports have something on them.
                "screen_port": lambda: not settings_store.get("headless")
-               and len(screen_detect.ports()) >= 2,
+               and len(_screen_ports()) >= 2,
                "screen_port_info": lambda: not settings_store.get("headless")
-               and len(screen_detect.ports()) == 1,
+               and len(_screen_ports()) == 1,
                # ADR-0158 D5: only where the player can set the backlight.
                "brightness": lambda: standby_module.screen_backlight() is not None},
-        registry=Settings.with_plugins(load_registry(), installed_plugins, downloads,
-                                       missing=restored_missing),
+        registry=registry,
         defaults={
             # ADR-0162: the Equaliser row says what is in use.
             "equaliser": lambda: equaliser.summary() if equaliser is not None else "Off",
@@ -2862,7 +2937,7 @@ async def main() -> None:
                       # not turn on, and says why.
                       **{f"{plugin.id}.enabled":
                          (lambda plugin_id=plugin.id: catalogue.switch_unavailable(plugin_id))
-                         for plugin in installed_plugins
+                         for plugin in settled
                          if plugin.catalogue and plugin.enabled_row is None}},
         options={
             "skin_corpus": skins_offered,
@@ -2871,7 +2946,7 @@ async def main() -> None:
             # without a restart.
             "output_device": lambda: [o.option for o in outputs.discover()],
             # ADR-0158 D3: a DSI panel's port beside the HDMI ones.
-            "screen_port": lambda: [_port_label(p.connector) for p in screen_detect.ports()],
+            "screen_port": lambda: [_port_label(p.connector) for p in _screen_ports()],
         },
         # A line under a USB DAC: what it reports it can do (George,
         # 2026-10-12). Worked out with the outputs, so asking costs nothing.
@@ -2884,7 +2959,7 @@ async def main() -> None:
                       # ADR-0141 D4 (George, 2026-10-12: one tile, what is on
                       # each port beside its choice in the picker).
                       "screen_port": lambda: {_port_label(p.connector): _port_line(p.connector)
-                                              for p in screen_detect.ports()}},
+                                              for p in _screen_ports()}},
         # *Tested* beside an output tested here or reported working, and a
         # reported problem under it - as the screens and boards show them
         # (George, 2026-10-18).
@@ -2903,14 +2978,14 @@ async def main() -> None:
                "screen": lambda: _reports_note("screen", hardware_report.screen_reports(settings_store.get("screen"))),
                # The Lyrion server's first start says what it is doing.
                **({"lyrion-server.enabled": lambda: _lyrion_note(settings.value("lyrion-server.enabled") is True)}
-                  if any(p.id == "lyrion-server" for p in installed_plugins) else {}),
+                  if any(p.id == "lyrion-server" for p in settled) else {}),
                # ADR-0168: withdrawn or blocked by a read during the run, said
                # without waiting for a restart.
                **{f"{plugin.id}.enabled":
                   (lambda plugin_id=plugin.id, p=plugin: catalogue_note(
                       catalogue.pulled(plugin_id),
                       catalogue.summary(plugin_id) or settings_registry_line(p, "catalogue")))
-                  for plugin in installed_plugins
+                  for plugin in settled
                   if plugin.catalogue and plugin.enabled_row is None}},
         # Wired = something reads it (ADR-0035). The token is read on every
         # Popular lookup, so it takes effect as soon as it is typed.
@@ -3115,10 +3190,10 @@ async def main() -> None:
                **plugin_switches, **plugin_rows,
                # ADR-0100 as amended: Retry under a failed download.
                **{f"{plugin.id}.download": (lambda _value=None, p=plugin: asyncio.ensure_future(_retry_download(p)))
-                  for plugin in installed_plugins if plugin.id in downloads},
+                  for plugin in settled if plugin.id in downloads},
                # ADR-0100, amended 2026-09-28: Remove, beside Retry.
                **{f"{plugin.id}.remove": (lambda _value=None, p=plugin: asyncio.ensure_future(_remove_download(p)))
-                  for plugin in installed_plugins if plugin.id in downloads and not plugin.uploaded}},
+                  for plugin in settled if plugin.id in downloads and not plugin.uploaded}},
         # **Phase 9 criterion 2.** These two act through
         # `POST /settings/{key}/items`, not through `set` - joining a network
         # and forgetting a device - so they are wired, and saying otherwise
@@ -3818,6 +3893,7 @@ async def main() -> None:
 
     lyrion_wake = asyncio.Event()
     lyrion_watch = lyrion_memory.Watch()
+    lyrion_reads = lyrion_stage.Reads()
     #: ADR-0115 decision 12: asked once, through Lyrion's own plugin page; a
     #: restart loads them; asked again if they are still missing ten minutes
     #: on. Once they are all in, never again - one removed later stays removed.
@@ -3890,14 +3966,18 @@ async def main() -> None:
     def _set_lyrion_stage(status) -> None:
         """ADR-0115 decision 28: the stage from what `serverstatus` answered
         (None: no answer), published when it changes."""
-        located = (settings.value("lyrion-server.music_folder") is True or bool(lyrion_shares.points())
-                   or (settings.value("lyrion-server.usb") is True and bool(lyrion_usb.all())))
+        located = lyrion_located(settings.value, lyrion_shares, lyrion_usb)
         addons = ({name: True for name in lyrion_addons.WANTED} if LYRION_ADDONS_DONE.exists()
                   else {name: (LYRION_PLUGINS / name).is_dir() for name in lyrion_addons.WANTED})
         if not LYRION_ADDONS_DONE.exists():
             # Material only once Lyrion serves it (`_lyrion_addons_in`).
             addons["MaterialSkin"] = addons["MaterialSkin"] and bool(lyrion_asked.get("served"))
-        now_stage = lyrion_stage.stage(status is not None, addons, status, located)
+        now_stage = lyrion_stage.stage(status is not None, addons, status, located,
+                                       chosen=lyrion_chosen(settings.value, lyrion_shares, lyrion_usb))
+        # **A read that ends, or never comes, with nothing found** (the
+        # review of 1.16.1): an empty share or USB folder leaves no mark.
+        if status is not None and lyrion_reads.nothing_found(now_stage["phase"]):
+            now_stage = lyrion_stage.found_nothing(now_stage)
         # **A slow answer is not a new start** (George, 2026-10-19: the
         # checklist went back and forth between steps 2 and 3): once
         # Lyrion has answered, a missed answer - its add-ons' restart, a
@@ -4509,8 +4589,9 @@ async def main() -> None:
             state_store.set_screen_confirm(None)
             logger.info("screen: kept")
             # ADR-0109, amended 2026-10-03: what a kept screen reports, so a
-            # different one is noticed at the next start.
-            await asyncio.to_thread(lambda: screen_watch.kept(screen_detect.seen()))
+            # different one is noticed at the next start - from the port it
+            # is on (the review of 1.16.1).
+            await asyncio.to_thread(lambda: screen_watch.kept(screen_detect.applied_port()))
             # ADR-0111 decision 2: the kept screen's pack, the old one out.
             _skins_kick()
             return {"kept": True}
@@ -4583,15 +4664,18 @@ async def main() -> None:
         # never starts a plugin.
         unit = uploads.unit_for(checked.id, checked.kind)
         await restart_if_enabled(unit)
+        # **After any catalogue install under way** (the review of 1.16.1):
+        # the restart cut its download off, and it was lost.
+        waits = catalogue.under_way() if restart else []
         if restart:
-            asyncio.ensure_future(_restart_core_soon())
+            asyncio.ensure_future(catalogue.restart_once_idle())
         # What the page tells the user: a first install arrives off; an update
         # keeps the switch as it was (George, 2026-09-30: the page said
         # "switched off" of an update that was running).
         return {"installed": checked.id, "version": checked.version, "kind": checked.kind,
                 "previous": checked.previous,
                 "enabled": await asyncio.to_thread(_unit_is_enabled, unit),
-                "restarting": True}
+                "restarting": True, "waits_for": waits}
 
     async def _install_from_catalogue(archive: bytes, plugin_id: str, restart: bool = True,
                                       permissions: tuple[str, ...] = ()) -> dict:
@@ -4612,7 +4696,8 @@ async def main() -> None:
 
     async def _switch_off_blocked(plugin_id: str, why: str) -> None:
         """ADR-0168 decision 5: off now, and the core restarted once so the
-        plugin's row says why - unless it was blocked when this core started."""
+        plugin's row says why - unless it was blocked when this core started.
+        The restart waits for a catalogue install under way."""
         plugin = next((p for p in installed_plugins if p.id == plugin_id), None)
         if plugin is None or plugin_id in blocked_at_start:
             return
@@ -4621,7 +4706,7 @@ async def main() -> None:
         await set_unit_enabled(plugin.unit, False)
         if not block_restart["scheduled"]:
             block_restart["scheduled"] = True
-            asyncio.ensure_future(_restart_core_soon())
+            asyncio.ensure_future(catalogue.restart_once_idle())
 
     async def _uninstall_plugin(plugin_id: str, keep: bool = False) -> bool:
         """Remove an uploaded or catalogue plugin. ADR-0169: with `keep`, its
@@ -4634,7 +4719,7 @@ async def main() -> None:
             await asyncio.to_thread(uploads.remove_data, plugin_id)
             await asyncio.to_thread(uploads.forget, plugin_id)
             settings_store.delete(f"{plugin_id}.enabled")
-            asyncio.ensure_future(_restart_core_soon())
+            asyncio.ensure_future(catalogue.restart_once_idle())
             return True
         if plugin is None:
             return False
@@ -4647,7 +4732,8 @@ async def main() -> None:
                 if row.get("key"):
                     settings_store.delete(f"{plugin_id}.{row['key']}")
         settings_store.delete(plugin.enabled_row or f"{plugin_id}.enabled")
-        asyncio.ensure_future(_restart_core_soon())
+        # After any catalogue install under way, as an upload's.
+        asyncio.ensure_future(catalogue.restart_once_idle())
         return True
 
     def _store_view() -> dict:
@@ -4730,7 +4816,8 @@ async def main() -> None:
             skins_state["waited"] = False
             _skins_kick()
 
-    setup_network = SetupNetwork(on_change=_setup_changed)
+    setup_network = SetupNetwork(on_change=_setup_changed,
+                                 headless=lambda: settings_store.get("headless") is True)
     setup_ref["net"] = setup_network
     # ADR-0169 (George, 2026-10-30): an updated player starts from what is in
     # use. A new one leaves it to setup, which records what it chose.
@@ -4805,7 +4892,7 @@ async def main() -> None:
         100 and left the output at full level)."""
         volume = state_store.state.volume
         if volume is not None and settings_store.get(ROOM_VOLUME_KEY) is None:
-            settings_store.set(ROOM_VOLUME_KEY, {"raw": mute.audible_raw(volume.raw),
+            settings_store.set(ROOM_VOLUME_KEY, {**keep_level(mute.audible_raw(volume.raw)),
                                                  "muted": bool(volume.muted)})
         if fixed_now["value"]:
             return
@@ -4825,8 +4912,10 @@ async def main() -> None:
         try:
             if not isinstance(was, dict) or fixed_now["value"]:
                 return
-            raw = was.get("raw")
-            if isinstance(raw, bool) or not isinstance(raw, int):
+            # On the scale in force now, which a change of output or volume
+            # type during the run, or a restart, may have moved.
+            raw = level_kept(was)
+            if raw is None:
                 # Kept as a percentage, before 2026-11-05's fix.
                 raw = slider_percent_to_raw(float(was.get("percent", 0)))
             logger.info("room: volume back to raw %s/%s", raw, hardware_max())
@@ -5352,16 +5441,13 @@ async def main() -> None:
     def _group_after_client(rate: int | None) -> float:
         """ADR-0166 D7 as amended: what comes after this player's client and
         Snapcast cannot see - CamillaDSP's hold on every sample while the
-        equaliser is on, at the rate it plays to the card (the card's
-        highest where it lacks the stream's). None but that: the card's own
-        delay is for the measurement."""
+        equaliser is on, at the rate it plays to the card
+        (`eq_engine.playing_rate`). None but that: the card's own delay is
+        for the measurement."""
         output = _with_software(outputs.in_force(settings.value("output_device"))[0])
         if output is None or not outputs.eq_in_path(output.card):
             return 0.0
-        playing = rate or 44100
-        if outputs.takes_rate(output.card, playing) is False:
-            playing = outputs.top_rate(output.card) or playing
-        return eq_latency_ms(playing)
+        return eq_latency_ms(eq_engine.playing_rate(output.card, rate or 44100))
 
     #: The renderers were stopped for the loopback's reload: the next chain
     #: rewrite starts them again, whether or not anything played.

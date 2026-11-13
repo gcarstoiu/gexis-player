@@ -28,6 +28,7 @@ import subprocess
 import tarfile
 import tempfile
 import time
+import tomllib
 import zlib
 from dataclasses import dataclass
 from pathlib import Path
@@ -77,6 +78,12 @@ MEMBERS = (
     "var/lib/gexis/plugins-known.json",
 )
 
+#: **Owners an archive keeps naming** (ADR-0179): go-librespot has an account
+#: of its own, which its unit gives the folder at every start; the sign-in is
+#: archived as every backup before had it, so an older release, whose
+#: go-librespot runs as pi, restores it to a user who can read it.
+ARCHIVED_OWNER = {"var/lib/go-librespot/state.json": ("pi", "audio")}
+
 #: **A plugin's `~/.cache` stays out** (ADR-0174): what it downloads and what
 #: it can build again. Plexamp's software and its engine's cache are 200 MB
 #: and more in its folder (sofapi, 2026-11-03), where a backup was 1 MB.
@@ -123,6 +130,60 @@ IDENTITIES = (
 #: so the whole plugin goes back to its defaults. Plexamp keeps its switch:
 #: on a second player it is claimed again.
 IDENTITY_SETTINGS = ("beszel.", "plexamp.claim_token")
+
+#: **Put back as values, never as the files** (the review of 1.16.1,
+#: 2026-11-10). `core.toml` is the root core's own configuration - where it
+#: writes, what it serves, where it listens - and one put back whole from a
+#: crafted backup pointed the moOde metadata file at `cmdline.txt`, which
+#: the core replaced at its first state. `device-name.env` is four units'
+#: environment, and a crafted one set `LD_PRELOAD` for them. What a backup
+#: carries of each is what the device was given: these keys of `core.toml`,
+#: over the device's own file, and the name.
+CORE_TOML = "etc/gexis/core.toml"
+CARRIED_CONFIG = {"idle_url": str, "lms_host": str, "lms_port": int, "lms_player_name": str}
+DEVICE_NAME_ENV = "etc/gexis/device-name.env"
+#: Larger than either file ever is; one larger is not read.
+_CARRIED_MAX = 64 * 1024
+_CONTROL = re.compile(r"[\x00-\x1f\x7f]")
+
+
+def _carried_config(brought: bytes, own: bytes | None) -> bytes | None:
+    """The device's own `core.toml` with `CARRIED_CONFIG` as the backup has
+    it, a key it leaves out left out as the whole file had it. None, to
+    leave the device's file: a file the core could not load stopped it at
+    every start."""
+    try:
+        theirs = tomllib.loads(brought.decode())
+        tomllib.loads((own or b"").decode())
+    except (UnicodeDecodeError, tomllib.TOMLDecodeError):
+        return None
+    setting = re.compile(rf"\s*({'|'.join(CARRIED_CONFIG)})\s*=")
+    lines = [line for line in (own or b"").decode().splitlines() if not setting.match(line)]
+    for key, kind in CARRIED_CONFIG.items():
+        value = theirs.get(key)
+        if type(value) is not kind or (kind is str and _CONTROL.search(value)):
+            continue
+        # A JSON string is a TOML basic one, control characters aside.
+        lines.append(f"{key} = {json.dumps(value, ensure_ascii=False)}")
+    text = "".join(line + "\n" for line in lines)
+    try:
+        tomllib.loads(text)
+    except tomllib.TOMLDecodeError:
+        return None
+    return text.encode()
+
+
+def _carried_name(brought: bytes, own: bytes | None) -> bytes | None:
+    """The backup's name, as a rename writes it; None to leave the
+    device's own file."""
+    from gexis_core import device_name
+
+    name = device_name.name_in(brought.decode(errors="replace"))
+    return device_name.env_text(name).encode() if name else None
+
+
+CARRIED = {CORE_TOML: _carried_config, DEVICE_NAME_ENV: _carried_name}
+
 
 #: **The databases the core holds open** (ADR-0131 §5). Put back by writing
 #: beside them and renaming, so an open connection keeps the file it had and
@@ -277,6 +338,66 @@ def _snapshot(source: Path, into: Path) -> bool:
         return False
 
 
+#: Where `_snapshot_pinned` links a database for SQLite: root's own folder,
+#: on the card with the plugins' folders. Relative to the root.
+LINKS_BESIDE = "var/lib/gexis-core"
+LINKS = ".backup-db-"
+
+
+def _snapshot_pinned(folder_fd: int, name: str, fd: int, into: Path, beside: Path, arcname: str) -> bool:
+    """`_snapshot` of the database `fd`, `name` in `folder_fd`. **SQLite opens
+    by path, following links on the way** (the review of 1.16.1): the folder
+    swapped for a link just before, it copied whatever database the link
+    named. So the database and its WAL files are hard-linked from the folder
+    already open into a folder of root's own - the same files, under a path
+    nothing else can change - and SQLite reads them there. False when that
+    cannot be done; the files then go in as they are."""
+    try:
+        place = Path(tempfile.mkdtemp(prefix=LINKS, dir=beside))
+    except OSError as exc:
+        logger.warning("backup: %s could not be copied as a database (%s); taking its files", arcname, exc)
+        return False
+    try:
+        opened = os.fstat(fd)
+        for suffix in ("",) + WAL_FILES:
+            try:
+                os.link(name + suffix, place / f"db{suffix}", src_dir_fd=folder_fd, follow_symlinks=False)
+            except FileNotFoundError:
+                if suffix:
+                    continue
+                raise
+            linked = os.lstat(place / f"db{suffix}")
+            if not stat.S_ISREG(linked.st_mode) or \
+                    (not suffix and (linked.st_dev, linked.st_ino) != (opened.st_dev, opened.st_ino)):
+                logger.warning("backup: %s changed while it was copied; taking its files", arcname)
+                return False
+        return _snapshot(place / "db", into)
+    except OSError as exc:
+        logger.warning("backup: %s could not be copied as a database (%s); taking its files", arcname, exc)
+        return False
+    finally:
+        shutil.rmtree(place, ignore_errors=True)
+
+
+def _sweep_links(beside: Path, now: float | None = None) -> None:
+    """The folders `_snapshot_pinned` left when a backup was cut short (a
+    power cut): links to plugins' databases, kept alive. Once they are old
+    enough not to be another backup's."""
+    now = time.time() if now is None else now
+    try:
+        names = os.listdir(beside)
+    except OSError:
+        return
+    for name in names:
+        path = beside / name
+        try:
+            if not name.startswith(LINKS) or now - os.lstat(path).st_mtime < STALE_PART_S:
+                continue
+        except OSError:
+            continue
+        shutil.rmtree(path, ignore_errors=True)
+
+
 #: **An update's backup that failed says so** (sofapi, 2026-10-13): the
 #: updater watches the share for the new archive, and without this it waited
 #: two minutes for one that was never coming. The core writes the reason
@@ -320,27 +441,107 @@ def _give_to_pi(fd: int) -> None:
         pass
 
 
-def _add(archive: tarfile.TarFile, path: Path, arcname: str, filter) -> None:
-    """`path` and, for a folder, everything in it - one entry at a time, so
-    **a file that goes while the backup runs is left out, not the backup**
-    (sofapi, 2026-10-13: an uploaded plugin's SQLite `-shm` file was listed,
-    then deleted by its program before it was read; `tarfile.add`'s own walk
-    failed the whole backup with "No such file or directory", and the update
-    waiting for it stopped). A file gone has nothing in it to bring back."""
+#: A file or folder opened for a backup: never through a link, and a pipe
+#: swapped in for a file cannot hang it.
+_ENTRY = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC
+
+
+class _Opened:
+    """What `TarFile.gettarinfo` asks of a file object: its descriptor, and a
+    name it does not use for one."""
+
+    def __init__(self, fd: int, name: str) -> None:
+        self._fd, self.name = fd, name
+
+    def fileno(self) -> int:
+        return self._fd
+
+
+def _add(archive: tarfile.TarFile, folder_fd: int, name: str, arcname: str, keep) -> None:
+    """`name` in the open folder `folder_fd` and, for a folder, everything in
+    it - one entry at a time, so **a file that goes while the backup runs is
+    left out, not the backup** (sofapi, 2026-10-13: an uploaded plugin's
+    SQLite `-shm` file was listed, then deleted by its program before it was
+    read; `tarfile.add`'s own walk failed the whole backup with "No such file
+    or directory", and the update waiting for it stopped). A file gone has
+    nothing in it to bring back.
+
+    **Never by its path** (the review of 1.16.1): each entry is opened
+    relative to the folder already open, without following a link, and what
+    goes in - its kind, size, owner and bytes - comes from what was opened.
+    By path, a plugin that swapped one of its folders for a link to `/etc`
+    between the check and the listing had root's files archived under its
+    own name, in a backup it could download.
+
+    `keep(info, folder_fd, name, fd)`: the member to write, or None."""
     if NOT_BACKED_UP.match(arcname):
         return
     try:
-        archive.add(path, arcname=arcname, recursive=False, filter=filter)
+        seen = os.stat(name, dir_fd=folder_fd, follow_symlinks=False)
+        if not (stat.S_ISREG(seen.st_mode) or stat.S_ISDIR(seen.st_mode)):
+            logger.info("backup: %s is not a file or a folder, leaving it out", arcname)
+            return
+        fd = os.open(name, _ENTRY, dir_fd=folder_fd)
     except FileNotFoundError:
         logger.info("backup: %s went while it was read, skipping", arcname)
         return
-    if path.is_dir() and not path.is_symlink():
-        try:
-            names = sorted(os.listdir(path))
-        except FileNotFoundError:
+    except OSError as exc:
+        if exc.errno not in (errno.ELOOP, errno.ENXIO):
+            raise
+        logger.info("backup: %s is not a file or a folder, leaving it out", arcname)
+        return
+    try:
+        info = keep(archive.gettarinfo(arcname=arcname, fileobj=_Opened(fd, arcname)), folder_fd, name, fd)
+        if info is None:
             return
-        for name in names:
-            _add(archive, path / name, f"{arcname}/{name}", filter)
+        if not info.isdir():
+            settled = _read_settled(fd, arcname)
+            if settled is not None:
+                data, now = settled
+                with data:
+                    info.size, info.mtime = now.st_size, now.st_mtime
+                    archive.addfile(info, data)
+            return
+        archive.addfile(info)
+        for child in sorted(os.listdir(fd)):
+            _add(archive, fd, child, f"{arcname}/{child}", keep)
+    finally:
+        os.close(fd)
+
+
+#: How many times a file that changes while it is read is read, and what of
+#: it is held in memory before the rest goes to a temporary file.
+READ_TRIES = 3
+SPOOL_MAX = 1 << 20
+
+
+def _read_settled(fd: int, arcname: str):
+    """The open file's bytes, read whole, **and the file unchanged while they
+    were read** (the review of 1.16.1): a program that rewrote a file shorter
+    in place after its size was taken failed the whole backup - tarfile had
+    written that size, then read fewer bytes ("unexpected end of data") - and
+    the update waiting for it stopped. Read again when it changed; left out,
+    and said, when it keeps changing. `(spool, its stat)`, or None."""
+    for attempt in range(READ_TRIES):
+        if attempt:
+            time.sleep(0.2)
+        before = os.fstat(fd)
+        spool = tempfile.SpooledTemporaryFile(max_size=SPOOL_MAX)
+        try:
+            os.lseek(fd, 0, os.SEEK_SET)
+            while chunk := os.read(fd, 1 << 16):
+                spool.write(chunk)
+            after = os.fstat(fd)
+        except BaseException:
+            spool.close()
+            raise
+        if spool.tell() == after.st_size and \
+                (before.st_size, before.st_mtime_ns) == (after.st_size, after.st_mtime_ns):
+            spool.seek(0)
+            return spool, after
+        spool.close()
+    logger.info("backup: %s kept changing while it was read, leaving it out", arcname)
+    return None
 
 
 #: How old a partial archive is before the next backup takes it for one
@@ -449,34 +650,68 @@ def _sync_dir(directory: Path) -> None:
         os.close(fd)
 
 
+def _archived_as(info: tarfile.TarInfo, user: str, group: str) -> None:
+    """`info` named as `user` and `group`'s, by name and, where this system
+    has them, by number."""
+    info.uname, info.gname = user, group
+    try:
+        info.uid = pwd.getpwnam(user).pw_uid
+    except KeyError:
+        pass
+    try:
+        info.gid = grp.getgrnam(group).gr_gid
+    except KeyError:
+        pass
+
+
 def _fill(archive: tarfile.TarFile, work: str, root: Path) -> None:
     """Everything in `MEMBERS` into `archive`; `work`, a folder for the
     databases' copies."""
     copied: list[tuple[tarfile.TarInfo, Path]] = []
+    beside = root / LINKS_BESIDE
+    _sweep_links(beside)
 
-    def live_databases(info: tarfile.TarInfo) -> tarfile.TarInfo | None:
-        path = root / info.name
+    def live_databases(info: tarfile.TarInfo, folder_fd: int, name: str, fd: int) -> tarfile.TarInfo | None:
         if info.isdir():
             return info
         if not info.isfile():
             logger.info("backup: %s is not a file or a folder, leaving it out", info.name)
             return None
+        if info.name in ARCHIVED_OWNER:
+            _archived_as(info, *ARCHIVED_OWNER[info.name])
         if any(info.name.endswith(s) for s in WAL_FILES) and \
                 any(c.name == info.name[:-4] for c, _ in copied):
             return None
-        if Path(f"{path}-wal").exists():
-            into = Path(work) / str(len(copied))
-            if _snapshot(path, into):
-                copied.append((info, into))
-                return None
+        try:
+            os.stat(f"{name}-wal", dir_fd=folder_fd, follow_symlinks=False)
+        except OSError:
+            return info
+        into = Path(work) / str(len(copied))
+        if _snapshot_pinned(folder_fd, name, fd, into, beside, info.name):
+            copied.append((info, into))
+            return None
         return info
 
-    for member in MEMBERS:
-        source = root / member
-        if not source.exists():
-            logger.info("backup: %s is not here, skipping", member)
-            continue
-        _add(archive, source, member, live_databases)
+    root_fd = os.open(root, _FOLDER)
+    try:
+        for member in MEMBERS:
+            *parents, name = member.split("/")
+            try:
+                folder = _open_folder(root_fd, parents, "backup", make=False)
+            except (FileNotFoundError, ValueError):
+                logger.info("backup: %s is not here, skipping", member)
+                continue
+            try:
+                try:
+                    os.stat(name, dir_fd=folder, follow_symlinks=False)
+                except FileNotFoundError:
+                    logger.info("backup: %s is not here, skipping", member)
+                    continue
+                _add(archive, folder, name, member, live_databases)
+            finally:
+                os.close(folder)
+    finally:
+        os.close(root_fd)
     # The copies, under the live files' names, owners and modes.
     for info, into in copied:
         info.size = into.stat().st_size
@@ -717,18 +952,20 @@ def _set_attributes(fd: int, member: tarfile.TarInfo) -> None:
 
 
 def _write_beside(archive: tarfile.TarFile, member: tarfile.TarInfo, kept: tarfile.TarInfo,
-                  folder: int, leaf: str) -> None:
+                  folder: int, leaf: str, data: bytes | None = None) -> None:
     """One file, written beside its place under a name nobody can guess and
     renamed over it. The rename replaces a link standing there instead of
     following it, and a program holding the old file open - the core its
-    databases (ADR-0131 §5.4) - keeps the one it had."""
+    databases (ADR-0131 §5.4) - keeps the one it had. `data`: written
+    instead of the member's own contents."""
     partial = f".{leaf}.{secrets.token_hex(4)}.restoring"
     fd = os.open(partial, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600,
                  dir_fd=folder)
     try:
         with os.fdopen(fd, "wb") as out:
-            source = archive.extractfile(member)
-            if source is not None:
+            if data is not None:
+                out.write(data)
+            elif (source := archive.extractfile(member)) is not None:
                 with source:
                     shutil.copyfileobj(source, out)
             out.flush()
@@ -771,6 +1008,9 @@ def _put_back(archive: tarfile.TarFile, members: list[tarfile.TarInfo], root: Pa
                 continue
             folder = _open_folder(root_fd, parts[:-1], label)
             try:
+                if member.name in CARRIED:
+                    _carry(archive, member, kept, folder, parts[-1])
+                    continue
                 _write_beside(archive, member, kept, folder, parts[-1])
                 # A WAL the archive does not bring is not left beside the
                 # database it brings: the next open would apply it to the
@@ -794,6 +1034,30 @@ def _put_back(archive: tarfile.TarFile, members: list[tarfile.TarInfo], root: Pa
                 os.close(fd)
     finally:
         os.close(root_fd)
+
+
+def _carry(archive: tarfile.TarFile, member: tarfile.TarInfo, kept: tarfile.TarInfo,
+           folder: int, leaf: str) -> None:
+    """`CARRIED`'s file: what the backup carries of it, over the device's
+    own, owned by root and readable by all whoever the archive says."""
+    def read(source) -> bytes | None:
+        if source is None:
+            return None
+        with source:
+            data = source.read(_CARRIED_MAX + 1)
+        return data if len(data) <= _CARRIED_MAX else None
+
+    brought = read(archive.extractfile(member))
+    try:
+        own = read(os.fdopen(os.open(leaf, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC, dir_fd=folder), "rb"))
+    except OSError:
+        own = None
+    data = CARRIED[member.name](brought, own) if brought is not None else None
+    if data is None:
+        logger.warning("backup: %s: left as it is, nothing in the backup's to carry", member.name)
+        return
+    kept = kept.replace(uid=0, gid=0, uname="root", gname="root", mode=0o644, deep=False)
+    _write_beside(archive, member, kept, folder, leaf, data)
 
 
 def write_settings(values: dict, root: Path = Path("/")) -> None:
@@ -870,13 +1134,17 @@ def _settings_in(archive: tarfile.TarFile, member: tarfile.TarInfo) -> dict:
     return values
 
 
-def inspect(path: Path, known_migrations: int, schema_key: str = "_settings_schema") -> dict:
+def inspect(path: Path, known_migrations: int, schema_key: str = "_settings_schema",
+            fileobj=None) -> dict:
     """**What a backup would bring, without putting anything back** (ADR-0131
     §3-4): its settings as setup applies them, which plugins it has on, what
     else it carries, when and where it was made, and whether a newer version
-    of gexis made it. Raises `Refused` with the sentence for the phone."""
+    of gexis made it. Raises `Refused` with the sentence for the phone.
+    `fileobj`: the archive already open, read instead of `path`."""
     try:
-        archive = tarfile.open(path, "r:gz")
+        if fileobj is not None:
+            fileobj.seek(0)
+        archive = tarfile.open(path, "r:gz", fileobj=fileobj)
     except (tarfile.TarError, OSError, EOFError, zlib.error):
         raise Refused(NOT_A_BACKUP) from None
     with archive:
@@ -1043,55 +1311,98 @@ def add_upload(part: Path, filename: str | None, known_migrations: int,
     amended 2026-10-17; George: *"It should stay in the restore list"*):
     never restored by itself, never in place of a file already there.
     Returns `{"name", "already"}`; raises `Refused` with the sentence for the
-    page. `part` is gone afterwards either way."""
+    page. `part` is gone afterwards either way.
+
+    **Through the one file, opened once** (the review of 1.16.1). The share
+    is `pi`'s and not sticky, so `pi` can put a link under `part`'s name at
+    any moment; read, changed and linked in by name, root gave `pi` what
+    the link named and put it in the share. Opened without following a
+    link, everything after - the check, the comparisons, mode, owner and
+    the link into the share - is done to the file that was opened."""
     try:
-        seen = inspect(part, known_migrations)
-        if seen["newer"]:
-            raise Refused(NEWER)
-        # **The same backup under another name is already there** (a file
-        # renamed on the computer): said, not added twice.
-        size = part.stat().st_size
-        for listed in available(directory):
-            if listed.size == size and _same(part, directory / listed.name):
-                return {"name": listed.name, "already": True}
-        given = Path(filename or "").name
-        if given.endswith(".tgz.gz"):
-            given = given[:-3]
-        if not (NAME.match(given) and SAFE.match(given)):
-            stamp = time.strftime("%Y%m%d-%H%M%S", time.localtime(seen["made"] or time.time()))
-            given = f"gexis-{_slug(seen.get('name') or 'gexis')}-{stamp}.tgz"
-        final = directory / given
-        if final.exists() or final.is_symlink():
-            if _same(part, final):
-                return {"name": given, "already": True}
-            given = f"gexis-{_slug(seen.get('name') or 'gexis')}-{time.strftime('%Y%m%d-%H%M%S')}.tgz"
-            final = directory / given
-        with part.open("rb+") as f:
-            os.fchmod(f.fileno(), 0o644)
-            _give_to_pi(f.fileno())
-            os.fsync(f.fileno())
-        # A link, not a rename: it fails rather than replace whatever
-        # arrived under that name in the meantime.
-        os.link(part, final)
-        _sync_dir(directory)
-        logger.info("backup: %s added from an upload (%s)", given, seen.get("name"))
-        return {"name": given, "already": False}
+        try:
+            fd = os.open(part, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+        except OSError:
+            raise Refused(NOT_A_BACKUP) from None
+        with os.fdopen(fd, "rb") as upload:
+            if not stat.S_ISREG(os.fstat(upload.fileno()).st_mode):
+                raise Refused(NOT_A_BACKUP)
+            return _add_upload(upload, part, filename, known_migrations, directory)
     except FileExistsError as exc:
         raise Refused("A backup with that name arrived at the same moment. Try again.") from exc
     finally:
         part.unlink(missing_ok=True)
 
 
-def _same(a: Path, b: Path) -> bool:
+def _add_upload(upload, part: Path, filename: str | None, known_migrations: int, directory: Path) -> dict:
+    """`add_upload`, given the file opened."""
+    seen = inspect(part, known_migrations, fileobj=upload)
+    if seen["newer"]:
+        raise Refused(NEWER)
+    # **The same backup under another name is already there** (a file
+    # renamed on the computer): said, not added twice.
+    size = os.fstat(upload.fileno()).st_size
+    for listed in available(directory):
+        if listed.size == size and _same(upload, directory / listed.name):
+            return {"name": listed.name, "already": True}
+    given = Path(filename or "").name
+    if given.endswith(".tgz.gz"):
+        given = given[:-3]
+    if not (NAME.match(given) and SAFE.match(given)):
+        stamp = time.strftime("%Y%m%d-%H%M%S", time.localtime(seen["made"] or time.time()))
+        given = f"gexis-{_slug(seen.get('name') or 'gexis')}-{stamp}.tgz"
+    final = directory / given
+    if final.exists() or final.is_symlink():
+        if _same(upload, final):
+            return {"name": given, "already": True}
+        given = f"gexis-{_slug(seen.get('name') or 'gexis')}-{time.strftime('%Y%m%d-%H%M%S')}.tgz"
+        final = directory / given
+    os.fchmod(upload.fileno(), 0o644)
+    _give_to_pi(upload.fileno())
+    os.fsync(upload.fileno())
+    # A link, not a rename: it fails rather than replace whatever
+    # arrived under that name in the meantime. Of the open file, by its
+    # descriptor: whatever is under `part`'s name by now is not linked.
     try:
-        if not stat.S_ISREG(b.lstat().st_mode) or a.stat().st_size != b.stat().st_size:
-            return False
-        with a.open("rb") as x, b.open("rb") as y:
-            while True:
-                one, two = x.read(1 << 20), y.read(1 << 20)
-                if one != two:
-                    return False
-                if not one:
-                    return True
+        os.link(f"/proc/self/fd/{upload.fileno()}", final)
+    except FileNotFoundError:
+        # Its name was taken away meanwhile, and a file with none cannot be
+        # linked again.
+        raise Refused("The file did not arrive whole. Try again.") from None
+    except OSError as exc:
+        if exc.errno != errno.EXDEV:
+            raise
+        # **Where the descriptor's link is on another device** (an overlay: a
+        # container, GitHub's runners): by its name, never followed, and
+        # kept only if what was linked is the file checked.
+        try:
+            os.link(part, final, follow_symlinks=False)
+        except FileNotFoundError:
+            raise Refused("The file did not arrive whole. Try again.") from None
+        mine, linked = os.fstat(upload.fileno()), os.lstat(final)
+        if (linked.st_dev, linked.st_ino) != (mine.st_dev, mine.st_ino):
+            final.unlink(missing_ok=True)
+            raise Refused("The file did not arrive whole. Try again.") from None
+    _sync_dir(directory)
+    logger.info("backup: %s added from an upload (%s)", given, seen.get("name"))
+    return {"name": given, "already": False}
+
+
+def _same(upload, b: Path) -> bool:
+    """Whether the open `upload` holds what the file `b` does; `b` is never
+    read through a link."""
+    try:
+        fd = os.open(b, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
     except OSError:
         return False
+    with os.fdopen(fd, "rb") as y:
+        mine, theirs = os.fstat(upload.fileno()), os.fstat(y.fileno())
+        if not stat.S_ISREG(theirs.st_mode) or mine.st_size != theirs.st_size:
+            return False
+        upload.seek(0)
+        while True:
+            one, two = upload.read(1 << 20), y.read(1 << 20)
+            if one != two:
+                return False
+            if not one:
+                return True

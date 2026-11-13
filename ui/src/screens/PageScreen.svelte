@@ -19,7 +19,9 @@
   page to keep.
 -->
 <script>
-  let { shown, seq, onclose } = $props();
+  //: `covered`: a screen that moves is drawn over this one (the update, a
+  //: reset, settling, setup, a pairing request).
+  let { shown, seq, onclose, covered = false } = $props();
 
   let url = $state(null);
   let loaded = $state(false);
@@ -29,14 +31,18 @@
 
   $effect(() => {
     seq;
-    url = null;
-    loaded = false;
     let gone = false;
     fetch('/panel/page', { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : null))
       .then((answer) => {
         if (gone) return;
-        url = answer?.shown ? (answer.url ?? null) : null;
+        // **The page shown stays unless its address changed** (the review
+        // of 1.16.1): the kept page renewed or cleared reloaded it.
+        const shownUrl = shown && answer?.shown ? (answer.url ?? null) : null;
+        if (shownUrl !== url) {
+          url = shownUrl;
+          loaded = false;
+        }
         const next = answer?.preload ?? null;
         if (!next) preload = null;
         else if (next.url !== preload?.url || next.n !== preload?.n) {
@@ -47,14 +53,23 @@
       .catch(() => {});
     return () => { gone = true; };
   });
+  // Gone, it takes its address with it: the next page starts from none.
+  $effect(() => {
+    if (shown) return;
+    url = null;
+    loaded = false;
+  });
 
   const kept = $derived(shown && !!preload && url === preload.url);
 
   // What the page covers stops moving, as under the idle screen: a running
   // animation underneath keeps the Pi's browser compositing (Finding 118),
-  // and live video needs the processor (Finding 142).
+  // and live video needs the processor (Finding 142). **Not while a screen
+  // that moves is over it** (the review of 1.16.1): the rule pauses all but
+  // the page, and the update's turning mark stood still under "Don't switch
+  // off."
   $effect(() => {
-    if (!shown) return;
+    if (!shown || covered) return;
     document.documentElement.classList.add('page-up');
     return () => document.documentElement.classList.remove('page-up');
   });

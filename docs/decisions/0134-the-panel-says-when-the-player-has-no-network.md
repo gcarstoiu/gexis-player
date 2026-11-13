@@ -40,3 +40,12 @@ range. **After boot nothing watched**: a network lost later was silent.
 - With one radio, the open setup network takes the Wi-Fi off the home
   network; the five-minute retry is what gives it back, as at boot.
 - A headless player opens it too, with the fixed password, as at boot.
+
+## Amended 2026-11-10 (ADR-0178)
+
+The setup network opened after the network is lost is held by a phone using
+the page for ten minutes at most: after that the player looks for its saved
+networks whoever is on the page, and returns to one in range. Its password
+and what answers there follow
+[ADR-0178](0178-fixes-from-the-review-of-1-16-1-that-change-what-is-seen.md)
+decision 2 (George).

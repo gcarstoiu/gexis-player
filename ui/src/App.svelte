@@ -223,6 +223,14 @@
       untrack(() => { idle = false; askedIdle = false; });
       return;
     }
+    // **Nor under the update lock, a factory reset or the settling screen**
+    // (the review of 1.16.1): the idle screen pauses every animation but its
+    // own, and their marks of progress stood still under it. One already up
+    // goes, and one a phone asks for meanwhile.
+    if (updateLock || $resetting || settlingShown) {
+      if (idle) untrack(() => { idle = false; askedIdle = false; });
+      return;
+    }
     // **The idle screen can be off** (ADR-0133 amended 2026-10-11, second;
     // off on a new player): the panel then stays on what it shows.
     if (!idleOn) {
@@ -391,7 +399,9 @@
   //: phone.** Applied once per ask, as the idle ask is, and attention like a
   //: touch. Home is the library's root (a fresh one - wherever the library
   //: had got to), or the root screen with LMS off; the others close what
-  //: covers Now Playing, and Lyrics and Track set its tab.
+  //: covers Now Playing, and Lyrics and Track set its tab. Each closes the
+  //: equaliser's editor and room correction's page as it closes Settings
+  //: (the review of 1.16.1); a run's own screen is not theirs to close.
   let appliedViewAsk = null;
   let libraryHome = $state(0);
   $effect(() => {
@@ -404,6 +414,8 @@
       askedIdle = false;
       touches += 1;
       settingsOpen = false;
+      eqOpen = false;
+      roomOpen = false;
       closeVolume();
       // An artist or album asked for earlier is not asked for again: the
       // library remounts on `libraryHome` with these as its props, and an
@@ -432,7 +444,7 @@
   //: 2026-10-06).
   let reportedNow = null;
   $effect(() => {
-    const showing = !!$active && !libraryOpen && !settingsOpen && !waitingOpen && !idle;
+    const showing = !!$active && !libraryOpen && !settingsOpen && !eqOpen && !roomOpen && !waitingOpen && !idle;
     if (surface !== 'panel' || showing === reportedNow) return;
     reportedNow = showing;
     reportShown({ now: showing }).catch(() => (reportedNow = null));
@@ -443,7 +455,7 @@
   //: nothing over it, its lyrics on.
   $effect(() => {
     const showing =
-      $lyricsShown && !!$active && !libraryOpen && !settingsOpen && !idle && !$panel.visualiser;
+      $lyricsShown && !!$active && !libraryOpen && !settingsOpen && !eqOpen && !roomOpen && !idle && !$panel.visualiser;
     // The state this reads arrives every second; the core hears a change.
     if (surface !== 'panel' || showing === reportedLyrics) return;
     reportedLyrics = showing;
@@ -614,6 +626,10 @@
     !!$setup &&
       (['open', 'failed', 'joining', 'done'].includes($setup.network) ||
         ($setup.needed && ['waiting', 'online'].includes($setup.network)))
+  );
+  //: ADR-0128: the settling screen on the panel, as drawn below.
+  const settlingShown = $derived(
+    !!$settling && !$settling.hidden && $settling.modal !== false && !$screenConfirm && !updateLock && !setupShown
   );
 
   //: **...and on a phone, the setup page** in place of Settings while setup
@@ -1063,7 +1079,8 @@
     <!-- ADR-0176: over the idle screen and the dashboard; a touch or a key
          closes it, and what was there is under it still. Mounted, hidden,
          while a page is kept loaded (K3). -->
-    <PageScreen shown={pageUp} seq={$panel.page.seq} onclose={closePage} />
+    <PageScreen shown={pageUp} seq={$panel.page.seq} onclose={closePage}
+                covered={updateLock || $resetting || settlingShown || setupShown || !!$pairing} />
   {/if}
 
   <!-- ADR-0175: while the room is measured, the screen says so - over the
@@ -1092,7 +1109,7 @@
 
   <!-- ADR-0128: the first start after setup, until it has settled - over
        everything but Keep this screen and the update lock. -->
-  {#if $settling && !$settling.hidden && $settling.modal !== false && !$screenConfirm && !updateLock && !setupShown}
+  {#if settlingShown}
     <SettlingScreen settling={$settling} ondone={() => settlingDone().catch(() => {})} onhide={() => settlingHide().catch(() => {})} />
   {:else if $personalise === 'pending' && $settingValues.headless !== true && !$screenConfirm && !updateLock && !setupShown}
     <!-- ADR-0149: part 2 is owed; the panel shows the way to it - **at

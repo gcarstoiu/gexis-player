@@ -29,6 +29,8 @@ it has any) sees a string it may already recognise.
 from __future__ import annotations
 
 import logging
+import os
+import re
 from pathlib import Path
 
 from gexis_core.model import PlaybackState
@@ -36,6 +38,20 @@ from gexis_core.model import PlaybackState
 logger = logging.getLogger("gexis_core.metadata_file")
 
 DEFAULT_PATH = Path("/var/local/www/currentsong.txt")
+
+#: A line break in a title would start a line of its own in the file.
+_UNWRITABLE = re.compile(r"[\x00-\x1f\x7f\u2028\u2029]")
+
+
+def allowed(path: Path) -> Path:
+    """`path` if it is a file in moOde's own folder, else moOde's own path
+    (the review of 1.16.1, 2026-11-10). The path comes from `core.toml`, and
+    the core writing it runs as root: one put back from a crafted backup
+    named `cmdline.txt`, which the core replaced at its first state."""
+    if path.parent == DEFAULT_PATH.parent and path.name not in ("", ".", ".."):
+        return path
+    logger.warning("metadata_file: %s is outside %s; writing %s", path, DEFAULT_PATH.parent, DEFAULT_PATH)
+    return DEFAULT_PATH
 
 RENDERER_LABELS = {
     "lms": "Squeezelite Active",
@@ -82,14 +98,19 @@ class MetadataFileWriter:
             "title": metadata.title or "",
             "coverurl": metadata.artwork or "",
         }
-        return "".join(f"{field}={values[field]}\n" for field in _FIELDS)
+        return "".join(f"{field}={_UNWRITABLE.sub(' ', values[field])}\n" for field in _FIELDS)
 
     def _write_atomically(self, data: str) -> None:
         tmp_path = self._path.with_name(self._path.name + ".tmp")
         try:
             self._path.parent.mkdir(parents=True, exist_ok=True)
-            tmp_path.write_text(data)
+            # Made new, never through a link left at the name; 0666 on the
+            # descriptor, as moOde leaves it, whatever the umask.
+            tmp_path.unlink(missing_ok=True)
+            fd = os.open(tmp_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
+            with os.fdopen(fd, "wb") as out:
+                out.write(data.encode(errors="replace"))
+                os.fchmod(out.fileno(), 0o666)
             tmp_path.rename(self._path)
-            self._path.chmod(0o666)
         except OSError as exc:
             logger.warning("metadata_file: failed to write %s: %s", self._path, exc)

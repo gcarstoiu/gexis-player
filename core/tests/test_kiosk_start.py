@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import stat
 import subprocess
 from pathlib import Path
 
@@ -120,3 +121,48 @@ def test_with_no_screen_chosen_a_dsi_panel_comes_before_hdmi(tmp_path):
     rc = _write(tmp_path, None, connected=("DSI-1", "HDMI-A-1"), dsi=True)
     assert '<touch mapToOutput="DSI-1"/>' in rc and '<action name="MoveToOutput" output="DSI-1"/>' in rc
 
+
+
+def _session(tmp_path: Path, token: str | None) -> tuple[list[str], Path]:
+    """The script's session part, as labwc runs it, with Chromium a stand-in
+    that writes down its arguments: those arguments, and the user's runtime
+    folder."""
+    token_file = tmp_path / "panel-token"
+    if token is not None:
+        token_file.write_text(token + "\n")
+    runtime = tmp_path / "run-user"
+    runtime.mkdir(mode=0o700)
+    fake = tmp_path / "bin"
+    fake.mkdir()
+    (fake / "chromium").write_text('#!/bin/bash\nprintf "%s\\n" "$@" > "$CHROMIUM_ARGS"\n')
+    (fake / "sleep").write_text("#!/bin/sh\n")
+    for name in ("chromium", "sleep"):
+        (fake / name).chmod(0o755)
+    env = {k: v for k, v in os.environ.items()
+           if not k.startswith(("GEXIS_", "WAYLAND_", "XDG_")) and k != "DISPLAY"}
+    env.update(PATH=f"{fake}:{os.environ['PATH']}", XDG_RUNTIME_DIR=str(runtime),
+               GEXIS_KIOSK_URL="http://127.0.0.1:8090/", GEXIS_KIOSK_PROFILE=str(tmp_path / "profile"),
+               GEXIS_PANEL_TOKEN=str(token_file), GEXIS_DRM=str(tmp_path / "drm"),
+               CHROMIUM_ARGS=str(tmp_path / "args"))
+    subprocess.run(["bash", str(SCRIPT)], env=env, check=True, capture_output=True, timeout=30)
+    return (tmp_path / "args").read_text().splitlines(), runtime
+
+
+def test_the_panel_s_token_is_never_on_chromium_s_command_line(tmp_path):
+    """The review of 1.16.1: any process on the player can read another's
+    command line - a Lyrion plugin, Roon Bridge - and the token in the
+    address let it pass for the panel. The kiosk opens a page only its own
+    user can read, which goes on to the panel's address with the token."""
+    args, runtime = _session(tmp_path, "Ab_9-token")
+    assert not any("Ab_9-token" in a for a in args)
+    url = args[-1]
+    assert url.startswith("file://")
+    page = Path(url[len("file://"):])
+    assert page.parent == runtime and stat.S_IMODE(page.stat().st_mode) == 0o600
+    assert 'location.replace("http://127.0.0.1:8090/#panel=Ab_9-token")' in page.read_text()
+    assert "#101a21" in page.read_text(), "the panel's ground colour, not a white flash"
+
+
+def test_with_no_token_the_panel_s_address_is_opened_as_it_is(tmp_path):
+    args, runtime = _session(tmp_path, None)
+    assert args[-1] == "http://127.0.0.1:8090/" and not list(runtime.iterdir())

@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """ADR-0176: a page from Home Assistant on the screen, for a while."""
 import asyncio
+import os
 
 import pytest
 
@@ -41,7 +42,7 @@ def test_the_call_is_read_with_its_defaults():
     None, [], {}, {"url": ""}, {"url": "ftp://ha.example/x"}, {"url": "ha.example/x"},
     {"url": URL, "id": ""}, {"url": URL, "id": "x" * 65}, {"url": URL, "id": 3},
     {"url": URL, "seconds": 9}, {"url": URL, "seconds": 3601}, {"url": URL, "seconds": True},
-    {"url": URL, "seconds": "60"},
+    {"url": URL, "seconds": "60"}, {"url": "http://[::1/"}, {"url": "http://[nothex]/"},
 ])
 def test_a_call_out_of_bounds_is_refused_with_a_400(body):
     with pytest.raises(Refused) as caught:
@@ -208,7 +209,8 @@ def test_a_page_to_keep_is_an_http_address_and_null_or_empty_clears_it():
     assert parse_preload({"url": f" {URL} "}) == URL
     assert parse_preload({"url": None}) is None
     assert parse_preload({"url": " "}) is None
-    for body in (None, {}, [], {"url": 3}, {"url": "ftp://ha.example/x"}, {"url": "ha.example/x"}):
+    for body in (None, {}, [], {"url": 3}, {"url": "ftp://ha.example/x"}, {"url": "ha.example/x"},
+                 {"url": "http://[::1/"}):
         with pytest.raises(Refused) as caught:
             parse_preload(body)
         assert caught.value.status == 400
@@ -226,9 +228,24 @@ def test_the_page_kept_is_saved_and_read_again_at_the_next_start(tmp_path):
     assert _page(preload_path=path)[0].preload is None
 
 
+def test_the_page_kept_is_root_s_alone(tmp_path):
+    """An address can carry a token (P2): not readable by a plugin's user
+    (the review of 1.16.1), and one saved 0644 before is closed at start."""
+    path = tmp_path / "page-preload.json"
+    old = os.umask(0o022)
+    try:
+        _page(preload_path=path)[0].set_preload(URL)
+    finally:
+        os.umask(old)
+    assert path.stat().st_mode & 0o777 == 0o600
+    path.chmod(0o644)
+    assert _page(preload_path=path)[0].preload == URL
+    assert path.stat().st_mode & 0o777 == 0o600
+
+
 def test_a_damaged_file_keeps_nothing(tmp_path):
     path = tmp_path / "page-preload.json"
-    for text in ("not json", "[]", '{"url": "ftp://x/y"}', '{"url": 3}'):
+    for text in ("not json", "[]", '{"url": "ftp://x/y"}', '{"url": 3}', '{"url": "http://[::1/"}'):
         path.write_text(text)
         assert _page(preload_path=path)[0].preload is None
 

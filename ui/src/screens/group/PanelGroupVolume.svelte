@@ -17,7 +17,10 @@
   import PanelMemberRow from './PanelMemberRow.svelte';
   import { track } from './panelSlider.js';
 
-  let { g, onadd, onundo, onflash } = $props();
+  //: `armsAt`: the drawer's - opened by itself, none of this takes a touch
+  //: before it (VolumeDrawer).
+  let { g, armsAt = 0, onadd, onundo, onflash } = $props();
+  const armed = () => performance.now() >= armsAt;
 
   //: **What the sliders show while a finger moves them**, and for a moment
   //: after (as the drawer's own slider settles): the core's answer arrives
@@ -72,10 +75,10 @@
     senderOf(m.id).send(m.id, percent);
   }
 
-  const muteAll = () => setGroupMute(!g.muted).catch(fail('Mute not changed'));
+  const muteAll = () => armed() && setGroupMute(!g.muted).catch(fail('Mute not changed'));
   const muteOne = (m) => setMemberMute(m.id, !m.muted).catch(fail('Mute not changed'));
   const remove = (m) => removePlayer(m.id).catch(fail(`${m.name} not removed`));
-  const leave = () => leaveGroup().catch(fail('Not left'));
+  const leave = () => armed() && leaveGroup().catch(fail('Not left'));
 
   const me = $derived(g.members.find((m) => m.me));
   const canLeave = $derived(!!me && !me.leads);
@@ -104,7 +107,7 @@
     <div class="head__title">Group volume</div>
     <div class="head__sub">{levelsSub(g)}</div>
   </div>
-  <button class="button button--52" type="button" onclick={onadd}><span class="plus">+</span>Add players</button>
+  <button class="button button--52" type="button" onclick={() => armed() && onadd?.()}><span class="plus">+</span>Add players</button>
 </div>
 
 <div class="all">
@@ -115,7 +118,7 @@
   <div class="track" role="slider" tabindex="-1" aria-label="All players volume"
        aria-valuemin="0" aria-valuemax="100" aria-valuenow={allLevel} data-dpad-main data-step={DPAD_STEP}
        ondpadstep={(event) => allStep(event.detail.step)}
-       onpointerdown={allDrag.down} onpointermove={allDrag.move} onpointerup={allDrag.up} onpointercancel={allDrag.up}>
+       onpointerdown={(event) => armed() && allDrag.down(event)} onpointermove={allDrag.move} onpointerup={allDrag.up} onpointercancel={allDrag.up}>
     <div class="rail">
       <div class="fill" class:is-muted={g.muted} style:width={`${allLevel}%`}></div>
       <div class="knob" style:left={`${allLevel}%`} data-dpad-knob></div>
@@ -129,7 +132,7 @@
 
 <div class="list" class:is-faded={overflowing} bind:this={list}>
   {#each g.members as m (m.id)}
-    <PanelMemberRow {m} level={levelOf(m)}
+    <PanelMemberRow {m} {armsAt} level={levelOf(m)}
                     canremove={m.reachable && !m.me && !m.leads}
                     onlevel={(percent) => memberLevel(m, percent)} ondone={settleLater}
                     onmute={() => muteOne(m)} onremove={() => remove(m)} />
@@ -144,7 +147,7 @@
   {#if canLeave}
     <button class="button button--58" type="button" onclick={leave}>Leave group</button>
   {/if}
-  <button class="button button--58 button--undo" type="button" onclick={onundo}>Undo group</button>
+  <button class="button button--58 button--undo" type="button" onclick={() => armed() && onundo?.()}>Undo group</button>
 </div>
 
 <style>
@@ -233,7 +236,8 @@
     display: flex;
     align-items: center;
     min-width: 0;
-    touch-action: none;
+    /* Up and down is the drawer's scroll (panelSlider.js). */
+    touch-action: pan-y;
   }
   .rail {
     width: 100%;

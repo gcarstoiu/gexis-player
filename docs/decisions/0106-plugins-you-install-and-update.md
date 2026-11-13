@@ -162,3 +162,10 @@ authors' plugins once they pass its checks and a person's reading
 ([ADR-0168](0168-a-plugin-catalogue.md), George). They install through this
 record's checks, folder and sandbox, after a notice of their own; listed
 means checked, not made or vouched for. Signing by authors stays out.
+
+## Amended 2026-11-10 (ADR-0178)
+
+The upload's check also runs the settings registry's own rules over the
+manifest's rows; a package Settings would leave out is refused with the
+registry's reason ([ADR-0178](0178-fixes-from-the-review-of-1-16-1-that-change-what-is-seen.md)
+decision 4, George).

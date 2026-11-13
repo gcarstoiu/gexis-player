@@ -6,6 +6,30 @@
 Every release of Gexis Player and its notes, newest first. The player
 shows the last 10 under Settings → System → Change logs.
 
+## 1.16.2 — 12 November 2026
+
+### Fixed
+
+- Security: backups, plugins, grouped players and the setup network are checked more strictly, and the music services run under accounts of their own.
+- A plugin with a mistake in its settings no longer stops the player from starting; such a package is refused at upload, with the reason.
+- A new Wi-Fi given to a player already set up keeps its plugins, and Make it yours is not asked again.
+- Low-rate radio, and 88.2 and 176.4 kHz through a USB-to-optical adapter, play with the equaliser or room correction on; a boosting preset no longer plays quieter than Flat.
+- Room correction: the volume and sound come back as they were after a measurement, and Done, Back and Measure here do what they say.
+- Groups: a player added to a group playing Lyrion no longer pauses it, an ended group stays ended, and a player plays with its group again after a restart or a dropped connection.
+- Plugins: Plexamp and Beszel stay removed, the catalogue is read however large it grows, and a download is no longer cut off by another plugin's install or removal.
+- Screens: moving between a TV and a panel keeps each one's settings, two panels no longer swap at every start, and a DSI panel lights up in setup after a factory reset.
+- A broken character in a song title no longer freezes the screen, and the phone's Home and Now playing work while the panel shows the equaliser or room correction.
+- Getting ready ends with Ready, no music found when the folders chosen hold no music, instead of waiting.
+- Updates: a plugin saving a file no longer stops one at its backup, and one that takes longer to start, where going back is not possible, counts as installed.
+
+### Good to know
+
+- In a group every player now plays about a second late, up from 0.4 seconds, to give players on Wi-Fi more time.
+- In a browser, the player is changed only from its own pages, opened by its address, its name or name.local; Home Assistant and apps are not affected.
+- A player already set up that loses its Wi-Fi opens its setup network only to choose a network, with a password of its own shown on its screen; a new player, or one without a screen, keeps gexis-setup.
+- A link in a Home Assistant dashboard that opens a new window does nothing on the screen.
+- A TV chosen as the screen stays the screen while it is off; choosing the panel's port under Screen port brings the panel back.
+
 ## 1.16.1 — 10 November 2026
 
 ### Good to know

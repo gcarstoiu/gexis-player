@@ -159,6 +159,30 @@ def carry_raw(raw: int | None, old: mixer_scale.Scale, new: mixer_scale.Scale) -
     return new.raw(old.db(raw))
 
 
+def keep_level(raw: int | None) -> dict:
+    """**A raw level to keep in a store, with the scale it was taken on**
+    (the review of 1.16.1): a store outlives the scale - an output or volume
+    type changed meanwhile, or a restart came up on another output - and a
+    bare raw was replayed on the new one, the software stage's -30 dB as the
+    jack's 0 dB. `level_kept` reads it back."""
+    s = _scale
+    return {"raw": raw, "scale": [s.raw_min, s.raw_max, s.db_min, s.db_step]}
+
+
+def level_kept(kept: dict) -> int | None:
+    """What `keep_level` kept, carried onto the scale in force now; None
+    when it holds no raw. A raw kept without its scale is taken as on it."""
+    raw = kept.get("raw")
+    if isinstance(raw, bool) or not isinstance(raw, int):
+        return None
+    scale = kept.get("scale")
+    if not (isinstance(scale, list) and len(scale) == 4
+            and all(isinstance(n, (int, float)) and not isinstance(n, bool) for n in scale)
+            and scale[3] > 0):
+        return raw
+    return carry_raw(raw, mixer_scale.Scale(*scale), _scale)
+
+
 def hardware_max() -> int:
     """The loudest raw value written: the control's 0 dB, never above it."""
     return _scale.top

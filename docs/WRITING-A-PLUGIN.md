@@ -67,7 +67,7 @@ brings one is refused.
 | `connection` | no | For a `service` that connects somewhere off this device: the heading above its rows then says *Connected*, *Connecting* or *Not connected*, read from the connections its running process holds |
 | `software` | no | What it downloads itself, from its maker, when it starts - `"Plexamp"`, 40 characters at most. Its switch then shows that download as the player's own are shown, from the `software` messages it sends (PLUGIN-CONTRACT.md); Retry under a failed one restarts the plugin |
 | `port` | no | A web page of its own on this device, by port number: its switch then says *Open http://<name>.local:<port>* (the Beszel hub's is 8095; 8090 and 8091 are the player's) |
-| `settings` | no | Rows for **Settings**, below |
+| `settings` | no | Rows for **Settings**, below. A row the settings registry would refuse (a number with no `min` and `max`, a choice with no options, a key twice, an `onlyWhen` naming a key you do not have) refuses the package, with the reason |
 | `permissions` | no | What it needs beyond the sandbox (section 3): a list of `cec`, `gpio`, `usb`. The person adding it is told, and the player grants exactly those. Absent: none |
 
 **Not allowed:** `unit` (the player writes it), paths that point outside the
@@ -83,7 +83,7 @@ Every uploaded plugin runs under `gexis-uploaded-<kind>@<id>.service`:
 | **Can write** | Only its own data folder, `$STATE_DIRECTORY` (also `$GEXIS_PLUGIN_DATA`, and `$HOME`), kept across restarts and versions and deleted with the plugin; software it downloads there can run from there; `$HOME/.cache` is left out of backups. Plus its own `/tmp` |
 | **Can read** | The system, read-only. **Not** `/home` |
 | **Devices** | A **renderer** gets the sound cards (and the basics every program has, like `/dev/null`); a **service** gets no devices beyond those basics. More only as its `permissions` ask, below |
-| **Network** | Open |
+| **Network** | Open, but for `127.0.0.2`, where the player's audio chain takes its orders. `127.0.0.1` is open, the player's own API included |
 | **Processes** | Its own only: other users' processes are out of sight (`ProtectProc=invisible`) |
 | **The player** | The plugin socket, `$GEXIS_PLUGIN_SOCKET` (`/run/gexis/plugins.sock`) |
 | **Limits** | 1 GB of memory (past it, the kernel ends your plugin and it restarts), 1.5 CPU cores, 128 tasks |
@@ -331,6 +331,7 @@ The checks, so you can pass them first time:
   `version`, `run`, and no `unit`;
 - `run` is in the package and is an aarch64 program or a `#!` script;
 - no path or link escapes the package;
+- no path in it twice with different contents, and none inside a link;
 - under 200 MB, and under 600 MB unpacked.
 
 **Update** by uploading a package with a different `version`. The version

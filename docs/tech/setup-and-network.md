@@ -41,7 +41,8 @@ script calls (`imager_custom`, `userconf`), each only if its variable is set:
 `userconf pi ""` always runs: it finalises the `pi` account and cancels the
 stock first-boot wizard. The script then deletes itself and its `cmdline.txt`
 entry. **The public image gives `pi` no sudo** (ADR-0139): `pi` runs the kiosk
-and Squeezelite, and a flaw in either would otherwise be a flaw as root.
+(the music services have accounts of their own, ADR-0179), and a flaw in it
+would otherwise be a flaw as root.
 Nothing in the player calls sudo; `verify-image.sh` asserts the image has no
 sudoers rule for `pi`, and only `DEV_SUDO="yes"` puts one on a test card.
 
@@ -133,6 +134,10 @@ stateDiagram-v2
 (`WATCH_S`), only while the state is `online`, setup is finished and no
 `join_new` is under way. Two minutes (`LOST_S`) with no device `online()`
 accepts opens the setup network and runs the same `_hold` retry as at boot.
+A phone using the page holds it for its first ten minutes (`SETUP_ACTIVE_S`);
+after that the retry looks for a saved network whoever is on the page, so a
+player already set up returns home within ten minutes of its network's
+return (ADR-0178 decision 2).
 
 State strings are the ones `SetupNetwork.status()` publishes:
 `starting`, `waiting`, `open`, `joining`, `failed`, `done`, `online`.
@@ -176,11 +181,23 @@ open; the panel's join step counts down (*"Can't join? Channel 6 changes in
 1:42"*). A failed `connection up` is handled as a failed start: the network
 reopens from the quiet channel.
 
-**The password** is `gexis-setup` on every player, with a panel or without
-(`setup_network.PASSWORD`; George, 2026-10-18). Until then a player whose
-screen had been confirmed made one up and showed it on the panel (ADR-0109
-decision 5); a freshly flashed card never had a confirmed screen, so setup
-always used the fixed one anyway.
+**The password** is `gexis-setup` on a new player, with a panel or without
+(`setup_network.PASSWORD`; George, 2026-10-18). A player already set up
+(`needed` false) with a screen in use - connected (`panel_attached`), kept on
+the panel (`screen_apply.confirmed()`), and not headless - makes one up
+(8 characters from `PASSWORD_ALPHABET`), kept in
+`/var/lib/gexis/setup-password` (0600, removed by a factory reset) and shown
+on the panel, which reads it from `/setup/status` on loopback (ADR-0178
+decision 2). Until 2026-10-18 every player with a confirmed screen did so
+(ADR-0109 decision 5).
+
+**Over the setup network a player already set up only joins a Wi-Fi network**
+(ADR-0178 decision 2). A request arriving on `ADDRESS` reaches only
+`SETUP_NETWORK_ROUTES` (the page, `/surface`, `/state`, `/assets/`, setup's
+status, networks, answers and Finish) and is otherwise answered 403;
+`SetupFlow` takes only `NETWORK_ANSWERS` from its answers and refuses a
+backup or a restore. The phone's part 1 is welcome, network, joining, the
+name taken from `/setup/status`'s `host`. A new player is set up there whole.
 
 **No captive portal** (ADR-0031 amendment 2). The panel shows two QR codes in
 sequence: one that joins the network, then one for the page,
@@ -202,7 +219,8 @@ needed) any associated phone holds it, as it has nothing saved to go back to.
 On a configured one a phone holds it only while the setup page is in use
 (George, 2026-10-12): a request to `/` or a `/setup/...` route from a phone in
 the last `SETUP_ACTIVE_S` (600 s) - noted by the `_note_setup_use`
-middleware in `wsserver.py`, the panel's own loopback requests excluded - or
+middleware in `wsserver.py`, every loopback request excluded (the panel's,
+its token or not, and the plugins') - or
 when the retry first found a phone on the network less than `SETUP_ACTIVE_S`
 ago (`_phone_since`, cleared when a retry finds none, and with the page's
 last use each time the setup network is held again - Finding 125 #19 - so a
@@ -408,9 +426,20 @@ nothing there is followed through a link:
   `fsync`ed, renamed into place and the folder synced (2026-10-16: a power
   cut had left a final name with 0 bytes); a `.part` left by a backup cut short is removed by
   the next backup once it is 10 minutes old (`STALE_PART_S`), by name only.
-  A live SQLite database with a `-wal` beside it - the Beszel hub's - goes
-  in as one consistent file, copied with SQLite's own backup, without its
-  `-wal` and `-shm`. **Only files and folders go in**: a link, a pipe, a
+  What goes in is **read through what was opened, never by path** (the
+  review of 1.16.1): each folder and file is opened relative to the folder
+  above it with `O_NOFOLLOW`, and its kind, size and owner come from that
+  descriptor, so a plugin swapping a folder of its own for a link mid-walk
+  cannot have root's files archived under its name. A file is read whole
+  before its entry is written, and read again when it changed meanwhile (a
+  program rewriting it in place); one that keeps changing after three reads
+  is left out and logged, not the backup. A live SQLite database
+  with a `-wal` beside it - the Beszel hub's - goes in as one consistent
+  file, copied with SQLite's own backup, without its `-wal` and `-shm`;
+  SQLite opens by path, so it reads hard links to them made from the open
+  folder into a folder of root's own in `/var/lib/gexis-core`
+  (`.backup-db-*`, removed after; one a power cut left is swept by the next
+  backup). **Only files and folders go in**: a link, a pipe, a
   device or a hard-linked second name under a backed-up folder (a plugin's
   pipe, a venv's `lib64 -> lib`) is left out and logged. The updater's
   failure mark, `.before-update-failed`, is removed and made anew with
@@ -431,6 +460,14 @@ nothing there is followed through a link:
   (`.tgz.gz` as `.tgz`), or `gexis-<device>-<made>.tgz` - `os.link`, so a
   file already there is never replaced. The same archive already in the
   share under any name is answered `already: true`. Nothing is restored.
+  **The upload is opened once, without following a link**, and checked,
+  compared, given to `pi` and linked in through that file
+  (`/proc/self/fd/N`; where that is on another device, an overlay, by its
+  name, never followed, and kept only if it is the same file), never read
+  or changed by its name again (the review of 1.16.1: the
+  share is `pi`'s, and a link put under the name once it was checked had
+  root hand `pi` the file it named); one whose name was taken meanwhile is
+  refused.
 - **Putting back.** `_checked()` refuses a name not in plain form or outside
   the backed-up paths; a link, pipe or device under a backed-up folder is
   skipped, not the archive, so the backups 0.15.0 wrote with one restore
@@ -448,6 +485,18 @@ nothing there is followed through a link:
   `var/lib/beszel-agent` and `var/lib/beszel-hub` are put back where they
   were (`RESTORED_ONLY`) and moved into the plugins' folders by the
   carry-over (ADR-0174).
+- **Two files come back as values, not as files** (`CARRIED`, the review of
+  1.16.1). `core.toml` names where the root core writes and what it serves,
+  and `device-name.env` is four units' environment, so neither is written
+  from the archive. Of `core.toml`, only `idle_url`, `lms_host`, `lms_port`
+  and `lms_player_name` are taken, over the device's own file
+  (`CARRIED_CONFIG`; a key the backup leaves out is removed, as the whole
+  file did; a value of the wrong type or with a control character is not
+  taken; a file that does not parse leaves the device's). Of
+  `device-name.env`, only the name, written as a rename writes it; without
+  one the device's file stays. Both are root's, mode 0644, whatever the
+  archive says. The moOde metadata file is written only inside
+  `/var/local/www` (`metadata_file.allowed()`), never through a link.
 
 **Setup's own screens are laid out for the attached screen** (ADR-0109
 amended 2026-10-07): `gexis-screen-check` runs before the kiosk during setup
@@ -471,14 +520,19 @@ the name its port line gives) with *Change*, which opens `screen`'s list at
 its makers; *Screen port* is its own row (George, 2026-10-14, after one
 combined tile for a day). `screen_detect.seen()` picks **the port chosen under *Screen port*** when
 something is connected there (ADR-0147 D1: `chosen` in screen.json's
-`current`), else the applied port if a known panel is there, any port a known
-panel is on, the applied port, else the first connected. `screen_detect.ports()` lists both for
+`current`), else the applied port if a known panel is there or it is a DSI
+port (ADR-0158 D3: a panel whose overlay the player writes has no
+fingerprint), any port a known panel is on, the applied port, else the first
+connected; Keep remembers the screen on the applied port
+(`screen_detect.applied_port`). `screen_detect.ports()` lists both for
 *Screen port*: each port's line (`_port_line`) is its option note, a port with
 nothing connected is `unavailable`, and on a one-port board the read-only
 `screen_port_info` shows instead. Choosing applies **the screen on that port**
 (`screen_watch.target`: the panel recognised there, else the device by its own
 mode, `screens.fitted` holding a 16:9 screen larger than 1080p to
-`other-1920x1080-capped`, which carries a kernel `video=` mode) marked
+`other-1920x1080-capped`, which carries a kernel `video=` mode) - or the
+screen kept on that port last (`kept_on` in screen.json), its model and
+rotation, while it is still the one there (`screen_watch.for_port`) - marked
 `chosen`, through `screen_apply.choose` (restart, Keep), dropping its stored
 value so the row reads the port in use. `gexis-kiosk-start` then pins the
 window to the screen's port whenever both are connected.
@@ -499,17 +553,25 @@ no connector). The firmware brings up the Touch Display's overlay by itself
 `dtoverlay=` lines are written into a block of our own at the end of
 `/boot/firmware/config.txt`, under `[all]`, between `screen_apply.CONFIG_BEGIN`
 and `CONFIG_END`, durably as `cmdline.txt` is, and nothing else in the file
-is changed. The overlays are part of `picture()`'s boot part, so a change
+is changed; a factory reset takes the block out with the screen's state.
+The overlays are part of `picture()`'s boot part, so a change
 restarts, asks Keep, and a go-back takes the block out. The list offered
 (`screens.offered()`, D6) leaves out a four-lane model (`Screen.lanes`, from
-its overlay's `…_4lane` parameter) on a board whose connector carries two:
+its overlay's `…_4lane` parameter, or an overlay four-lane by itself,
+`screens.FOUR_LANE_OVERLAYS`: the JDI 7") on a board whose connector carries two:
 `screens.board_lanes()` reads `/proc/device-tree/model`, four on a Pi 5 or a
-Compute Module, two on any other Pi, every model off a Pi. Display standby on a
+Compute Module, two on any other Pi, every model off a Pi. The JDI 7" is
+offered on a Compute Module only (`screens.COMPUTE_MODULE_OVERLAYS`), as
+Raspberry Pi's overlay notes say. Display standby on a
 DSI connector turns `bl_power` off and leaves the output on
 (`standby.backlight`), and `read_output` reads the backlight back;
 *Screen brightness* writes `brightness` as a share of `max_brightness`, at
 once and at every start. *Screen port* takes its options from the ports
-there are (`optionsFrom: screen_port`), *DSI* among them. With a TV chosen,
+there are (`optionsFrom: screen_port`, `_screen_ports`), *DSI* among them -
+also while an HDMI port chosen there is the screen over a DSI panel whose
+overlay that choice took out (`screen_apply.left_dark`: no driver, so no
+connector), from the model kept on its port, whose overlay choosing *DSI*
+writes back. With a TV chosen,
 the DSI touch is ignored by a udev rule on its I2C driver (`DRIVERS==`).
 
 **Who answers *Keep this screen?*** (ADR-0147 D3, D5, as amended by
@@ -716,6 +778,10 @@ plugin on or off as chosen - explicitly, since a plugin switch defaults to on -
 and records in `/var/lib/gexis/settling.json` what the first start waits for:
 the visualiser's skins (component `skins`) when chosen, and each chosen plugin
 that downloads (its component name). Nothing to wait for writes nothing.
+A player already set up (`needed` false when Finish came: it opened setup
+because its Wi-Fi was gone, ADR-0134) is only given the network: its plugins,
+the Plugins page's record and part 2 are left as they were (the review of
+1.16.1).
 
 The core reads it every 2 s (`_follow_settling`) against `_all_components()`
 and publishes `settling` on `/state` (`settling.view`): each item `waiting`,
@@ -872,7 +938,7 @@ screen check, the core, the kiosk, the renderers and the Lyrion Server.
 `wipe()` then:
 
 - removes the files and folders in `REMOVED` (settings and enrichment
-  databases, caches, the device name, share passwords, the setup
+  databases, the page Home Assistant keeps loaded, caches, the device name, share passwords, the setup
   marker and answers, the screen and board records, components, uploaded
   plugins, Plexamp, Spotify's state, Beszel, the Lyrion Server's prefs and
   cache, and `/etc/gexis/settings-seed.json`, the settings chosen when the
@@ -894,7 +960,8 @@ screen check, the core, the kiosk, the renderers and the Lyrion Server.
 - writes back the image's hostname `raspberrypi` (and sets it on the running
   kernel), Spotify's name `gexis` and the time zone Europe/London;
 - strips the screen's `video=` and the Wi-Fi country from `cmdline.txt` and
-  the sound card board's block from `config.txt`;
+  the sound card board's block from `config.txt`, each written beside,
+  synced and renamed over (`screen_apply.replace_durably`), never in place;
 - purges every installed `gexis-skins*` package.
 
 The 2026-10-10 step that kept this boot's log after a reset

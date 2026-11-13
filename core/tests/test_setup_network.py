@@ -83,7 +83,7 @@ class Clock:
         await asyncio.sleep(0)
 
 
-def setup(tmp_path, nm, *, panel=True, carrier=False, stations=0, trial=None):
+def setup(tmp_path, nm, *, panel=True, carrier=False, stations=0, trial=None, screen_kept=False, headless=False):
     drm = tmp_path / "drm"
     (drm / "card1-HDMI-A-1").mkdir(parents=True)
     (drm / "card1-HDMI-A-1" / "status").write_text("connected\n" if panel else "disconnected\n")
@@ -103,7 +103,8 @@ def setup(tmp_path, nm, *, panel=True, carrier=False, stations=0, trial=None):
         run=nm, clock=clock, sleep=clock.sleep,
         marker=tmp_path / "setup-done",
         trial_file=trial_file, drm=drm, net_root=net, stations=count,
-        unblock=nm.unblock,
+        unblock=nm.unblock, password_file=tmp_path / "setup-password",
+        screen_kept=lambda: screen_kept, headless=lambda: headless,
     )
     # Never the build machine's own radios.
     net._rfkill = tmp_path / "no-rfkill"
@@ -250,13 +251,44 @@ def test_a_leftover_profile_is_deleted_at_startup(tmp_path):
     assert nm.did("connection", "delete", sn.PROFILE) and sn.PROFILE not in nm.profiles
 
 
-def test_the_password_is_gexis_setup_with_or_without_a_panel(tmp_path):
-    """George, 2026-10-18: "Let's just use gexis-setup for all cases"."""
+def test_a_new_player_s_password_is_gexis_setup_with_or_without_a_panel(tmp_path):
+    """George, 2026-10-18: one password on every player - kept for a new one
+    by ADR-0178 decision 2."""
     for panel in (True, False):
         nm = FakeNM(devices=NOTHING)
-        net, _ = setup(tmp_path / str(panel), nm, panel=panel)
+        net, _ = setup(tmp_path / str(panel), nm, panel=panel, screen_kept=True)
+        net._needed = True
         run(net.open())
         assert net.status()["password"] == "gexis-setup"
+
+
+def test_a_player_already_set_up_with_a_screen_shows_a_password_of_its_own(tmp_path):
+    """**ADR-0178 decision 2.** The printed password let anyone in range join
+    the setup network of a player knocked off its Wi-Fi. A player already set
+    up, with a screen kept and in use, makes one up, kept so it does not
+    change under someone who read it before a restart."""
+    nm = FakeNM(devices=NOTHING, saved={"Home": "preconfigured"})
+    net, _ = setup(tmp_path, nm, screen_kept=True)
+    run(net.open())
+    made = net.status()["password"]
+    assert made != "gexis-setup" and len(made) == 8 and set(made) <= set(sn.PASSWORD_ALPHABET)
+    assert any(made in call for call in nm.calls), "the network itself uses it"
+    assert (tmp_path / "setup-password").stat().st_mode & 0o777 == 0o600
+    again, _ = setup(tmp_path / "again", FakeNM(devices=NOTHING, saved={"Home": "preconfigured"}), screen_kept=True)
+    again._password_file = tmp_path / "setup-password"
+    run(again.open())
+    assert again.status()["password"] == made
+    assert net.public_status()["password"] is None
+
+
+@pytest.mark.parametrize("panel, kept, headless", [(False, True, False), (True, False, False), (True, True, True)])
+def test_without_a_screen_in_use_a_set_up_player_keeps_gexis_setup(tmp_path, panel, kept, headless):
+    """Nothing would show a made-up password: no screen connected, none kept
+    (a dark one would hide it), or the player set to run without one."""
+    nm = FakeNM(devices=NOTHING, saved={"Home": "preconfigured"})
+    net, _ = setup(tmp_path, nm, panel=panel, screen_kept=kept, headless=headless)
+    run(net.open())
+    assert net.status()["password"] == "gexis-setup"
 
 
 def test_without_a_panel_the_password_is_the_fixed_one(tmp_path):
@@ -308,7 +340,7 @@ def test_the_retry_rejoins_a_saved_network_in_range_when_nobody_is_on(tmp_path):
     assert clock.now >= sn.CONFIGURED_WAIT_S + sn.RETRY_S
 
 
-def test_the_retry_never_scans_with_a_phone_using_the_page(tmp_path):
+def test_the_retry_never_scans_in_the_first_ten_minutes_of_a_phone_using_the_page(tmp_path):
     nm = FakeNM(devices=NOTHING, saved={"Home": "preconfigured"}, in_range={"Home"})
 
     def phone():
@@ -317,9 +349,25 @@ def test_the_retry_never_scans_with_a_phone_using_the_page(tmp_path):
         return 1
 
     net, clock = setup(tmp_path, nm, stations=phone)
-    hold(net, nm, clock, lambda: clock.now > sn.CONFIGURED_WAIT_S + 3 * sn.RETRY_S)
+    hold(net, nm, clock, lambda: clock.now > sn.CONFIGURED_WAIT_S + sn.SETUP_ACTIVE_S - sn.WATCH_S)
     assert net.status()["network"] == "open"
     assert not [c for c in nm.calls if "--rescan" in c]
+
+
+def test_a_set_up_player_goes_home_within_ten_minutes_whoever_keeps_the_page_open(tmp_path):
+    """**ADR-0178 decision 2.** A page asked something every so often held a
+    player already set up on its setup network for as long as it was asked,
+    its home Wi-Fi back or not."""
+    nm = FakeNM(devices=NOTHING, saved={"Home": "preconfigured"}, in_range={"Home"})
+
+    def phone():
+        net.page_used()
+        return 1
+
+    net, clock = setup(tmp_path, nm, stations=phone)
+    hold(net, nm, clock, lambda: net.status()["network"] == "online")
+    assert nm.did("connection", "up", "preconfigured")
+    assert clock.now <= sn.CONFIGURED_WAIT_S + sn.SETUP_ACTIVE_S + sn.RETRY_S
 
 
 def test_a_phone_that_never_opened_the_page_does_not_hold_the_player(tmp_path):
@@ -332,7 +380,10 @@ def test_a_phone_that_never_opened_the_page_does_not_hold_the_player(tmp_path):
     hold(net, nm, clock, lambda: net.status()["network"] == "online")
     assert net.status()["network"] == "online"
     assert nm.did("connection", "up", "preconfigured")
-    assert net._phone_since is not None and clock.now >= net._phone_since + sn.SETUP_ACTIVE_S
+    # Held while it may be about to - and, since ADR-0178 decision 2, no
+    # longer than ten minutes from the setup network's opening.
+    assert net._phone_since is not None
+    assert clock.now >= min(net._phone_since, sn.CONFIGURED_WAIT_S) + sn.SETUP_ACTIVE_S
 
 
 def test_a_phone_idle_on_the_page_for_ten_minutes_no_longer_holds(tmp_path):
@@ -347,7 +398,8 @@ def test_a_phone_idle_on_the_page_for_ten_minutes_no_longer_holds(tmp_path):
     net, clock = setup(tmp_path, nm, stations=phone)
     hold(net, nm, clock, lambda: net.status()["network"] == "online")
     assert net.status()["network"] == "online"
-    assert clock.now >= stopped + sn.SETUP_ACTIVE_S
+    # Ten minutes from the setup network's opening at the most (ADR-0178).
+    assert clock.now >= min(stopped, sn.CONFIGURED_WAIT_S) + sn.SETUP_ACTIVE_S
 
 
 def test_the_page_counts_for_ten_minutes(tmp_path):

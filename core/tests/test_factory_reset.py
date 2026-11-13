@@ -13,10 +13,11 @@ def _used_player(root: Path) -> None:
         f.parent.mkdir(parents=True, exist_ok=True)
         f.write_text(text)
     for rel in ("var/lib/gexis-core/settings.db", "var/lib/gexis-core/enrichment.db",
+                "var/lib/gexis-core/page-preload.json",
                 "var/lib/gexis-core/backups/gexis-living-room-20261009-120000.tgz",
                 "var/lib/gexis-core/pictures/beach.jpg",
                 "etc/gexis/device-name.env", "etc/machine-info", "var/lib/gexis/setup-done",
-                "var/lib/gexis/screen.json", "etc/gexis/screen.env", "var/lib/gexis/components/plexamp.sha256",
+                "var/lib/gexis/setup-password", "var/lib/gexis/screen.json", "etc/gexis/screen.env", "var/lib/gexis/components/plexamp.sha256",
                 "var/lib/go-librespot/state.json", "var/lib/beszel-agent/fingerprint",
                 "home/pi/.local/share/Plexamp/Settings/x", "home/pi/plexamp/js/index.js",
                 "home/pi/Library/Caches/x", "home/pi/.cache/Plexamp/x",
@@ -42,11 +43,15 @@ def test_a_used_player_goes_back_to_a_freshly_flashed_card(tmp_path):
     _used_player(tmp_path)
     factory_reset.wipe(tmp_path)
     for gone in ("var/lib/gexis-core/settings.db", "etc/gexis/device-name.env",
-                 "etc/machine-info", "var/lib/gexis/setup-done", "var/lib/gexis/screen.json",
+                 "etc/machine-info", "var/lib/gexis/setup-done", "var/lib/gexis/setup-password",
+                 "var/lib/gexis/screen.json",
                  "etc/gexis/screen.env", "var/lib/gexis/components", "var/lib/go-librespot/state.json",
                  "var/lib/beszel-agent", "home/pi/.local/share/Plexamp", "home/pi/plexamp",
                  "home/pi/Library", "home/pi/.cache/Plexamp",
-                 "var/lib/squeezeboxserver/prefs", "var/lib/gexis/plugins"):
+                 "var/lib/squeezeboxserver/prefs", "var/lib/gexis/plugins",
+                 # The page Home Assistant kept loaded: its address can carry
+                 # a token (ADR-0176 K1; the review of 1.16.1).
+                 "var/lib/gexis-core/page-preload.json"):
         assert not (tmp_path / gone).exists(), gone
     # The owner's music, playlists and pictures stay (ADR-0132 as amended).
     for kept in ("var/lib/gexis-music/Album/track.flac", "var/lib/gexis-music/Playlists/Evening.m3u",
@@ -72,6 +77,31 @@ def test_a_used_player_goes_back_to_a_freshly_flashed_card(tmp_path):
     assert "video=" not in cmdline and "regdom" not in cmdline and "root=PARTUUID=abcd-02" in cmdline
     config = (tmp_path / "boot/firmware/config.txt").read_text()
     assert "hifiberry" not in config and config.startswith("dtparam=audio=on")
+
+
+def test_the_boot_files_are_never_rewritten_in_place(tmp_path, monkeypatch):
+    """The review of 1.16.1: cmdline.txt (the Wi-Fi country, on every set-up
+    player) and config.txt were truncated and written on the FAT boot
+    partition, unsynced; a power cut there can leave a Pi that does not
+    boot. Written beside, on the card, renamed over, as the screen's are."""
+    import os
+    _used_player(tmp_path)
+    boot = tmp_path / "boot/firmware"
+    inodes = {name: (boot / name).stat().st_ino for name in ("cmdline.txt", "config.txt")}
+    synced, real_fsync = [], os.fsync
+
+    def fsync(fd):
+        synced.append(os.readlink(f"/proc/self/fd/{fd}"))
+        real_fsync(fd)
+
+    monkeypatch.setattr(os, "fsync", fsync)
+    done = factory_reset.wipe(tmp_path)
+    assert "cmdline.txt" in done and "config.txt" in done
+    for name, inode in inodes.items():
+        assert (boot / name).stat().st_ino != inode, f"{name}: a new file renamed into place"
+        assert str(boot / name) + ".tmp" in synced, f"{name}: on the card before the rename"
+        assert not (boot / (name + ".tmp")).exists()
+    assert str(boot) in synced, "and the rename itself"
 
 
 def test_the_request_is_what_settings_writes(tmp_path):
@@ -188,3 +218,43 @@ def test_the_images_copy_is_where_gexis_core_installs_it():
     """`DEFAULT_CORE_TOML` is the package's path, not a guess."""
     build = (Path(__file__).resolve().parents[2] / "packaging/core/build.sh").read_text()
     assert f'"$STAGE/{factory_reset.DEFAULT_CORE_TOML}"' in build
+
+
+def _with_a_dsi_panel(root: Path) -> dict:
+    """`_used_player` whose screen is the Waveshare 10.1" DSI-TOUCH-A, kept:
+    its overlay in config.txt's screen block, beside the board's."""
+    from gexis_core import screen_apply
+    _used_player(root)
+    files = {"state": root / "var/lib/gexis/screen.json", "env": root / "etc/gexis/screen.env",
+             "cmdline": root / "boot/firmware/cmdline.txt", "config": root / "boot/firmware/config.txt"}
+    screen_apply.choose(screen_apply.Applied("waveshare-dsi-v2-10.1a", 0, "DSI-1"), **files, now=1)
+    screen_apply.keep(state=files["state"])
+    assert screen_apply.overlays_in(files["config"].read_text()) == ("vc4-kms-dsi-waveshare-panel-v2,10_1_inch_a",)
+    return files
+
+
+def test_the_reset_takes_the_screen_s_block_out_of_config_txt(tmp_path, monkeypatch):
+    """The review of 1.16.1: the screen's state files went, its block in
+    config.txt (ADR-0158, newer than the reset) stayed - not a freshly
+    flashed card (ADR-0132 §3: the screen goes)."""
+    from gexis_core import screen_apply, screen_detect
+    monkeypatch.setattr(screen_detect, "ports", lambda *a, **k: [])
+    files = _with_a_dsi_panel(tmp_path)
+    factory_reset.wipe(tmp_path)
+    config = files["config"].read_text()
+    assert screen_apply.overlays_in(config) == () and screen_apply.CONFIG_BEGIN not in config
+    assert "hifiberry" not in config and config == "dtparam=audio=on\n"
+
+
+def test_the_reset_s_own_boot_lays_the_panel_out_without_a_restart(tmp_path, monkeypatch):
+    """The panel is up at this boot - the firmware read the block before the
+    wipe - and nothing is chosen, so setup lays it out from its own mode.
+    With the block left, that removed it and restarted, and setup ran with
+    the panel dark (the review of 1.16.1)."""
+    from gexis_core import screen_apply, screen_detect, screen_watch
+    monkeypatch.setattr(screen_detect, "ports", lambda *a, **k: [])
+    files = _with_a_dsi_panel(tmp_path)
+    factory_reset.wipe(tmp_path)
+    panel = screen_detect.Seen(True, "DSI-1", preferred=(800, 1280), panel=("goodix",))
+    assert screen_watch.during_setup(panel, path=tmp_path / "seen.json", files=files) == "switched"
+    assert screen_apply.read_state(files["state"])["current"]["connector"] == "DSI-1"

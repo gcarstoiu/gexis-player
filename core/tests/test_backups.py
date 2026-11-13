@@ -27,7 +27,7 @@ def _device(root):
     (root / "var/lib/gexis-core/settings.db").write_text("settings")
     (root / "var/lib/gexis-core/enrichment.db").write_text("enrichment")
     (root / "etc/gexis/core.toml").write_text('idle_url = "secret"')
-    (root / "etc/gexis/device-name.env").write_text("NAME=gexis")
+    (root / "etc/gexis/device-name.env").write_text("GEXIS_DEVICE_NAME=gexis\n")
     (root / "var/lib/bluetooth/11:22/info").write_text("paired")
     # ADR-0174: Beszel's agent and hub are catalogue plugins, their data in
     # their own folders - the fingerprint, and the hub's history.
@@ -71,6 +71,21 @@ def test_it_holds_the_spotify_pairing(tmp_path):
     with tarfile.open(out / name) as archive:
         held = set(archive.getnames())
     assert "var/lib/go-librespot/state.json" in held
+
+
+def test_the_spotify_sign_in_is_archived_as_pi_s(tmp_path):
+    """ADR-0179: go-librespot has an account of its own, and its unit gives
+    it the folder at every start. The archive names `pi` and `audio` for the
+    sign-in, as every backup before had it, so an older release - whose
+    go-librespot runs as pi - restores it to a user who can read it."""
+    import pwd
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    name = backups.create("gexis", out, root)
+    with tarfile.open(out / name) as archive:
+        sign_in = archive.getmember("var/lib/go-librespot/state.json")
+        other = archive.getmember("var/lib/gexis-core/settings.db")
+    assert (sign_in.uname, sign_in.gname) == ("pi", "audio")
+    assert other.uname == pwd.getpwuid(os.getuid()).pw_name, "the rest as it is on disk"
 
 
 def test_it_leaves_go_librespots_config_to_the_image(tmp_path):
@@ -216,13 +231,13 @@ def test_a_half_written_archive_is_never_listed(tmp_path, monkeypatch):
 
     def explode(*args, **kwargs):
         handle = real(*args, **kwargs)
-        original = handle.add
+        original = handle.addfile
 
         def boom(*a, **k):
             original(*a, **k)
             raise OSError("no space left on device")
 
-        handle.add = boom
+        handle.addfile = boom
         return handle
 
     monkeypatch.setattr(tarfile, "open", explode)
@@ -788,20 +803,66 @@ def test_a_file_that_goes_while_the_backup_runs_is_left_out_not_the_backup(tmp_p
     data.mkdir()
     (data / "settings.db-shm").write_bytes(b"shm")
     (data / "prefs.json").write_text("{}")
-    real = tarfile.TarFile.gettarinfo
+    real = os.open
 
-    def gone(self, name=None, arcname=None, fileobj=None):
-        if str(name).endswith("settings.db-shm"):
-            raise FileNotFoundError(2, "No such file or directory", str(name))
-        return real(self, name, arcname, fileobj)
+    def gone(path, flags, mode=0o777, *, dir_fd=None):
+        if str(path).endswith("settings.db-shm") and dir_fd is not None:
+            os.unlink(path, dir_fd=dir_fd)  # its program, between the listing and the read
+        return real(path, flags, mode, dir_fd=dir_fd)
 
-    monkeypatch.setattr(tarfile.TarFile, "gettarinfo", gone)
+    monkeypatch.setattr(os, "open", gone)
     name = backups.create("gexis", out, root)
     with tarfile.open(out / name) as archive:
         held = set(archive.getnames())
     assert "var/lib/private/gexis-uploaded/radiofoo/data/prefs.json" in held
     assert not any(n.endswith("settings.db-shm") for n in held)
     assert "var/lib/gexis-core/settings.db" in held, "the rest is all there"
+
+
+def _rewritten_while_read(monkeypatch, root):
+    """A plugin's state file a program rewrites shorter, in place, once the
+    backup has taken its size."""
+    state = root / "var/lib/private/gexis-uploaded/radiofoo/state"
+    state.write_text("x" * 4096)
+    real = tarfile.TarFile.gettarinfo
+
+    def gettarinfo(self, name=None, arcname=None, fileobj=None):
+        info = real(self, name, arcname, fileobj)
+        if str(arcname).endswith("radiofoo/state"):
+            state.write_text("{}")
+        return info
+
+    monkeypatch.setattr(tarfile.TarFile, "gettarinfo", gettarinfo)
+    return state
+
+
+def test_a_file_rewritten_shorter_while_it_is_read_does_not_fail_the_backup(tmp_path, monkeypatch):
+    """The review of 1.16.1: tarfile wrote the size it saw, read fewer bytes,
+    and the whole backup failed ("unexpected end of data") - and the update
+    waiting for it stopped."""
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    _rewritten_while_read(monkeypatch, root)
+    held = _held(out, backups.create("gexis", out, root, automatic=True))
+    assert held["var/lib/private/gexis-uploaded/radiofoo/state"] == b"{}"
+    assert held["var/lib/gexis-core/settings.db"] == b"settings", "the rest is all there"
+
+
+def test_a_file_that_keeps_changing_while_it_is_read_is_left_out(tmp_path, monkeypatch):
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    state = root / "var/lib/private/gexis-uploaded/radiofoo/state"
+    real, n = os.lseek, [0]
+
+    def lseek(fd, pos, how):
+        if os.readlink(f"/proc/self/fd/{fd}") == str(state):
+            n[0] += 1
+            state.write_text("x" * n[0])  # its program, in the middle of every read
+        return real(fd, pos, how)
+
+    monkeypatch.setattr(os, "lseek", lseek)
+    monkeypatch.setattr(backups.time, "sleep", lambda s: None)
+    held = _held(out, backups.create("gexis", out, root))
+    assert "var/lib/private/gexis-uploaded/radiofoo/state" not in held and n[0] == backups.READ_TRIES
+    assert held["var/lib/gexis-core/settings.db"] == b"settings"
 
 
 def test_an_update_backup_that_failed_leaves_its_reason_and_a_new_one_clears_it(tmp_path):
@@ -1057,6 +1118,111 @@ def _planted(tmp_path):
     return out, name
 
 
+# --- the review of 1.16.1: a plugin swapping its folders mid-walk ----------
+
+def _swapped(root):
+    """A plugin's folder `d`, and a folder of root's secrets elsewhere; the
+    returned function swaps `d` for a link to the secrets, as a plugin that
+    renames inside its own folder can at any moment."""
+    plugin = root / "var/lib/private/gexis-uploaded/evil"
+    (plugin / "d").mkdir(parents=True)
+    (plugin / "d/note").write_text("mine")
+    secret = root / "etc-secret"
+    secret.mkdir()
+    (secret / "shadow").write_text("root:$6$SECRET-HASH")
+
+    def swap():
+        if not (plugin / "d").is_symlink():
+            (plugin / "d").rename(plugin / "d-was")
+            (plugin / "d").symlink_to(secret)
+    return plugin, swap
+
+
+def _held(out, name):
+    with tarfile.open(out / name) as archive:
+        return {m.name: archive.extractfile(m).read() if m.isfile() else None for m in archive.getmembers()}
+
+
+def _names(path) -> str:
+    return os.readlink(f"/proc/self/fd/{path}") if isinstance(path, int) else str(path)
+
+
+def test_a_folder_swapped_for_a_link_while_it_is_listed_is_not_followed(tmp_path, monkeypatch):
+    """A plugin swapped its folder for a link to /etc between the check that
+    it was a folder and the listing: root's files went in under its name, in
+    a backup it could download."""
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    plugin, swap = _swapped(root)
+    real = os.listdir
+
+    def listdir(path="."):
+        if _names(path).endswith("/evil/d"):
+            swap()
+        return real(path)
+
+    monkeypatch.setattr(os, "listdir", listdir)
+    held = _held(out, backups.create("gexis", out, root))
+    assert not any(b"SECRET" in (data or b"") for data in held.values()), sorted(held)
+    assert not any(n.endswith("/shadow") for n in held)
+
+
+def test_a_file_swapped_for_a_link_after_it_was_looked_at_is_not_followed(tmp_path, monkeypatch):
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    plugin = root / "var/lib/private/gexis-uploaded/evil"
+    plugin.mkdir(parents=True)
+    (plugin / "note").write_text("mine")
+    (root / "secret").write_text("root:$6$SECRET-HASH")
+    real = tarfile.TarFile.gettarinfo
+
+    def gettarinfo(self, name=None, arcname=None, fileobj=None):
+        info = real(self, name, arcname, fileobj)
+        if str(arcname).endswith("evil/note"):
+            (plugin / "note").unlink()
+            (plugin / "note").symlink_to(root / "secret")
+        return info
+
+    monkeypatch.setattr(tarfile.TarFile, "gettarinfo", gettarinfo)
+    held = _held(out, backups.create("gexis", out, root))
+    assert not any(b"root:" in (data or b"") for data in held.values())
+    assert held.get("var/lib/private/gexis-uploaded/evil/note") in (b"mine", None)
+
+
+def test_a_live_database_is_never_copied_through_a_link(tmp_path, monkeypatch):
+    """SQLite opens by path: the folder swapped just before its copy, it read
+    whatever database the link named - another plugin's, or root's."""
+    root, out = _device(tmp_path / "root"), tmp_path / "out"
+    plugin, swap = _swapped(root)
+
+    def wal_db(path, rows):
+        conn = sqlite3.connect(path)
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA wal_autocheckpoint=0")
+        conn.execute("CREATE TABLE t (v TEXT)")
+        conn.executemany("INSERT INTO t VALUES (?)", [(r,) for r in rows])
+        conn.commit()
+        return conn
+
+    mine = wal_db(plugin / "d/data.db", ["mine"])
+    theirs = wal_db(root / "etc-secret/data.db", ["SECRET"])
+    real = backups._snapshot
+
+    def snapshot(source, into):
+        swap()
+        return real(source, into)
+
+    monkeypatch.setattr(backups, "_snapshot", snapshot)
+    name = backups.create("gexis", out, root)
+    mine.close()
+    theirs.close()
+    with tarfile.open(out / name) as archive:
+        member = "var/lib/private/gexis-uploaded/evil/d/data.db"
+        assert member in archive.getnames()
+        archive.extract(member, tmp_path / "x", filter="tar")
+    copy = sqlite3.connect(tmp_path / "x" / member)
+    assert copy.execute("SELECT v FROM t").fetchall() == [("mine",)]
+    assert not list((root / "var/lib/gexis-core").glob(".backup-*")), "nothing of the copy is left"
+
+
 def test_a_link_under_a_backups_name_is_not_one(tmp_path):
     out, name = _planted(tmp_path)
     assert backups.available(out) == []
@@ -1238,3 +1404,227 @@ def test_the_review_lists_what_a_backup_restores_by_section(tmp_path, monkeypatc
     assert by["Audio"] == ["Output"]
     assert "Lyrion Client · Navigation" in by["Sources"] and "Spotify sign-in" in by["Sources"]
     assert seen["brings"] == ["Spotify sign-in"]
+
+
+def _with_files(out, files, mode=0o644):
+    """A backup holding `files`, {member: bytes}, written as `pi` with `mode`."""
+    import io
+    out.mkdir(exist_ok=True)
+    name = "gexis-gexis-20261110-120000.tgz"
+    with tarfile.open(out / name, "w:gz") as archive:
+        for member, data in files.items():
+            info = tarfile.TarInfo(member)
+            info.size, info.mode, info.uname, info.uid = len(data), mode, "pi", 1000
+            archive.addfile(info, io.BytesIO(data))
+    return name
+
+
+def test_a_restored_core_toml_never_points_the_core_somewhere_else(tmp_path):
+    """**The review of 1.16.1** (critical): `core.toml` was put back whole,
+    and it names where the root core writes and what it serves - a crafted
+    backup set `metadata_file_path` to `cmdline.txt`, and the core replaced
+    that at its first state. Only the values a backup exists to carry come
+    back; the device's own file keeps the rest."""
+    from gexis_core.config import Config
+
+    root = tmp_path / "root"
+    (root / "etc/gexis").mkdir(parents=True)
+    (root / "etc/gexis/core.toml").write_text('# the image\'s comment\nidle_url = "https://old.example/clock"\n')
+    name = _with_files(tmp_path / "out", {"etc/gexis/core.toml": (
+        b'metadata_file_path = "/boot/firmware/cmdline.txt"\nui_dir = "/"\nstate_port = 22\n'
+        b'idle_url = "https://new.example/clock?id=\\"7\\""\nlms_host = "lms.example"\nlms_port = 9002\n')},
+        mode=0o666)
+
+    backups.restore(name, tmp_path / "out", root)
+
+    restored = root / "etc/gexis/core.toml"
+    config = Config.load(restored)
+    assert config.metadata_file_path == Config.metadata_file_path
+    assert config.ui_dir == Config.ui_dir and config.state_port == Config.state_port
+    assert config.idle_url == 'https://new.example/clock?id="7"'
+    assert (config.lms_host, config.lms_port) == ("lms.example", 9002)
+    assert restored.read_text().startswith("# the image's comment\n")
+    assert restored.stat().st_mode & 0o7777 == 0o644
+
+
+def test_a_carried_value_the_backup_does_not_have_goes_as_before(tmp_path):
+    """A key the backup leaves out is left out, as the whole file did."""
+    from gexis_core.config import Config
+
+    root = tmp_path / "root"
+    (root / "etc/gexis").mkdir(parents=True)
+    (root / "etc/gexis/core.toml").write_text('idle_url = "https://old.example/clock"\n')
+    name = _with_files(tmp_path / "out", {"etc/gexis/core.toml": b"# nothing set\n"})
+
+    backups.restore(name, tmp_path / "out", root)
+    assert Config.load(root / "etc/gexis/core.toml").idle_url == ""
+
+
+@pytest.mark.parametrize("brought", [b"not = toml = [[[", b"\xff\xfe", b'lms_port = "9000"\nidle_url = "a\\u0000b"\n'])
+def test_a_core_toml_the_core_could_not_read_leaves_the_device_s_own(tmp_path, brought):
+    """Put back whole, a file the core cannot load stopped it at every
+    start. Unreadable, it is left out; a value of the wrong kind or with a
+    control character in it is not carried."""
+    from gexis_core.config import Config
+
+    root = tmp_path / "root"
+    (root / "etc/gexis").mkdir(parents=True)
+    own = 'idle_url = "https://old.example/clock"\nlms_port = 9001\n'
+    (root / "etc/gexis/core.toml").write_text(own)
+    name = _with_files(tmp_path / "out", {"etc/gexis/core.toml": brought})
+
+    backups.restore(name, tmp_path / "out", root)
+    config = Config.load(root / "etc/gexis/core.toml")
+    if brought.startswith(b"lms_port"):
+        assert (config.idle_url, config.lms_port) == ("", Config.lms_port)
+    else:
+        assert (root / "etc/gexis/core.toml").read_text() == own
+
+
+def test_the_name_file_comes_back_as_the_name_alone(tmp_path):
+    """**The review of 1.16.1**: `device-name.env` is read by four units as
+    their environment; put back whole, a crafted one set `LD_PRELOAD` for
+    them. The name is carried, written the way a rename writes it."""
+    root = tmp_path / "root"
+    (root / "etc/gexis").mkdir(parents=True)
+    (root / "etc/gexis/device-name.env").write_text('GEXIS_DEVICE_NAME="Sofa"\n')
+    name = _with_files(tmp_path / "out", {"etc/gexis/device-name.env":
+                                         b'GEXIS_DEVICE_NAME="Kitchen \\"Pi\\""\nLD_PRELOAD=/var/lib/x.so\n'}, mode=0o666)
+
+    backups.restore(name, tmp_path / "out", root)
+    env = root / "etc/gexis/device-name.env"
+    assert env.read_text() == 'GEXIS_DEVICE_NAME="Kitchen \\"Pi\\""\n'
+    assert env.stat().st_mode & 0o7777 == 0o644
+
+
+def test_a_name_file_without_a_name_leaves_the_device_s_own(tmp_path):
+    root = tmp_path / "root"
+    (root / "etc/gexis").mkdir(parents=True)
+    (root / "etc/gexis/device-name.env").write_text('GEXIS_DEVICE_NAME="Sofa"\n')
+    name = _with_files(tmp_path / "out", {"etc/gexis/device-name.env": b"LD_PRELOAD=/var/lib/x.so\n"})
+
+    backups.restore(name, tmp_path / "out", root)
+    assert (root / "etc/gexis/device-name.env").read_text() == 'GEXIS_DEVICE_NAME="Sofa"\n'
+
+
+def _uploaded(tmp_path):
+    made, share = tmp_path / "made", tmp_path / "share"
+    name = backups.create("Kitchen", made, _real_device(tmp_path / "root", VALUES))
+    share.mkdir()
+    fd, part = backups.upload_part(share)
+    with os.fdopen(fd, "wb") as f:
+        f.write((made / name).read_bytes())
+    return share, part, (made / name).read_bytes()
+
+
+def test_an_upload_swapped_for_a_link_while_it_is_checked_is_not_followed(tmp_path, monkeypatch):
+    """**The review of 1.16.1** (high): the share is `pi`'s and not sticky,
+    so `pi` can put a link under the upload's name once it is checked. Root
+    then changed the mode and owner of what it named and linked it into the
+    share - `/etc/shadow`, served to the network. Everything after the check
+    goes through the file that was checked."""
+    share, part, body = _uploaded(tmp_path)
+    secret = tmp_path / "secret"
+    secret.write_text("root:$6$hash")
+    secret.chmod(0o600)
+    listed = backups.available
+
+    def swapped(directory):
+        part.unlink()
+        part.symlink_to(secret)
+        return listed(directory)
+    monkeypatch.setattr(backups, "available", swapped)
+
+    with pytest.raises(backups.Refused, match="did not arrive whole"):
+        backups.add_upload(part, None, 5, share)
+    assert secret.stat().st_mode & 0o7777 == 0o600
+    assert [p.name for p in share.iterdir()] == [], "nothing linked in, the link removed"
+
+
+def test_an_upload_moved_aside_while_it_is_checked_is_still_the_one_added(tmp_path, monkeypatch):
+    """Renamed rather than removed, the file checked keeps a name, and that
+    file - not what is under the upload's name now - goes in."""
+    share, part, body = _uploaded(tmp_path)
+    secret = tmp_path / "secret"
+    secret.write_text("root:$6$hash")
+    secret.chmod(0o600)
+    listed = backups.available
+
+    def swapped(directory):
+        part.rename(tmp_path / "aside")
+        part.symlink_to(secret)
+        return listed(directory)
+    monkeypatch.setattr(backups, "available", swapped)
+
+    try:
+        added = backups.add_upload(part, None, 5, share)
+    except backups.Refused:
+        # Where the descriptor cannot be linked (an overlay: GitHub's
+        # runners), only the name can be, and it is not the file checked.
+        assert [p.name for p in share.iterdir() if not p.name.startswith(".")] == []
+    else:
+        kept = share / added["name"]
+        assert kept.read_bytes() == body and kept.stat().st_ino == (tmp_path / "aside").stat().st_ino
+    assert secret.stat().st_mode & 0o7777 == 0o600
+
+
+def test_an_upload_that_is_a_link_before_it_is_checked_is_refused(tmp_path):
+    share, part, _ = _uploaded(tmp_path)
+    secret = tmp_path / "secret"
+    secret.write_bytes(b"x")
+    part.unlink()
+    part.symlink_to(secret)
+    with pytest.raises(backups.Refused):
+        backups.add_upload(part, None, 5, share)
+    assert sorted(p.name for p in share.iterdir()) == []
+
+
+def test_a_backup_compared_with_an_upload_is_never_read_through_a_link(tmp_path, monkeypatch):
+    share, part, body = _uploaded(tmp_path)
+    secret = tmp_path / "secret"
+    secret.write_bytes(body)
+    (share / "gexis-kitchen-20260101-120000.tgz").symlink_to(secret)
+    added = backups.add_upload(part, "gexis-kitchen-20260101-120000.tgz", 5, share)
+    assert added["already"] is False and added["name"] != "gexis-kitchen-20260101-120000.tgz"
+
+
+def _no_magic_links(monkeypatch):
+    """A filesystem where a descriptor's `/proc/self/fd` link is on another
+    device: an overlay (a container, GitHub's runners)."""
+    import errno
+    real = os.link
+
+    def link(src, dst, *a, **k):
+        if str(src).startswith("/proc/self/fd/"):
+            raise OSError(errno.EXDEV, "Invalid cross-device link")
+        return real(src, dst, *a, **k)
+    monkeypatch.setattr(backups.os, "link", link)
+
+
+def test_an_upload_is_added_where_its_descriptor_cannot_be_linked(tmp_path, monkeypatch):
+    """Through its name then, never followed, and only if that name is still
+    the file checked."""
+    _no_magic_links(monkeypatch)
+    share, part, body = _uploaded(tmp_path)
+    added = backups.add_upload(part, None, 5, share)
+    assert (share / added["name"]).read_bytes() == body and not added["already"]
+
+
+def test_where_it_cannot_be_linked_an_upload_swapped_for_a_link_is_refused(tmp_path, monkeypatch):
+    _no_magic_links(monkeypatch)
+    share, part, body = _uploaded(tmp_path)
+    secret = tmp_path / "secret"
+    secret.write_text("root:$6$hash")
+    secret.chmod(0o600)
+    listed = backups.available
+
+    def swapped(directory):
+        part.rename(tmp_path / "aside")
+        part.symlink_to(secret)
+        return listed(directory)
+    monkeypatch.setattr(backups, "available", swapped)
+
+    with pytest.raises(backups.Refused, match="did not arrive whole"):
+        backups.add_upload(part, None, 5, share)
+    assert secret.stat().st_mode & 0o7777 == 0o600
+    assert [p.name for p in share.iterdir() if not p.name.startswith(".")] == []

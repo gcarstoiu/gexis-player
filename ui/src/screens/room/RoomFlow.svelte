@@ -252,7 +252,10 @@
       default: return [null, null, null];
     }
   });
-  const back = () => (full?.measured ? onpage?.() : onback?.());
+  //: Back from *Measuring cancelled* says the end has been shown, as Done
+  //: does: the page went back to it at its next change (the review of 1.16.1).
+  const back = () => (screenName === 'cancelled' ? doneAndLeave(!!full?.measured)
+    : full?.measured ? onpage?.() : onback?.());
 
   //: A row while a position is measured (R16-R18): each speaker, then both.
   const SWEPT = ['L', 'R', BOTH];

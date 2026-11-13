@@ -23,7 +23,9 @@ traps below are a local build's, kept for when GitHub is unavailable.
 - **Signing on R2D2** needs `GEXIS_RELEASE_GNUPGHOME=~/projects/gexis-release-key`,
   `TMPDIR` in `~/projects/scratch/` (promotion downloads the 1.1 GB image), and
   `packaging/release/out` linked to `~/projects/gexis-release-out` in the
-  checkout it runs from (git-ignored; remove the link after). It refuses a
+  checkout it runs from (git-ignored; remove the link after); its
+  `serials/` holds each channel's last serial, which a channel never goes
+  below. It refuses a
   file without an attestation from `release.yml` at the tag.
 - **A download the build needs is listed in `packaging/inputs.tsv`** with its
   licence, or the release run fails; `packaging/inputs.sh publish` (with
@@ -31,6 +33,9 @@ traps below are a local build's, kept for when GitHub is unavailable.
 - **`workflow_dispatch` needs the workflow on `main`**: previews by hand work
   only once a release PR has brought `release.yml` there.
 
+- **Tag annotated, like every release before**: `git tag -a vX -m "Gexis
+  Player X"` (1.16.0's was lightweight; `build.sh` reads tags with `--tags`,
+  so its versions came out right, but a plain `git describe` skips it).
 - **The release tag goes on the release-notes commit, nothing after it**
   (1.4.0, 2026-10-22): a package's version is the last commit that touched it,
   and the notes are core's last change - a documents fix committed after them
@@ -44,6 +49,10 @@ traps below are a local build's, kept for when GitHub is unavailable.
   was cancelled, re-run it (`gh run rerun <id>`).
 
 **Building**
+- **R2D2's `/` fills up** (moved from HANDOFF, 2026-11-10): Docker's
+  containerd store keeps images on `/`, not in `/home/docker`, and pi-gen
+  rebuilds its 1.16 GB build image on every image build, about 1.7 GB at a
+  build's peak; check `df -h /` before one.
 - **Clear space with `make prune`, never `make clean`**: `clean` destroys the
   warm pi-gen stages (~9 GB; a cold build is ~40 min against ~15).
 - **Never `docker start pigen_work`** - it starts a build. Read its volumes
@@ -88,3 +97,10 @@ traps below are a local build's, kept for when GitHub is unavailable.
 - **The API page's deploy can time out in GitHub Pages' queue** (1.14.0,
   `deployment_queued` for ten minutes): the page built; `gh run rerun <id>
   --failed` deployed it. It is not one of `main`'s required checks.
+- **A package versioned by its upstream (CamillaDSP, go-librespot,
+  Squeezelite, PeppyALSA and the rest) is not reinstalled at the same
+  version**, whatever files of ours it carries (LESSONS 53). The review of
+  1.16.1 changed CamillaDSP's unit under an unchanged `4.1.3-1`; found by
+  listing the preview's packages before installing. `packaging/revisions.json`
+  records each one's revision and a hash of its own files, and
+  `test_package_revisions.py` fails until a changed one's revision is raised.

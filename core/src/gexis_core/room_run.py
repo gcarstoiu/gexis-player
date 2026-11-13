@@ -120,6 +120,11 @@ class RunState:
                 "positions": rc.POSITIONS}
 
 
+def _screen(state: RunState) -> tuple:
+    """What a tap answers: the step, the position and *Too quiet*."""
+    return state.step, state.position, state.checking, state.too_quiet
+
+
 def _progress(step: str, position: int = 1, speaker: str | None = None, sweep: int = 0,
               checking: bool = False) -> float:
     """The design's §3: the level 5 %; positions 8 to 78 % (each an equal
@@ -180,6 +185,10 @@ class Run:
         #: `SWEEP_PEAK_DBFS`.
         self._sweep_cap = SWEEP_PEAK_DBFS + self._dsp.band_level_db(self._dsp.log_sweep(seconds=self._sweep_s))
         self._taps: asyncio.Queue = asyncio.Queue()
+        #: The screen the phone shows, numbered: one more at each new step,
+        #: position or *Too quiet* (`_set`); a tap carries the one it was
+        #: sent on.
+        self._shown = 0
         self._task: asyncio.Task | None = None
         self.state = RunState("place")
         self.pending: rc.Measurement | None = None
@@ -217,8 +226,11 @@ class Run:
 
     def tap(self, what: str) -> None:
         """`start`, `next` (*Measure here*), `check` (*Check it*), `skip`,
-        `keep`, `discard`, `again` (*Try again*), `done`."""
-        self._taps.put_nowait(what)
+        `keep`, `discard`, `again` (*Try again*), `done`. **A tap is for the
+        screen it was sent on** (the review of 1.16.1): a second *Measure
+        here* that came after the run had moved on answered the next
+        position's, which was then swept where the last one was."""
+        self._taps.put_nowait((what, self._shown))
 
     def cancel(self) -> None:
         """**Cancel is instant** (George, 2026-11-05): the end is shown at
@@ -253,21 +265,24 @@ class Run:
     def _set(self, state: RunState) -> None:
         if state.aim_db is None and self._aim is not None:
             state = replace(state, aim_db=self._aim)
+        if _screen(state) != _screen(self.state):
+            self._shown += 1
         self.state = state
         self._host.publish(state, None)
 
     async def _wait(self, *accepted: str) -> str:
-        """The phone's next tap among `accepted`; *cancel* never comes here
-        (it cancels the task). After `TIMEOUT_S` the run is cancelled."""
+        """The phone's next tap among `accepted`, sent on this screen;
+        *cancel* never comes here (it cancels the task). After `TIMEOUT_S`
+        the run is cancelled."""
         self._waiting = True
         try:
             while True:
                 try:
-                    what = await asyncio.wait_for(self._taps.get(), self._timeout)
+                    what, shown = await asyncio.wait_for(self._taps.get(), self._timeout)
                 except asyncio.TimeoutError:
                     logger.info("room: nobody tapped for %d s, the run is cancelled", self._timeout)
                     raise Cancelled("timeout")
-                if what in accepted:
+                if what in accepted and shown == self._shown:
                     return what
                 logger.debug("room: %s ignored while waiting for %s", what, "/".join(accepted))
         finally:
@@ -480,7 +495,7 @@ class Run:
         ignored."""
         found = False
         while not self._taps.empty():
-            found = self._taps.get_nowait() == "skip" or found
+            found = self._taps.get_nowait()[0] == "skip" or found
         return found
 
     def _closest(self, curves):

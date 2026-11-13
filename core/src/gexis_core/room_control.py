@@ -93,6 +93,7 @@ class RoomControl:
         self._run_stage = None       # what a run wants on the stage
         self._run_card: str | None = None
         self._ended: dict | None = None
+        self._ended_run = None       # the run whose end that is
 
     # -- reading ------------------------------------------------------------------
 
@@ -342,14 +343,15 @@ class RoomControl:
             if self.run is not None:
                 self.run.cancel()
             return self.snapshot()
-        if what == "done":
+        if what == "done" and not self.running():
             # The phone has shown how it ended; nothing left to show.
             self._ended = None
             self.publish()
             return self.snapshot()
         if not self.running():
             raise RoomError("The room is not being measured.")
-        if what not in ("start", "next", "check", "skip", "keep", "discard", "again"):
+        # `done` while it runs: *Nothing to correct*'s button, which ends it.
+        if what not in ("start", "next", "check", "skip", "keep", "discard", "again", "done"):
             raise RoomError(f"Unknown: {what}.")
         self.run.tap(what)
         await asyncio.sleep(0)
@@ -387,13 +389,22 @@ class RoomControl:
             # are the store's again.
             path_now = self._eq_on(card) or self.state().in_path(card)
             self._run_stage = None
-            if took and not path_now:
+            # **The chain written again whenever it is not the one wanted
+            # now** (the review of 1.16.1): the equaliser switched off during
+            # a run it had brought the stage in for was only synced - while a
+            # run needs the stage nothing reopens - and the chain went on
+            # sending every source into the loopback with CamillaDSP stopped.
+            if (getattr(self, "_path_before", False) or took) != path_now:
                 await self._reopen("room correction measured")
             else:
                 await self._sync()
             await self._release()
 
     def _run_published(self, state, ended) -> None:
-        if ended is not None:
+        # A run's end is taken once: its last publish, the player put back,
+        # brought back an end *Done* had cleared before it (the review of
+        # 1.16.1).
+        if ended is not None and self._ended_run is not self.run:
+            self._ended_run = self.run
             self._ended = dict(ended)
         self.publish()

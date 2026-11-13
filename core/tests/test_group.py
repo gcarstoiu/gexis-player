@@ -50,6 +50,11 @@ class Net:
         self.players[member.id] = player
         return player
 
+    def statuses(self, *ids):
+        """Each player's `/player/status`, as the half-minute round finds it."""
+        return {pid: {"id": pid, "host": f"{pid}.local", "group": g.summary(self.players[pid].record)}
+                for pid in ids}
+
 
 def test_a_record_survives_its_json():
     record = g.Record.new(LIVING, KITCHEN, clock=lambda: 5.0)
@@ -102,6 +107,48 @@ async def test_a_player_joined_from_another_group_leaves_it(tmp_path):
     assert office.record is None
 
 
+async def test_a_leader_joined_to_another_group_hands_its_own_on(tmp_path):
+    """The review of 1.16.1: joined to Office's group (Home Assistant's join,
+    a sync in a Lyrion app, the API), Living Room left Kitchen and Study a
+    group led by a player no longer in it - silent, its leader shown off."""
+    net = Net(tmp_path)
+    living, kitchen, study, office = net.add(LIVING), net.add(KITCHEN), net.add(STUDY), net.add(OFFICE)
+    await living.join(KITCHEN)
+    await living.join(STUDY)
+    await office.join(LIVING)
+    await asyncio.sleep(0)  # Living Room's word to its old group, sent beside its answer
+    await asyncio.sleep(0)
+    assert living.record.ids() == ["office", "living"] and living.record.leader == "office"
+    assert kitchen.record == study.record
+    assert kitchen.record.ids() == ["kitchen", "study"] and kitchen.record.leader == "kitchen"
+
+
+async def test_a_leader_joined_to_another_group_ends_a_group_of_two(tmp_path):
+    net = Net(tmp_path)
+    living, kitchen, office = net.add(LIVING), net.add(KITCHEN), net.add(OFFICE)
+    await living.join(KITCHEN)
+    await office.join(LIVING)
+    await asyncio.sleep(0)
+    await asyncio.sleep(0)
+    assert kitchen.record is None
+
+
+async def test_a_leader_gone_to_another_group_unheard_is_taken_out_with_the_lead_handed_on(tmp_path):
+    net = Net(tmp_path)
+    living, kitchen, study, office = net.add(LIVING), net.add(KITCHEN), net.add(STUDY), net.add(OFFICE)
+    await living.join(KITCHEN)
+    await living.join(STUDY)
+    net.off.update({"kitchen", "study"})
+    await office.join(LIVING)
+    await asyncio.sleep(0)
+    await asyncio.sleep(0)
+    net.off.clear()
+    living._owed.clear()  # its word lost, as across a restart
+    await kitchen.reconcile({"living": {"id": "living", "group": g.summary(living.record)},
+                             "study": {"id": "study", "group": g.summary(study.record)}})
+    assert kitchen.record.ids() == ["kitchen", "study"] and kitchen.record.leader == "kitchen"
+
+
 async def test_the_leader_cannot_be_removed_and_a_member_can(tmp_path):
     net = Net(tmp_path)
     living, kitchen, study = net.add(LIVING), net.add(KITCHEN), net.add(STUDY)
@@ -144,6 +191,85 @@ async def test_a_member_that_was_off_is_brought_up_to_date_when_seen(tmp_path):
     await living.reconcile({"study": {"id": "study", "group": g.summary(study.record)},
                             "kitchen": {"id": "kitchen", "group": None}})
     assert study.record == record
+
+
+async def _three(net):
+    living, kitchen, study = net.add(LIVING), net.add(KITCHEN), net.add(STUDY)
+    await living.join(KITCHEN)
+    await living.join(STUDY)
+    return living, kitchen, study
+
+
+async def _rounds(net, first):
+    """Every player's round, `first`'s before the others'."""
+    for _ in range(2):
+        for pid in (first, *[p for p in ("living", "kitchen", "study") if p != first]):
+            await net.players[pid].reconcile(net.statuses(*[p for p in ("living", "kitchen", "study") if p != pid]))
+    for player in net.players.values():
+        await player.settled()
+
+
+@pytest.mark.parametrize("first", ["study", "living"])
+@pytest.mark.parametrize("restarted", [False, True])
+async def test_an_undone_group_stays_undone_when_a_member_that_missed_it_comes_back(tmp_path, first, restarted):
+    """The review of 1.16.1: Study, off at the undo, came back with the
+    group it kept and sent it to the others, now in no group; they took it,
+    and Kitchen's own music was stopped for a group undone."""
+    net = Net(tmp_path)
+    living, kitchen, study = await _three(net)
+    net.off.add("study")
+    await living.undo()
+    await kitchen.settled()
+    if restarted:
+        net.add(LIVING)  # what it owed Study is gone with the restart
+    joined = len(net.applied["kitchen"])
+    net.off.clear()
+    await _rounds(net, first)
+    assert [p.record for p in net.players.values()] == [None, None, None]
+    assert net.applied["kitchen"][joined:] == [], "nothing put in force again on Kitchen"
+
+
+@pytest.mark.parametrize("first", ["living", "kitchen"])
+@pytest.mark.parametrize("restarted", [False, True])
+async def test_a_member_that_left_while_the_leader_was_off_stays_out(tmp_path, first, restarted):
+    """The review of 1.16.1 (C2): the leader off, Kitchen left to play on its
+    own; the leader, back with the group it kept, sent it to Kitchen, which
+    took it and stopped its own music."""
+    net = Net(tmp_path)
+    living, kitchen, study = await _three(net)
+    net.off.add("living")
+    left = await kitchen.leave()
+    await kitchen.settled()
+    if restarted:
+        net.add(KITCHEN)
+    joined = len(net.applied["kitchen"])
+    net.off.clear()
+    await _rounds(net, first)
+    kitchen, living, study = (net.players[p] for p in ("kitchen", "living", "study"))
+    assert kitchen.record is None and net.applied["kitchen"][joined:] == []
+    assert living.record == study.record == left and left.ids() == ["living", "study"]
+
+
+async def test_a_player_that_left_can_be_joined_to_the_same_group_again(tmp_path):
+    net = Net(tmp_path)
+    living, kitchen, study = await _three(net)
+    await kitchen.leave()
+    record = await living.join(KITCHEN)
+    assert kitchen.record == record and record.ids() == ["living", "study", "kitchen"]
+    await kitchen.leave()
+    assert kitchen.record is None and living.record.ids() == ["living", "study"]
+
+
+async def test_a_reflashed_member_is_given_the_group_again(tmp_path):
+    """B10: nothing of the group on it, as on a new card."""
+    net = Net(tmp_path)
+    living, kitchen, study = await _three(net)
+    for kept in tmp_path.glob("kitchen*"):
+        kept.unlink()
+    kitchen = net.add(KITCHEN)
+    assert kitchen.record is None
+    await living.reconcile(net.statuses("kitchen", "study"))
+    assert kitchen.record == living.record and kitchen.record.has("kitchen")
 
 
 async def test_the_leader_gone_leaves_the_others_grouped(tmp_path):
@@ -249,3 +375,41 @@ async def test_a_member_is_told_before_the_player_asked_has_done_its_own_part(tm
     assert living.record is None, "told at once"
     slow.set()
     await kitchen.settled()
+
+
+@pytest.mark.parametrize("host", ["192.0.2.1\nLD_PRELOAD=/var/lib/gexis-core/pictures/x.so",
+                                  "a b", "x.local/path?", "host\r", "-o", "h\x00"])
+def test_a_member_s_host_is_a_name_or_an_address_and_nothing_else(host):
+    """**The review of 1.16.1** (high): a record's host went into the
+    snapclient's environment file as written, and a line break in it set
+    `LD_PRELOAD` for a unit running as `pi`. A record naming one is not a
+    group record."""
+    with pytest.raises(ValueError):
+        g.Member.from_json({"id": "x", "host": host})
+    with pytest.raises(ValueError):
+        g.Record.from_json({"id": "r", "revision": 1, "leader": "x", "members": [{"id": "x", "host": host}]})
+
+
+@pytest.mark.parametrize("host", ["192.0.2.1", "sofapi.local", "living-room.local", "fe80::1", "[fe80::1%wlan0]", ""])
+def test_names_and_addresses_still_make_members(host):
+    assert g.Member.from_json({"id": "x", "host": host}).host == host
+
+
+@pytest.mark.parametrize("restarted", [False, True])
+async def test_a_member_removed_while_unreachable_learns_it_when_seen_again(tmp_path, restarted):
+    """The review of 1.16.1: a record owed to a player taken out was sent
+    only once the player that owed it was in no group, so a member removed
+    as it dropped off went on playing the group's music."""
+    net = Net(tmp_path)
+    living, kitchen, study = net.add(LIVING), net.add(KITCHEN), net.add(STUDY)
+    await living.join(KITCHEN)
+    await living.join(STUDY)
+    net.off.add("study")
+    record = await living.remove("study")
+    if restarted:
+        living = net.add(LIVING)  # what it owed is gone with the restart
+    net.off.clear()
+    await living.reconcile(net.statuses("kitchen", "study"))
+    await kitchen.reconcile(net.statuses("living", "study"))
+    assert study.record is None
+    assert living.record == kitchen.record == record

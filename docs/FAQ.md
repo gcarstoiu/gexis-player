@@ -206,8 +206,8 @@ Every one: Lyrion, Spotify, Bluetooth, Plexamp, and what plugins add. A
 plugin has nothing to do for it.
 
 **Why does a group play a moment late?**
-To play together, every player of a group holds the music for about 0.4
-seconds before it plays it, so a pause or a skip is heard that much later.
+To play together, every player of a group holds the music for about a
+second before it plays it, so a pause or a skip is heard that much later.
 The player that leads waits too, so all the rooms are heard at once. A player
 playing alone does not wait.
 
@@ -337,7 +337,9 @@ boot settings, which the player writes when you choose the model: the
 player restarts and asks *Keep this screen?*, and if the screen stays dark
 it goes back by itself. A four-lane DSI model needs a Pi 5 or a Compute
 Module, whose display connectors carry four lanes; a Pi 4's carries two, so
-on a Pi 4 the list leaves those models out. With a DSI screen connected it is the screen, and
+on a Pi 4 the list leaves those models out. The JDI 7" works only on a
+Compute Module, as Raspberry Pi's notes for it say, so a Pi 5 leaves it out
+too. With a DSI screen connected it is the screen, and
 both HDMI ports are free for a receiver, a sound bar or a TV; *Screen port*
 can still make an HDMI port the screen. On a DSI screen, *Screen brightness*
 sets its backlight, and display standby turns the backlight off.
@@ -347,7 +349,8 @@ Yes: connect it to either HDMI port and choose that port under *Settings →
 Display → Screen port*. The player restarts on the TV at 1920 x 1080, taken from the sizes the TV
 offers (a 4K TV scales it to full screen). Turned off and on again, the TV
 may come back small for a few seconds before the player sets it back to
-1920 x 1080. A TV has no touch, so *Keep this
+1920 x 1080. A TV that is off when the player starts stays the screen: its
+picture comes when it is switched on. A TV has no touch, so *Keep this
 screen?* appears on the phone page - answer it there, or the player goes back
 to the screen before. A touch panel left on the other port is switched off;
 choose its port again to go back to it. If the edges of the picture are cut
@@ -626,7 +629,10 @@ HTTP API at `http://<player>.local:8090`, with the player's name in place of
 against the player, so be careful with restart and reset. Routes marked
 *stable* are the ones meant for integrations; *internal* ones are the
 player's own and may change. Anyone on the home network can use the API, as
-they can the settings: there is no login.
+they can the settings: there is no login. A web page served from anywhere
+else cannot use it from a browser: the player takes changes from a browser
+only on its own pages, and a browser has to open it by its address, its
+name or `<player>.local`. Apps, scripts and Home Assistant are not affected.
 
 ## Network and Wi-Fi
 
@@ -714,7 +720,12 @@ about every HTTP page; choose *Continue to site*. What you send stays on
 your home network, between your phone and the player.
 
 **What is the setup network's password, and why does the phone say it has no internet?**
-It is `gexis-setup` on every player, and the screen shows it too. The phone's warning about no internet is expected: stay
+On a new player it is `gexis-setup`, and the screen shows it too. A player
+already set up opens the setup network when its Wi-Fi has been gone for two
+minutes; then, with a screen, it uses a password of its own, shown on that
+screen, and without one `gexis-setup`. There the page only asks for the Wi-Fi
+network to join, and once its own network is back the player returns to it
+within ten minutes. The phone's warning about no internet is expected: stay
 connected, as the setup page is served by the player itself.
 
 **My phone sees gexis-setup but cannot join it, or keeps dropping off it.**
@@ -1002,8 +1013,10 @@ Plugins page, each plugin's tag says where it came from.
 **How do I add or update a plugin?**
 *Add* in its tile, on the screen or a phone. One of the player's own is
 switched on, and downloads its software if it has some. One from the
-catalogue downloads there, the player restarts once to finish, and it arrives
-switched off: switch it on on the Plugins page. A newer version shows *Update
+catalogue downloads there, the player restarts once to finish (once for
+several added together, and a Remove or an upload meanwhile waits for the
+download to finish), and it arrives switched off: switch it on on the
+Plugins page. A newer version shows *Update
 to …* on the plugin's row. Plugins never update by themselves.
 
 **Add plugins shows nothing from other authors.**

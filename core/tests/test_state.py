@@ -452,3 +452,20 @@ def test_dropping_one_that_was_never_there_is_quiet():
     store = _store()
     store.drop_renderer("never-here")
     assert set(store.state.available) == {"lms"}
+
+
+def test_a_subscriber_that_fails_does_not_stop_the_others(caplog):
+    """The review of 1.16.1: the moOde file's writer, the first subscriber,
+    raised on a title it could not encode, and from then on no change - the
+    volume's included - reached the screens. Logged once while it fails."""
+    store = StateStore(_caps("lms"))
+
+    def fails(state):
+        raise UnicodeEncodeError("utf-8", "\ud83c", 0, 1, "surrogates not allowed")
+    seen = []
+    store.subscribe(fails)
+    store.subscribe(seen.append)
+    store.set_active("lms")
+    store.set_volume_raw(100)
+    assert [s.active for s in seen] == ["lms", "lms"] and seen[-1].volume.raw == 100
+    assert len([r for r in caplog.records if r.name == "gexis_core.state"]) == 1

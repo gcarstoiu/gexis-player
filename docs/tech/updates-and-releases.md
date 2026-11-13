@@ -307,7 +307,10 @@ flowchart TD
 own GitHub release: `ours`, `skins`, `rpi` (Raspberry Pi archive's share of the
 tested set) and `debian`. A part's name is `<kind>-<first 12 hex of its
 Packages' sha256>`, which is also its apt suite. Unchanged parts already exist
-on GitHub and are not uploaded again. `packaging/release/reuse.py` goes further:
+on GitHub and are not uploaded again - except the indexes of a part not yet
+signed, which each upload replaces: its `Release` is dated, so one left by a
+tag that was never signed would not carry the next tag's attestation, and
+`--sign` checks that. `packaging/release/reuse.py` goes further:
 a file any published part already holds byte-for-byte is referenced from there
 (`Filename: ../<other-part>/<file>`), so each file is uploaded once, ever. "The
 same bytes" is proven by the holding part's own index, itself proven by its
@@ -352,9 +355,13 @@ Notes: <release page URL>
 written beside and renamed, so a cut mid-write leaves the one before; a file
 that does not read as a number counts as 0 (`seen_serial()`). `publish.sh`
 starts a channel's serial at 1 only when the channel file truly does not
-exist: a fetch that fails any other way (a 5xx, the rate limit, no network),
-or a 404 for a file the `channels` release lists, stops it before anything is
-signed or uploaded. `Format` lets a newer publishing layout tell an older
+exist: a fetch that fails any other way (a 5xx, the rate limit, no network)
+stops it before anything is signed or uploaded, and a 404 is believed only
+when GitHub's API, answering (retried, never taken from a failed call), lists
+no such file in the `channels` release. It also never goes below the serial
+it last gave the channel, kept in `packaging/release/out/serials/<channel>`:
+a file an upload cut short left missing, or an older one GitHub still
+serves, continues from there. `Format` lets a newer publishing layout tell an older
 updater to reflash rather than fail with a 404. A release goes to Testing
 first and keeps its number when promoted to Stable.
 
@@ -417,9 +424,11 @@ key, or for another release, stops the update.
 
 1. **download** - `apt-get update` on the new parts; simulate to plan the
    changes; `--download-only` everything. Then pre-download, from the
-   installed release, the current versions of every package that will change,
-   so going back needs no network. If those repositories can't be read, the
-   update continues and says going back won't be possible.
+   installed release, the current versions of every package that will change
+   or be removed (a release that conflicts with one the old release depends
+   on), so going back needs no network. If those repositories can't be read,
+   or a package can't be fetched from them, the update continues and says
+   going back won't be possible.
 2. **backup** - `POST /settings/backup?before=update` on the core, then wait
    up to 120 s for a new `.tgz` in `/var/lib/gexis-core/backups/` (ADR-0083).
    No backup, no update. The core names it
@@ -477,6 +486,7 @@ stateDiagram-v2
     stopping --> installing
     installing --> going_back: apt error or verify failed
     going_back --> failed: back on previous, or "restore the backup"
+    going_back --> done: could not go back, and the new release answers late
     installing --> restarting
     restarting --> checking_device: services restarted, or after the reboot (postboot)
     checking_device --> done: core answers (and, after a reboot, verify)
@@ -545,7 +555,11 @@ records `failed-<channel>` so the nightly run won't retry that release,
 reports whether the device is back on the previous version or the backup must
 be restored, and - when the new release had already been restarted -
 restarts what changed again, or reboots when that is what lands it. A boot
-after going back is not checked again. **Only an updater with this code does
+after going back is not checked again. **Late, not broken** (the review of
+1.16.1): where going back could not be done (its packages could not be
+fetched) after the restart, the release that went in is checked again -
+`verify` and another minute for the core - and, whole and answering, it
+stays and the update counts as done. **Only an updater with this code does
 it** (built 2026-10-07): it protects updates made from that release on. Once *Update* is pressed there is no
 cancel (ADR-0110 §5).
 
@@ -678,16 +692,19 @@ player that used them over at its next start (`carry_over.py`) - their old
 units stopped, their data moved into the plugins' own folders (Plexamp's
 store, its claim record, and its software with the stamp of its pin, so the
 same version is not fetched again), recorded for the catalogue's install,
-switched on again. Plexamp's plugin downloads Plexamp itself, from the pin in
-its archive, into its own folder, and reports it with the contract's
-`software` messages; a new Plexamp is a new plugin version.
+switched on again. It is carried once: its id leaves `_plugins_added`, so a
+plugin removed afterwards stays removed. Plexamp's plugin downloads Plexamp
+itself, from the pin in its archive, into its own folder, and reports it with
+the contract's `software` messages; a new Plexamp is a new plugin version.
 
 **Uploaded plugins** (ADR-0106, `core/src/gexis_core/uploads.py`) bypass the
 release entirely: a `.tar.gz` with `plugin.json` (plus `version` and `run`),
 checked before anything is written (manifest, unique id, no path escapes,
-aarch64 executable, size limits of 200 MB packed / 600 MB unpacked), unpacked
-into `/var/lib/gexis/plugins/<id>/<version>/` with `current` pointing at it and
-the previous version kept, and run under the sandboxed template
+no path twice with different contents, none inside a link, aarch64
+executable, size limits of 200 MB packed / 600 MB unpacked), unpacked into
+`/var/lib/gexis/plugins/<id>/<version>/` - refused unless the manifest
+unpacked is the one checked - with `current` pointing at it and the previous
+version kept, and run under the sandboxed template
 `gexis-uploaded-<kind>@<id>.service`. Uploading a newer version updates it.
 
 **Plugins from the catalogue** (ADR-0168) reach a player without a release
