@@ -103,6 +103,17 @@ radio on a Pi 4 were found published: to be measured.
      MP3, AAC, HE-AAC and HLS; the rate reaching the card and the stage;
      titles from ICY and from HLS; a drop and its recovery. If mpv fails
      there, PyAV is the fallback, and the choice comes back to George.
+   - **Measured 2026-11-13**
+     ([Finding 146](../findings/146-mpv-as-the-radio-engine-on-a-pi-4.md)):
+     mpv confirmed - eleven stations, `.pls` and HLS included, at 3-6 % of
+     a core and 65-87 MB. What it adds to the renderer: FFmpeg's reconnect
+     on and a 5 s network timeout (a cut and a freeze then go unheard on a
+     station buffering more than 5 s); any end of a live stream taken as a
+     drop (mpv reports a cut and a station gone as an ordinary end of
+     file); the watchdog counting from the playback stopping; stereo asked
+     for (a mono station decodes as one channel). The rate at the card,
+     the stage and a stream at 32 kHz or below are measured in the build,
+     on a player not in a group.
 4. **How a station plays and shows**:
    - Tapping a station plays it: the radio renderer acquires the output as
      the others do (arbitration, ADR-0027); another source takes over and
@@ -177,7 +188,8 @@ radio on a Pi 4 were found published: to be measured.
 5. A stream cut mid-play recovers; one that stays down stops with a
    message.
 6. With Lyrion on, Lyrion's radio opens from Radio and works as before.
-7. The CPU it takes on a Pi 4, measured at the step 2 figures or better.
+7. The CPU it takes on a Pi 4, measured at Finding 146's figures (3-6 % of
+   a core) or better.
 8. In Home Assistant, a favourite plays from the player's sources and from
    the card, and the directory is browsed and searched from the media
    browser.

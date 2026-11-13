@@ -3935,6 +3935,11 @@ screen gains Radio; the player's own favourites; the phone and Home
 Assistant in this phase. Settings in ADR-0022. The brief for Claude Design:
 [`design/briefs/31-radio.md`](../design/briefs/31-radio.md).
 
+**The engine measured 2026-11-13**
+([Finding 146](findings/146-mpv-as-the-radio-engine-on-a-pi-4.md)): mpv
+confirmed, at 3-6 % of a core; its reconnect on and a 5 s network timeout,
+the watchdog for the rest.
+
 **Acceptance:**
 
 1. With Lyrion off, a station found by country, genre or name plays from the
@@ -3949,8 +3954,8 @@ Assistant in this phase. Settings in ADR-0022. The brief for Claude Design:
 5. A stream cut mid-play recovers; one that stays down stops with a
    message.
 6. With Lyrion on, Lyrion's radio opens from Radio and works as before.
-7. The CPU it takes on a Pi 4, measured at the engine's finding's figures or
-   better.
+7. The CPU it takes on a Pi 4, measured at Finding 146's figures (3-6 % of
+   a core) or better.
 8. In Home Assistant, a favourite plays from the player's sources and from
    the card, and the directory is browsed and searched from the media
    browser.
