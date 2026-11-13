@@ -4152,6 +4152,69 @@ not measured.
 4. Live cameras while music plays at 192 kHz with room correction: no
    dropouts - recorded as a finding.
 
+### Phase 36 — Glass in place of the visualiser's engines
+
+**ID:** `ph-glass` · added 2026-11-13 as 36 (George).
+
+**Added 2026-11-13** (George, after Glass was checked again that day). The
+visualiser moves to Glass, foonerd's Rust engine for PeppyMeter themes (MIT;
+[Finding 133](findings/133-glass-against-our-visualiser.md): cheaper than
+ours on every skin measured, at a third of the memory). The engines it runs
+today come from foonerd's forks of PeppyMeter, PeppySpectrum and
+peppy_screensaver, archived on 2026-10-04: they still download at their
+pinned commits, with no fixes to come. George also asked what an engine of
+our own would mean, so that the player does not rest on one maintainer.
+
+**Glass on 2026-11-13** (read from GitHub, not measured): 0.11.47, one
+contributor, 819 commits since 2026-09-24, 325 releases, one issue filed. It
+is built around Volumio (its plugin, manager page and state channel), and its
+audio tap is a project of its own since 2026-11-01 (`foonerd/evotap`, with a
+written contract).
+
+**An investigation first, as a finding**: what each way of holding the
+engine costs, its code counted rather than estimated:
+- **Glass as foonerd releases it**, pinned like any other input, and what we
+  would follow or carry ourselves as it changes;
+- **a fork of our own**: which parts we keep (the theme reader, the drawing,
+  the analyser, the tap) and which we leave (the Volumio plugin, the manager,
+  the remotes); Rust in our build; what keeping it has cost upstream so far;
+- **an engine written by us**, with Glass's design and
+  [Finding 134](findings/134-where-the-visualisers-time-goes.md) as the guide.
+
+For each, the licences (Glass MIT, its analyser Apache-2.0, the themes
+GPL-3.0) and how a fix made upstream would reach us.
+
+**An ADR before anything is built**, after the finding. It must settle:
+- which of the three (George);
+- the tap: Glass's in the output chain for every output (ADR-0055, ADR-0124,
+  Finding 116), or peppyalsa feeding Glass; bit-perfect in front of a real
+  card and at a stream's end (Findings 003 and 004); its cost at 192 kHz
+  (Finding 133: 10.4 % against peppyalsa's 1.5 %);
+- the player's state to the engine from the core, not from Volumio;
+- start, stop, standby, the dashboard and Home Assistant's page under the
+  core (ADR-0026's screen ownership);
+- what ours draws that Glass does not, or not the same way: the skins'
+  fonts, badges, fanart (ADR-0112), the ticker and smooth rotation
+  (ADR-0097), the meters following the volume (ADR-0146), the ballistics
+  (ADR-0058);
+- every skin pack we ship (ADR-0111), at every size, and the previews
+  (ADR-0050);
+- a player that updates keeps its skin and settings;
+- the settings, for ADR-0022's inventory.
+
+**Acceptance (draft):**
+
+1. The finding and the ADR, decided by George.
+2. Every skin we ship draws whole at each size, as ours did - checked with
+   made-up data.
+3. Cheaper than ours on a Pi 4 at matched work, its tap included, by Finding
+   133's method, at 44.1 and 192 kHz.
+4. Bit-perfect with the tap in front of the card on every output, a stream's
+   end included.
+5. Standby, the dashboard, Home Assistant's page, touch and the phone's
+   visualiser button behave as before.
+6. Nothing in the build fetched from an archived repository.
+
 
 ### Parked
 
