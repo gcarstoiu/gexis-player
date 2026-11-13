@@ -200,6 +200,7 @@ been written properly. **0098 has no record either.**
 | [0177](0177-room-correction-for-the-full-range.md) | Room correction for the full range | Accepted 2026-11-10 (Phase 30, George: decisions 1-4 as recommended): up to six broad filters, ±3 dB, 250 Hz-14 kHz, towards the speaker's own slope; Bass or Full range at one level |
 | [0178](0178-fixes-from-the-review-of-1-16-1-that-change-what-is-seen.md) | Fixes from the review of 1.16.1 that change what is seen | Accepted 2026-11-10 (George, as recommended): own pages only for browsers; a set-up player's setup network only gives a network; no dashboard pop-ups; bad plugin rows refused at upload; appended 2026-11-11: a TV off stays the screen, *Ready, no music found*, a late update stays, a Remove waits for a download |
 | [0179](0179-the-music-services-under-accounts-of-their-own.md) | The music services under accounts of their own | Accepted 2026-11-11 (Claude, nothing seen changes): Squeezelite, go-librespot, Shairport Sync and its plugin, Snapcast off `pi`, the screen's user |
+| [0180](0180-internet-radio-without-lyrion.md) | Internet radio without Lyrion | Accepted 2026-11-13 (Phase 31, George: 1-7 as recommended, 8 as b): radio-browser.info, mpv, own favourites, phone and Home Assistant |
 
 ## Cross-cutting rules
 
