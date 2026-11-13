@@ -17,9 +17,12 @@ Type=simple
 # directories root-owned regardless of -o/-g on the target file, which is
 # exactly what broke this (mkdir permission denied at first boot on
 # gexis). StateDirectory= is systemd's own answer: /var/lib/go-librespot,
-# created and (re-)chowned to User=/Group= on every start, survives the
-# user account changing, self-healing against ownership drift.
+# created and chowned to User=/Group= at a start - but only when the folder
+# itself has another owner. A restore puts the sign-in back under the owner
+# its archive names (pi, ADR-0179), so everything in it is given to the
+# account at every start.
 StateDirectory=go-librespot
+ExecStartPre=+/usr/bin/chown -R gexis-spotify:gexis-spotify /var/lib/go-librespot
 # --config_dir, not -config_dir: go-librespot parses -c as a distinct
 # short flag for config overrides (field=value, see its own README) using
 # POSIX-style bundling, not Go's stdlib flag package (which treats -x and
@@ -31,8 +34,13 @@ StateDirectory=go-librespot
 ExecStart=/usr/bin/go-librespot --config_dir /var/lib/go-librespot
 Restart=on-failure
 RestartSec=2
-User=pi
-Group=audio
+# ADR-0179: an account of its own, not the screen's (pi).
+User=gexis-spotify
+# The audio chain's control ports take orders from anyone; this has no
+# business there (the review of 1.16.1, as for plugins).
+IPAddressDeny=127.0.0.2
+Group=gexis-spotify
+SupplementaryGroups=audio
 
 [Install]
 WantedBy=multi-user.target

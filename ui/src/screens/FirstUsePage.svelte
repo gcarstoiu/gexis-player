@@ -188,7 +188,7 @@ class Component extends DCLogic {
     return { lyr, plex, spo, air, bt, headless, wait: !lyr || s.browse === 'off', here: lyr && s.lyrWhere === 'here',
       marks: [lyr && 'lyr', plex && 'plex', spo && 'spo', air && 'air', bt && 'bt'].filter(Boolean) };
   }
-  p1Path(s) { return s.start === 'new' ? ['p1welcome', 'p1net', 'p1start', 'p1name', 'p1clock', 'p1output', 'p1screen', 'p1review', 'p1join'] : ['p1welcome', 'p1net', 'p1start', 'p1backup', 'p1output', 'p1screen', 'p1restore', 'p1restored']; }
+  p1Path(s) { if (s.setUp) return ['p1welcome', 'p1net', 'p1join']; return s.start === 'new' ? ['p1welcome', 'p1net', 'p1start', 'p1name', 'p1clock', 'p1output', 'p1screen', 'p1review', 'p1join'] : ['p1welcome', 'p1net', 'p1start', 'p1backup', 'p1output', 'p1screen', 'p1restore', 'p1restored']; }
   ivBlock(s) {
     const A = 'var(--accent-lms)', ON = { bg: 'var(--c-lms-16)', border: A, ink: A }, LINE = 'var(--ink-line)', FILL = 'var(--ink-fill)';
     const up = (i, f) => this.setState(st => ({ ivs: st.ivs.map((x, k) => k === i ? Object.assign({}, x, f(x)) : x) }));
@@ -295,7 +295,10 @@ class Component extends DCLogic {
     }));
     const SK = { alt: 'Skip' };
     switch (s.screen) {
-      case 'p1welcome': return { hero: true, crumb: 'First-time setup', title: 'Set up gexis', sub: s.overLan ? 'This page talks only to the player, over your network. This part gets the player working; what it plays and shows comes after.' : 'You are connected to the player’s own Wi-Fi. This part gets the player working; what it plays and shows comes after, from your home Wi-Fi.',
+      //: ADR-0178 decision 2: a player already set up is only given its Wi-Fi.
+      case 'p1welcome': if (s.setUp) return { hero: true, crumb: 'Wi-Fi', title: nm + ' can’t reach its Wi-Fi', sub: 'Choose the network it should join. Everything else on the player stays as it is.',
+        blocks: [note('warn', 'Keep mobile data off', 'Until it has joined. With it on, your phone may try to reach this page over mobile data, where the player cannot be found.')], foot: { next: 'Start' } };
+        return { hero: true, crumb: 'First-time setup', title: 'Set up gexis', sub: s.overLan ? 'This page talks only to the player, over your network. This part gets the player working; what it plays and shows comes after.' : 'You are connected to the player’s own Wi-Fi. This part gets the player working; what it plays and shows comes after, from your home Wi-Fi.',
         blocks: [note('info', 'About a minute', 'Network, name, time, output and screen. Every answer can be changed later in Settings.'), ...(s.overLan ? [] : [note('warn', 'Keep mobile data off', 'Until this part finishes. With it on, your phone may try to reach this page over mobile data, where the player cannot be found.')])], foot: { next: 'Start' } };
       case 'p1net': { const chosen = s.nets.find(n => n.name === s.net), sec = s.other ? true : chosen ? chosen.secured : false, blocks = [];
         if (s.joinError) blocks.push(note('warn', 'Could not join ' + s.joinError.ssid, (s.joinError.reason || '') + ' Type the password again.'));
@@ -358,7 +361,7 @@ class Component extends DCLogic {
         blocks: [P(s.net ? 'This page came from the player’s own Wi-Fi, so it stops here. Put this phone back on ' + s.net + ', then open:' : 'Open the player at its address:'), { t: 'Addr', label: 'Open in any browser', value: 'http://' + sl + '.local:8090' }, status('spin', 'Waiting for ' + nm + (s.net ? ' on ' + s.net : '')),
           ...(s.keepQ ? [note('warn', 'Then go to the player’s screen', 'It restarts on the screen you chose and asks whether to keep it. Tap Keep on the screen within two minutes, or it goes back to how it was.')] : []),
           ...(s.scr === 'headless' ? [note('warn', 'Write the address down', 'Nothing is drawn on the device, so this address is the only way in.')] : []),
-          note('ok', '', 'When the player answers, this page carries on into making it yours.' + (s.scr === 'headless' ? '' : ' The player’s screen shows a code for it too.'))], foot: { hide: true } };
+          note('ok', '', s.setUp ? 'When the player answers, this page opens it.' : 'When the player answers, this page carries on into making it yours.' + (s.scr === 'headless' ? '' : ' The player’s screen shows a code for it too.'))], foot: { hide: true } };
       case 'p1restore': { const ch = id => () => this.go(id, 'p1restore'), b = (s.backup && s.backup.settings) || {}, en = (s.backup && s.backup.enabled) || [];
         const listens = [b.lms_enabled !== false && 'Lyrion', b.spotify_enabled !== false && 'Spotify', b.bt_enabled !== false && 'Bluetooth'].filter(Boolean).join(' · ') || 'Nothing';
         const installed = [...en.map(live.pluginName), b.visualiser_skins ? 'Visualiser skins' : null].filter(Boolean).join(' · ') || 'Nothing';
@@ -596,6 +599,8 @@ class Component extends DCLogic {
   //: Part 2's own state, with what the prototype simulated filled in by
   //: the player: its name, clock, network, the Lyrion search, Plexamp's
   //: download, a phone asking to pair, the network shares, the downloads.
+  //: The last answers sent, which Finish waits for.
+  let saving = null;
   let st = $state(Object.assign(init('A', mode === 'p1' ? 'p1' : 'p2', false), {
     first: true, nameSaved: false, second: true, touchpad: true, plexClaimed: false, plexError: null, plexDlError: null, skinsAsked: false,
     volume: 'Hardware', volHw: {}, volNotes: {}, outTags: {}, outProblems: {}, town: '', net: 'your network', lyrMeta: '', lyrServer: null, pairDevice: '', pairCode: '',
@@ -1019,7 +1024,9 @@ class Component extends DCLogic {
     //: drops resumes where it was), with the step it goes to.
     save(s, to) {
       const a = { ...live.answers(s, s.screen), step: to };
-      json('/setup/answers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(a) })
+      //: Kept so Finish waits for it: a player already set up goes from the
+      //: network straight to joining (ADR-0178 decision 2).
+      saving = json('/setup/answers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(a) })
         .then((saved) => { st.hasPw = !!saved.has_password; if (s.screen === 'p1net') { st.pw = ''; st.joinError = saved.error ?? null; } })
         .catch((err) => { st.problem = err.message; });
     },
@@ -1037,13 +1044,14 @@ class Component extends DCLogic {
     },
     async finish1(id) {
       st.problem = null;
+      await saving;
       try {
         const told = await json('/setup/finish', { method: 'POST' });
         st.keepQ = !!told?.keep_question;
         waitForHome();
       } catch (err) {
         st.problem = err.message;
-        comp.go(id === 'p1restored' ? 'p1restore' : 'p1review');
+        comp.go(id === 'p1restored' ? 'p1restore' : st.setUp ? 'p1net' : 'p1review');
       }
     }
   };
@@ -1115,29 +1123,36 @@ class Component extends DCLogic {
   //: Part 1's start: the answers kept on the player (a page that dropped, or
   //: a failed join), the networks, the screen, the outputs, the time zones.
   async function loadPart1() {
-    let saved = {}, rows = {};
+    let saved = {}, rows = {}, host = null;
+    //: A player already set up is only given its Wi-Fi, and nothing else
+    //: answers over its setup network (ADR-0178 decision 2).
+    const setUp = setup?.needed === false;
     try { saved = await json('/setup/answers'); } catch { /* a fresh start */ }
-    try {
-      const walk = (o) => {
-        if (Array.isArray(o)) o.forEach(walk);
-        else if (o && typeof o === 'object') { if (o.key && o.type) rows[o.key] = o; Object.values(o).forEach(walk); }
-      };
-      walk(await json('/settings'));
-    } catch { /* defaults */ }
-    await live.loadScreens();
-    try { st.offered = await json('/setup/plugins'); } catch { st.offered = []; }
+    if (setUp) {
+      try { host = (await json('/setup/status')).host ?? null; } catch { /* the default name */ }
+    } else {
+      try {
+        const walk = (o) => {
+          if (Array.isArray(o)) o.forEach(walk);
+          else if (o && typeof o === 'object') { if (o.key && o.type) rows[o.key] = o; Object.values(o).forEach(walk); }
+        };
+        walk(await json('/settings'));
+      } catch { /* defaults */ }
+      await live.loadScreens();
+      try { st.offered = await json('/setup/plugins'); } catch { st.offered = []; }
+    }
     const zones = rows.timezone?.options ?? [];
     let phoneTz = null;
     try { phoneTz = Intl.DateTimeFormat().resolvedOptions().timeZone || null; } catch { /* none */ }
     let tz = saved.timezone ?? (setup?.needed ? phoneTz : rows.timezone?.value) ?? phoneTz;
     if (tz && zones.length && !zones.includes(tz)) tz = null;
     const outputs = rows.output_device?.options ?? [];
-    try { for (const o of await json('/setup/outputs')) st.volHw[o.option] = o.hardware; } catch { /* all offered */ }
+    if (!setUp) try { for (const o of await json('/setup/outputs')) st.volHw[o.option] = o.hardware; } catch { /* all offered */ }
     const sug = st.screenInfo?.suggested;
     const scPick = saved.headless ? null : saved.screen ?? (setup?.needed ? null : rows.screen?.value ?? null) ?? sug?.label ?? null;
     Object.assign(st, {
       overLan: setup?.network === 'online',
-      name: saved.name ?? rows.device_name?.value ?? 'gexis', zones, tz, tzMode: tz ? 'auto' : 'hand',
+      setUp, name: saved.name ?? rows.device_name?.value ?? host ?? 'gexis', zones, tz, tzMode: tz ? 'auto' : 'hand',
       fmt: (saved.clock ?? rows.clock_format?.value ?? '24 h') === '12 h' ? 1 : 0,
       outputs, outNotes: rows.output_device?.optionNotes ?? {},
       //: *Tested* beside an output, and a problem owners reported under it

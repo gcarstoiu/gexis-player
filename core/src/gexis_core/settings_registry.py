@@ -154,8 +154,8 @@ def _board_problems() -> dict[str, str]:
 
 
 #: `screen_port`: the ports a screen can be on (ADR-0141; ADR-0158 D3: a
-#: DSI panel's too, while its driver is loaded) - the two HDMI ports until
-#: the daemon says what is there.
+#: DSI panel's too, while its driver is loaded or a port was chosen over
+#: it) - the two HDMI ports until the daemon says what is there.
 OPTION_RESOLVERS = {"timezones": _timezones, "skin_corpus": tuple, "output_device": tuple,
                     "screens": _screens, "boards": _boards, "screen_port": lambda: ("HDMI 1", "HDMI 2")}
 #: Sources only the daemon can answer: the resolvers above are placeholders
@@ -536,7 +536,8 @@ class Settings:
     own default."""
 
     @staticmethod
-    def with_plugins(registry: list[dict], plugins, downloads=None, missing=()) -> list[dict]:
+    def with_plugins(registry: list[dict], plugins, downloads=None, missing=(),
+                     problems: dict | None = None) -> list[dict]:
         """**A plugin's rows, merged into the registry** (ADR-0086).
 
         **Two places, and the split is George's** (2026-09-25): *"create the
@@ -564,7 +565,8 @@ class Settings:
 
         Rows that fail the registry's own rules are dropped with the reason
         logged, not raised: one badly packaged plugin must not stop the
-        others, nor the device.
+        others, nor the device. `problems`, if given, is told each plugin
+        dropped and why (the upload's check, ADR-0178 decision 4).
         """
         merged = [dict(g, rows=list(g["rows"])) for g in registry]
         by_id = {g.get("id"): g for g in merged}
@@ -744,6 +746,8 @@ class Settings:
                 check([{"id": "check", "label": "check", "rows": switches + rows}])
             except (ValueError, KeyError) as exc:
                 logger.warning("plugins: %s's settings are not usable: %s", plugin.id, exc)
+                if problems is not None:
+                    problems[plugin.id] = str(exc)
                 continue
             if switch_group is not None:
                 by_area.setdefault(area, []).extend(switches)

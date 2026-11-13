@@ -2,10 +2,11 @@
 CamillaDSP, systemd and ALSA's tools played by fakes."""
 import asyncio
 import json
+from pathlib import Path
 
 import pytest
 
-from gexis_core import eq_engine
+from gexis_core import eq_engine, outputs
 from gexis_core import equaliser as eq
 from gexis_core.eq_engine import EqEngine, Stream, parse_contents
 
@@ -30,6 +31,29 @@ def test_the_stream_is_read_from_device_1():
     assert parse_contents(contents(active="off")) is None
     assert parse_contents(contents(fmt=99)) is None, "a format no renderer sends"
     assert parse_contents("") is None
+
+
+UNIT = Path(__file__).resolve().parents[2] / "image/stage-gexis/11-equaliser/files/gexis-equaliser.service"
+
+
+def test_camilladsp_listens_where_plugins_cannot_reach_and_is_spoken_to_there():
+    """The review of 1.16.1: its websocket takes any configuration, with no
+    credential, from whoever reaches it - a plugin included."""
+    unit = UNIT.read_text()
+    assert f"--port {eq_engine.PORT} --address {outputs.CONTROL_HOST} " in unit
+    assert eq_engine.Camilla().url == f"ws://{outputs.CONTROL_HOST}:{eq_engine.PORT}"
+
+
+def test_camilladsp_can_write_nothing_and_open_only_the_sound_devices():
+    """The review of 1.16.1: a configuration naming a file as its playback
+    device wrote wherever pi could - the kiosk's profile, Spotify's sign-in,
+    the card until it was full."""
+    lines = UNIT.read_text().splitlines()
+    for wanted in ("ProtectSystem=strict", "ProtectHome=yes", "PrivateTmp=yes", "DevicePolicy=closed",
+                   "DeviceAllow=char-alsa rw", "NoNewPrivileges=yes", "CapabilityBoundingSet="):
+        assert wanted in lines, wanted
+    assert not any(l.startswith(("ReadWritePaths", "StateDirectory", "RuntimeDirectory", "LogsDirectory"))
+                   for l in lines)
 
 
 class FakeCamilla:
@@ -178,6 +202,61 @@ async def test_a_rate_the_card_lacks_is_converted_to_its_highest(monkeypatch, tm
     assert d["capture_samplerate"] == 88200 and d["samplerate"] == 192000 and d["resampler"]["type"] == "AsyncSinc"
 
 
+def _below_half_the_rate(config: dict) -> bool:
+    """CamillaDSP's own check: it refuses a filter at or above half the rate."""
+    rate = config["devices"]["samplerate"]
+    return all(f["parameters"]["freq"] < rate / 2
+               for f in config["filters"].values() if f["type"] == "Biquad")
+
+
+async def test_a_rate_the_stage_cannot_run_at_is_converted_to_48_khz(monkeypatch, tmp_path):
+    """**The review of 1.16.1.** A 32 kHz radio stream on HDMI, which takes
+    every rate behind its conversion, put the 16 kHz band at half the rate:
+    CamillaDSP refused the configuration and the stream played silence. To
+    48 kHz, not the card's highest, whose cost is not measured above 192."""
+    rig = Rig(monkeypatch, tmp_path)
+    monkeypatch.setattr(eq_engine.outputs, "top_rate", lambda card: 768000)
+    await rig.engine.configure("vc4hdmi0", eq.FLAT, room=((), ()))
+    for rate in (32000, 24000, 16000, 12000, 11025, 8000):
+        rig.amixer = contents(rate=rate)
+        await rig.engine._look()
+        config = json.loads([a for n, a in rig.camilla.sent if n == "SetConfigJson"][-1])
+        d = config["devices"]
+        assert (d["capture_samplerate"], d["samplerate"]) == (rate, 48000), rate
+        assert d["chunksize"] == eq.chunksize(48000) and d["resampler"]["type"] == "AsyncSinc"
+        assert _below_half_the_rate(config), rate
+        rig.amixer = contents(active="off")
+        await rig.engine._look()
+    rig.amixer = contents(rate=44100)
+    await rig.engine._look()
+    config = json.loads([a for n, a in rig.camilla.sent if n == "SetConfigJson"][-1])
+    assert config["devices"]["samplerate"] == 44100 and "resampler" not in config["devices"], \
+        "a rate it runs at plays as it is"
+    assert _below_half_the_rate(config)
+
+
+async def test_a_low_rate_on_a_card_never_asked_goes_to_48_khz(monkeypatch, tmp_path):
+    rig = Rig(monkeypatch, tmp_path, takes_rate=lambda card, rate: None)
+    monkeypatch.setattr(eq_engine.outputs, "top_rate", lambda card: None)
+    await rig.engine.configure("Headphones", eq.FLAT)
+    rig.amixer = contents(rate=32000)
+    await rig.engine._look()
+    d = json.loads(next(a for n, a in rig.camilla.sent if n == "SetConfigJson"))["devices"]
+    assert (d["capture_samplerate"], d["samplerate"]) == (32000, 48000)
+
+
+def test_the_rate_camilladsp_plays_at(monkeypatch):
+    """One answer for the engine and for the group's latency (ADR-0166 D7)."""
+    monkeypatch.setattr(eq_engine.outputs, "top_rate", lambda card: 192000)
+    takes = lambda card, rate: rate != 88200  # noqa: E731
+    assert eq_engine.playing_rate("Adapter", 96000, takes) == 96000
+    assert eq_engine.playing_rate("Adapter", 88200, takes) == 192000
+    assert eq_engine.playing_rate("Adapter", 32000, takes) == 48000
+    no_48 = lambda card, rate: rate in (44100, 88200, 176400)  # noqa: E731
+    assert eq_engine.playing_rate("Adapter", 32000, no_48) == 192000, "a card without 48 kHz: its highest"
+    assert eq_engine.playing_rate("Adapter", 44100, lambda card, rate: None) == 44100
+
+
 async def test_off_stops_it(monkeypatch, tmp_path):
     rig = Rig(monkeypatch, tmp_path)
     await rig.engine.configure("sndrpihifiberry", eq.FLAT)
@@ -214,6 +293,20 @@ async def test_while_nothing_plays_the_headroom_is_given_back_at_once(monkeypatc
     assert [s for s in rig.camilla.sent if s[0] == "give"] == [("give", 5.0), ("give", 6.0)], "once a change"
     await rig.engine.configure(None, eq.FLAT)
     assert rig.camilla.sent[-1] == ("give", 0.0), "off: taken back, after CamillaDSP stopped"
+
+
+async def test_a_restart_or_a_move_tells_the_volume_again_at_the_same_headroom(monkeypatch, tmp_path):
+    """**The review of 1.16.1.** A change of volume type restarts the stage
+    with the same headroom, and the volume was not told, so the give-back
+    stayed on the control it had left: Rock played 5 dB under Flat. Where
+    it goes is the volume's to work out, from the whole target."""
+    rig = Rig(monkeypatch, tmp_path, give=True)
+    rock = eq.PRESET["rock"].gains
+    await rig.engine.configure("sndrpihifiberry", rock)
+    await rig.engine.configure("sndrpihifiberry", rock, restart=True)
+    await rig.engine.configure("vc4hdmi0", rock)
+    await rig.engine.configure("vc4hdmi0", rock)
+    assert [s for s in rig.camilla.sent if s[0] == "give"] == [("give", 5.0)] * 3
 
 
 async def test_a_rising_headroom_is_given_back_after_the_lowering_and_a_falling_one_before(monkeypatch, tmp_path):
@@ -328,3 +421,26 @@ async def test_the_rooms_raises_are_lowered_for_and_given_back(monkeypatch, tmp_
     await rig.engine.configure("sndrpihifiberry", eq.FLAT, room=eq.RoomPlay(cuts=full.cuts, above=full.above))
     await rig.settle()
     assert ("SetFaderVolume", [1, 0.0]) in rig.camilla.sent, "no lift (a run's check): no headroom"
+
+
+async def test_the_adapter_s_missing_rates_are_converted_as_the_card_says(monkeypatch, tmp_path):
+    """A rate the card lacks converted, from what the card itself answers
+    (the review of 1.16.1): aplay gives the adapter's rates as a range, and
+    the range alone said it
+    took 88.2 and 176.4 kHz, so nothing was converted and the track was
+    silent with the equaliser on."""
+    from test_outputs import ADAPTER_DUMP, _Alsa, _asked
+
+    from gexis_core import outputs
+    _asked(monkeypatch, {"Adapter": ADAPTER_DUMP})
+    monkeypatch.setattr(outputs, "_libasound", lambda: _Alsa({44100, 48000, 96000, 192000}), raising=False)
+    assert outputs.needs_plug("Adapter") is False
+    rig = Rig(monkeypatch, tmp_path, takes_rate=outputs.takes_rate)
+    await rig.engine.configure("Adapter", eq.FLAT)
+    for rate, plays in ((88200, 192000), (176400, 192000), (96000, 96000), (44100, 44100)):
+        rig.amixer = contents(rate=rate)
+        await rig.engine._look()
+        d = json.loads([a for n, a in rig.camilla.sent if n == "SetConfigJson"][-1])["devices"]
+        assert d["samplerate"] == plays and d.get("capture_samplerate", rate) == rate, rate
+        rig.amixer = contents(active="off")
+        await rig.engine._look()

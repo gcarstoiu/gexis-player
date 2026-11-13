@@ -28,7 +28,17 @@ def _known_cards():
     yield
     outputs._needs_plug.clear()
 
-HIFIBERRY = Output(card="sndrpihifiberry", label="HiFiBerry DAC+ HD", control="DAC")
+
+@pytest.fixture(autouse=True)
+def _no_card_here_is_asked_its_rates(monkeypatch):
+    """`needs_plug` asks a card giving a range each rate in it through
+    alsa-lib; here it cannot, so the range stands unless a test gives it
+    one (`_Alsa`)."""
+    def none():
+        raise OSError("no alsa-lib in the tests")
+    monkeypatch.setattr(outputs, "_libasound", none, raising=False)
+
+HIFIBERRY =Output(card="sndrpihifiberry", label="HiFiBerry DAC+ HD", control="DAC")
 JACK = Output(card="Headphones", label="Headphones (3.5 mm)", control="PCM")
 HDMI1 = Output(card="vc4hdmi0", label="HDMI 1", control=None, connected=True)
 HDMI2 = Output(card="vc4hdmi1", label="HDMI 2", control=None, connected=False)
@@ -659,10 +669,88 @@ def _asked(monkeypatch, dumps):
     monkeypatch.setattr(outputs, "_needs_plug", {})
     monkeypatch.setattr(outputs, "_formats", {})
     monkeypatch.setattr(outputs, "_rates", {})
+    monkeypatch.setattr(outputs, "_rate_list", {})
     monkeypatch.setattr(outputs, "_asked_of", {})
     def run(args, **kw):
         return sp.CompletedProcess(args, 0, "", dumps[args[3].split(":", 1)[1]])
     monkeypatch.setattr(outputs.subprocess, "run", run)
+
+
+#: Finding 130's USB-to-optical adapter, as aplay prints it: a range, though
+#: it takes 44.1, 48, 96 and 192 kHz only.
+ADAPTER_DUMP = "FORMAT:  S16_LE S24_LE\nSAMPLE_BITS: [16 32]\nRATE: [44100 192000]\n"
+
+
+class _Alsa:
+    """alsa-lib as `_probe_rates` calls it, for a device taking `rates`."""
+
+    def __init__(self, rates, busy=False):
+        self.rates, self.busy = set(rates), busy
+        self.opened, self.tried, self.freed, self.closed = [], [], 0, 0
+
+    def snd_pcm_open(self, pcm, name, stream, mode):
+        self.opened.append((name, stream, mode))
+        return -16 if self.busy else 0
+
+    def snd_pcm_close(self, pcm):
+        self.closed += 1
+        return 0
+
+    def snd_pcm_hw_params_malloc(self, params):
+        return 0
+
+    def snd_pcm_hw_params_free(self, params):
+        self.freed += 1
+
+    def snd_pcm_hw_params_any(self, pcm, params):
+        return 0
+
+    def snd_pcm_hw_params_test_rate(self, pcm, params, rate, direction):
+        self.tried.append(rate)
+        return 0 if rate in self.rates and direction == 0 else -22
+
+
+def test_a_card_giving_a_range_is_asked_each_rate_in_it(monkeypatch):
+    """**The review of 1.16.1.** aplay prints a card's rates as a range, and
+    the range was read as every rate in it: the adapter was taken to play
+    88.2 kHz, so with the equaliser on CamillaDSP opened it at that rate -
+    exactly, which the card refuses - and the track was silent."""
+    alsa = _Alsa({44100, 48000, 96000, 192000})
+    _asked(monkeypatch, {"Adapter": ADAPTER_DUMP})
+    monkeypatch.setattr(outputs, "_libasound", lambda: alsa, raising=False)
+    assert outputs.needs_plug("Adapter") is False
+    assert [outputs.takes_rate("Adapter", r) for r in (44100, 48000, 88200, 96000, 176400, 192000)] == \
+        [True, True, False, True, False, True]
+    assert outputs.top_rate("Adapter") == 192000
+    assert alsa.opened == [(b"hw:Adapter", 0, 1)], "playback, without waiting on a busy card"
+    assert min(alsa.tried) >= 44100 and max(alsa.tried) <= 192000, "only the rates in its range"
+    assert (alsa.freed, alsa.closed) == (1, 1)
+
+
+def test_a_card_that_cannot_be_asked_each_rate_keeps_its_range(monkeypatch):
+    _asked(monkeypatch, {"Adapter": ADAPTER_DUMP})
+    monkeypatch.setattr(outputs, "_libasound", lambda: _Alsa((), busy=True), raising=False)
+    assert outputs.needs_plug("Adapter") is False
+    assert outputs.takes_rate("Adapter", 88200) is True
+
+
+def test_a_card_behind_a_conversion_is_not_asked_its_rates(monkeypatch):
+    alsa = _Alsa(())
+    _asked(monkeypatch, {"vc4hdmi0": "FORMAT:  IEC958_SUBFRAME_LE\nRATE: [32000 192000]\n"})
+    monkeypatch.setattr(outputs, "_libasound", lambda: alsa, raising=False)
+    assert outputs.needs_plug("vc4hdmi0") is True and outputs.takes_rate("vc4hdmi0", 88200) is True
+    assert alsa.opened == []
+
+
+def test_another_device_under_the_same_card_id_forgets_the_rates_asked(monkeypatch, tmp_path):
+    _asked(monkeypatch, {"AUDIO": ADAPTER_DUMP})
+    monkeypatch.setattr(outputs, "_libasound", lambda: _Alsa({44100, 48000, 96000, 192000}), raising=False)
+    _plugged_dac(tmp_path, monkeypatch, devnum=5)
+    outputs.needs_plug("AUDIO")
+    assert outputs.takes_rate("AUDIO", 88200) is False
+    _plugged_dac(tmp_path, monkeypatch, devnum=6)
+    outputs.native_dsd("AUDIO")   # what notices the new device
+    assert outputs.takes_rate("AUDIO", 88200) is None, "not asked yet"
 
 
 def test_a_dac_taking_only_32_bits_is_widened_and_no_other(monkeypatch):

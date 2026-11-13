@@ -6,8 +6,8 @@ the core from 127.0.0.1 too, so loopback alone let one report touches, answer
 *Keep this screen?*, keep a new address, park the renderers or read the phone's
 touchpad. The core keeps a token per boot in `/run`, readable by root and the
 kiosk's user only; the kiosk opens its page with it, and the page sends it
-with its requests. A plugin's unit cannot see the kiosk's command line
-(`ProtectProc=invisible`).
+with its requests. It is on no command line, which any process can read (the
+review of 1.16.1): the kiosk reaches its page through one of its own.
 """
 from __future__ import annotations
 

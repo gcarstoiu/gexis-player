@@ -180,3 +180,12 @@ removing it.
 - An upload and a catalogue install that ask for `cec`: the notice lists it;
   an archive asking for more than was shown is refused; an update adding a
   permission asks again.
+
+## Amended 2026-11-10 (the review of 1.16.1)
+
+The audio chain's control ports, CamillaDSP's websocket (1234) and
+snapserver's control (1705), take orders from anyone who reaches them, and a
+plugin could. They listen on `127.0.0.2` (`outputs.CONTROL_HOST`), which both
+plugin unit templates deny (`IPAddressDeny=127.0.0.2`); `127.0.0.1`, the
+player's own API included, stays open to plugins. `docs/WRITING-A-PLUGIN.md`
+says so in its Network row.

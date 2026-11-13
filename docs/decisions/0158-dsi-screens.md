@@ -292,3 +292,12 @@ open, Phase 17 closes (George, 2026-10-23).
   bench; the way back (*Applying a DSI screen*, step 3) covers a wrong one.
 - That the Touch Display 2 and the other portrait panels come up turned to
   landscape with touch following (*Settled by the evidence* 4).
+
+## Amended 2026-11-11: the JDI 7" (the review of 1.16.1)
+
+The list's two JDI LT070ME05000 entries are four-lane too, though their
+overlays carry no `4lane` parameter: D6 now counts them by their overlays
+(`screens.FOUR_LANE_OVERLAYS`), so a Pi 4 no longer offers them. Raspberry
+Pi's notes for both overlays say they work only on a Compute Module, so a
+Pi 5 does not offer them either (`screens.COMPUTE_MODULE_OVERLAYS`). Eight
+models are four-lane; a Pi 4 offers 50 of D1's 58, a Pi 5 56.

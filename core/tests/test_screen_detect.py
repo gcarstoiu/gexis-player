@@ -242,6 +242,50 @@ def test_with_a_receiver_on_hdmi_the_dsi_panel_is_the_screen(tmp_path):
         "a known panel wins over the port applied last, as on HDMI"
 
 
+def waveshare_dsi_and_hdmi(tmp_path):
+    """The Waveshare 10.1" DSI-TOUCH-A up by the overlay the player wrote
+    (Goodix touch, 800 x 1280, no fingerprint) and the recognised 10.1" HDMI
+    (B), with its USB touch, on HDMI 1."""
+    drm, usb, i2c = bedroompi(tmp_path, hdmi=EDID, drivers=(("10-0014", "goodix"),))
+    (drm / "card1-DSI-1" / "modes").write_text("800x1280\n")
+    touch = usb / "1-1"
+    touch.mkdir()
+    (touch / "idVendor").write_text("0712\n")
+    (touch / "idProduct").write_text("0010\n")
+    return drm, usb, i2c
+
+
+def test_a_dsi_panel_applied_on_holds_beside_a_known_hdmi_panel(tmp_path, monkeypatch):
+    """ADR-0158 D3: with a DSI panel connected it is the screen. One whose
+    overlay the player writes has no fingerprint, and a known panel on HDMI
+    took its place at every start (the review of 1.16.1)."""
+    drm, usb, i2c = waveshare_dsi_and_hdmi(tmp_path)
+    hdmi = next(p for p in screen_detect.ports(drm, usb, i2c) if p.connector == "HDMI-A-1")
+    assert screen_detect.suggest(hdmi).id == "waveshare-10.1-hdmi-b"
+    assert screen_detect.seen(drm, usb, prefer="DSI-1", i2c=i2c).connector == "DSI-1"
+    monkeypatch.setattr(screen_detect, "_chosen_connector", lambda: None)
+    monkeypatch.setattr(screen_detect, "_applied_connector", lambda: "DSI-1")
+    assert screen_detect.seen(drm, usb, i2c=i2c).connector == "DSI-1"
+    # Applied on HDMI 1, or nothing applied: the known panel, as before.
+    assert screen_detect.seen(drm, usb, prefer="HDMI-A-1", i2c=i2c).connector == "HDMI-A-1"
+    assert screen_detect.seen(drm, usb, prefer=None, i2c=i2c).connector == "HDMI-A-1"
+
+
+def test_keep_remembers_the_screen_on_the_port_it_was_applied_on(tmp_path, monkeypatch):
+    """What Keep stores for the next start's comparison: the port the kept
+    screen is on, not the one `seen()` would pick (the review of 1.16.1)."""
+    drm, usb = two_ports(tmp_path, EDID, _receiver_edid())
+    monkeypatch.setattr(screen_detect, "_chosen_connector", lambda: None)
+    monkeypatch.setattr(screen_detect, "_applied_connector", lambda: "HDMI-A-2")
+    assert screen_detect.seen(drm, usb).connector == "HDMI-A-1", "a known panel over an unknown screen"
+    assert screen_detect.applied_port(drm, usb).connector == "HDMI-A-2"
+    # Nothing connected where it was applied: what `seen()` finds.
+    monkeypatch.setattr(screen_detect, "_applied_connector", lambda: "DSI-1")
+    assert screen_detect.applied_port(drm, usb).connector == "HDMI-A-1"
+    from test_main_wiring import _closure
+    assert "screen_watch.kept(screen_detect.applied_port())" in _closure("_screen_answer")
+
+
 def test_the_dsi_panel_s_touch_is_its_own(tmp_path):
     """Keep this screen? on the panel itself (ADR-0158, settled 5): the class
     and the Hosyond have an I2C touch the player recognises."""

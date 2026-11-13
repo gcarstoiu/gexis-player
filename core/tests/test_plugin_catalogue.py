@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import tarfile
 
+import aiohttp
 import pytest
 from aiohttp.test_utils import TestClient, TestServer
 
@@ -74,15 +75,22 @@ def published(cat: bytes, sign) -> dict[str, bytes]:
 
 
 class Response:
+    """A body as aiohttp hands it out: a read gives what has arrived, a piece
+    at a time, never more of a longer body (the review of 1.16.1)."""
+    PIECE = 1000
+
     def __init__(self, status: int, body: bytes):
-        self.status, self._body, self.content = status, body, self
+        self.status, self._body, self.content, self._at = status, body, self, 0
 
     async def read(self, n: int = -1) -> bytes:
-        return self._body if n < 0 else self._body[:n]
+        end = len(self._body) if n < 0 else self._at + min(n, self.PIECE)
+        piece = self._body[self._at:end]
+        self._at += len(piece)
+        return piece
 
     async def iter_chunked(self, size: int):
-        for i in range(0, len(self._body), size):
-            yield self._body[i:i + size]
+        while piece := await self.read(size):
+            yield piece
 
     async def __aenter__(self):
         return self
@@ -237,8 +245,113 @@ async def test_install_downloads_checks_and_hands_the_archive_on(key, tmp_path):
             break
         await asyncio.sleep(0.01)
     assert job.phase == "installed" and calls["installed"] == [("hello", hashlib.sha256(data).hexdigest())]
-    # One install restarts the core itself (ADR-0106).
-    assert calls["restart_with"] == [True] and calls["restarted"] == 0
+    # The core restarted once it is in (ADR-0106).
+    assert calls["restart_with"] == [False] and calls["restarted"] == 1
+
+
+class Held(Session):
+    """One download held until `release` is set."""
+
+    def __init__(self, served: dict[str, bytes], url: str, release: asyncio.Event):
+        super().__init__(served)
+        self.url, self.release = url, release
+
+    def get(self, url, **kw):
+        response = super().get(url, **kw)
+        if url == self.url:
+            pieces = response.iter_chunked
+
+            async def held(size):
+                await self.release.wait()
+                async for piece in pieces(size):
+                    yield piece
+            response.iter_chunked = held
+        return response
+
+
+async def _until(check) -> None:
+    for _ in range(200):
+        if check():
+            return
+        await asyncio.sleep(0.01)
+    raise AssertionError("not reached")
+
+
+def _two(sign, *, hub_served: bytes | None = None):
+    found = {pid: archive(plugin_id=pid) for pid in ("agent", "hub")}
+    versions = {pid: listed(data, url=f"https://github.com/someone/b/releases/download/v1/{pid}.tar.gz")
+                for pid, data in found.items()}
+    cat = index(*(entry(v, plugin_id=pid) for pid, v in versions.items()))
+    served = {**published(cat, sign), versions["agent"]["url"]: found["agent"],
+              versions["hub"]["url"]: found["hub"] if hub_served is None else hub_served}
+    return served, versions["hub"]["url"]
+
+
+@pytest.mark.parametrize("hub_fails", [False, True])
+async def test_installs_that_overlap_restart_the_core_once_none_is_under_way(key, tmp_path, hub_fails):
+    """The review of 1.16.1: Beszel's hub, then its agent, added one after the
+    other - the agent, in first, restarted the core under the hub's
+    download, which was lost. The core restarts once, when the last ends,
+    whether it went in or not."""
+    keyring, sign = key
+    served, held_url = _two(sign, hub_served=b"not the listed archive" if hub_fails else None)
+    release = asyncio.Event()
+    svc, calls = service(key, tmp_path, served)
+    svc.session = lambda: Held(served, held_url, release)
+    await svc.refresh()
+    hub, agent = svc.start_install("hub"), svc.start_install("agent")
+    await _until(lambda: agent.phase == "installed")
+    await asyncio.sleep(0.05)
+    assert hub.phase == "downloading" and calls["restarted"] == 0 and calls["restart_with"] == [False]
+    release.set()
+    await _until(lambda: hub.phase in ("installed", "failed"))
+    await asyncio.sleep(0.05)
+    assert hub.phase == ("failed" if hub_fails else "installed")
+    assert calls["restarted"] == 1
+
+
+async def test_a_restart_owed_elsewhere_waits_for_an_install_under_way(key, tmp_path):
+    """The review of 1.16.1: a plugin blocked by a read of the catalogue
+    restarted the core at once, under another plugin's download, which was
+    lost. Owed with an install under way, the restart comes when it ends;
+    with none, at once."""
+    keyring, sign = key
+    served, held_url = _two(sign)
+    release = asyncio.Event()
+    svc, calls = service(key, tmp_path, served)
+    svc.session = lambda: Held(served, held_url, release)
+    await svc.refresh()
+    hub = svc.start_install("hub")
+    await svc.restart_once_idle()
+    assert hub.phase == "downloading" and calls["restarted"] == 0
+    release.set()
+    await _until(lambda: hub.phase == "installed")
+    await asyncio.sleep(0.05)
+    assert calls["restarted"] == 1
+    await svc.restart_once_idle()
+    assert calls["restarted"] == 2, "nothing under way: at once"
+
+
+def test_a_blocked_plugin_restarts_the_core_once_no_install_is_under_way():
+    from test_main_wiring import _closure
+    body = _closure("_switch_off_blocked")
+    assert "catalogue.restart_once_idle()" in body and "_restart_core_soon()" not in body
+
+
+async def test_a_restore_during_an_install_leaves_the_restart_to_the_last(key, tmp_path):
+    keyring, sign = key
+    served, held_url = _two(sign)
+    release = asyncio.Event()
+    svc, calls = service(key, tmp_path, served)
+    svc.session = lambda: Held(served, held_url, release)
+    await svc.refresh()
+    hub = svc.start_install("hub")
+    assert await svc.restore([{"id": "agent", "version": "0.1.0"}]) == ["agent"]
+    assert hub.phase == "downloading" and calls["restarted"] == 0
+    release.set()
+    await _until(lambda: hub.phase == "installed")
+    await asyncio.sleep(0.05)
+    assert calls["restarted"] == 1
 
 
 async def test_an_archive_that_is_not_the_listed_one_fails_and_installs_nothing(key, tmp_path):
@@ -289,6 +402,47 @@ async def test_a_failed_read_keeps_the_last_good_catalogue(key, tmp_path):
     await svc.refresh()
     view = svc.view()
     assert view["available"] and view["serial"] == 2 and "404" in view["error"]
+
+
+async def test_a_catalogue_that_arrives_in_pieces_is_read_whole(key, tmp_path):
+    """The review of 1.16.1: one read took what had arrived - on a real
+    network one TLS record, about 16 KB - and a longer catalogue was refused
+    as not readable, every read after it."""
+    keyring, sign = key
+    data = archive()
+    cat = index(*(entry(listed(data), plugin_id=f"plugin-{n}") for n in range(60)))
+    assert len(cat) > 16 * 1024
+    svc, _ = service(key, tmp_path, published(cat, sign))
+    await svc.refresh()
+    assert svc.error is None and len(svc.catalogue.plugins) == 60
+
+
+async def test_a_catalogue_larger_than_one_can_be_is_refused():
+    with pytest.raises(pc.Unavailable, match="larger than a catalogue"):
+        await pc._get(Session({URL: b" " * 5001}), URL, 5000)
+    assert len(await pc._get(Session({URL: b" " * 5000}), URL, 5000)) == 5000
+
+
+async def test_a_body_sent_in_two_parts_is_read_to_its_end():
+    """aiohttp itself, over a local socket: the server sends part of the
+    body, waits, then the rest."""
+    from aiohttp import web
+    body = b"[" + b" " * 40000 + b"]"
+
+    async def handler(request):
+        response = web.StreamResponse(headers={"Content-Length": str(len(body))})
+        await response.prepare(request)
+        await response.write(body[:16384])
+        await asyncio.sleep(0.2)
+        await response.write(body[16384:])
+        await response.write_eof()
+        return response
+
+    app = web.Application()
+    app.router.add_get("/catalogue.json", handler)
+    async with TestClient(TestServer(app)) as client:
+        got = await pc._get(client.session, str(client.make_url("/catalogue.json")), pc.MAX_INDEX)
+    assert got == body
 
 
 async def test_a_release_without_the_key_reads_nothing_and_says_so(key, tmp_path):
@@ -363,6 +517,88 @@ async def test_a_restore_installs_them_all_then_restarts_once(key, tmp_path):
     again, calls = service(key, tmp_path, published(cat, sign))
     await again.refresh()
     assert await again.restore(missing) == [] and calls["restarted"] == 0
+
+
+class Offline(Session):
+    """No network until `net["up"]`."""
+
+    def __init__(self, served: dict[str, bytes], net: dict):
+        super().__init__(served)
+        self.net = net
+
+    def get(self, url, **kw):
+        if not self.net["up"]:
+            raise aiohttp.ClientConnectionError("no route to host")
+        return super().get(url, **kw)
+
+
+REAL_SLEEP = asyncio.sleep
+
+
+async def _run(svc, restore, monkeypatch, *, until, on_wait=lambda seconds: None) -> list[float]:
+    """`Service.run` with each wait recorded and skipped, until `until(waits)`."""
+    waits = []
+
+    async def skip(seconds):
+        waits.append(seconds)
+        on_wait(seconds)
+        await REAL_SLEEP(0)
+    monkeypatch.setattr(pc.asyncio, "sleep", skip)
+    task = asyncio.ensure_future(svc.run(restore=restore))
+    for _ in range(300):
+        if until(waits):
+            break
+        await REAL_SLEEP(0.01)
+    task.cancel()
+    await asyncio.gather(task, return_exceptions=True)
+    return waits
+
+
+OWED = [{"id": "hello", "version": None, "origin": "catalogue"}]
+
+
+async def test_what_is_owed_is_installed_once_the_network_is_there(key, tmp_path, monkeypatch):
+    """The review of 1.16.1: a plugin a restore or the carry-over owes was
+    tried once per start; with no network 20 s after it, not again until the
+    next start, while its row said it would be installed once the player
+    reaches the catalogue. A new card keeps no catalogue."""
+    keyring, sign = key
+    data = archive()
+    served = {**published(index(entry(listed(data))), sign), listed(data)["url"]: data}
+    net = {"up": False}
+    svc, calls = service(key, tmp_path, served)
+    svc.session = lambda: Offline(served, net)
+    waits = await _run(svc, OWED, monkeypatch, until=lambda waits: calls["installed"] and calls["restarted"],
+                       on_wait=lambda seconds: seconds != 20 and net.update(up=True))
+    assert [pid for pid, _ in calls["installed"]] == ["hello"] and calls["restarted"] == 1
+    assert waits[:2] == [20, pc.RETRY_S]
+
+
+async def test_a_download_that_failed_is_tried_again(key, tmp_path, monkeypatch):
+    keyring, sign = key
+    data = archive()
+    cat = index(entry(listed(data)))
+    pc.accept(cat, sign(cat), keyring=keyring, state=tmp_path)
+    served = {**published(cat, sign), listed(data)["url"]: data}
+    net = {"up": False}
+    svc, calls = service(key, tmp_path, served)
+    svc.session = lambda: Offline(served, net)
+    await _run(svc, OWED, monkeypatch, until=lambda waits: calls["installed"],
+               on_wait=lambda seconds: seconds != 20 and net.update(up=True))
+    assert [pid for pid, _ in calls["installed"]] == ["hello"] and svc.jobs["hello"].phase == "installed"
+
+
+async def test_owed_is_tried_sooner_then_less_often_and_daily_once_in(key, tmp_path, monkeypatch):
+    keyring, sign = key
+    monkeypatch.setattr(pc, "EVERY_S", 300)
+    cat = index(entry(listed(archive())))
+    svc, calls = service(key, tmp_path, published(cat, sign))   # its archive cannot be had
+    waits = await _run(svc, OWED, monkeypatch, until=lambda waits: len(waits) >= 6)
+    assert waits[:6] == [20, pc.RETRY_S, 2 * pc.RETRY_S, 4 * pc.RETRY_S, 300, 300]
+    assert calls["installed"] == []
+    nothing, _ = service(key, tmp_path, published(cat, sign))
+    waits = await _run(nothing, [], monkeypatch, until=lambda waits: len(waits) >= 3)
+    assert waits[:3] == [60, 300, 300], "nothing owed: the daily read"
 
 
 async def test_a_withdrawal_read_during_a_run_reaches_the_row(key, tmp_path):
@@ -585,3 +821,17 @@ async def test_what_part_two_may_install_without_a_question(key, tmp_path):
     await svc.refresh()
     assert svc.offered("hello")["id"] == "hello"
     assert [svc.offered(i) for i in ("tv", "later", "spotify", "absent")] == [None] * 4
+
+
+async def test_the_installs_under_way_are_named(key, tmp_path):
+    keyring, sign = key
+    served, held_url = _two(sign)
+    release = asyncio.Event()
+    svc, calls = service(key, tmp_path, served)
+    svc.session = lambda: Held(served, held_url, release)
+    await svc.refresh()
+    assert svc.under_way() == []
+    svc.start_install("hub")
+    assert svc.under_way() == [svc.catalogue.entry("hub")["name"]]
+    release.set()
+    await _until(lambda: not svc.under_way())

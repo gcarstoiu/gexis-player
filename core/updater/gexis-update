@@ -853,16 +853,20 @@ def why(r: subprocess.CompletedProcess) -> str:
     return " | ".join((errors or lines)[-3:])[:400] or f"exit {r.returncode}"
 
 
-def plan(opts: list[str], version: str) -> list[tuple[str, str | None, str]]:
-    """What installing `version` would change: (package, from, to)."""
+def plan(opts: list[str], version: str) -> tuple[list[tuple[str, str | None, str]], list[tuple[str, str]]]:
+    """What installing `version` would change: (package, from, to); and what
+    it would remove: (package, version)."""
     sim = apt(opts, "-s", "--allow-change-held-packages", "dist-upgrade")
     sim2 = apt(opts, "-s", "--allow-change-held-packages", "install", f"gexis-player={version}")
-    changes = {}
+    changes, removed = {}, {}
     for line in (sim.stdout + sim2.stdout).splitlines():
         m = re.match(r"^Inst (\S+) (?:\[(\S+)\] )?\((\S+)", line)
         if m:
             changes[m.group(1)] = (m.group(1), m.group(2), m.group(3))
-    return list(changes.values())
+        m = re.match(r"^Remv (\S+) \[(\S+)\]", line)
+        if m:
+            removed[m.group(1)] = (m.group(1), m.group(2))
+    return list(changes.values()), [r for p, r in removed.items() if p not in changes]
 
 
 # --- the steps ---------------------------------------------------------------
@@ -1089,6 +1093,20 @@ def restart(changes: list[tuple[str, str | None, str]]) -> str:
     return "services: " + (", ".join(sorted(units)) or "none")
 
 
+#: **How long a core that was late gets once more**, where going back could
+#: not be done: it has had its two minutes and the attempt at going back.
+LATE_S = 60
+
+
+def _stays(target: str) -> bool:
+    """The release going in, whole, and the core answering on it."""
+    try:
+        verify(target)
+    except Stop:
+        return False
+    return core_answers(LATE_S)
+
+
 def go_back(about: dict, channel: str, target: str, current: str, back_repos, back_pins,
             backup, failure: str, changes) -> int:
     """**Put the release that was there back** (ADR-0105 §4 step 6): from the
@@ -1104,6 +1122,19 @@ def go_back(about: dict, channel: str, target: str, current: str, back_repos, ba
     # Gone back: nothing left for a boot to check or finish.
     pending().unlink(missing_ok=True)
     ok = installed("gexis-player") == current
+    if not ok and changes is not None and _stays(target):
+        # **Late, not broken** (the review of 1.16.1): going back could not
+        # be done - its packages could not be fetched - and the release that
+        # went in is whole and answers now. It said *Did not update* and to
+        # restore the backup of a player working on the new release. Not
+        # after a failed install (`changes` None): the old core still runs
+        # then, and its answer says nothing of the new one.
+        for name in STEPS:
+            step(name, "done")
+        prune_cache()
+        report("done", **about, backup=backup, changed=len(changes),
+               message=f"{target} installed; it answered late ({failure}), and going back was not possible")
+        return 0
     # Remembered, so a night's Automatic run does not try it again
     # (Finding 105); "Update now" still does - it is asked for.
     (STATE / f"failed-{channel}").write_text(target)
@@ -1148,7 +1179,7 @@ def install(args) -> int:
     if apt(opts, "update").returncode:
         raise Stop(f"apt could not read {' '.join(repos)}")
     heal(opts)
-    changes = plan(opts, target)
+    changes, removed = plan(opts, target)
     for args_ in (["--download-only", "--allow-change-held-packages", "dist-upgrade"],
                   ["--download-only", "--allow-change-held-packages", "install", f"gexis-player={target}"]):
         r = apt_download(opts, *args_, report_as={**about, "message": f"fetching {target}"})
@@ -1157,10 +1188,20 @@ def install(args) -> int:
     # The versions installed now, for going back: from the release that has them.
     back = apt_env(back_repos, back_pins)
     if apt(back, "update").returncode == 0:
-        olds = [f"{p}={old}" for p, old, _ in changes if old]
-        if olds:
-            apt(back, "--download-only", "--reinstall", "--allow-downgrades",
-                "--allow-change-held-packages", "install", *olds)
+        # **And what the update removes** (the review of 1.16.1): 1.13.0's
+        # player conflicts with Plexamp and Beszel, which 1.12's depends on;
+        # installed from the image, they were never in this cache, and going
+        # back stopped without them. Asked for apart, so one that cannot be
+        # found does not keep the others out.
+        for olds in ([f"{p}={old}" for p, old, _ in changes if old], [f"{p}={old}" for p, old in removed]):
+            if not olds:
+                continue
+            r = apt(back, "--download-only", "--reinstall", "--allow-downgrades",
+                    "--allow-change-held-packages", "install", *olds)
+            if r.returncode:
+                report("downloading", **about,
+                       message=f"{current}'s packages could not be fetched ({why(r)}); "
+                               "going back will not be possible")
     else:
         report("downloading", **about,
                message=f"{current}'s repositories are not reachable; going back will not be possible")

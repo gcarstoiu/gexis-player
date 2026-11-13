@@ -18,6 +18,9 @@ package:
   (George, 2026-11-03): it is recorded as a plugin from the catalogue whose
   package is missing, which the restore's path installs (ADR-0168), at
   every start until it is there;
+- **carried once**: its id leaves the Plugins page's record of ours
+  (`_plugins_added`) once carried, so a plugin removed afterwards is not
+  recorded again at the next start (the review of 1.16.1);
 - **switched on again** once installed, if it was on;
 - the user its package made goes once no package needs it.
 
@@ -133,10 +136,13 @@ def carry(*, ours: set[str], stored: Callable[[str], object], added: set[str] | 
           wants: Path = WANTS, installed_packages: Callable[[], set[str]] | None = None,
           versions: Callable[[], dict[str, str]] = uploads.versions,
           stop: Callable[[str], None] | None = None,
+          write_added: Callable[[set[str]], None] | None = None,
           moved: Iterable[Moved] = MOVED) -> list[str]:
     """Everything owed at this start, before the restore's list is read.
-    Returns the ids recorded to be installed from the catalogue."""
+    Returns the ids recorded to be installed from the catalogue; `added`
+    goes back to `write_added` without the ones carried."""
     recorded = []
+    carried_ids = set()
     left = [m for m in moved if m.id not in ours]
     for m in left:
         for unit in (m.unit, *m.also):
@@ -147,12 +153,21 @@ def carry(*, ours: set[str], stored: Callable[[str], object], added: set[str] | 
         link = wants / m.unit
         if link.is_symlink() and not link.exists():
             link.unlink()  # the old unit's, left by its package's removal
-        if not carried or m.id in uploads.origins(known) or m.id in versions():
+        if not carried:
+            continue
+        carried_ids.add(m.id)
+        if m.id in uploads.origins(known) or m.id in versions():
             continue
         uploads.record_missing(m.id, {"name": m.name, "kind": m.kind, "version": None,
                                       "origin": uploads.CATALOGUE, SWITCH_ON: on}, known)
         recorded.append(m.id)
         logger.info("carry-over: %s will be installed from the catalogue%s", m.id, ", and switched on" if on else "")
+    if added and added & carried_ids and write_added:
+        try:
+            write_added(added - carried_ids)
+        except Exception as exc:  # noqa: BLE001 - the start goes on; the next one takes them out
+            logger.warning("carry-over: %s left in the Plugins page's record: %s",
+                           ", ".join(sorted(added & carried_ids)), exc)
     _drop_users([m for m in moved if m.id in ours], left, installed_packages)
     return recorded
 

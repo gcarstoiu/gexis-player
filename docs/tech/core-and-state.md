@@ -185,8 +185,11 @@ also proves itself (ADR-0170): the core makes a token per boot in
 restarts), the kiosk opens its page with it (`#panel=…`), and the page sends it
 as `X-Gexis-Panel` with every request and as `?panel=` on `/touchpad`;
 `gexis-park.service`, the visualiser's touch report and the updater's stop
-before an install send it too. Plugins' units have `ProtectProc=invisible`,
-so the kiosk's command line is out of their sight. `_from_panel` checks both;
+before an install send it too. It is on no command line, which any process
+can read (the review of 1.16.1): Chromium opens a page in the kiosk user's
+runtime folder (`gexis-panel.html`, 0600) that goes on to the panel's
+address, and the park hands it to curl on its input. Plugins' units also have
+`ProtectProc=invisible`. `_from_panel` checks both;
 a server built without a token (the tests) goes by loopback alone. A few
 routes are the panel's only or behave differently by origin: `/surface`,
 `/touchpad`, `/setup/status` (the setup password goes to the panel only),
@@ -555,15 +558,23 @@ pieces in code:
   sha256), and installs it as an upload (`uploads.install`), recording
   `origin: catalogue` in `plugins-known.json` - so a restore installs it
   from the catalogue again: every such plugin downloaded and installed in
-  turn, then the core restarted once. A read that brings a different
+  turn, then the core restarted once. What it could not install yet (no
+  network at the start, a download that stopped) is tried at each read,
+  the reads then coming a minute after a miss and twice as long after each
+  further one, up to the daily read. A read that brings a different
   serial moves the settings revision, so open screens read again. A
   *withdrawn* plugin is marked on its row (its note is worked out with every
   settings read, so a withdrawal read during a run shows at once); a
   *blocked* one is switched off at once (the core restarts once, so its row
-  says why) and its switch refuses to turn it on (the registry's
+  says why - after any catalogue install under way, which a restart would
+  cut off) and its switch refuses to turn it on (the registry's
   `restrictions`, so the row says why and a write of on is a 409). A
   release built without the key reads nothing and says `keyed: false`;
-  *Add plugins* offers only ours there.
+  *Add plugins* offers only ours there. Catalogue installs that overlap
+  restart the core once, when the last under way ends; so does the restart
+  an upload from a file or a Remove owes (`Service.restart_once_idle`), and
+  its answer names the downloads it waits for (`waits_for`), which the page
+  says.
 - **One store for every plugin** (`plugin_store.py`, ADR-0169): ours that may
   be added (not the Lyrion client, Spotify, Bluetooth), the visualiser skins
   among them as `visualiser-skins`, are added or not, recorded in the
@@ -620,7 +631,13 @@ pieces in code:
   ready, every 20 s after) and works out Starting, Adding its add-ons
   (until `lyrion-addons.done`), About to read your music, Reading your music
   (`rescan`, with Lyrion's own `progressname` and its count) or Ready (`info
-  total songs`).
+  total songs`), or Ready, no music yet with nowhere chosen to read from.
+  **Ready, no music found** where folders are chosen and hold nothing
+  Lyrion reads, since its read of an empty folder leaves no mark: at once
+  for the Music folder alone and empty (it counts as somewhere to read only
+  while it holds a file, its `Playlists` folder and hidden files aside);
+  for a share or USB folder, once a read is seen to start and end with no
+  song, or none has started for 3 minutes (`lyrion_stage.Reads`, per core).
   It goes out as `components.lyrion.after` while the package is installed;
   in Settings as the Lyrion Server heading's indicator and the read-only
   `lyrion-server.library` row (`progress`, or `busy` with no count).
@@ -735,7 +752,8 @@ timer's - takes it down first (`PeppyController(before_show=...)`, ADR-0156
 as amended 2026-10-22), and the dashboard's own `show` takes the visualiser
 down. The panel draws it
 (`DashboardScreen.svelte`, an `<iframe>` at z-index 11, under the volume
-drawer); at the idle timeout inside a dashboard time it asks for the
+drawer, sandboxed without `allow-popups`: a link that would open a new window
+does nothing, ADR-0178 decision 3); at the idle timeout inside a dashboard time it asks for the
 dashboard instead of the idle screen, and when the schedule takes it down the
 idle screen follows at once. Home Assistant's side - framing and trusted
 networks - is the user's (decision 8, Finding 132).
@@ -769,9 +787,9 @@ until, seq, closed: {id, by, at}}` - never the address, since `/state` is
 open to the network; `seq` goes up when the panel has a page to load. `POST
 /panel/page/show` (`{url, id = "page", seconds = 600}`, 10 to 3600) is
 refused while `ha_pages` is off (403), on a headless player or during a room
-measurement (409); the address goes through the idle page's probe first,
-and a page that cannot be framed is refused with `ha_page.explain`'s
-sentence (422). A show while one is up replaces it (`closed.by: replaced`);
+measurement (409), checked again after the probe; the address goes through
+the idle page's probe first, and a page that cannot be framed is refused
+with `ha_page.explain`'s sentence (422). A show while one is up replaces it (`closed.by: replaced`);
 the same id again restarts its limit. `POST /panel/page/hide` (`{id}`
 optional; `?by=touch` or `?by=key` from the panel only) and `GET
 /panel/page`, which adds `url` for the panel only and `pages`, the switch.
@@ -799,12 +817,15 @@ and the dashboard, under setup, pairing and *Keep this screen?*): an
 under a layer that takes any touch and calls `hide?by=touch`; a keyboard's
 key calls `hide?by=key`, and `data-dpad-cover` keeps the D-pad's ring off.
 The idle countdown and the takeover wait while it is up, and what it covers
-stops animating (`html.page-up`).
+stops animating (`html.page-up`) - except while a screen that moves is drawn
+over it (the update, a factory reset, settling, setup, a pairing request),
+since the rule pauses everything but the page.
 
 **A page kept loaded** (the amendment, K1-K8). `POST /panel/page/preload`
 (`{url}`; `{url: null}` or `""` clears it, allowed with the switch off) is
-checked as a show is and saved in `/var/lib/gexis-core/page-preload.json`,
-outside the settings, `/state` and backups; `Page` reads it at start.
+checked as a show is and saved in `/var/lib/gexis-core/page-preload.json`
+(0600, root's alone; a factory reset removes it), outside the settings,
+`/state` and backups; `Page` reads it at start.
 `panel.page.preloaded` is true while an address is set, `ha_pages` is on
 and the player is not headless; the switch's write calls `Page.refresh`.
 `GET /panel/page` adds `preload: {url, n}` for the panel only, `n` one more
@@ -854,18 +875,27 @@ phone only.
   records for one group the later change wins (`accepts`: revision, then
   time, then author). A player joined from another group leaves it first. A
   member that was off is sent the record when the next search for players
-  finds it (`reconcile`, every 30 s).
+  finds it (`reconcile`, every 30 s), and so is a player taken out that
+  missed it, whatever group the player that tells it is in by then. The
+  groups a player left or ended are remembered (`group-left.json`, the
+  change that took it out): an older revision of one, from a member that
+  missed the change, is refused, and that member is sent the change; a
+  reflashed player remembers none and is given its group again (B10).
 - **What a change does here** (`Multiroom._apply`): into a group, the
   group's loopback is made, `output.conf` rewritten for the group (the
   renderers restarted - waited for only if one plays or holds the device,
   since a renderer keeps the ALSA configuration it read first), the server started and
   the client pointed at the leader; a joined player's own source stops first
-  (C1). The leader moving: the old one's source stops, every client moves.
+  (C1). The leader moving: the old one's source stops, every client moves;
+  a leader joined to another group hands the lead to the first player left
+  (a group of two ends).
   Out of a group: the client and server stop and the chain is the player's
-  own again - except on a leader still playing, which plays on through its
-  own server until nothing holds the device (*the music stays on the
-  leader*): going alone rewrites the chain and would restart whoever holds
-  it - a paused source, or one taking over meanwhile.
+  own again - except on a leader whose source still plays or holds the
+  device, paused included, which plays on through its own server until
+  nothing holds it (*the music stays on the leader*): going alone rewrites
+  the chain and would restart whoever holds it - a paused source, or one
+  taking over meanwhile. Lyrion on the leader's own chain (one Lyrion
+  server) is not restarted by it, so that leader goes alone at once.
 - **A source playing on a member leads** (D4, amended 2026-10-28): the
   supervisor's `on_active_change` reaches `Multiroom.on_local_active`, which
   notes the source; `_lead_if_playing`, run on every state change, claims

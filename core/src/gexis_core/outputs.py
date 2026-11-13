@@ -20,6 +20,7 @@ were one conversation.
 """
 from __future__ import annotations
 
+import ctypes
 import logging
 import re
 import subprocess
@@ -83,6 +84,12 @@ group_in_path: Callable[[], str | None] = lambda: None
 #: What CamillaDSP plays to while the equaliser is on: the rest of the
 #: output's chain, after the loopback (ADR-0162 D1, D8).
 EQ_OUT = "gexis_eq_out"
+#: **Where the chain's control ports listen** - CamillaDSP's websocket and
+#: snapserver's JSON-RPC, which take orders from whoever reaches them. A
+#: loopback address of their own, denied to plugins' units (`IPAddressDeny=`;
+#: the review of 1.16.1): 127.0.0.1, where the player's API is open to them,
+#: stays theirs.
+CONTROL_HOST = "127.0.0.2"
 
 #: Friendly names for the board's own outputs, whose ALSA ids are stable
 #: and unhelpful. Anything else is named from what `aplay -l` says it is,
@@ -174,7 +181,7 @@ def _current(card: str) -> None:
     the next `needs_plug` asks the new one; kept otherwise, because asking
     plays a second of zeroes on the card."""
     if card in _asked_of and _asked_of[card] != _device(card):
-        for cache in (_needs_plug, _formats, _rates, _asked_of):
+        for cache in (_needs_plug, _formats, _rates, _rate_list, _asked_of):
             cache.pop(card, None)
 
 
@@ -259,6 +266,71 @@ def widens(card: str) -> bool:
     return "S32_LE" in formats and "S16_LE" not in formats
 
 
+#: The rates a card giving a range is asked one by one (`_probe_rates`):
+#: ALSA's standard rates, and 12 and 24 kHz.
+PROBE_RATES = (8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000, 64000,
+               88200, 96000, 176400, 192000, 352800, 384000, 705600, 768000)
+_SND_PCM_STREAM_PLAYBACK = 0
+_SND_PCM_NONBLOCK = 1
+_alsa_lib = None
+
+
+def _libasound():
+    """alsa-lib, every function used declared first (LESSONS 16)."""
+    global _alsa_lib
+    if _alsa_lib is None:
+        lib = ctypes.CDLL("libasound.so.2")
+        ptr = ctypes.c_void_p
+        for name, restype, argtypes in (
+            ("snd_pcm_open", ctypes.c_int, [ctypes.POINTER(ptr), ctypes.c_char_p, ctypes.c_int, ctypes.c_int]),
+            ("snd_pcm_close", ctypes.c_int, [ptr]),
+            ("snd_pcm_hw_params_malloc", ctypes.c_int, [ctypes.POINTER(ptr)]),
+            ("snd_pcm_hw_params_free", None, [ptr]),
+            ("snd_pcm_hw_params_any", ctypes.c_int, [ptr, ptr]),
+            ("snd_pcm_hw_params_test_rate", ctypes.c_int, [ptr, ptr, ctypes.c_uint, ctypes.c_int]),
+        ):
+            fn = getattr(lib, name)
+            fn.restype, fn.argtypes = restype, argtypes
+        _alsa_lib = lib
+    return _alsa_lib
+
+
+def _probe_rates(device: str, low: int, high: int) -> tuple[int, ...] | None:
+    """**The standard rates from `low` to `high` the device takes exactly**,
+    asked one by one (`snd_pcm_hw_params_test_rate`): the driver's own rules
+    answer, nothing is set and nothing plays. None when it cannot be asked.
+
+    aplay prints a card's rates as a range even when it takes only some of
+    them, and the range was read as every rate in it: the USB-to-optical
+    adapter (44.1, 48, 96 and 192 kHz, Finding 130) was taken to play
+    88.2 kHz, so with the equaliser on nothing converted it and CamillaDSP,
+    which opens a card at the exact rate, played nothing (the review of
+    1.16.1)."""
+    try:
+        lib = _libasound()
+    except (OSError, AttributeError) as exc:
+        logger.warning("outputs: cannot ask %s its rates one by one: %s", device, exc)
+        return None
+    pcm, params = ctypes.c_void_p(), ctypes.c_void_p()
+    err = lib.snd_pcm_open(ctypes.byref(pcm), device.encode(), _SND_PCM_STREAM_PLAYBACK, _SND_PCM_NONBLOCK)
+    if err < 0:
+        logger.warning("outputs: cannot ask %s its rates one by one (error %d)", device, err)
+        return None
+    try:
+        if lib.snd_pcm_hw_params_malloc(ctypes.byref(params)) < 0:
+            return None
+        try:
+            if lib.snd_pcm_hw_params_any(pcm, params) < 0:
+                return None
+            found = tuple(r for r in PROBE_RATES if low <= r <= high
+                          and lib.snd_pcm_hw_params_test_rate(pcm, params, r, 0) == 0)
+        finally:
+            lib.snd_pcm_hw_params_free(params)
+    finally:
+        lib.snd_pcm_close(pcm)
+    return found or None
+
+
 def needs_plug(card: str) -> bool | None:
     """Whether this card has to be written through a conversion layer.
 
@@ -326,6 +398,12 @@ def needs_plug(card: str) -> bool | None:
     _rate_list.pop(card, None)
     if rates is not None:
         _rates[card] = rates
+        if listed is None and not answer:
+            # A range: each rate in it asked (`_probe_rates`); a card
+            # behind a conversion takes every rate.
+            listed = _probe_rates(f"hw:{card}", *rates)
+            if listed is not None:
+                logger.info("outputs: %s takes %s Hz", card, " ".join(map(str, listed)))
         if listed is not None:
             _rate_list[card] = listed
     _asked_of[card] = _device(card)

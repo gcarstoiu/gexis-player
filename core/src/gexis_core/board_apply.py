@@ -19,6 +19,7 @@ import json
 from pathlib import Path
 
 from . import boards
+from .screen_apply import replace_durably
 
 CONFIG = Path("/boot/firmware/config.txt")
 STATE = Path("/var/lib/gexis/board.json")
@@ -131,10 +132,7 @@ def choose(value: str, *, config: Path = CONFIG, state: Path = STATE) -> bool:
     before = written(config)
     if (before.id if before else None) == (board.id if board else None):
         return False
-    text = config.read_text()
-    tmp = config.with_name(config.name + ".gexis-tmp")
-    tmp.write_text(with_block(text, board))
-    tmp.replace(config)
+    replace_durably(config, with_block(config.read_text(), board))
     write_state({"chosen": board.id if board else None, "previous": before.id if before else None,
                  "pending": board is not None}, state)
     return True
@@ -152,9 +150,7 @@ def check(cards: list[str], *, config: Path = CONFIG, state: Path = STATE) -> st
         write_state({**doc, "pending": False, "not_found": None}, state)
         return None
     previous = boards.by_id(doc.get("previous"))
-    tmp = config.with_name(config.name + ".gexis-tmp")
-    tmp.write_text(with_block(config.read_text(), previous))
-    tmp.replace(config)
+    replace_durably(config, with_block(config.read_text(), previous))
     write_state({"chosen": doc.get("previous"), "previous": None, "pending": False,
                  "not_found": doc.get("chosen")}, state)
     return doc.get("chosen")

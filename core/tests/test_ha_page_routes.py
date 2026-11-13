@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """ADR-0176: the routes for a page from Home Assistant on the screen."""
+import asyncio
+
 import pytest
 from aiohttp.test_utils import TestClient, TestServer
 
@@ -92,6 +94,18 @@ async def test_a_bad_call_is_a_400_and_an_unknown_action_a_404():
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("action", ["show", "preload"])
+@pytest.mark.parametrize("url", ["http://[::1/", "http://[nothex]/"])
+async def test_a_malformed_address_is_the_400_sentence_not_a_500(action, url):
+    """The review of 1.16.1: a bracketed host that does not parse."""
+    _, page, server, _ = _setup()
+    async with TestClient(TestServer(server.make_app())) as client:
+        r = await client.post(f"/panel/page/{action}", json={"url": url})
+        assert r.status == 400 and (await r.json())["error"] == "url must be an http or https address"
+        assert not page.shown and page.preload is None
+
+
+@pytest.mark.asyncio
 async def test_a_page_that_cannot_be_framed_is_refused_with_its_sentence():
     async def refuses(url):
         return {"url": url, "embeddable": False, "reason": "refuses framing"}
@@ -102,6 +116,43 @@ async def test_a_page_that_cannot_be_framed_is_refused_with_its_sentence():
         body = await r.json()
         assert r.status == 422 and body["reason"] == "refuses framing"
         assert "Send X-Frame-Options" in body["error"] and not page.shown
+
+
+class _Room:
+    measuring = False
+
+    def running(self):
+        return self.measuring
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("action", ["show", "preload"])
+@pytest.mark.parametrize("meanwhile, status", [("switch", 403), ("measure", 409), ("headless", 409)])
+async def test_what_changed_during_the_address_check_is_checked_again(action, meanwhile, status):
+    """The review of 1.16.1: the check can take 5 s, and the switch turned
+    off or a measurement begun meanwhile let the page up all the same."""
+    probing, release = asyncio.Event(), asyncio.Event()
+
+    async def slow(url):
+        probing.set()
+        await release.wait()
+        return {"url": url, "embeddable": True, "reason": None}
+
+    _, page, server, _ = _setup(check=slow)
+    server._room = room = _Room()
+    async with TestClient(TestServer(server.make_app())) as client:
+        call = asyncio.ensure_future(client.post(f"/panel/page/{action}", json={"url": URL}))
+        await probing.wait()
+        if meanwhile == "switch":
+            assert (await client.put("/settings/ha_pages", json={"value": False})).status == 200
+        elif meanwhile == "measure":
+            room.measuring = True
+        else:
+            server._settings.values["headless"] = True
+        release.set()
+        r = await call
+        assert r.status == status and "error" in await r.json()
+        assert not page.shown and page.preload is None
 
 
 @pytest.mark.asyncio

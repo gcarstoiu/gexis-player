@@ -41,6 +41,11 @@ install -D -m 644 "$STAGE_DIR/files/gexis-nqptp.service" "$STAGE/usr/lib/systemd
 install -D -m 644 "$STAGE_DIR/files/shairport-sync.conf" "$STAGE/usr/share/gexis/airplay/shairport-sync.conf"
 install -D -m 755 "$STAGE_DIR/files/airplay-hook" "$STAGE/usr/lib/gexis/airplay-hook"
 install -D -m 644 "$STAGE_DIR/files/gexis-airplay-dbus.conf" "$STAGE/usr/share/dbus-1/system.d/gexis-airplay.conf"
+# ADR-0179: the receiver's and the plugin's account; the plugin's own unit
+# names pi, so a drop-in sets it.
+install -D -m 644 "$STAGE_DIR/files/airplay-sysusers.conf" "$STAGE/usr/lib/sysusers.d/gexis-airplay.conf"
+install -D -m 644 "$STAGE_DIR/files/gexis-airplay-account.conf" \
+	"$STAGE/usr/lib/systemd/system/gexis-airplay.service.d/gexis-account.conf"
 # ADR-0086: the manifest and its glyph, owned by the plugin's repository.
 install -D -m 644 "$PLUGIN_SRC/plugin.json" "$STAGE/usr/share/gexis/plugins/airplay/plugin.json"
 install -D -m 644 "$PLUGIN_SRC/mark.png" "$STAGE/usr/share/gexis/plugins/airplay/mark.png"
@@ -58,6 +63,12 @@ cat > "$STAGE/DEBIAN/postinst" <<'EOF'
 #!/bin/sh
 set -e
 if [ "$1" = configure ]; then
+	# ADR-0179: their account, before the D-Bus policy naming it is loaded.
+	# Not `|| true`: without it neither unit starts, and a failed install
+	# goes back.
+	if command -v systemd-sysusers >/dev/null; then
+		systemd-sysusers gexis-airplay.conf
+	fi
 	if [ -z "$2" ] && [ ! -e /var/lib/gexis/setup-done ]; then
 		systemctl enable gexis-shairport-sync.service >/dev/null 2>&1 || true
 	fi

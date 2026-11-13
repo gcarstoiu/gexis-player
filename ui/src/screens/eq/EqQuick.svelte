@@ -13,7 +13,10 @@
 <script>
   import { equaliser, quickNote, setEqualiser, stateLine } from '../../lib/equaliser.svelte.js';
 
-  let { host = 'drawer', onedit } = $props();
+  //: `armsAt`: the drawer's or the tray's - one that came by itself takes
+  //: no touch here before it (App.svelte, VOLUME_ARM_MS).
+  let { host = 'drawer', armsAt = 0, onedit } = $props();
+  const armed = () => performance.now() >= armsAt;
 
   const eq = $derived($equaliser);
   //: **The switch moves at once** (George, 2026-10-28: slow to react): the
@@ -41,7 +44,7 @@
   });
 
   async function choose(key) {
-    if (!lit || key === 'custom' || key === eq.sel) return;
+    if (!armed() || !lit || key === 'custom' || key === eq.sel) return;
     error = null;
     try {
       await setEqualiser({ sel: key });
@@ -50,7 +53,7 @@
     }
   }
   async function toggle() {
-    if (!eq || busy) return;
+    if (!eq || busy || !armed()) return;
     busy = true;
     error = null;
     wanted = !on;
@@ -101,7 +104,7 @@
 {/snippet}
 
 {#snippet edit()}
-  <button type="button" class="edit" onclick={() => onedit?.()}>Edit<span class="edit__chev"></span></button>
+  <button type="button" class="edit" onclick={() => armed() && onedit?.()}>Edit<span class="edit__chev"></span></button>
 {/snippet}
 
 {#snippet toggleSwitch()}

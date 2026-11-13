@@ -11,8 +11,10 @@ After=sound.target network-online.target
 [Service]
 EnvironmentFile=/run/gexis/snapclient.env
 ExecStart=/usr/bin/snapclient --logsink=system --logfilter=*:notice -h ${GEXIS_SNAP_HOST} -p ${GEXIS_SNAP_PORT} -s gexis_group_in --mixer none --hostID ${GEXIS_SNAP_ID} --latency ${GEXIS_SNAP_LATENCY} $GEXIS_SNAP_OPTS
-User=pi
-Group=audio
+# ADR-0179: an account of its own, not the screen's (pi).
+User=gexis-snap
+Group=gexis-snap
+SupplementaryGroups=audio
 InaccessiblePaths=-/run/dbus/system_bus_socket
 # Snapcast's own note: very noisy on stdout.
 StandardOutput=null

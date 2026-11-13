@@ -159,6 +159,29 @@ def target(seen: screen_detect.Seen) -> screens.Screen:
     return same[0] if len(same) == 1 else screens.fitted(width, height)
 
 
+def for_port(port: screen_detect.Seen, model: screens.Screen, kept) -> tuple[screens.Screen, int]:
+    """**What a port chosen under *Screen port* takes, and at what turn**:
+    `model`, what is on it (`target`, a TV held to 1080p), at 0° - unless
+    `kept`, the screen last kept on that port, is still the one there, which
+    comes back as it was (ADR-0147 How D1: the panel's rotation goes back
+    with it to its port; ADR-0158 D2: a model picked keeps its name; the
+    review of 1.16.1). Still the one there: the same model; on a DSI port,
+    a DSI model, unless a panel recognised there needs other overlays; on
+    HDMI, nothing recognised and the model's own mode the one reported."""
+    back = screens.by_id(kept.screen_id) if kept is not None else None
+    if back is None:
+        return model, 0
+    if back.id == model.id:
+        return model, kept.rotation
+    found = screen_detect.suggest(port)
+    if port.dsi:
+        same = back.interface == "dsi" and (found is None or found.overlays == back.overlays)
+    else:
+        native = (back.height, back.width) if back.rotation in (90, 270) else (back.width, back.height)
+        same = back.interface == "hdmi" and found is None and port.preferred == native
+    return (back, kept.rotation) if same else (model, 0)
+
+
 SETTINGS_DB = Path("/var/lib/gexis-core/settings.db")
 CONNECTIONS = Path("/etc/NetworkManager/system-connections")
 
@@ -237,6 +260,17 @@ def at_start(seen: screen_detect.Seen | None = None, *, headless: bool | None = 
     # wakes, which would read as a different screen attached.
     current = screen_apply.read_state(state).get("current") or {}
     if current.get("chosen") and seen.connector == current.get("connector"):
+        return "same"
+    # **A TV chosen is the screen while it is off** (the review of 1.16.1):
+    # on standby at a start - a power cut at night - it is not connected,
+    # and the panel took over at 0 deg, asked Keep there and went back with
+    # another restart. A screen without touch chosen stays; its picture
+    # comes when it is switched on. A touch panel chosen and then unplugged
+    # still gives way.
+    if current.get("chosen") and seen.connector != current.get("connector") \
+            and not screen_detect.has_touch(current.get("screen") or ""):
+        logger.info("screen: %s chosen on %s, not connected now; it stays the screen",
+                    current.get("screen"), current.get("connector"))
         return "same"
     q = question(seen, headless=headless, path=path)
     if q is None:

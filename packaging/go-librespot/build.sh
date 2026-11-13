@@ -16,8 +16,10 @@ STAGE_DIR=/src/image/stage-gexis/02-renderers
 : "${GO_LIBRESPOT_VERSION:?} ${GO_LIBRESPOT_ASSET:?} ${GO_LIBRESPOT_URL:?} ${GO_LIBRESPOT_SHA256:?}"
 # The revision counts changes to our own files around it: -2 turned
 # normalisation off (2026-10-05) - the same upstream version, new content,
-# so a new version (LESSONS 53).
-VERSION="${GO_LIBRESPOT_VERSION#v}-2"
+# so a new version (LESSONS 53). -3: the unit kept off the audio chain's
+# control address (the review of 1.16.1). -4: an account of its own
+# (ADR-0179).
+VERSION="${GO_LIBRESPOT_VERSION#v}-4"
 
 PKG=gexis-go-librespot
 STAGE=/tmp/stage/$PKG
@@ -32,6 +34,8 @@ tar -xzf "$WORK/$GO_LIBRESPOT_ASSET" -C "$WORK" go-librespot
 install -D -m 755 "$WORK/go-librespot" "$STAGE/usr/bin/go-librespot"
 install -D -m 644 "$STAGE_DIR/files/go-librespot.service" \
 	"$STAGE/usr/lib/systemd/system/go-librespot.service"
+install -D -m 644 "$STAGE_DIR/files/go-librespot-sysusers.conf" \
+	"$STAGE/usr/lib/sysusers.d/gexis-go-librespot.conf"
 # The player rewrites /var/lib/go-librespot/config.yml at runtime (device
 # name, sign-in), so the package ships the default and postinst places it
 # only where there is none (ADR-0107, files the player rewrites).
@@ -48,10 +52,15 @@ cat > "$STAGE/DEBIAN/postinst" <<'EOF'
 #!/bin/sh
 set -e
 if [ "$1" = configure ]; then
+	# ADR-0179: its account. Not `|| true`: without it the unit cannot
+	# start, and a failed install goes back. The unit gives it the folder.
+	if command -v systemd-sysusers >/dev/null; then
+		systemd-sysusers gexis-go-librespot.conf
+	fi
 	# Placed once: the player owns this file after the first install.
 	if [ ! -e /var/lib/go-librespot/config.yml ]; then
 		install -d -m 755 /var/lib/go-librespot
-		install -m 644 -o 1000 -g 1000 \
+		install -m 644 \
 			/usr/share/gexis/defaults/go-librespot/config.yml \
 			/var/lib/go-librespot/config.yml
 	fi

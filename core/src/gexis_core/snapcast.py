@@ -32,6 +32,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 from pathlib import Path
 from typing import Callable
 
@@ -52,9 +53,10 @@ RATES = (44100, 48000, 88200, 96000, 176400, 192000, 352800, 384000)
 #: `output` pads every integer format to this on the way in (as the
 #: equaliser's chain does), so one width per rate: 32 bits, bit-perfect.
 BITS = 32
-#: **The buffer: as short as measured safe** (D7, decision 7) - the end-to-end
-#: delay from the loopback to every card. Measured before it is called done.
-BUFFER_MS = 400
+#: **The buffer** (D7 as amended 2026-11-12) - the end-to-end delay from the
+#: loopback to every card. A second: at 400 ms a member on Wi-Fi came in
+#: seconds late at a start, and lost its connection at 88.2 kHz and above.
+BUFFER_MS = 1000
 #: FLAC needs about 26 ms a chunk (snapserver's own note).
 CHUNK_MS = 26
 #: Where the server's pipes and its own data live (the unit's
@@ -88,7 +90,7 @@ enabled = false
 
 [tcp]
 enabled = true
-bind_to_address = 127.0.0.1
+bind_to_address = {outputs.CONTROL_HOST}
 port = {CONTROL_PORT}
 
 [stream]
@@ -109,10 +111,19 @@ filter = *:notice
 """
 
 
+#: What the client's environment takes: one word each, so nothing in a
+#: value is a line, or a variable, of its own (the review of 1.16.1).
+_ENV_VALUE = re.compile(r"[A-Za-z0-9.:%_*\[\]-]+")
+
+
 def client_env(host: str, host_id: str, latency_ms: int = 0, sampleformat: str | None = None) -> str:
     """The client unit's environment: the leader to play from, this player's
     stable id, the card's own delay, and a format only where the card cannot
-    take the stream's (`sample_format_for`)."""
+    take the stream's (`sample_format_for`). Raises ValueError for a value
+    that is not one plain word."""
+    for value in (host, host_id, *([sampleformat] if sampleformat else [])):
+        if value and (not _ENV_VALUE.fullmatch(value) or value.startswith("-")):
+            raise ValueError(f"not for the client's environment: {value!r}")
     opts = f"--sampleformat {sampleformat}" if sampleformat else ""
     return (f"GEXIS_SNAP_HOST={host}\nGEXIS_SNAP_PORT={STREAM_PORT}\nGEXIS_SNAP_ID={host_id}\n"
             f"GEXIS_SNAP_LATENCY={int(latency_ms)}\nGEXIS_SNAP_OPTS={opts}\n")
@@ -176,7 +187,7 @@ class Control:
             if self._writer is not None and not self._writer.is_closing():
                 return self._writer
             reader, writer = await asyncio.wait_for(
-                asyncio.open_connection("127.0.0.1", self._port), timeout)
+                asyncio.open_connection(outputs.CONTROL_HOST, self._port), timeout)
             self._writer = writer
             self._reader = asyncio.create_task(self._read(reader))
             return writer
@@ -495,7 +506,11 @@ class Snapcast:
         """The client to the leader at `host` (this player's own server:
         `127.0.0.1`), or stopped with None. Restarted only when what it
         plays from changes."""
-        wanted = None if host is None else client_env(host, host_id, latency_ms, sampleformat)
+        try:
+            wanted = None if host is None else client_env(host, host_id, latency_ms, sampleformat)
+        except ValueError as exc:
+            logger.error("multiroom: the client is not started: %s", exc)
+            wanted = None
         if wanted == self._client:
             return
         self._client = wanted

@@ -58,6 +58,36 @@ def test_never_less_than_the_peak():
     assert eq.headroom_db(g) >= eq.peak_db(g)
 
 
+#: Every rate the stage runs at: a stream's, up to the loopback's 192 kHz,
+#: and a card's highest when it converts.
+STAGE_RATES = (44100, 48000, 88200, 96000, 176400, 192000, 352800, 384000, 705600, 768000)
+
+
+def test_no_setting_rises_above_its_headroom_at_any_rate_the_stage_runs_at():
+    """**The review of 1.16.1.** The headroom was taken at 44.1 and 48 kHz,
+    where the top bands narrow; at 96 kHz and up they keep their width, and
+    a treble boost of one's own (+6/+12/+12 at 4, 8 and 16 kHz) rose 1.2 to
+    1.6 dB above it - clipped at CamillaDSP's output."""
+    lift = (((12000.0, 3.0, 1.0),), ((9000.0, 3.0, 0.8),))
+    for gains in [(0,) * 7 + (6, 12, 12), (0,) * 7 + (12, 12, 12), (0,) * 8 + (6, 6), (0,) * 6 + (3, 9, 12, 12)]:
+        h = eq.headroom_db(gains)
+        assert all(eq.peak_db(gains, fs) <= h for fs in STAGE_RATES), gains
+        h = eq.headroom_db(gains, lift)
+        assert all(eq.peak_db(gains, fs, channel) <= h for fs in STAGE_RATES for channel in lift), gains
+    for p in eq.PRESETS:
+        assert all(eq.peak_db(p.gains, fs) <= eq.headroom_db(p.gains) for fs in STAGE_RATES), p.key
+
+
+def test_the_peak_is_the_filters_summed_at_each_point_of_the_curve():
+    gains, extra = (3, -2, 0, 4, 0, 0, 1, 6, 12, -3), ((60.0, -6.0, 4.0), (9000.0, 2.5, 0.9))
+    for fs in (44100, 96000, 768000):
+        points = [eq.CENTRES[0] * 2 ** (-0.5 + (eq._OCT_END + 0.5) * j / (eq._POINTS - 1))
+                  for j in range(eq._POINTS)]
+        want = max([0.0] + [eq.response_db(gains, f, fs) + sum(eq.band_db(f0, g, f, fs, q) for f0, g, q in extra)
+                            for f in points if f < fs / 2])
+        assert eq.peak_db(gains, fs, extra) == pytest.approx(want, abs=1e-9)
+
+
 def test_choose_a_preset_then_move_a_band_makes_custom():
     e = Equaliser().choose("dac", "rock")
     assert e.output("dac").sel == "rock" and e.output("dac").gains == eq.PRESET["rock"].gains

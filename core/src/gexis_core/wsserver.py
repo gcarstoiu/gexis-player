@@ -45,7 +45,7 @@ from aiohttp import web
 from dbus_next import BusType
 from dbus_next.aio import MessageBus
 
-from gexis_core import ha_page, memo, own_wallpapers, panel_token, screen_apply, settling, updates
+from gexis_core import ha_page, memo, own_pages, own_wallpapers, panel_token, screen_apply, settling, updates
 from gexis_core.players import Players, own_id, status_line
 from gexis_core.group import GroupError
 from gexis_core.wallpapers import SEARCH as PIXABAY_SEARCH
@@ -106,6 +106,17 @@ APP_FILES = {
     "app-icon-512.png": "image/png",
     "apple-touch-icon.png": "image/png",
 }
+
+#: **What a player already set up answers over its setup network**
+#: (ADR-0178 decision 2): its page, and setup's status, networks, answers and
+#: Finish. Settings and their tokens, backups, plugins and a reset are not
+#: reached from there.
+SETUP_NETWORK_ROUTES = frozenset({
+    ("GET", "/"), ("GET", "/surface"), ("GET", "/state"), ("GET", "/setup/status"),
+    ("GET", "/setup/answers"), ("POST", "/setup/answers"), ("GET", "/setup/networks"),
+    ("POST", "/setup/finish"),
+    *(("GET", f"/{name}") for name in APP_FILES),
+})
 
 DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 8090
@@ -1748,15 +1759,9 @@ class StateServer:
             if preload is None:
                 self._page.set_preload(None)
                 return web.json_response(self._page.state())
-        if self._setting_or_none("headless") is True:
-            return web.json_response({"error": "this player has no screen"}, status=409)
-        if self._setting_or_none("ha_pages") is not True:
-            return web.json_response({"error": "Pages from Home Assistant are off on this player: "
-                                               "switch them on in Settings → Display."}, status=403)
-        # A measurement takes the screen to say so, and wants the processor
-        # quiet while it records.
-        if self._room is not None and self._room.running():
-            return web.json_response({"error": "The room is being measured on this player."}, status=409)
+        refused = self._page_refused()
+        if refused is not None:
+            return refused
         if action == "preload":
             # K1: checked as a show is, so the action fails with the reason.
             if self._page_check is not None:
@@ -1764,6 +1769,9 @@ class StateServer:
                 if not found.get("embeddable"):
                     return web.json_response({"error": ha_page.explain(found.get("reason")),
                                               "reason": found.get("reason")}, status=422)
+                refused = self._page_refused()
+                if refused is not None:
+                    return refused
             self._page.set_preload(preload)
             return web.json_response(self._page.state())
         try:
@@ -1778,8 +1786,28 @@ class StateServer:
             if not found.get("embeddable"):
                 return web.json_response({"error": ha_page.explain(found.get("reason")),
                                           "reason": found.get("reason")}, status=422)
+        # **Asked again after the check** (the review of 1.16.1): it can take
+        # 5 s, and the switch turned off or a measurement begun meanwhile
+        # had the page up all the same.
+        refused = self._page_refused()
+        if refused is not None:
+            return refused
         await self._page.show(url, page_id, seconds)
         return web.json_response(self._page.state())
+
+    def _page_refused(self) -> web.Response | None:
+        """Why a page cannot go up now - no screen, the switch off, a
+        measurement running - or None."""
+        if self._setting_or_none("headless") is True:
+            return web.json_response({"error": "this player has no screen"}, status=409)
+        if self._setting_or_none("ha_pages") is not True:
+            return web.json_response({"error": "Pages from Home Assistant are off on this player: "
+                                               "switch them on in Settings → Display."}, status=403)
+        # A measurement takes the screen to say so, and wants the processor
+        # quiet while it records.
+        if self._room is not None and self._room.running():
+            return web.json_response({"error": "The room is being measured on this player."}, status=409)
+        return None
 
     async def _handle_panel_input(self, request: web.Request) -> web.Response:
         """**ADR-0157: the phone's tap or typing, made real.** The panel asks
@@ -2580,7 +2608,10 @@ class StateServer:
         if self._setup is None:
             return web.json_response({"needed": False, "network": "unmanaged"})
         panel = self._from_panel(request)
-        return web.json_response(self._setup.status() if panel else self._setup.public_status())
+        status = self._setup.status() if panel else self._setup.public_status()
+        # The name the phone is sent to afterwards: a player already set up
+        # keeps its own (ADR-0178 decision 2), and Settings is closed there.
+        return web.json_response({**status, "host": device_name.hostname()})
 
     @staticmethod
     def _setup_error(raw: str, status: int) -> web.Response:
@@ -2591,6 +2622,44 @@ class StateServer:
         logger.info("setup: answered %s: %s", status, raw)
         return web.json_response({"error": setup_flow.said(raw)}, status=status)
 
+    def _over_setup_network(self, request: web.Request) -> bool:
+        """Whether the request arrived on the setup network's own address."""
+        from gexis_core import setup_network
+
+        sockname = request.transport.get_extra_info("sockname") if request.transport is not None else None
+        return bool(sockname) and sockname[0] == setup_network.ADDRESS
+
+    @web.middleware
+    async def _setup_network_only_sets_up(self, request: web.Request, handler):
+        """ADR-0178 decision 2: over its setup network, a player already set
+        up only joins a Wi-Fi network (`SETUP_NETWORK_ROUTES`)."""
+        if (self._setup is not None and self._over_setup_network(request)
+                and not self._setup.status().get("needed")):
+            method = "GET" if request.method == "HEAD" else request.method
+            if (method, request.path) not in SETUP_NETWORK_ROUTES and not (
+                    method == "GET" and request.path.startswith("/assets/")):
+                logger.info("setup: refused %s %s over the setup network", request.method, request.path)
+                return web.json_response({"error": "Over its setup network this player only joins a Wi-Fi network."},
+                                         status=403)
+        return await handler(request)
+
+    @web.middleware
+    async def _own_pages_only(self, request: web.Request, handler):
+        """**ADR-0178 decision 1** (`own_pages`): from a browser, a change or
+        a socket comes from the player's own page, and the player is named
+        the way only the home network can."""
+        why = own_pages.refused(request.method, request.headers)
+        if why == own_pages.NAME:
+            logger.info("refused %s %s from a browser naming the player %r", request.method, request.path,
+                        request.headers.get("Host"))
+            return web.Response(status=403, text=f"Open this player as {device_name.hostname() or 'gexis'}.local, "
+                                                 f"or by its address.")
+        if why == own_pages.ORIGIN:
+            logger.info("refused %s %s from another site's page (%s)", request.method, request.path,
+                        request.headers.get("Origin") or request.headers.get("Sec-Fetch-Site"))
+            return web.json_response({"error": "Only the player's own page can do that."}, status=403)
+        return await handler(request)
+
     @web.middleware
     async def _note_setup_use(self, request: web.Request, handler):
         """**Somebody is using the setup page** (George, 2026-10-12): the
@@ -2599,9 +2668,16 @@ class StateServer:
         network holds a configured player off its saved Wi-Fi only while
         this was recent (`setup_network.SETUP_ACTIVE_S`)."""
         if (self._setup is not None and (request.path == "/" or request.path.startswith("/setup/"))
-                and not self._from_panel(request)):
+                and self._from_phone(request)):
             self._setup.page_used()
         return await handler(request)
+
+    def _from_phone(self, request: web.Request) -> bool:
+        """Off loopback: the panel and the plugins are on it, a phone never
+        is. Not `_from_panel` (the review of 1.16.1): the kiosk's own load of
+        the page is a navigation, which sends no token, and since ADR-0170 it
+        counted as a phone setting the player up."""
+        return request.remote not in ("127.0.0.1", "::1")
 
     def _setup_closed(self) -> web.Response | None:
         """ADR-0104: the setup routes answer only while setup is on - the
@@ -2668,7 +2744,9 @@ class StateServer:
         plugin_id = request.match_info["id"]
         if not await self._store_remove(plugin_id, keep):
             return web.json_response({"error": f"{plugin_id} is not one to remove"}, status=404)
-        return web.json_response({"removed": plugin_id, "kept": keep})
+        # A restart it owes waits for these (the review of 1.16.1).
+        waits = self._catalogue.under_way() if self._catalogue is not None else []
+        return web.json_response({"removed": plugin_id, "kept": keep, "waits_for": waits})
 
     async def _handle_catalogue(self, request: web.Request) -> web.Response:
         """ADR-0168: what *Add plugins* shows of the catalogue. `?refresh=1` reads the
@@ -3675,7 +3753,8 @@ class StateServer:
         (DEVELOPMENT.md: "tested with a WebSocket client") - rather than
         binding a fixed port or reaching into `run()`'s internals.
         """
-        app = web.Application(middlewares=[self._note_setup_use])
+        app = web.Application(middlewares=[self._own_pages_only, self._setup_network_only_sets_up,
+                                           self._note_setup_use])
         app.router.add_get("/state", self._handle)
         app.router.add_post("/renderer/{renderer_id}/activate", self._handle_activate)
         app.router.add_post("/transport/{command}", self._handle_transport)

@@ -116,3 +116,12 @@ REST decision plus complexity.
   will put on it (full-screen JPEGs swapped per track, ADR-0019). Phase 4's own
   four screens are trivial by comparison; this is flagged because Phase 5 is
   where it would first matter.
+
+## Amended 2026-11-10 (ADR-0178)
+
+The REST commands stay without a login, but a browser drives them only from
+the player's own pages: a change or a socket from another site's page is
+refused, and a browser must name the player by an address, a name without
+dots, `localhost` or a name under `.local`
+([ADR-0178](0178-fixes-from-the-review-of-1-16-1-that-change-what-is-seen.md)
+decision 1, George).

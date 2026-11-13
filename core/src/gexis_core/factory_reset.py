@@ -29,12 +29,16 @@ REMOVED = (
     "var/lib/gexis-core/settings.db", "var/lib/gexis-core/settings.db-wal", "var/lib/gexis-core/settings.db-shm",
     "var/lib/gexis-core/enrichment.db", "var/lib/gexis-core/enrichment.db-wal", "var/lib/gexis-core/enrichment.db-shm",
     "var/cache/gexis-core",
+    # The page Home Assistant kept loaded: its address can carry a token
+    # (ADR-0176 K1; the review of 1.16.1).
+    "var/lib/gexis-core/page-preload.json",
     # The name.
     "etc/gexis/device-name.env", "etc/machine-info",
     # Network share passwords; kept debug logs.
     "etc/gexis/shares", "etc/systemd/journald.conf.d/60-gexis-debug-logs.conf",
     # Setup comes back (ADR-0104): no marker, no answers, nothing settling.
     "var/lib/gexis/setup-done", "var/lib/gexis/setup-answers.json", "var/lib/gexis/setup-backup.tgz",
+    "var/lib/gexis/setup-password",
     "var/lib/gexis/settling.json",
     # The screen and the sound card board.
     "etc/gexis/screen.env", "var/lib/gexis/screen.json", "var/lib/gexis/screen-seen.json",
@@ -204,7 +208,9 @@ def wipe(root: Path = Path("/"), run=subprocess.run) -> list[str]:
         before = path.read_text()
         after = _cmdline(screen_apply.with_video(before.strip(), None)) + "\n"
         if after != before:
-            path.write_text(after)
+            # Never truncated in place on the FAT boot partition (the
+            # review of 1.16.1): a power cut there leaves no `root=`.
+            screen_apply.replace_durably(path, after)
             return True
         return False
     step("cmdline.txt", cmdline)
@@ -215,8 +221,13 @@ def wipe(root: Path = Path("/"), run=subprocess.run) -> list[str]:
             return False
         before = path.read_text()
         after = board_apply.with_block(before, None)
+        if screen_apply.overlays_in(after):
+            # **The screen's block goes too** (ADR-0158; the review of
+            # 1.16.1): left, the reset's own boot found the panel up with no
+            # screen chosen, laid it out without the block, and restarted.
+            after = screen_apply.with_overlays(after, ())
         if after != before:
-            path.write_text(after)
+            screen_apply.replace_durably(path, after)
             return True
         return False
     step("config.txt", config_txt)
