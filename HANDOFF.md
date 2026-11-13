@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-11-11 (on R2D2).
+Last updated: 2026-11-13 (on R2D2).
 
 ## Start here
 
@@ -20,8 +20,7 @@ and the ideas as Must / Should / Could. It follows `docs/DEVELOPMENT.md`'s
 phases; change it when a phase opens, closes or moves, and show George first. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Stable and Testing: 1.16.1** (2026-11-10; Stable serial 15, Testing
-serial 69): room correction's Full range marked *Limited testing* (George),
+**Stable: 1.16.1** (2026-11-10; serial 15): room correction's Full range marked *Limited testing* (George),
 on 1.16.0 (room correction for the full range, Phase 30), with 1.14.0 (Phase
 29) and 1.15.0 (Phase 35) - Stable came from 1.13.0. Built by run
 42864483931 (`verify-image.sh` all 151 checks passed); signed on R2D2; both
@@ -32,18 +31,16 @@ and signature. Notes approved by George; PRs #98 and #99 merged by George
 a lightweight tag (the others annotated); `build.sh` reads tags with
 `--tags`, so its versions are right.
 
-**In progress: the fixes from the review of 1.16.1** (2026-11-10/11).
-All 55 findings fixed, each on a local `fix-*` branch with a test that
-failed first, merged one at a time into **`review-fixes`** (worktree
-`~/projects/gexis-review-fixes`, pushed) with the full suite after each:
-3346 passed. Four changed what users see and were decided by George as
-recommended (ADR-0178). sofapi runs its preview (run 42924770173, restarted
-2026-11-11 00:47). **Next:** George's regression pass (to-do
-`review-1161-regression`); then 1.16.2 from `review-fixes` with notes George
-approves; then Finding 145; then the worktrees (`gexis-player-fixes`,
-`gexis-player-fixes-b`, `gexis-fix-*`, `gexis-review`, `gexis-review-fixes`)
-and the local `fix-*` branches removed. `publish.sh` now keeps a serial floor
-in `out/serials/`: seed it (Testing 69, Stable 15) before that publish.
+**Testing: 1.16.2** (2026-11-12, serial 70; Stable stays 1.16.1): the 55
+fixes from the review of 1.16.1 (the four users see: ADR-0178) and a
+group's buffer of a second (ADR-0166 amended). Built by run 43305560359
+(`verify-image.sh` all 155 checks passed), signed on R2D2, read back with a
+good signature; notes approved and PR #100 merged by George. **Owed after
+the merge:** `main` into `docs` and `next` and the routine clean-up; Finding
+145; then the worktrees (`gexis-player-fixes`, `gexis-player-fixes-b`,
+`gexis-fix-*`, `gexis-review`, `gexis-review-fixes`,
+`gexis-release-1.16.2`) and the local `fix-*` branches removed.
+`publish.sh` keeps a serial floor in `out/serials/`.
 
 **The plugin catalogue** (Phase 24, closed 2026-10-31):
 `gcarstoiu/gexis-plugins` (local `~/projects/gexis-plugins`; `tools/publish.sh`
@@ -134,9 +131,12 @@ screen change may miss full-screen (the HMTECH 10.1"; to-do
 - **The visualiser made cheaper, the rest left** (Finding 134; George,
   2026-10-22: stop here): the needle and spectrum skins are unchanged - the
   present itself and the vendored engines' drawing (to-do `viz-cheaper`).
-- **Glass** (foonerd's Rust PeppyMeter, Finding 133): George, 2026-10-22,
-  *"Glass is too young now"* - **remind him at the beginning of 2027** and
-  measure it again (to-do `glass-revisit-2027`).
+- **Glass** (foonerd's Rust PeppyMeter, Finding 133) is **Phase 36**
+  (`ph-glass`, George 2026-11-13): a finding first (Glass as released, a
+  fork of ours, or our own engine), then an ADR. The PeppyMeter,
+  PeppySpectrum and peppy_screensaver forks we pin were archived on
+  2026-10-04; every pinned download from foonerd's repositories still matched
+  its checksum on 2026-11-13 (130).
 
 **The Home Assistant integration**: `gcarstoiu/gexis-player-homeassistant`
 0.6.0 (local `~/projects/gexis-player-homeassistant`, tests on
@@ -182,7 +182,8 @@ On Stable with work open: 22 (multiroom), 23 (AirPlay 2, limited testing),
 27 (releases built on GitHub; a card still to flash) and 28 (Plexamp and
 Beszel to the catalogue), both with 1.13.0. 29 (room correction for the
 bass), 30 (the full range) and 35 (a page from Home Assistant) on Stable with
-1.16.1, work open; then 31-34; MPD parked. `docs/DEVELOPMENT.md`
+1.16.1, work open; then 31-34 and 36 (Glass, added 2026-11-13); MPD
+parked. `docs/DEVELOPMENT.md`
 holds each phase's acceptance criteria.
 
 ## Machines
