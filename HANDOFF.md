@@ -156,8 +156,11 @@ there (George).
 2026-11-13**: ADR-0180 accepted (George: 1-7 as recommended; 8 as (b), the
 phone and Home Assistant in this phase, a Radio view on the card); settings
 in ADR-0022. The brief for Claude Design is `design/briefs/31-radio.md`,
-with George. **Next:** mpv measured on sofapi (checked not in use first;
-public stations only) as Finding 146, then George's picks from the design.
+with George. **mpv measured 2026-11-13** (Finding 146, on sofapi, unpacked
+under `/tmp`, nothing installed, all removed): confirmed. **Next:** George's
+picks from the design, then the core (`ph-radio` branch). The rate at the
+card, the stage and a stream at 32 kHz or below are measured in the build,
+on a player not in a group (sofapi's `output` feeds the group's loopback).
 
 **Phase 35** (a page from Home Assistant, ADR-0176 as amended) **on Stable
 with 1.16.1**, with the integration's 0.6.0. **Not yet on a player:** the
