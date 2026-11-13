@@ -152,6 +152,13 @@ range. Layouts are checked with made-up data in
 for room correction, research first; whether more positions help is checked
 there (George).
 
+**Phase 31** (internet radio without Lyrion, `ph-radio`) **started
+2026-11-13**: ADR-0180 accepted (George: 1-7 as recommended; 8 as (b), the
+phone and Home Assistant in this phase, a Radio view on the card); settings
+in ADR-0022. The brief for Claude Design is `design/briefs/31-radio.md`,
+with George. **Next:** mpv measured on sofapi (checked not in use first;
+public stations only) as Finding 146, then George's picks from the design.
+
 **Phase 35** (a page from Home Assistant, ADR-0176 as amended) **on Stable
 with 1.16.1**, with the integration's 0.6.0. **Not yet on a player:** the
 heat take-down, a USB keyboard's key, one page replacing another, the switch
@@ -182,8 +189,8 @@ On Stable with work open: 22 (multiroom), 23 (AirPlay 2, limited testing),
 27 (releases built on GitHub; a card still to flash) and 28 (Plexamp and
 Beszel to the catalogue), both with 1.13.0. 29 (room correction for the
 bass), 30 (the full range) and 35 (a page from Home Assistant) on Stable with
-1.16.1, work open; then 31-34 and 36 (Glass, added 2026-11-13); MPD
-parked. `docs/DEVELOPMENT.md`
+1.16.1, work open. **31 started 2026-11-13** (internet radio, ADR-0180
+accepted); then 32-34 and 36 (Glass, added 2026-11-13); MPD parked. `docs/DEVELOPMENT.md`
 holds each phase's acceptance criteria.
 
 ## Machines

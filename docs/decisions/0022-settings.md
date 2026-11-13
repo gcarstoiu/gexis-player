@@ -669,3 +669,18 @@ Confirmed by George, 2026-11-07 (Phase 30's decisions) and 2026-11-10 (ADR-0177'
 | Positions | [H] | The same three as the bass's (George, 2026-11-10: whether more help is checked later) |
 | Bass target level | [H] | From the speaker's slope line where it meets 250 Hz, for Bass and Full range alike (ADR-0177 decision 1, George 2026-11-10); a measurement from before Phase 30 keeps its own |
 | Broad corrections | [H] | Up to six for each speaker above the bass, Q 0.5 to 2 (0.7 to 2.5 octaves wide); a gap under 1.5 dB left alone (George, 2026-11-10) |
+
+### Appended 2026-11-13 — internet radio without Lyrion
+
+Confirmed by George, 2026-11-13, [ADR-0180](0180-internet-radio-without-lyrion.md):
+
+| Setting | Mark | Notes |
+|---|---|---|
+| Internet radio | [N] | On or off, as each source; on by default and offered in first use (decision 7); the service runs only while a station plays |
+| Popular here country | [N] | The country *Popular here* lists; setup's Wi-Fi country by default, changeable |
+| Radio favourites | [N] | The player's own list, in the owner's order, kept in its settings and backups; a station added by its address from the phone (decision 4) |
+| Stream watchdog | [H] | No audio for 10 s: reconnect, three times, then stop with a message |
+| Directory cache | [H] | Each answer kept on the player for a day |
+| Low-rate streams | [H] | 32 kHz and below resampled to 48 kHz, so the equaliser and room correction apply |
+
+Counting a play with the directory has no setting (decision 5).

@@ -3926,7 +3926,34 @@ library's Radio is Lyrion's own directory.
 station plays and shows on Now Playing; favourites; how it sits beside
 Lyrion's Radio on a player that has both.
 
-**Acceptance:** drafted with its ADR.
+**Started 2026-11-13**:
+[ADR-0180](decisions/0180-internet-radio-without-lyrion.md) accepted
+(George: decisions 1-7 as recommended, 8 as (b)). radio-browser.info, read
+by the core; mpv as the engine, measured on sofapi before it is built on;
+one Radio screen with Lyrion's radio inside it; with Lyrion off the waiting
+screen gains Radio; the player's own favourites; the phone and Home
+Assistant in this phase. Settings in ADR-0022. The brief for Claude Design:
+[`design/briefs/31-radio.md`](../design/briefs/31-radio.md).
+
+**Acceptance:**
+
+1. With Lyrion off, a station found by country, genre or name plays from the
+   panel and from the phone; Now Playing shows the station, and the title
+   and artist when the stream sends them.
+2. Favourites survive a restart and a backup restored, and play with the
+   directory unreachable.
+3. Another source takes the output and gives it back, and Radio plays in a
+   group, as the other sources do.
+4. The equaliser and room correction apply to every stream, one at 32 kHz
+   included.
+5. A stream cut mid-play recovers; one that stays down stops with a
+   message.
+6. With Lyrion on, Lyrion's radio opens from Radio and works as before.
+7. The CPU it takes on a Pi 4, measured at the engine's finding's figures or
+   better.
+8. In Home Assistant, a favourite plays from the player's sources and from
+   the card, and the directory is browsed and searched from the media
+   browser.
 
 ### Phase 32 — The library answers for itself
 
