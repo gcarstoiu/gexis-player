@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import ipaddress
 import json
 import logging
 import random
@@ -125,10 +126,12 @@ class Station:
         name = data.get("name")
         url = data.get("url_resolved") or data.get("url")
         if not (isinstance(sid, str) and sid and isinstance(name, str) and name.strip()
-                and playable(url)):
+                and playable(url) and on_the_internet(url)):
             return None
         bitrate = data.get("bitrate")
-        return cls(id=sid, name=name.strip(), url=url, logo=logo_of(data.get("favicon")),
+        logo = logo_of(data.get("favicon"))
+        return cls(id=sid, name=name.strip(), url=url,
+                   logo=logo if logo and on_the_internet(logo) else None,
                    country=_text(data.get("country")),
                    countrycode=_text(data.get("countrycode")),
                    codec=_codec(data.get("codec")),
@@ -158,6 +161,23 @@ def playable(url) -> bool:
     except ValueError:
         return False
     return parts.scheme in ("http", "https") and bool(parts.netloc)
+
+
+def on_the_internet(url: str) -> bool:
+    """**False for an address written as one on a home network** - a
+    private, loopback or link-local number. The directory is public and
+    anyone may edit it; a listed station has no business on the owner's
+    network. A name is not looked up here (the logos are, before fetching:
+    `radio_logos`); a station added by its address is the owner's own and
+    may be anywhere."""
+    try:
+        host = (urlsplit(url.strip()).hostname or "").lower()
+    except ValueError:
+        return False
+    try:
+        return ipaddress.ip_address(host).is_global
+    except ValueError:
+        return bool(host) and host != "localhost" and not host.endswith((".local", ".localhost"))
 
 
 def logo_of(favicon) -> str | None:

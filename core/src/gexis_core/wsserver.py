@@ -1299,7 +1299,7 @@ class StateServer:
             return None
         if isinstance(body.get("favourite"), str):
             return self._stations.favourites.get(body["favourite"])
-        return Station.from_json(body.get("station"))
+        return self._stations.station_from(body.get("station"))
 
     async def _handle_stations_play(self, request: web.Request) -> web.Response:
         """`{"station": {...}}` or `{"favourite": id}`: the radio takes the
@@ -1317,13 +1317,27 @@ class StateServer:
             return web.json_response({"error": "Internet radio is switched off."}, status=409)
         except Refused:
             return web.json_response({"error": "The player cannot play now."}, status=409)
-        return web.json_response({"ok": True, "station": station.to_json()})
+        return web.json_response({"ok": True, "station": self._stations.public(station)})
 
     async def _handle_favourites(self, request: web.Request) -> web.Response:
         off = self._stations_off()
         if off:
             return off
-        return web.json_response({"favourites": [s.to_json() for s in self._stations.favourites.all()]})
+        return web.json_response({"favourites": self._stations.favourites_json()})
+
+    async def _handle_station_logo(self, request: web.Request) -> web.Response:
+        """A station's logo, through the player (George, 2026-11-14): only one
+        the player handed out, kept on the device; 404 for none, and the
+        screens draw the radio mark."""
+        if self._stations is None or self._stations.logos is None:
+            return web.json_response({"error": "no such logo"}, status=404)
+        found = await self._stations.logos.get(request.match_info["key"])
+        if found is None:
+            return web.json_response({"error": "no such logo"}, status=404)
+        kind, data = found
+        return web.Response(body=data, content_type=kind,
+                            headers={"Cache-Control": "public, max-age=86400",
+                                     "X-Content-Type-Options": "nosniff"})
 
     async def _handle_favourites_add(self, request: web.Request) -> web.Response:
         from gexis_core.radio_favourites import Full
@@ -1387,7 +1401,7 @@ class StateServer:
             return web.json_response({"error": "The favourites are full."}, status=409)
         if station is None:
             return web.json_response({"error": "That address did not play.", "played": False}, status=422)
-        return web.json_response({"ok": True, "station": station.to_json()})
+        return web.json_response({"ok": True, "station": self._stations.public(station)})
 
     async def _handle_artist_photos(self, request: web.Request) -> web.Response:
         """`?ids=1,2,3[&size=200]` -> `{"<id>": url|null}`.
@@ -4058,6 +4072,7 @@ class StateServer:
         app.router.add_put("/stations/favourites", self._handle_favourites_order)
         app.router.add_delete("/stations/favourites/{id}", self._handle_favourites_remove)
         app.router.add_post("/stations/favourites/address", self._handle_favourites_address)
+        app.router.add_get("/stations/logo/{key}", self._handle_station_logo)
         app.router.add_get("/library/artist-photos", self._handle_artist_photos)
         app.router.add_get("/library/artist-info", self._handle_artist_info)
         app.router.add_get("/enrichment", self._handle_enrichment)

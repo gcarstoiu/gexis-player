@@ -1669,12 +1669,12 @@
     mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 72px), transparent 100%);
   }
   .cards--more::-webkit-scrollbar { display: none; }
-  .card--mymusic { --card: 143, 196, 216; }
-  .card--favorites { --card: 232, 160, 180; }
+  .card--mymusic { --card: var(--c-radio-rgb); }
+  .card--favorites { --card: var(--c-favourite-rgb); }
   .card--apps { --card: var(--c-display-rgb); }
   .card--other { --card: 176, 188, 196; border-style: dashed; border-color: rgba(176, 188, 196, 0.4); background: rgba(176, 188, 196, 0.08); }
-  .card--mymusic .card__count { color: rgba(143, 196, 216, 0.9); }
-  .card--favorites .card__count { color: rgba(232, 160, 180, 0.9); }
+  .card--mymusic .card__count { color: rgba(var(--c-radio-rgb), 0.9); }
+  .card--favorites .card__count { color: rgba(var(--c-favourite-rgb), 0.9); }
   .card--apps .card__count { color: var(--c-display-90); }
   .card--other .card__count { color: rgba(176, 188, 196, 0.95); }
   .card.is-busy { opacity: 0.6; }

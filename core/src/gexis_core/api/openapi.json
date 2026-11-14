@@ -4839,6 +4839,69 @@
         }
       }
     },
+    "/stations/logo/{key}": {
+      "parameters": [
+        {
+          "name": "key",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{16}$"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "station_logo",
+        "tags": [
+          "Internet radio"
+        ],
+        "summary": "A station's logo, through the player",
+        "description": "Only a logo the player itself named in a station it gave out, fetched by the player and kept on it, so a screen never fetches from a station's site. PNG, JPEG, GIF or WebP.",
+        "x-gexis-stability": "stable",
+        "responses": {
+          "200": {
+            "description": "The picture.",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/gif": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such logo, or none could be had: the screens draw the radio mark.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/renderer/{renderer_id}/activate": {
       "post": {
         "operationId": "activate",

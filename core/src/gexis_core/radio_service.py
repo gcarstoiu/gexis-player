@@ -22,6 +22,7 @@ from gexis_core import radio_favourites
 from gexis_core.adapters.radio import PLAYING, NOT_ANSWERING, RadioAdapter
 from gexis_core.radio_directory import PAGE, Directory, Station, Unreachable, playable
 from gexis_core.radio_favourites import Favourites, address_id
+from gexis_core.radio_logos import Logos
 
 logger = logging.getLogger("gexis_core.radio_service")
 
@@ -43,8 +44,12 @@ class Refused(Exception):
 class RadioService:
     def __init__(self, *, directory: Directory, favourites: Favourites, adapter: RadioAdapter,
                  acquire: Callable[[str], Awaitable[None]], active: Callable[[], str | None],
-                 enabled: Callable[[], bool], country: Callable[[], str | None]) -> None:
+                 enabled: Callable[[], bool], country: Callable[[], str | None],
+                 logos: Logos | None = None) -> None:
         self.directory = directory
+        #: Logos through the player (George, 2026-11-14): every station a
+        #: screen is given names its logo by the player's own address.
+        self.logos = logos
         self.favourites = favourites
         self.adapter = adapter
         self._acquire = acquire
@@ -60,8 +65,25 @@ class RadioService:
         directory answered last time it was asked."""
         return {"enabled": self._enabled(), "country": self._country(),
                 "reachable": self.directory.reachable,
-                "favourites": [s.to_json() for s in self.favourites.all()]}
+                "favourites": self.favourites_json()}
 
+    def favourites_json(self) -> list[dict]:
+        return [self.public(s) for s in self.favourites.all()]
+
+    def public(self, station: Station) -> dict:
+        """A station as a screen is given it: its logo at the player's
+        address."""
+        data = station.to_json()
+        if self.logos is not None:
+            data["logo"] = self.logos.path(station.logo)
+        return data
+
+    def station_from(self, data) -> Station | None:
+        """A station a screen sends back, its logo given its own address
+        again (an address of ours the player no longer remembers is none)."""
+        if isinstance(data, dict) and self.logos is not None and isinstance(data.get("logo"), str):
+            data = {**data, "logo": self.logos.source(data["logo"])}
+        return Station.from_json(data)
     async def popular(self, offset: int = 0) -> dict:
         country = self._country()
         if not country:
@@ -97,7 +119,7 @@ class RadioService:
 
     def _page(self, stations: list[Station], offset: int) -> dict:
         favourite = set(self.favourites.ids())
-        return {"stations": [{**s.to_json(), "favourite": s.id in favourite} for s in stations],
+        return {"stations": [{**self.public(s), "favourite": s.id in favourite} for s in stations],
                 "offset": offset, "end": len(stations) < PAGE,
                 "reachable": self.directory.reachable}
 

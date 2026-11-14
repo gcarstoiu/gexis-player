@@ -23,6 +23,8 @@ from gexis_core.adapters.radio import RadioAdapter
 from gexis_core.arbitration import Supervisor, TimeoutLadder
 from gexis_core.radio_directory import Directory
 from gexis_core.radio_favourites import Favourites
+from gexis_core.radio_logos import Logos
+from pathlib import Path
 from gexis_core.radio_service import RadioService
 from gexis_core.state import StateStore
 from gexis_core.wsserver import StateServer
@@ -110,7 +112,8 @@ async def rig(monkeypatch):
                             enabled=lambda rid: rid != "radio" or switched["on"])
     service = RadioService(directory=directory, favourites=favourites, adapter=radio,
                            acquire=supervisor.acquire, active=lambda: supervisor.active,
-                           enabled=lambda: switched["on"], country=lambda: "DE")
+                           enabled=lambda: switched["on"], country=lambda: "DE",
+                           logos=Logos(user_agent="GexisPlayer/test", cache_dir=Path(folder) / "logos"))
     server = StateServer(StateStore({rid: a.capabilities for rid, a in adapters.items()}),
                          stations=service)
     client = TestClient(TestServer(server.make_app()))
@@ -216,6 +219,18 @@ async def test_a_station_added_by_its_address_is_kept_only_if_it_plays(rig):
 
     resp = await rig.client.post("/stations/favourites/address", json={"url": "file:///etc/passwd", "name": "x"})
     assert resp.status == 400
+
+
+async def test_logos_come_through_the_player_and_go_back_as_they_were(rig):
+    station = (await (await rig.client.get("/stations/popular")).json())["stations"][0]
+    assert station["logo"].startswith("/stations/logo/")
+    # Sent back as a favourite, it is kept with the logo's own address.
+    assert (await (await rig.client.post("/stations/favourites", json={"station": station})).json())["added"]
+    assert rig.favourites.all()[0].logo == "https://example.org/l.png"
+    listed = (await (await rig.client.get("/stations/favourites")).json())["favourites"]
+    assert listed[0]["logo"] == station["logo"]
+    # A key the player never gave is nothing.
+    assert (await rig.client.get("/stations/logo/0000000000000000")).status == 404
 
 
 async def test_switched_off_it_does_not_play(rig):

@@ -321,3 +321,22 @@ def test_capabilities_declare_no_level_of_its_own():
     assert not caps.volume_managed
     assert caps.controls == frozenset({"play", "pause", "next", "previous"})
     assert RadioAdapter.unit_name == "gexis-radio.service"
+
+
+async def test_nothing_sent_the_station_s_name_is_the_title(rig):
+    """George, 2026-11-14: with nothing sent, the station's name is the
+    title, with no album line; sent, the name is the album line."""
+    await rig.adapter.play_station(station(1))
+    await until(lambda: rig.adapter.state.state == radio_mod.PLAYING)
+    last = rig.metadata[-1]
+    assert (last.title, last.artist, last.album) == ("Station 1", None, None)
+    assert rig.adapter.state.lines == "none"
+    rig.mpv.set("metadata", {"icy-title": "Morning Show"})
+    await until(lambda: rig.adapter.state.lines == "whole")
+    last = rig.metadata[-1]
+    assert (last.title, last.artist, last.album) == ("Morning Show", None, "Station 1")
+    rig.mpv.set("metadata", {"icy-title": "Band - Song"})
+    await until(lambda: rig.adapter.state.lines == "split")
+    rig.mpv.set("metadata", {"icy-title": ""})
+    await until(lambda: rig.adapter.state.lines == "none")
+    assert rig.metadata[-1].title == "Station 1" and rig.metadata[-1].album is None

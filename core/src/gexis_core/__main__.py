@@ -30,7 +30,7 @@ from gexis_core.menus import LyrionMenus
 from gexis_core.radio import RadioBrowser
 from gexis_core.adapters.spotify import SpotifyAdapter
 from gexis_core.adapters.radio import RadioAdapter, UNIT_NAME as RADIO_UNIT
-from gexis_core import radio_directory, radio_favourites
+from gexis_core import radio_directory, radio_favourites, radio_logos
 from gexis_core import radio_service as radio_service_module
 from gexis_core.arbitration import Supervisor
 from dataclasses import replace
@@ -843,6 +843,8 @@ async def main() -> None:
     # and the settings exist; nothing resolves a station before then.
     radio_agent = f"GexisPlayer/{updates.short(updates.installed_release()) or 'unknown'}"
     stations = radio_directory.Directory(user_agent=radio_agent)
+    # George, 2026-11-14: logos through the player, never from the screens.
+    station_logos = radio_logos.Logos(user_agent=radio_agent)
     #: Raised on every change of the favourites, and published, so a panel,
     #: a phone and Home Assistant read the list again.
     favourites_revision = {"n": 0}
@@ -855,10 +857,16 @@ async def main() -> None:
     radio = RadioAdapter(user_agent=radio_agent,
                          resolve=lambda station: radio_service.resolve(station),
                          step=favourites.step,
-                         is_favourite=lambda station_id: favourites.get(station_id) is not None)
+                         is_favourite=lambda station_id: favourites.get(station_id) is not None,
+                         logo_path=station_logos.path)
 
     def _publish_radio() -> None:
-        state_store.set_radio({**radio.state.to_json(), "favourites": favourites_revision["n"]})
+        published = {**radio.state.to_json(), "favourites": favourites_revision["n"]}
+        if radio.state.station is not None:
+            published["station"] = {**published["station"],
+                                    "logo": station_logos.path(radio.state.station.logo),
+                                    "favourite": favourites.get(radio.state.station.id) is not None}
+        state_store.set_radio(published)
     radio.on_state_change(lambda _state: _publish_radio())
     adapters = {"lms": lms, "spotify": spotify, "bluetooth": bluetooth, "radio": radio}
 
@@ -5046,7 +5054,7 @@ async def main() -> None:
         directory=stations, favourites=favourites, adapter=radio,
         acquire=supervisor.acquire, active=lambda: supervisor.active,
         enabled=lambda: renderer_enabled("radio"),
-        country=lambda: settings.value("radio_country"))
+        country=lambda: settings.value("radio_country"), logos=station_logos)
     _publish_radio()
     state_server = StateServer(
         state_store,

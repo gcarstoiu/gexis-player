@@ -28,6 +28,9 @@
   --r-38: 38px;
   /* colours as 'r, g, b' for rgba(var(--x), alpha): the library's cards */
   --c-artist-rgb: 242, 164, 143;
+  /* Phase 31's two picked families (themeRule.js PICKED): the radio's accent and the heart */
+  --c-radio-rgb: 143, 196, 216;
+  --c-favourite-rgb: 232, 160, 180;
   --c-bluetooth-rgb: 159, 180, 232;
   --c-display-rgb: 200, 162, 216;
   --c-ink-rgb: 233, 238, 242;

@@ -341,3 +341,15 @@ def _refused_base() -> str:
     port = sock.getsockname()[1]
     sock.close()
     return f"http://127.0.0.1:{port}"
+
+
+@pytest.mark.parametrize("url, ok", [
+    ("http://stream.example.org/live", True), ("http://93.184.215.14/live", True),
+    ("http://192.168.1.10:8000/live", False), ("http://10.1.2.3/x", False), ("http://127.0.0.1/x", False),
+    ("http://[::1]/x", False), ("http://localhost/x", False), ("http://player.local/x", False),
+])
+def test_a_listed_station_on_the_home_network_is_left_out(url, ok):
+    assert rd.on_the_internet(url) is ok
+    entry = {**STATION, "url_resolved": url, "favicon": url + "/logo.png"}
+    station = rd.Station.from_directory(entry)
+    assert (station is not None) is ok

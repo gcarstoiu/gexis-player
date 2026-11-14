@@ -207,4 +207,31 @@
   --rc-stroke-position: 1px;   --rc-stroke-position-lg: 1.25px;
   --rc-dash-expected: 7 5;     --rc-dash-expected-lg: 8 6;
   --rc-dash-target: 0.5 5;     --rc-dash-target-lg: 0.5 6;  /* with round caps */
+
+  /* Phase 31 (ADR-0180): internet radio, design/source/31/tokens-radio-31.css. */
+  --accent-radio: #8fc4d8;                       /* the radio's mark, its rule on Now Playing, the station fallback */
+  --favourite: #e8a0b4;                          /* the heart, everywhere */
+  --radio-rule: linear-gradient(90deg,#8fc4d8,rgba(143,196,216,0.25)); /* Now Playing's 3 px top rule */
+  --radio-glyph-ground: 0.14;                    /* §8: a category disc's ground is its tint at this alpha */
+  --radio-glyph-line: 0.30;                      /* §8: and its border at this one */
+  --station-logo-row: 46px;   --station-logo-row-radius: 13px;   /* panel rows */
+  --station-logo-card-bar: 72px;  --station-logo-card-bar-radius: 16px; /* bar cards; 64 / 14 in favourites */
+  --station-logo-phone: 44px; --station-logo-phone-radius: 12px;
+  --station-logo-ha: 40px;    --station-logo-ha-radius: 10px;
+  --station-logo-native-max: 64px;               /* a logo smaller than this is drawn at its own size on the plate, never enlarged */
+  --station-logo-plate: rgba(233,238,242,0.08);
+  --station-logo-plate-line: rgba(233,238,242,0.14);
+  --station-fallback-ground: rgba(143,196,216,0.14);
+  --station-fallback-line: rgba(143,196,216,0.3);
+  --preset-size: 160px;  --preset-radius: 22px;  /* the panel's favourites row (1b) */
+  --preset-badge-ground: rgba(10,16,22,0.78);
+  --row-selected: rgba(126,214,188,0.16);        /* as the library's selected row */
+  --row-act-ground: rgba(126,214,188,0.13);  --row-act-line: rgba(126,214,188,0.32);
+  --row-removed-ink: rgba(233,238,242,0.5);      /* struck through */
+  --remove-ground: rgba(242,164,143,0.16);   --remove-line: rgba(242,164,143,0.45);
+  --directory-ground: rgba(224,167,88,0.1);  --directory-line: rgba(224,167,88,0.4);
+  --favourites-empty-line: rgba(233,238,242,0.22); /* 1.5 px dashed */
+  --skeleton-tile: rgba(233,238,242,0.08);
+  --skeleton-line-1: rgba(233,238,242,0.1);  --skeleton-line-2: rgba(233,238,242,0.07);
+  --radio-corner-button-width: 148px;            /* the waiting screen's Radio button, beside Settings */
 }

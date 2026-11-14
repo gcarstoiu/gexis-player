@@ -82,10 +82,15 @@ class RadioState:
     state: str = STOPPED
     #: Which reload the watchdog is on, 1 to `TRIES`; 0 otherwise.
     attempt: int = 0
+    #: What the station sent for Now Playing's lines (the design's `lines`):
+    #: `split` (artist and title), `whole` (one line, the title) or `none`
+    #: (nothing: the station's name is the title, George 2026-11-14).
+    lines: str = "none"
 
     def to_json(self) -> dict:
         return {"station": self.station.to_json() if self.station else None,
-                "state": self.state, "attempt": self.attempt, "tries": TRIES}
+                "state": self.state, "attempt": self.attempt, "tries": TRIES,
+                "lines": self.lines}
 
 
 class Units:
@@ -123,7 +128,8 @@ class RadioAdapter(Adapter):
                  step: Callable[[str, int], Station | None],
                  is_favourite: Callable[[str], bool],
                  units: Units | None = None, socket_path: str = SOCKET,
-                 connect: Callable[..., Mpv] = Mpv) -> None:
+                 connect: Callable[..., Mpv] = Mpv,
+                 logo_path: Callable[[str | None], str | None] = lambda url: url) -> None:
         """`resolve` gives the address to play a station at (the directory's
         now, counted, or the kept one); `step` the favourite before or after
         one; `is_favourite` whether a station is one."""
@@ -134,6 +140,8 @@ class RadioAdapter(Adapter):
         self._units = units or Units()
         self._socket_path = socket_path
         self._connect = connect
+        #: The player's own address for a station's logo (`radio_logos`).
+        self._logo_path = logo_path
         self._mpv: Mpv | None = None
         self._on_metadata: Callable[[TrackMetadata], None] | None = None
         self._on_state: Callable[[RadioState], None] | None = None
@@ -383,9 +391,17 @@ class RadioAdapter(Adapter):
                 self._sounding()
         elif name == "metadata":
             station = self._state.station
-            artist, title = radio_lines.from_metadata(value, station.name if station else None)
-            if (artist, title) != (self._metadata.artist, self._metadata.title):
-                self._publish_metadata(replace(self._metadata, artist=artist, title=title))
+            if station is None:
+                return
+            artist, title = radio_lines.from_metadata(value, station.name)
+            lines = "split" if artist else "whole" if title else "none"
+            if lines != self._state.lines:
+                self._set_state(replace(self._state, lines=lines))
+            metadata = self._lines(station, artist, title)
+            if (metadata.artist, metadata.title, metadata.album) != \
+                    (self._metadata.artist, self._metadata.title, self._metadata.album):
+                self._publish_metadata(replace(self._metadata, artist=metadata.artist,
+                                               title=metadata.title, album=metadata.album))
         elif name == "audio-params":
             rate = value.get("samplerate") if isinstance(value, dict) else None
             if isinstance(rate, int) and rate > 0:
@@ -486,17 +502,21 @@ class RadioAdapter(Adapter):
         self._watchdog = self._settled = None
 
     def _station_metadata(self, station: Station, transport: str) -> TrackMetadata:
-        """The album line is the station's name (item 4, as ADR-0038 §8a
-        for Lyrion's radio). The track's cover is looked up as for any
-        renderer that sends none (ADR-0081); the station's logo is shown
-        until one is found, and when none is."""
-        return TrackMetadata(
-            album=station.name,
-            fallback_artwork=station.logo,
-            codec=station.codec,
-            source_type=RENDERER_ID,
-            transport=transport,
-        )
+        """The track's cover is looked up as for any renderer that sends none
+        (ADR-0081); the station's logo, through the player, is shown until one
+        is found, and when none is."""
+        return replace(self._lines(station, None, None),
+                       fallback_artwork=self._logo_path(station.logo),
+                       codec=station.codec, source_type=RENDERER_ID, transport=transport)
+
+    @staticmethod
+    def _lines(station: Station, artist: str | None, title: str | None) -> TrackMetadata:
+        """**Now Playing's lines** (item 4; George, 2026-11-14): what the
+        station sent, with its name on the album line - or, when it sent
+        nothing, its name as the title and no album line."""
+        if title is None:
+            return TrackMetadata(title=station.name)
+        return TrackMetadata(artist=artist, title=title, album=station.name)
 
     def _publish_metadata(self, metadata: TrackMetadata) -> None:
         station = self._state.station

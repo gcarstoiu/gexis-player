@@ -34,6 +34,20 @@ export const THEMES = [
     veil: [0.8, 0.96], radius: 0.45, mono: "'Chivo Mono'", monoScale: 1 },
 ];
 
+//: **Two colours picked per theme in Phase 31** (design/source/31,
+//: tokens-radio-31.css): the radio's accent and the favourite's heart, each a
+//: hue no other accent of its theme holds. Not in THEMES, whose entries are
+//: Phase 28's themes.js to the letter; the generator checks these against
+//: Phase 31's file. Their families recolour as build.js's do in Phase 31: any
+//: #8fc4d8 or #e8a0b4, in tokens or a script's style, takes the theme's pick.
+export const PICKED = {
+  bauhaus: { radio: '#0d6475', favourite: '#a8205f' },
+  sage: { radio: '#1b5f6b', favourite: '#93284f' },
+  velvet: { radio: '#8ccfc7', favourite: '#e7a3d4' },
+  ink: { radio: '#62dbd6', favourite: '#f2a7e8' },
+  gauge: { radio: '#8fb4ff', favourite: '#ff6f7d' },
+};
+
 //: The setting's value (a name, as Settings shows it) to the theme, or
 //: null for Deep Teal and anything unknown.
 export function themeNamed(name) {
@@ -54,6 +68,7 @@ const FAMILY = {
   '126,214,188': 'lms', '168,229,211': 'lmsHi', '242,164,143': 'artist', '248,196,180': 'artistHi',
   '159,180,232': 'bluetooth', '143,217,168': 'spotify', '224,167,88': 'warn', '200,162,216': 'display',
   '63,90,109': 'weaveA', '46,68,83': 'weaveB', '55,80,95': 'weaveM', '13,21,28': 'ground', '13,21,27': 'ground',
+  '143,196,216': 'radio', '232,160,180': 'favourite',
 };
 
 //: build.js's makeMap: today's [r, g, b] and alpha to the theme's, or null
@@ -61,6 +76,8 @@ const FAMILY = {
 export function colourMap(T) {
   const C = {};
   for (const k of ['ink', 'lms', 'artist', 'bluetooth', 'spotify', 'warn', 'display', 'weaveA', 'weaveB', 'base', 'panel', 'well', 'desk', 'onAccent']) C[k] = hex2(T[k]);
+  C.radio = hex2(PICKED[T.id]?.radio ?? '#8fc4d8');
+  C.favourite = hex2(PICKED[T.id]?.favourite ?? '#e8a0b4');
   C.lmsHi = mix(C.lms, T.light ? [0, 0, 0] : [255, 255, 255], 0.3);
   C.artistHi = mix(C.artist, T.light ? [0, 0, 0] : [255, 255, 255], 0.3);
   C.weaveM = mix(C.weaveA, C.weaveB, 0.5);
@@ -78,7 +95,8 @@ export function colourMap(T) {
     if (FAMILY[k]) {
       const f = FAMILY[k];
       if (f === 'ground') return [C.panel, a];
-      return [C[f], (f === 'ink' || f === 'artist' || f === 'lms') && a < 1 ? +textA(a).toFixed(3) : a];
+      return [C[f], (f === 'ink' || f === 'artist' || f === 'lms' || f === 'radio' || f === 'favourite') && a < 1
+        ? +textA(a).toFixed(3) : a];
     }
     if (k === '255,255,255' && a < 1) return [C.ink, +(T.light ? a * 1.1 : a).toFixed(3)];
     if (k === '0,0,0' && a < 1) return [rgb, +(T.light ? a * 0.35 : a).toFixed(3)];

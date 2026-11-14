@@ -214,14 +214,14 @@
       {
         "type": "group",
         "label": "Internet radio",
-        "accent": "#e0a758"
+        "accent": "#8fc4d8"
       },
       {
         "key": "radio_enabled",
         "type": "toggle",
-        "label": "Enabled",
+        "label": "On",
         "marks": "N",
-        "note": "Stations from radio-browser.info, with or without Lyrion.",
+        "note": "Stations from a public directory, and your own favourites. Works with Lyrion off.",
         "default": true
       },
       {
@@ -229,7 +229,7 @@
         "type": "choice",
         "label": "Popular here",
         "marks": "N",
-        "note": "The country whose most played stations Popular here lists. Taken from the time zone until it is set.",
+        "note": "The country whose stations Popular here lists. Set from the time zone at setup.",
         "options": [],
         "optionsFrom": "countries",
         "onlyWhen": [
