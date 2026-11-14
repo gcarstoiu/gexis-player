@@ -9,6 +9,7 @@
   import BarLibrary from './screens/bar/BarLibrary.svelte';
   import WaitingHome from './screens/WaitingHome.svelte';
   import RadioScreen from './screens/radio/RadioScreen.svelte';
+  import BarRadio from './screens/bar/BarRadio.svelte';
   import PanelBackground from './screens/PanelBackground.svelte';
   import IdleScreen from './screens/IdleScreen.svelte';
   import VolumeDrawer from './screens/VolumeDrawer.svelte';
@@ -975,9 +976,11 @@
   {:else if radioShown}
     <div class="screen-layer">
       {#if screen.family === 'bar'}
-        <!-- ADR-0180, Bar family: the bars' Radio screen (BarRadio) goes
-             here, with the panel's props below - not built yet, so nothing
-             is drawn; Back is `radioOpen = false`. -->
+        <!-- ADR-0180, Bar family: the bars' Radio screen, its own rail where
+             the panel has the mini strip. -->
+        <BarRadio standalone active={$active} metadata={$metadata}
+          controls={$active ? ($capabilities[$active]?.controls ?? []) : []}
+          onback={() => (radioOpen = false)} onopen={() => (radioOpen = false)} />
       {:else}
         <RadioScreen standalone active={$active} metadata={$metadata} volume={$volume}
           controls={$active ? ($capabilities[$active]?.controls ?? []) : []}
@@ -997,11 +1000,13 @@
            `onartist` is not passed at all, so the artist line is a name rather
            than a link that leads nowhere. -->
       {#if screen.family === 'bar'}
-        <!-- ADR-0109, Bar family: the strip, with the same props. -->
+        <!-- ADR-0109, Bar family: the strip, with the same props. ADR-0180
+             (6c, B21): with Lyrion off, its chevron goes back to Radio. -->
         <BarNowPlaying active={$active} metadata={$metadata} volume={$volume} controls={$capabilities[$active]?.controls ?? []} available={$available} shuffle={$shuffle} repeat={$repeat} queue={$queue} onvolume={openVolume} onvisualisation={showVisualisation} ondashboard={dashboardButton ? showDashboard : null}
           rootless={lmsOff}
           onhome={lmsOff ? openSettings : openLibraryHome}
-          onminimise={lmsOff ? null : minimise}
+          onminimise={lmsOff ? (radioOn ? openRadio : null) : minimise}
+          minimiseLabel={lmsOff ? 'Back to Radio' : 'Minimise'}
           onartist={lmsOff ? undefined : openLibraryArtist}
           onalbum={lmsOff ? undefined : openLibraryAlbum} />
       {:else}
