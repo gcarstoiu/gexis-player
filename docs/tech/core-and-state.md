@@ -862,7 +862,8 @@ and guestpi could not reach each other on the home network): when a look
 leaves one found unanswered, each player that answered is asked for its
 own `/players` (`Players._through`), and a player one of them reached
 itself is listed with `via`, that player's name - one hop, never one it
-had through a third. It gets no address, so the group neither follows,
+had through a third, never this player (`_is_me`: its token, or its
+board's id or name, as another's list can be older than this core's start). It gets no address, so the group neither follows,
 joins nor tells it (`status_of` and `on_refresh` leave it out), and the
 screens give it no Join (`joinable`, `canEnter`) and end its status
 *Can't group from here* (`CANT_GROUP`). The lists are in alphabetical order, the group
