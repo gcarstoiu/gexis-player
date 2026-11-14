@@ -193,14 +193,25 @@ reload (`mdns_block.py`), and the name repair retries every 30 min after its
 five (ADR-0022's [H] row, confirmed), and since 25ec0855 sets the block
 right after the core's own reload at start (3 s open before). Tests and CI
 pass. **The preview (radio, this fix, the menu order and a group change
-told to every player) on sofapi, ShelvesPi and GuestPi since 2026-11-14
-19:44**, from the temporary branch `preview-radio-mdns` at 8dc68f52 (run
-43626907114; `~/preview-all` on each, the packages only; mpv came with it
-on the two new ones): installed idle, rebooted - each kept its own name,
-every plugin blocked, the block set again right after the core's own
-reload. **BedroomPi not yet**: it was playing Spotify (its packages wait in
-`~/preview-all`; dry run read, clean). The uploaded test renderer's newer
-build is on bedroompi and guestpi (private notes).
+told to every player) on all four players**: sofapi, ShelvesPi and GuestPi
+since 2026-11-14 19:44, BedroomPi since 20:50 (it had been playing), from
+the temporary branch `preview-radio-mdns` at 8dc68f52 (run 43626907114;
+`~/preview-all` on each, the packages only; mpv came with it on the three
+new to radio): installed idle, rebooted - each kept its own name
+(BedroomPi had been `bedroompi-2` on 1.16.2), every plugin blocked, the
+block set again right after the core's own reload. The uploaded test
+renderer's newer build is on bedroompi and guestpi (private notes).
+
+**BedroomPi and GuestPi cannot reach each other** (2026-11-14, George asked
+why GuestPi was missing from BedroomPi's menu): the home network, not the
+player. Each is on a different access point of the mesh; nothing sent from
+one straight to the other arrives, over IPv4 or IPv6, before and after
+BedroomPi's reboot, while multicast does - so each hears the other announced,
+its status request times out, and each lists the other two but not the
+other. Every other pair answers. A group with only those two would fail the
+same way. On those two a list opening waits the 2 s status timeout for the
+fresh answer; the kept list shows meanwhile. Masked probes in
+`~/projects/scratch/ph31/dbg/` (`reach.py`, `link.py`, `seen.py`).
 
 **The lists of players in alphabetical order** (George 2026-11-14, ADR-0136
 amended): built on `fix-players-order` (worktree

@@ -124,6 +124,12 @@ off; the watch set it again at 18:31:31. Those 3 s are now closed: the core
 sets it again right after its own reload (`fix-mdns-block` 25ec0855, not in
 that preview).
 
+The later preview with 25ec0855 (`gexis-core 1.16.2+git56.8dc68f5`) on all
+four, each installed idle and rebooted: each announced its own name with no
+clash and no repair try, every plugin unit had both bind programs, only
+avahi held port 5353, and the core logged the block set again twice.
+bedroompi had announced `bedroompi-2` on 1.16.2 until then.
+
 ## What it means
 
 - ADR-0142's block held until the first reload after a plugin started; the
