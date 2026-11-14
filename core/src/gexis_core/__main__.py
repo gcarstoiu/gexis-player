@@ -880,6 +880,10 @@ async def main() -> None:
     if regranted:
         subprocess.run(["systemctl", "daemon-reload"], check=False, capture_output=True)
         subprocess.run(["systemctl", "try-restart", *regranted], check=False, capture_output=True)
+        # Finding 148: that reload took the running plugins' port-5353 block
+        # off; set again now, not seconds later when the watch starts
+        # (sofapi, 2026-11-14: 3 s without it after boot).
+        mdns_block.reapply()
     # ADR-0142: what was announced for plugins goes with the core that wrote
     # it; each plugin asks again when it connects.
     try:
