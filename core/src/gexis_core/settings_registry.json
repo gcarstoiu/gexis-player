@@ -214,7 +214,8 @@
       {
         "type": "group",
         "label": "Internet radio",
-        "accent": "#8fc4d8"
+        "accent": "#8fc4d8",
+        "indicatorOf": "radio_enabled"
       },
       {
         "key": "radio_enabled",
@@ -229,7 +230,9 @@
         "type": "choice",
         "label": "Popular here",
         "marks": "N",
-        "note": "The country whose stations Popular here lists. Set from the time zone at setup.",
+        "summary": "The country whose stations Popular here lists. Set from the time zone at setup.",
+        "note": "Whose stations Popular here lists.",
+        "defaultTag": "From your time zone",
         "options": [],
         "optionsFrom": "countries",
         "onlyWhen": [

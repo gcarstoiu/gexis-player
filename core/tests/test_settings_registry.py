@@ -1547,6 +1547,27 @@ def test_a_service_s_connection_is_indicated_on_its_heading_apart_from_reports(s
         settings.indicate("beszel.enabled", "green")
 
 
+def test_popular_here_tags_the_time_zone_s_country_whatever_is_chosen(store, tmp_path):
+    """ADR-0180, design/source/31 S01-S04: the row's line is its summary and
+    the sheet's its note; *From your time zone* is beside the country the
+    row falls back to, chosen or not; the heading reports on the switch."""
+    settings = Settings(store, registry=load_registry(), seed_path=tmp_path / "absent.json",
+                        defaults={"radio_country": lambda: "DE"},
+                        options={"countries": lambda: ("AT", "DE")},
+                        labels={"countries": lambda: {"AT": "Austria", "DE": "Germany"}})
+    def row(key):
+        return next(r for g in settings.to_json() for r in g["rows"] if r.get("key") == key)
+    country = row("radio_country")
+    assert country["value"] == "DE" and country["optionTags"] == {"DE": "From your time zone"}
+    assert "defaultTag" not in country, "said as a tag, not as a field of its own"
+    assert country["summary"].startswith("The country whose") and country["note"] == "Whose stations Popular here lists."
+    store.set("radio_country", "AT")
+    assert row("radio_country")["optionTags"] == {"DE": "From your time zone"}
+    heading = next(r for g in settings.to_json() for r in g["rows"]
+                   if r.get("type") == "group" and r.get("label") == "Internet radio")
+    assert heading["indicatorOf"] == "radio_enabled" and "indicator" not in heading
+
+
 def test_headless_hides_every_setting_that_needs_a_screen(store):
     """George, 2026-10-05: with Headless on, the home screen, idle screen,
     visualiser and its tweaks, the volume drawer, the transition screen and

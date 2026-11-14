@@ -1096,6 +1096,15 @@ class Settings:
                 # *Tested* tags and problem lines as the static lists.
                 if row["key"] in self._option_tags:
                     public["optionTags"] = self._option_tags[row["key"]]()
+                # **The option the row falls back to, tagged** (ADR-0180,
+                # design/source/31 S02): *From your time zone* beside the
+                # time zone's country, whatever is chosen now.
+                tag = public.pop("defaultTag", None)
+                if tag:
+                    fallback = (self._defaults[row["key"]]() if row["key"] in self._defaults
+                                else row.get("default"))
+                    if fallback is not None:
+                        public["optionTags"] = {**public.get("optionTags", {}), str(fallback): tag}
                 if row["key"] in self._option_problems:
                     public["optionProblems"] = self._option_problems[row["key"]]()
                 if row["key"] in self._option_notes:

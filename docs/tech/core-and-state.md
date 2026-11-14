@@ -300,7 +300,10 @@ working by owners, `hardware_reports.shown_tested`) and `optionProblems` (a
 line under an option owners reported a problem with). The screens and boards
 lists get both from the registry (`OPTION_TAGS`, `OPTION_PROBLEMS`); the
 outputs, a daemon's own list, from `option_tags` and `option_problems`
-injected by `__main__.py`.
+injected by `__main__.py`. A choice's `defaultTag` is published as the tag of
+the option the row falls back to now (its `defaults` callable, else the
+registry default): *From your time zone* beside *Popular here*'s time-zone
+country, chosen or not (ADR-0180).
 
 `settings_registry.py:Settings` wraps the store and the registry (ADR-0035):
 
@@ -336,6 +339,11 @@ injected by `__main__.py`.
   *Connected* (`ok`). Without one it says *Connecting* (`wait`) for
   `GRACE_S` = 60 s, then *Not connected* (`bad`). A failed unit is `bad`
   at once.
+
+  Internet radio's heading names `radio_enabled` too, but the core says
+  nothing there: Settings says *Ready* itself while the radio is on and
+  `GET /stations/countries` answers - the directory's list, asked now or
+  kept from the last day - with `reachable` not false (ADR-0180).
 - Every successful `set` calls the row's callback and then bumps
   `settings_revision`, so every open client refetches. `PUT
   /settings/{key}` answers `{key, value, revision}`, the revision being the
