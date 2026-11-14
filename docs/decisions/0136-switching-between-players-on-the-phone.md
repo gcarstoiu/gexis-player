@@ -65,6 +65,12 @@ opened on:
    older than 5 s, it asks the players already found for their status again,
    without the network search (up to 5 s); the list kept on the phone shows
    meanwhile. The background search every 30 s is unchanged.
+4. **A group change is told to every player** (George, the same evening,
+   after the bar's list still showed a group undone on sofapi: the bar ran
+   1.16.2, without item 3). When what a player says of its group changes,
+   it tells every player found (`POST /players/changed`); each asks the
+   others again 0.3 s later and its open lists read `/players` again. A
+   player older than this answers 404 and waits for its next look.
 
 Built on `fix-players-order`, checked with invented players on the phone,
 the panel and the bar, and the manual's three group pictures retaken with the
