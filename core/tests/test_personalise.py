@@ -81,6 +81,15 @@ def test_airplay_is_written_either_way_and_waits_for_nothing():
         assert begun == []
 
 
+def test_internet_radio_is_written_either_way():
+    """ADR-0180 decision 7 (design/source/31 F01-F02): on in every preset,
+    a switch of its own in *My own mix*; it downloads nothing."""
+    for on in (True, False):
+        settings, begun = FakeSettings(), []
+        result = personalise.apply(personalise.checked({"radio_enabled": on}), settings, OFFERED, begun.extend)
+        assert settings.values["radio_enabled"] is on and result["failed"] == [] and begun == []
+
+
 def test_one_refusal_is_named_and_the_rest_still_written():
     settings = FakeSettings(refuse={"weather_location"})
     begun = []

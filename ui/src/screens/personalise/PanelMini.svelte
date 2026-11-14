@@ -13,6 +13,7 @@
   import spotifyIcon from '../../assets/icon-spotify.png';
   import btIcon from '../../assets/icon-bluetooth.png';
   import airplayIcon from '../../assets/icon-airplay.png';
+  import RadioMark from '../../lib/RadioMark.svelte';
 
   let p = $props();
 
@@ -27,15 +28,16 @@ const cond = c => ({ sunDisplay: c === 'sun' || c === 'part' ? 'block' : 'none',
     return d.toLocaleDateString('en-GB', { weekday: 'long' }) + sep + d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
   }
 
-  // The flow's sources: all four in turn (How will you listen?), or the
-  // ones chosen (Getting ready), 3 s each.
-  const FLOW = ['lyr', 'plex', 'spo', 'bt'], FLOW_DELAY = { lyr: '0s', plex: '-9s', spo: '-6s', bt: '-3s' };
+  // The flow's sources: all five in turn (How will you listen?), or the
+  // ones chosen (Getting ready), 3 s each. Internet radio is the fifth
+  // (ADR-0180, design/source/31 F03): the 12 s loop became 15 s.
+  const FLOW = ['lyr', 'plex', 'spo', 'bt', 'rad'], FLOW_DELAY = { lyr: '0s', plex: '-12s', spo: '-9s', bt: '-6s', rad: '-3s' };
   function flowShow(src) { return !p.marks || p.marks.includes(src) ? 'block' : 'none'; }
   function flowAnim(src) {
-    if (!p.marks) return `fuCycle 12s linear ${FLOW_DELAY[src]} infinite`;
+    if (!p.marks) return `fuCycle5 15s linear ${FLOW_DELAY[src]} infinite`;
     const chosen = FLOW.filter((x) => p.marks.includes(x)), n = chosen.length, k = chosen.indexOf(src);
     if (k < 0) return 'none';
-    const name = n >= 4 ? 'fuCycle' : `fuCycle${n}`;
+    const name = n === 4 ? 'fuCycle' : `fuCycle${n}`;
     return `${name} ${3 * n}s linear ${k === 0 ? 0 : 3 * k - 3 * n}s infinite`;
   }
 
@@ -55,7 +57,8 @@ const cond = c => ({ sunDisplay: c === 'sun' || c === 'part' ? 'block' : 'none',
     const mk = p.marks || [], N = { lyr: ['Lyrion', 'Starts on play'], plex: ['Plexamp', 'Listening'], spo: ['Spotify', 'Listening'], air: ['AirPlay', 'Listening'], bt: ['Bluetooth', 'Pairable'] };
     const tiles = ['lyr', 'plex', 'spo', 'air', 'bt'].filter(k => mk.includes(k)).map(k => { const lead = k === 'lyr'; return { name: N[k][0], status: N[k][1], isLyr: lead, isPlex: k === 'plex', isSpo: k === 'spo', isAir: k === 'air', isBt: k === 'bt',
       border: lead ? 'rgba(126,214,188,0.5)' : 'rgba(233,238,242,0.14)', markBg: lead ? 'rgba(126,214,188,0.1)' : 'rgba(233,238,242,0.08)', statusInk: lead ? '#7ed6bc' : 'rgba(233,238,242,0.6)' }; });
-    return { wTiles: tiles, wCols: Math.max(tiles.length, 3), wServices: tiles.length > 0, wNone: !tiles.length, wWall: !p.black };
+    // The radio is no tile (its own button, ADR-0180): with it on, there is a source.
+    return { wTiles: tiles, wCols: Math.max(tiles.length, 3), wServices: tiles.length > 0, wNone: !tiles.length && !mk.includes('rad'), wWall: !p.black };
   }
   function renderVals(p) {
     const kind = p.kind || 'lib', all = kind === 'all', anim = p.animate !== false, rpm = p.rpm === 45 ? 45 : 33;
@@ -269,6 +272,11 @@ const cond = c => ({ sunDisplay: c === 'sun' || c === 'part' ? 'block' : 'none',
         <span style="position:absolute;left:48cqw;top:38.5cqw;margin-left:-1cqw;margin-top:-2cqw;font-size:3cqw;line-height:1;color:#7ed6bc;opacity:0;animation:pmRiseB 2s ease-in-out 0ms infinite;">♪</span><span style="position:absolute;left:51.5cqw;top:38.5cqw;margin-left:-1cqw;margin-top:-2cqw;font-size:2.5cqw;line-height:1;color:#7ed6bc;opacity:0;animation:pmRiseA 2.5s ease-in-out 350ms infinite;">♫</span><span style="position:absolute;left:50cqw;top:38.5cqw;margin-left:-1cqw;margin-top:-2cqw;font-size:3.4cqw;line-height:1;color:#7ed6bc;opacity:0;animation:pmRiseB 1.8s ease-in-out 1100ms infinite;">♪</span><span style="position:absolute;left:49cqw;top:38.5cqw;margin-left:-1cqw;margin-top:-2cqw;font-size:2.7cqw;line-height:1;color:#7ed6bc;opacity:0;animation:pmRiseA 2.8s ease-in-out 1350ms infinite;">♩</span><span style="position:absolute;left:52cqw;top:38.5cqw;margin-left:-1cqw;margin-top:-2cqw;font-size:3cqw;line-height:1;color:#7ed6bc;opacity:0;animation:pmRiseB 2.2s ease-in-out 2200ms infinite;">♫</span>
         <div style="position:absolute;left:50cqw;top:45cqw;width:0;height:0;"><div style="position:absolute;left:-5cqw;top:-5cqw;width:10cqw;height:10cqw;border-radius:50%;border:0.18cqw solid rgba(233,238,242,0.5);box-sizing:border-box;animation:npRing 1800ms ease-out infinite;"></div><div style="position:absolute;left:-5cqw;top:-5cqw;width:10cqw;height:10cqw;border-radius:50%;background:rgba(16,26,33,0.92);border:1px solid rgba(233,238,242,0.2);box-sizing:border-box;display:flex;align-items:center;justify-content:center;"><img src={btIcon} alt="" style="width:4.4cqw;height:4.4cqw;display:block;opacity:0.85;" /></div><div style="position:absolute;left:-12cqw;width:24cqw;top:6.2cqw;text-align:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:1.8cqw;letter-spacing:0.16em;text-transform:uppercase;color:rgba(233,238,242,0.75);">Bluetooth</div></div>
       </div>
+      <!-- ADR-0180 (design/source/31 F03): Internet radio, the fifth step. -->
+      <div style="position:absolute;inset:0;z-index:2;opacity:0;animation:{flowAnim('rad')};display:{flowShow('rad')};">
+        <span style="position:absolute;left:48cqw;top:38.5cqw;margin-left:-1cqw;margin-top:-2cqw;font-size:3cqw;line-height:1;color:#7ed6bc;opacity:0;animation:pmRiseB 2s ease-in-out 0ms infinite;">♪</span><span style="position:absolute;left:51.5cqw;top:38.5cqw;margin-left:-1cqw;margin-top:-2cqw;font-size:2.5cqw;line-height:1;color:#7ed6bc;opacity:0;animation:pmRiseA 2.5s ease-in-out 350ms infinite;">♫</span><span style="position:absolute;left:50cqw;top:38.5cqw;margin-left:-1cqw;margin-top:-2cqw;font-size:3.4cqw;line-height:1;color:#7ed6bc;opacity:0;animation:pmRiseB 1.8s ease-in-out 1100ms infinite;">♪</span><span style="position:absolute;left:49cqw;top:38.5cqw;margin-left:-1cqw;margin-top:-2cqw;font-size:2.7cqw;line-height:1;color:#7ed6bc;opacity:0;animation:pmRiseA 2.8s ease-in-out 1350ms infinite;">♩</span><span style="position:absolute;left:52cqw;top:38.5cqw;margin-left:-1cqw;margin-top:-2cqw;font-size:3cqw;line-height:1;color:#7ed6bc;opacity:0;animation:pmRiseB 2.2s ease-in-out 2200ms infinite;">♫</span>
+        <div style="position:absolute;left:50cqw;top:45cqw;width:0;height:0;"><div style="position:absolute;left:-5cqw;top:-5cqw;width:10cqw;height:10cqw;border-radius:50%;border:0.18cqw solid rgba(143,196,216,0.6);box-sizing:border-box;animation:npRing 1800ms ease-out infinite;"></div><div style="position:absolute;left:-5cqw;top:-5cqw;width:10cqw;height:10cqw;border-radius:50%;background:rgba(143,196,216,0.18);border:0.26cqw solid rgba(143,196,216,0.6);box-sizing:border-box;display:flex;align-items:center;justify-content:center;"><span style="width:4.9cqw;height:4.9cqw;display:block;"><RadioMark size="100%" stroke={2.2} ink="#8fc4d8" /></span></div><div style="position:absolute;left:-12cqw;width:24cqw;top:6.2cqw;text-align:center;font-family:'IBM Plex Mono','Courier New',monospace;font-size:1.8cqw;letter-spacing:0.16em;text-transform:uppercase;color:rgba(233,238,242,0.75);">Internet radio</div></div>
+      </div>
     </div>
   {/if}
   {#if V.kPhoto}
@@ -427,6 +435,7 @@ const cond = c => ({ sunDisplay: c === 'sun' || c === 'part' ? 'block' : 'none',
   @keyframes fuCycle1{0%,100%{opacity:1;}}
   @keyframes fuCycle2{0%,44%{opacity:1;}50%,94%{opacity:0;}100%{opacity:1;}}
   @keyframes fuCycle3{0%,29.3%{opacity:1;}33.3%,96%{opacity:0;}100%{opacity:1;}}
+  @keyframes fuCycle5{0%,17.6%{opacity:1;}20%,97.6%{opacity:0;}100%{opacity:1;}}
 
   @keyframes tpMove{0%{left:74%;top:84%;}20%,32%{left:32.8%;top:27%;}50%,62%{left:67.2%;top:27%;}80%,90%{left:40%;top:82%;}100%{left:74%;top:84%;}}
   @keyframes tpPress{0%,21%,27%,51%,57%,81%,87%,100%{transform:scale(1);}24%,54%,84%{transform:scale(0.7);}}
