@@ -1,6 +1,8 @@
 # ADR-0164 — The phone remote
 
-**Status:** **Built** 2026-10-27 on `ph-phone-controls` from the second
+**Status:** The player menu's order amended 2026-11-14 (George, ADR-0136's
+amendment): alphabetical, this player in its place, no *Other players*
+heading. **Built** 2026-10-27 on `ph-phone-controls` from the second
 design (below, *Built (2026-10-27)*), previewed on sofapi, in 1.7.0
 (Stable, 2026-10-27; Phase 21 closed by George the same day).
 **Accepted, revised** — George, 2026-10-27: Claude Design's
