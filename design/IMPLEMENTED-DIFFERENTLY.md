@@ -913,6 +913,13 @@ is silent or production differs, confirmed by George (2026-10-28):
   group has that player. Remove is not on this player's row (Leave group is)
   nor on the leader's (Undo group is). A Fixed member's mute shows only
   where its output has a control to silence.
+- **[U]** The lists of players are in alphabetical order (George,
+  2026-11-14): the phone's menu, the panel's *Add players*, the bar's band
+  and the switcher. This player sits in its place with its check, not first;
+  a group goes where its first player falls, its players alphabetical, the
+  leader tagged where it falls. The phone's *Other players* heading is gone:
+  this player no longer divides the list. The drawing put this player, or
+  its group, first, the leader first within a group.
 - **[S]** *Add players* on the panel and the bar lists the group's own
   members first, with their state and no button, as the drawing's data does.
 - **[S]** On a panel shorter than 800 (720 at 13.3"), the grouped drawer

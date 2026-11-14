@@ -613,7 +613,9 @@ are NASA photographs (`assets/weather/`, credited in Credits).
 
 On a phone, `screens/remote/PhoneRemote.svelte` fills the page (ADR-0164,
 built from `design/source/21`): a player picker over `/players` (ADR-0136;
-another player opens its own page, C1) and a Remote / Settings switch, the
+another player opens its own page, C1; its menu in alphabetical order, this
+player in its place, a group where its first player falls - George,
+2026-11-14 - and `/players?fresh=1` asked on opening) and a Remote / Settings switch, the
 two pages side by side. Settings is `Settings.svelte` with
 `switcher={false}` and `flat` (its pages, choosers and the equaliser editor
 on the modals' solid `--bg-panel`, no weave or veil), mounted on its first

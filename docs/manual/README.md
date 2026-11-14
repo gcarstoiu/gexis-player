@@ -336,6 +336,11 @@ this player, and it plays along. Its players are not joined one by one from
 outside the group; a player already in a group has no Join on another one -
 leave or undo yours first.
 
+**The order.** Every list of players is in alphabetical order, so a player
+keeps its place whichever player the list is opened on - the one you are on
+too, with its check. A group's players stay together, in alphabetical order,
+where its first player falls.
+
 ![The group on the phone](images/phone-group.webp)
 
 **What a group plays.** Music started on any player of the group plays on

@@ -113,7 +113,7 @@ export function joinNames(names) {
  *  [text, more]. Empty when not grouped. */
 export function withText(g) {
   if (!g) return ['', ''];
-  const others = g.members.filter((m) => !m.me).map((m) => m.name);
+  const others = alphabetical(g.members).filter((m) => !m.me).map((m) => m.name);
   if (others.length <= 2) return [`with ${others.join(', ')}`, ''];
   return [`with ${others.slice(0, 2).join(', ')}`, ` + ${others.length - 2}`];
 }
@@ -262,7 +262,7 @@ export function silentNote(g, panel = false) {
 /** *Undo the group?* - the body. With the leader gone there is no music to
  *  stay on it (the design's `undoBody`). */
 export function undoBody(g) {
-  const names = g.members.map((m) => m.name);
+  const names = alphabetical(g.members).map((m) => m.name);
   const leader = g.members.find((m) => m.leads)?.name ?? names[0];
   const again = `${joinNames(names)} each play on their own again.`;
   return g.silent ? again : `${again} The music stays on ${leader}.`;

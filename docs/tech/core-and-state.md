@@ -846,7 +846,14 @@ share's). `players.py`: `Players.watch()` (started with the core) runs
 host (`parse_browse`, this player left out by hostname) and asks each `GET
 /player/status` (2 s); `/players` answers from that, in about 10 ms where a
 search on request took 1.1 s (measured on sofapi, 2026-10-11). The phone
-remembers the last list (`localStorage`), so the button shows at once. `/player/status` is `{name, host, instance, id, screen, transport, renderer}` - the
+remembers the last list (`localStorage`), so the button shows at once.
+`/players?fresh=1`, sent when a list opens (the phone's menu, the panel's
+drawer, the bar's tray, the switcher): if what was found is older than
+`ASK_AGAIN_S` (5 s), the players already found are asked their status again,
+without a search (`Players.ask_again`), so a group made or undone elsewhere
+shows (George, 2026-11-14). The lists are in alphabetical order, a group's
+players together where its first player falls (`inOrder` and its helpers in
+`lib/group.svelte.js`). `/player/status` is `{name, host, instance, id, screen, transport, renderer}` - the
 renderer named as the source list names it; `instance` a token made at each
 core start, by which a player found under a name avahi changed after a
 conflict (`guestpi-2.local`, 2026-10-12) still leaves itself out; `id` the
