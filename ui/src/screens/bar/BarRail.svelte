@@ -17,6 +17,11 @@
     read as broken.
 
   A tap anywhere but play opens now playing, as the mini strip does.
+
+  **A station** (ADR-0180; design/source/31, B01-B13): the radio mark at 38
+  in its accent, Stop in place of Pause, and a logo on its plate rather than
+  stretched to a cover. On Radio's pages, with nothing playing, the radio
+  mark alone at 0.5 (B02).
 -->
 <script>
   import { enrichedArtwork } from '../../lib/enrichment.js';
@@ -24,8 +29,12 @@
   import { availability, sources } from '../../lib/state.js';
   import { playhead } from '../../lib/playhead.svelte.js';
   import { playToggle } from '../../lib/playToggle.svelte.js';
+  import RadioMark from '../../lib/RadioMark.svelte';
+  import StationLogo from '../../lib/StationLogo.svelte';
+  import { radio as radioState } from '../../lib/radio.js';
 
-  let { active, metadata, controls = [], onopen } = $props();
+  //: `radio`: the rail of a Radio page (BarRadio.svelte).
+  let { active, metadata, controls = [], onopen, radio = false } = $props();
 
   const transport = $derived(metadata?.transport ?? null);
   const head = playhead(() => metadata);
@@ -58,6 +67,11 @@
     Math.min(64, Math.floor((RAIL_ROOM - gap * Math.max(0, waiting.length - 1)) / Math.max(1, waiting.length))),
   );
 
+  //: A station's own picture is its logo, drawn on the plate; a cover found
+  //: for the track fills the slot as any other.
+  const station = $derived(active === 'radio' ? ($radioState?.station ?? null) : null);
+  const stationArt = $derived(!!station && (!artwork || (!!station.logo && artwork === station.logo)));
+
   let pressed = $state(false);
   const open = () => active && onopen?.();
 </script>
@@ -79,7 +93,9 @@
   onpointerleave={() => (pressed = false)}
   onpointercancel={() => (pressed = false)}
 >
-  {#if !active}
+  {#if !active && radio}
+    <div class="waiting"><RadioMark size={34} ink="rgba(var(--c-radio-rgb), 0.5)" /></div>
+  {:else if !active}
     <div class="waiting" style:gap={`${gap}px`}>
       {#each waiting as w, i (w.id)}
         <div class="waiting__one" style:width={`${disc}px`} style:height={`${disc}px`}>
@@ -96,8 +112,10 @@
     {/if}
   </div>
 
-  <div class="cover">
-    {#if artwork}
+  <div class="cover" class:cover--station={stationArt}>
+    {#if stationArt}
+      <StationLogo src={artwork} size={84} radius="var(--r-md)" mark={38} />
+    {:else if artwork}
       <img src={artwork} alt="" onerror={() => (failedArtwork = artwork)} />
     {:else if !active}
       <div class="cover__slot"></div>
@@ -105,7 +123,7 @@
   </div>
 
   <div class="mark">
-    {#if active}<SourceMark source={active} size={26} color="var(--src-accent)" />{/if}
+    {#if active}<SourceMark source={active} size={active === 'radio' ? 38 : 26} color="var(--src-accent)" />{/if}
   </div>
 
   <button
@@ -115,14 +133,17 @@
     class:is-gone={active && !hasPlayPause}
     disabled={!active || !hasPlayPause}
     data-shows={toggle.shows}
-    aria-label={toggle.shows === 'playing' ? 'Pause' : 'Play'}
+    aria-label={toggle.shows === 'playing' ? (active === 'radio' ? 'Stop' : 'Pause') : 'Play'}
     onpointerdown={(e) => e.stopPropagation()}
     onclick={(e) => {
       e.stopPropagation();
       toggle.toggle();
     }}
   >
-    {#if active && toggle.shows === 'playing'}
+    {#if active === 'radio' && toggle.shows === 'playing'}
+      <!-- ADR-0180: a station's Pause stops it, so it is drawn as Stop. -->
+      <span class="i-stop"></span>
+    {:else if active && toggle.shows === 'playing'}
       <span class="i-pause"><i></i><i></i></span>
     {:else}
       <span class="i-play"></span>
@@ -215,6 +236,10 @@
     box-shadow: inset 0 0 0 1px var(--c-white-08);
     transition: transform 90ms ease;
   }
+  .cover--station {
+    background: none;
+    box-shadow: none;
+  }
   .cover img {
     position: absolute;
     inset: 0;
@@ -269,6 +294,12 @@
   .i-pause i {
     width: 6px;
     height: 23px;
+    border-radius: 2px;
+    background: var(--bg-panel);
+  }
+  .i-stop {
+    width: 13px;
+    height: 13px;
     border-radius: 2px;
     background: var(--bg-panel);
   }

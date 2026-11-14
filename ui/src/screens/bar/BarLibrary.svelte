@@ -62,6 +62,7 @@
   import LyrionLevel from '../LyrionLevel.svelte';
   import LyrionSearch from '../LyrionSearch.svelte';
   import { dragScroll, watchSideways, edgeMask } from './sideways.svelte.js';
+  import BarRadio from './BarRadio.svelte';
 
   // Library.svelte's props, so App can hand either screen the same set.
   // `volume`, `availability`, `onvolume` and `onsettings` are the panel's:
@@ -447,7 +448,13 @@
       if (!nav.wanted()) return;
       radio = page;
       if (!push) return;
-      path = handle ? [...path, { kind: 'radio', handle, label }] : [{ kind: 'radio', handle: null, label: 'Radio' }];
+      //: From the player's own Radio screen, Lyrion's tree goes on top of
+      //: it, so Back returns there (ADR-0180; design/source/31).
+      path = handle
+        ? [...path, { kind: 'radio', handle, label }]
+        : here?.kind === 'stations'
+          ? [...path, { kind: 'radio', handle: null, label: "Lyrion's radio" }]
+          : [{ kind: 'radio', handle: null, label: 'Radio' }];
     } catch (err) {
       flash(err.message);
       console.info('radio:', err.message);
@@ -465,6 +472,13 @@
       console.info('radio:', err.message);
     }
   }
+
+  //: **ADR-0180: the player's own Radio screen** (design/source/31, B01),
+  //: where the home's Radio card leads while internet radio is on; Lyrion's
+  //: tree is its *Lyrion's radio*. With it off, the card opens Lyrion's tree
+  //: as before.
+  const radioOn = $derived($settingValues.radio_enabled !== false);
+  const openStations = () => (path = [{ kind: 'stations', label: 'Radio' }]);
 
   //: The radio's crumb: the levels above this one, as Bar States draws it
   //: ("Radio · By location"); at the top, what the level holds.
@@ -873,6 +887,20 @@
     </div>
   {/snippet}
 
+  {#if here?.kind === 'stations'}
+    <!-- ADR-0180: Radio draws its own side column, steps and rail; Back
+         from its top comes home. -->
+    <BarRadio
+      {active}
+      {metadata}
+      {controls}
+      lyrion
+      onback={() => opening(back)}
+      onhome={() => opening(home)}
+      onlyrion={() => openRadio()}
+      onopen={onclose}
+    />
+  {:else}
   <div class="frame">
     {#if column}
       <div class="side">
@@ -965,7 +993,8 @@
               </span>
             </button>
             <button class="card card--radio" class:is-pressed={pressed === 'radio'} class:is-busy={busy === 'radio'} type="button"
-              onpointerdown={() => press('radio')} onpointerup={lift} onpointercancel={lift} onclick={() => opening(() => openRadio())}>
+              onpointerdown={() => press('radio')} onpointerup={lift} onpointercancel={lift}
+              onclick={() => opening(() => (radioOn ? openStations() : openRadio()))}>
               <span class="glyph glyph--waves"><i></i><b></b><b></b></span>
               <span class="card__text">
                 <span class="card__name">Radio</span>
@@ -1331,6 +1360,7 @@
       </div>
     {/if}
   </div>
+  {/if}
 </div>
 
 <style>

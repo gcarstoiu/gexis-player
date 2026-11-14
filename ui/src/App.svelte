@@ -9,6 +9,7 @@
   import BarLibrary from './screens/bar/BarLibrary.svelte';
   import WaitingHome from './screens/WaitingHome.svelte';
   import RadioScreen from './screens/radio/RadioScreen.svelte';
+  import BarRadio from './screens/bar/BarRadio.svelte';
   import PanelBackground from './screens/PanelBackground.svelte';
   import IdleScreen from './screens/IdleScreen.svelte';
   import VolumeDrawer from './screens/VolumeDrawer.svelte';
@@ -975,9 +976,11 @@
   {:else if radioShown}
     <div class="screen-layer">
       {#if screen.family === 'bar'}
-        <!-- ADR-0180, Bar family: the bars' Radio screen (BarRadio) goes
-             here, with the panel's props below - not built yet, so nothing
-             is drawn; Back is `radioOpen = false`. -->
+        <!-- ADR-0180, Bar family: the bars' Radio screen, its own rail where
+             the panel has the mini strip. -->
+        <BarRadio standalone active={$active} metadata={$metadata}
+          controls={$active ? ($capabilities[$active]?.controls ?? []) : []}
+          onback={() => (radioOpen = false)} onopen={() => (radioOpen = false)} />
       {:else}
         <RadioScreen standalone active={$active} metadata={$metadata} volume={$volume}
           controls={$active ? ($capabilities[$active]?.controls ?? []) : []}
