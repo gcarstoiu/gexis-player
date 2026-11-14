@@ -114,6 +114,13 @@ radio on a Pi 4 were found published: to be measured.
      for (a mono station decodes as one channel). The rate at the card,
      the stage and a stream at 32 kHz or below are measured in the build,
      on a player not in a group.
+   - **On a player 2026-11-14**
+     ([Finding 147](../findings/147-internet-radio-through-the-real-chain.md)):
+     the stream's own rate reaches the DAC, 32-bit stereo; 22.05 kHz is
+     raised to 48 kHz with the stage running; a cut recovers and a station
+     that stays down stops with the message; 4.8-7.0 % of a core through the
+     real chain (the meter and the conversion run in mpv's process); memory
+     flat over an hour.
 4. **How a station plays and shows**:
    - Tapping a station plays it: the radio renderer acquires the output as
      the others do (arbitration, ADR-0027); another source takes over and
@@ -254,6 +261,19 @@ repository). George's picks are in its README. His answers the same day:
   only the player's address reaches a station's site (item 7 stays true).
 - **Two limits appended to ADR-0022** as [H]: the check's 20 s, and at most
   200 favourites.
+
+**And on what the screens' build found undrawn** (George, the same day):
+the phone hides *Lyrion's radio* (it has no Lyrion browsing; a control that
+does nothing is not shown); *Popular here*'s sheet lists only countries with
+stations when the directory answers, every country when it cannot be
+reached; Settings' heading says *Directory unreachable* then; first use's
+*Your setup* gains an Internet radio row; and, as built, *No country is
+called "…"*, a search count of *50+* while more results remain, the phone's
+search closing when emptied, Undo after the heart removes a favourite on
+the phone, Home on a Radio sub-page going to the library's top with Lyrion
+on and Radio's top with it off, a station played with nothing playing
+opening Now Playing, and a preset in first use asked again turning the
+radio on. Four more values appended to ADR-0022 as [H].
 
 Settled by this record, not asked: three tries (ADR-0022, confirmed
 2026-11-13); favourites belong to the player (item 5). *By language*'s

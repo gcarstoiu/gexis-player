@@ -3945,9 +3945,16 @@ in the ADR's *The core, built* section): the directory client, the
 favourites, mpv as `gexis-radio.service`, the `/stations` routes, the two
 settings rows, the unit and mpv in the packages; tests against a fake
 directory and a fake mpv that fail as the real ones did, and a check
-against a real mpv with a silent output. **Next:** the screens from Claude
-Design's handover once it is in the repository; then a preview on a player
-not in a group.
+against a real mpv with a silent output. **The screens built 2026-11-14**
+(panel, bars, phone, Settings, first use) from Claude Design's handover
+(`design/source/31/`), and the public documents. **On a player 2026-11-14**
+([Finding 147](findings/147-internet-radio-through-the-real-chain.md), sofapi
+taken out of its group and put back): the stream's rate to the DAC, 22 kHz
+raised to 48 with room correction running (acceptance 4 met), a cut recovered
+and a station down stopped with the message (5 met), 4.8-7.0 % of a core
+through the real chain (7 for George to read against Finding 146's silent
+3-6 %), memory flat over an hour. **Next:** George's regression pass on
+sofapi (the preview stays installed); the Home Assistant integration.
 
 **Acceptance:**
 
