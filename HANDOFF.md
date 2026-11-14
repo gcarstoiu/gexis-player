@@ -192,13 +192,15 @@ ADR-0142 amended, Lesson 96). The core now sets the block again after each
 reload (`mdns_block.py`), and the name repair retries every 30 min after its
 five (ADR-0022's [H] row, confirmed), and since 25ec0855 sets the block
 right after the core's own reload at start (3 s open before). Tests and CI
-pass. **On sofapi since 2026-11-14 18:30: the preview of radio, this fix and
-the menu order together** (George's choice), from the temporary branch
-`preview-radio-mdns` at b0140bad (run 43620767986; `~/preview-sofapi` there,
-the packages only): installed while idle (George let its music be paused),
-rebooted - the name `sofapi` held, every plugin blocked (Finding 148 §5).
-bedroompi and guestpi have their names back and run the uploaded test
-renderer's newer build (private notes).
+pass. **The preview (radio, this fix, the menu order and a group change
+told to every player) on sofapi, ShelvesPi and GuestPi since 2026-11-14
+19:44**, from the temporary branch `preview-radio-mdns` at 8dc68f52 (run
+43626907114; `~/preview-all` on each, the packages only; mpv came with it
+on the two new ones): installed idle, rebooted - each kept its own name,
+every plugin blocked, the block set again right after the core's own
+reload. **BedroomPi not yet**: it was playing Spotify (its packages wait in
+`~/preview-all`; dry run read, clean). The uploaded test renderer's newer
+build is on bedroompi and guestpi (private notes).
 
 **The lists of players in alphabetical order** (George 2026-11-14, ADR-0136
 amended): built on `fix-players-order` (worktree
@@ -214,7 +216,11 @@ group pictures retaken. In sofapi's preview.
 **The Home Assistant integration's `radio` branch:** a stopped station shows
 as paused with Play (George); the card keeps one column under its 440 px cap.
 
-**Next: George's regression pass on sofapi** covers all three (to-do
+**A group change is told to every player** (George, ADR-0136 item 4): on the
+players, a group made on ShelvesPi showed in sofapi's kept list 0.64 s later,
+undone 1.48 s later, without sofapi being asked.
+
+**Next: George's regression pass** covers all three (to-do
 `ph31-regression`, `fix-mdns-block`, `players-menu-order`); each branch then
 merges into `next` on its own, `preview-radio-mdns` deleted after. Merging
 `fix-players-order` and `ph-radio` both into `next` conflicts once in
