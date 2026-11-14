@@ -235,6 +235,31 @@ repository). What the build settled that the decision above leaves open:
 - **Placeholders until the design**: the source's accent (the warning
   token's colour today) and its mark (none).
 
+## The design, and George's answers on it (2026-11-14)
+
+Claude Design's handover is `design/source/31/` (its PNGs kept outside the
+repository). George's picks are in its README. His answers the same day:
+
+- **The nine choices made while drawing, and the new words: as drawn.** With
+  Lyrion off, Radio shows the mini strip while something plays; the radio
+  mark is a broadcast mark; the panel's favourites row has *All N* and its
+  tiles only play; the bars' move buttons read *Earlier* and *Later*;
+  *Popular here* starts as the time zone's country; Internet radio's section
+  in Settings → Sources comes after Bluetooth, with *Ready*; it is in every
+  first-use preset, with a *Radio* group in *My own mix*; the card says the
+  other stations are in Home Assistant's media browser; the phone's *Add by
+  address* sits beside *Edit*.
+- **A station added by its address keeps playing** once its check passes.
+- **Logos come through the player**: it fetches, keeps and serves them, so
+  only the player's address reaches a station's site (item 7 stays true).
+- **Two limits appended to ADR-0022** as [H]: the check's 20 s, and at most
+  200 favourites.
+
+Settled by this record, not asked: three tries (ADR-0022, confirmed
+2026-11-13); favourites belong to the player (item 5). *By language*'s
+tint is built as drawn (`--accent-display`). With nothing sent, the
+station's name is the title (George, in the design's picks).
+
 ## Decided 2026-11-13 (George)
 
 Decisions 1-7 as recommended: radio-browser.info; one Radio screen with
