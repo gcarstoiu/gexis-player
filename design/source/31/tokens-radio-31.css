@@ -1,0 +1,177 @@
+/* gexis — Phase 31 internet radio tokens, default theme.
+   New this phase; the rest are tokens.css's. Each theme block below is the
+   same names through Phase 28's recolour (theme.py), with --accent-radio and
+   --favourite chosen per theme: a hue no other accent of that theme holds,
+   4.5:1 or more as text on its base and panel. */
+:root {
+  --accent-radio: #8fc4d8;                       /* the radio's mark, its rule on Now Playing, the station fallback */
+  --favourite: #e8a0b4;                          /* the heart, everywhere */
+  --radio-rule: linear-gradient(90deg,#8fc4d8,rgba(143,196,216,0.25)); /* Now Playing's 3 px top rule */
+  --radio-glyph-ground: 0.14;                    /* §8: a category disc's ground is its tint at this alpha */
+  --radio-glyph-line: 0.30;                      /* §8: and its border at this one */
+  --station-logo-row: 46px;   --station-logo-row-radius: 13px;   /* panel rows */
+  --station-logo-card-bar: 72px;  --station-logo-card-bar-radius: 16px; /* bar cards; 64 / 14 in favourites */
+  --station-logo-phone: 44px; --station-logo-phone-radius: 12px;
+  --station-logo-ha: 40px;    --station-logo-ha-radius: 10px;
+  --station-logo-native-max: 64px;               /* a logo smaller than this is drawn at its own size on the plate, never enlarged */
+  --station-logo-plate: rgba(233,238,242,0.08);
+  --station-logo-plate-line: rgba(233,238,242,0.14);
+  --station-fallback-ground: rgba(143,196,216,0.14);
+  --station-fallback-line: rgba(143,196,216,0.3);
+  --preset-size: 160px;  --preset-radius: 22px;  /* the panel's favourites row (1b) */
+  --preset-badge-ground: rgba(10,16,22,0.78);
+  --row-selected: rgba(126,214,188,0.16);        /* as the library's selected row */
+  --row-act-ground: rgba(126,214,188,0.13);  --row-act-line: rgba(126,214,188,0.32);
+  --row-removed-ink: rgba(233,238,242,0.5);      /* struck through */
+  --remove-ground: rgba(242,164,143,0.16);   --remove-line: rgba(242,164,143,0.45);
+  --directory-ground: rgba(224,167,88,0.1);  --directory-line: rgba(224,167,88,0.4);
+  --favourites-empty-line: rgba(233,238,242,0.22); /* 1.5 px dashed */
+  --skeleton-tile: rgba(233,238,242,0.08);
+  --skeleton-line-1: rgba(233,238,242,0.1);  --skeleton-line-2: rgba(233,238,242,0.07);
+  --radio-corner-button-width: 148px;            /* the waiting screen's Radio button, beside Settings */
+}
+
+/* Bauhaus */
+:root[data-theme="bauhaus"] {
+  --accent-radio: #0d6475;                       /* the radio's mark, its rule on Now Playing, the station fallback */
+  --favourite: #a8205f;                          /* the heart, everywhere */
+  --radio-rule: linear-gradient(90deg,#0d6475,rgba(13,100,117,0.275)); /* Now Playing's 3 px top rule */
+  --radio-glyph-ground: 0.14;                    /* §8: a category disc's ground is its tint at this alpha */
+  --radio-glyph-line: 0.30;                      /* §8: and its border at this one */
+  --station-logo-row: 46px;   --station-logo-row-radius: 13px;   /* panel rows */
+  --station-logo-card-bar: 72px;  --station-logo-card-bar-radius: 16px; /* bar cards; 64 / 14 in favourites */
+  --station-logo-phone: 44px; --station-logo-phone-radius: 12px;
+  --station-logo-ha: 40px;    --station-logo-ha-radius: 10px;
+  --station-logo-native-max: 64px;               /* a logo smaller than this is drawn at its own size on the plate, never enlarged */
+  --station-logo-plate: rgba(20,20,20,0.088);
+  --station-logo-plate-line: rgba(20,20,20,0.154);
+  --station-fallback-ground: rgba(13,100,117,0.154);
+  --station-fallback-line: rgba(13,100,117,0.33);
+  --preset-size: 160px;  --preset-radius: 22px;  /* the panel's favourites row (1b) */
+  --preset-badge-ground: rgba(242,239,232,0.78);
+  --row-selected: rgba(26,71,196,0.176);        /* as the library's selected row */
+  --row-act-ground: rgba(26,71,196,0.143);  --row-act-line: rgba(26,71,196,0.352);
+  --row-removed-ink: rgba(20,20,20,0.675);      /* struck through */
+  --remove-ground: rgba(209,38,28,0.176);   --remove-line: rgba(209,38,28,0.643);
+  --directory-ground: rgba(150,72,0,0.1);  --directory-line: rgba(150,72,0,0.4);
+  --favourites-empty-line: rgba(20,20,20,0.242); /* 1.5 px dashed */
+  --skeleton-tile: rgba(20,20,20,0.088);
+  --skeleton-line-1: rgba(20,20,20,0.11);  --skeleton-line-2: rgba(20,20,20,0.077);
+  --radio-corner-button-width: 148px;            /* the waiting screen's Radio button, beside Settings */
+}
+
+/* Sage */
+:root[data-theme="sage"] {
+  --accent-radio: #1b5f6b;                       /* the radio's mark, its rule on Now Playing, the station fallback */
+  --favourite: #93284f;                          /* the heart, everywhere */
+  --radio-rule: linear-gradient(90deg,#1b5f6b,rgba(27,95,107,0.275)); /* Now Playing's 3 px top rule */
+  --radio-glyph-ground: 0.14;                    /* §8: a category disc's ground is its tint at this alpha */
+  --radio-glyph-line: 0.30;                      /* §8: and its border at this one */
+  --station-logo-row: 46px;   --station-logo-row-radius: 13px;   /* panel rows */
+  --station-logo-card-bar: 72px;  --station-logo-card-bar-radius: 16px; /* bar cards; 64 / 14 in favourites */
+  --station-logo-phone: 44px; --station-logo-phone-radius: 12px;
+  --station-logo-ha: 40px;    --station-logo-ha-radius: 10px;
+  --station-logo-native-max: 64px;               /* a logo smaller than this is drawn at its own size on the plate, never enlarged */
+  --station-logo-plate: rgba(27,36,30,0.088);
+  --station-logo-plate-line: rgba(27,36,30,0.154);
+  --station-fallback-ground: rgba(27,95,107,0.154);
+  --station-fallback-line: rgba(27,95,107,0.33);
+  --preset-size: 160px;  --preset-radius: 22px;  /* the panel's favourites row (1b) */
+  --preset-badge-ground: rgba(236,232,220,0.78);
+  --row-selected: rgba(36,90,61,0.176);        /* as the library's selected row */
+  --row-act-ground: rgba(36,90,61,0.143);  --row-act-line: rgba(36,90,61,0.352);
+  --row-removed-ink: rgba(27,36,30,0.675);      /* struck through */
+  --remove-ground: rgba(168,64,31,0.176);   --remove-line: rgba(168,64,31,0.643);
+  --directory-ground: rgba(138,74,0,0.1);  --directory-line: rgba(138,74,0,0.4);
+  --favourites-empty-line: rgba(27,36,30,0.242); /* 1.5 px dashed */
+  --skeleton-tile: rgba(27,36,30,0.088);
+  --skeleton-line-1: rgba(27,36,30,0.11);  --skeleton-line-2: rgba(27,36,30,0.077);
+  --radio-corner-button-width: 148px;            /* the waiting screen's Radio button, beside Settings */
+}
+
+/* Velvet */
+:root[data-theme="velvet"] {
+  --accent-radio: #8ccfc7;                       /* the radio's mark, its rule on Now Playing, the station fallback */
+  --favourite: #e7a3d4;                          /* the heart, everywhere */
+  --radio-rule: linear-gradient(90deg,#8ccfc7,rgba(140,207,199,0.25)); /* Now Playing's 3 px top rule */
+  --radio-glyph-ground: 0.14;                    /* §8: a category disc's ground is its tint at this alpha */
+  --radio-glyph-line: 0.30;                      /* §8: and its border at this one */
+  --station-logo-row: 46px;   --station-logo-row-radius: 13px;   /* panel rows */
+  --station-logo-card-bar: 72px;  --station-logo-card-bar-radius: 16px; /* bar cards; 64 / 14 in favourites */
+  --station-logo-phone: 44px; --station-logo-phone-radius: 12px;
+  --station-logo-ha: 40px;    --station-logo-ha-radius: 10px;
+  --station-logo-native-max: 64px;               /* a logo smaller than this is drawn at its own size on the plate, never enlarged */
+  --station-logo-plate: rgba(242,224,210,0.08);
+  --station-logo-plate-line: rgba(242,224,210,0.14);
+  --station-fallback-ground: rgba(140,207,199,0.14);
+  --station-fallback-line: rgba(140,207,199,0.3);
+  --preset-size: 160px;  --preset-radius: 22px;  /* the panel's favourites row (1b) */
+  --preset-badge-ground: rgba(21,10,11,0.78);
+  --row-selected: rgba(217,180,92,0.16);        /* as the library's selected row */
+  --row-act-ground: rgba(217,180,92,0.13);  --row-act-line: rgba(217,180,92,0.32);
+  --row-removed-ink: rgba(242,224,210,0.5);      /* struck through */
+  --remove-ground: rgba(242,147,154,0.16);   --remove-line: rgba(242,147,154,0.45);
+  --directory-ground: rgba(255,154,85,0.1);  --directory-line: rgba(255,154,85,0.4);
+  --favourites-empty-line: rgba(242,224,210,0.22); /* 1.5 px dashed */
+  --skeleton-tile: rgba(242,224,210,0.08);
+  --skeleton-line-1: rgba(242,224,210,0.1);  --skeleton-line-2: rgba(242,224,210,0.07);
+  --radio-corner-button-width: 148px;            /* the waiting screen's Radio button, beside Settings */
+}
+
+/* Ink */
+:root[data-theme="ink"] {
+  --accent-radio: #62dbd6;                       /* the radio's mark, its rule on Now Playing, the station fallback */
+  --favourite: #f2a7e8;                          /* the heart, everywhere */
+  --radio-rule: linear-gradient(90deg,#62dbd6,rgba(98,219,214,0.25)); /* Now Playing's 3 px top rule */
+  --radio-glyph-ground: 0.14;                    /* §8: a category disc's ground is its tint at this alpha */
+  --radio-glyph-line: 0.30;                      /* §8: and its border at this one */
+  --station-logo-row: 46px;   --station-logo-row-radius: 13px;   /* panel rows */
+  --station-logo-card-bar: 72px;  --station-logo-card-bar-radius: 16px; /* bar cards; 64 / 14 in favourites */
+  --station-logo-phone: 44px; --station-logo-phone-radius: 12px;
+  --station-logo-ha: 40px;    --station-logo-ha-radius: 10px;
+  --station-logo-native-max: 64px;               /* a logo smaller than this is drawn at its own size on the plate, never enlarged */
+  --station-logo-plate: rgba(230,236,247,0.08);
+  --station-logo-plate-line: rgba(230,236,247,0.14);
+  --station-fallback-ground: rgba(98,219,214,0.14);
+  --station-fallback-line: rgba(98,219,214,0.3);
+  --preset-size: 160px;  --preset-radius: 22px;  /* the panel's favourites row (1b) */
+  --preset-badge-ground: rgba(9,14,29,0.78);
+  --row-selected: rgba(127,200,255,0.16);        /* as the library's selected row */
+  --row-act-ground: rgba(127,200,255,0.13);  --row-act-line: rgba(127,200,255,0.32);
+  --row-removed-ink: rgba(230,236,247,0.5);      /* struck through */
+  --remove-ground: rgba(255,143,168,0.16);   --remove-line: rgba(255,143,168,0.45);
+  --directory-ground: rgba(255,194,77,0.1);  --directory-line: rgba(255,194,77,0.4);
+  --favourites-empty-line: rgba(230,236,247,0.22); /* 1.5 px dashed */
+  --skeleton-tile: rgba(230,236,247,0.08);
+  --skeleton-line-1: rgba(230,236,247,0.1);  --skeleton-line-2: rgba(230,236,247,0.07);
+  --radio-corner-button-width: 148px;            /* the waiting screen's Radio button, beside Settings */
+}
+
+/* Gauge */
+:root[data-theme="gauge"] {
+  --accent-radio: #8fb4ff;                       /* the radio's mark, its rule on Now Playing, the station fallback */
+  --favourite: #ff6f7d;                          /* the heart, everywhere */
+  --radio-rule: linear-gradient(90deg,#8fb4ff,rgba(143,180,255,0.25)); /* Now Playing's 3 px top rule */
+  --radio-glyph-ground: 0.14;                    /* §8: a category disc's ground is its tint at this alpha */
+  --radio-glyph-line: 0.30;                      /* §8: and its border at this one */
+  --station-logo-row: 46px;   --station-logo-row-radius: 13px;   /* panel rows */
+  --station-logo-card-bar: 72px;  --station-logo-card-bar-radius: 16px; /* bar cards; 64 / 14 in favourites */
+  --station-logo-phone: 44px; --station-logo-phone-radius: 12px;
+  --station-logo-ha: 40px;    --station-logo-ha-radius: 10px;
+  --station-logo-native-max: 64px;               /* a logo smaller than this is drawn at its own size on the plate, never enlarged */
+  --station-logo-plate: rgba(231,233,228,0.08);
+  --station-logo-plate-line: rgba(231,233,228,0.14);
+  --station-fallback-ground: rgba(143,180,255,0.14);
+  --station-fallback-line: rgba(143,180,255,0.3);
+  --preset-size: 160px;  --preset-radius: 22px;  /* the panel's favourites row (1b) */
+  --preset-badge-ground: rgba(17,19,21,0.78);
+  --row-selected: rgba(63,211,230,0.16);        /* as the library's selected row */
+  --row-act-ground: rgba(63,211,230,0.13);  --row-act-line: rgba(63,211,230,0.32);
+  --row-removed-ink: rgba(231,233,228,0.5);      /* struck through */
+  --remove-ground: rgba(255,210,31,0.16);   --remove-line: rgba(255,210,31,0.45);
+  --directory-ground: rgba(255,122,46,0.1);  --directory-line: rgba(255,122,46,0.4);
+  --favourites-empty-line: rgba(231,233,228,0.22); /* 1.5 px dashed */
+  --skeleton-tile: rgba(231,233,228,0.08);
+  --skeleton-line-1: rgba(231,233,228,0.1);  --skeleton-line-2: rgba(231,233,228,0.07);
+  --radio-corner-button-width: 148px;            /* the waiting screen's Radio button, beside Settings */
+}
