@@ -83,8 +83,9 @@ them to the Plugins page's list (`plugin_store.ADDED`).
 **Phase 29** (room correction for the bass, ADR-0175) **on Stable with
 1.16.1**. **Not yet:** the cuts read from CamillaDSP while music plays, the
 level against a meter, two sweeps' agreement at 60 dB, the stage's cost,
-the A/B bit-exactness. **Copy to confirm** with George: the lines the design
-has no state for (`design/IMPLEMENTED-DIFFERENTLY.md`, Phases 29 and 30).
+the A/B bit-exactness. The lines the design has no state for
+(`design/IMPLEMENTED-DIFFERENTLY.md`, Phases 29 and 30) confirmed by George
+2026-11-14.
 
 **Open, small:** a preview's download still holds the skin packs (1.1 of
 1.2 GB) though `release.yml` excludes them; `gen_personalise.py` out of step since Phase 23;
