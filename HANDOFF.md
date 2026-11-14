@@ -153,20 +153,23 @@ for room correction, research first; whether more positions help is checked
 there (George).
 
 **Phase 31** (internet radio without Lyrion, `ph-radio`) **started
-2026-11-13**: ADR-0180 accepted (George: 1-7 as recommended; 8 as (b), the
-phone and Home Assistant in this phase, a Radio view on the card); settings
-in ADR-0022. The brief for Claude Design is `design/briefs/31-radio.md`,
-with George. **mpv measured 2026-11-13** (Finding 146, on sofapi, unpacked
-under `/tmp`, nothing installed, all removed): confirmed. **The core built
-2026-11-14** on `ph-radio` (worktree `~/projects/gexis-player-radio`; what
-the build settled is in ADR-0180's *The core, built*): directory,
-favourites, mpv as `gexis-radio.service`, `/stations` routes, settings,
-packaging. **Next:** the screens - George said the design was in the
-project as `design/source/31/`, but it was not on this computer or any
-branch on 2026-11-14; asked for. The source's accent and mark are
-placeholders until it comes. Then a preview on a player not in a group
-(sofapi's `output` feeds the group's loopback): the rate at the card, the
-stage, 32 kHz, CPU, an hour.
+2026-11-13**: ADR-0180 accepted; settings in ADR-0022. **mpv measured
+2026-11-13** (Finding 146): confirmed. **The core built 2026-11-14** on
+`ph-radio` (worktree `~/projects/gexis-player-radio`; what the build settled
+is in ADR-0180's *The core, built*): directory, favourites, mpv as
+`gexis-radio.service`, `/stations` routes, logos through the player,
+settings, packaging. **The design arrived 2026-11-14** (`design/source/31/`;
+its PNGs and per-artboard markup in `~/projects/scratch/ph31/design`);
+George's answers in ADR-0180 (as drawn; an added station keeps playing;
+logos through the player; six limits in ADR-0022). **The screens built
+2026-11-14** on `ph-radio` (CI green at 439ac897): the panel, the bars, the
+phone, Settings and first use, each checked against its artboards with
+invented stations (`~/projects/scratch/ph31/harness`, `WT` names the
+worktree; the screenshots in its `out/`). **Next:** the public documents'
+Radio sections; the Home Assistant integration (favourites as sources, the
+media browser, the card's Radio view, C01–C06), released after the
+player's; a preview on a player not in a group (sofapi's `output` feeds the
+group's loopback): the rate at the card, the stage, 32 kHz, CPU, an hour.
 
 **Phase 35** (a page from Home Assistant, ADR-0176 as amended) **on Stable
 with 1.16.1**, with the integration's 0.6.0. **Not yet on a player:** the
