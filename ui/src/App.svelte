@@ -1000,11 +1000,13 @@
            `onartist` is not passed at all, so the artist line is a name rather
            than a link that leads nowhere. -->
       {#if screen.family === 'bar'}
-        <!-- ADR-0109, Bar family: the strip, with the same props. -->
+        <!-- ADR-0109, Bar family: the strip, with the same props. ADR-0180
+             (6c, B21): with Lyrion off, its chevron goes back to Radio. -->
         <BarNowPlaying active={$active} metadata={$metadata} volume={$volume} controls={$capabilities[$active]?.controls ?? []} available={$available} shuffle={$shuffle} repeat={$repeat} queue={$queue} onvolume={openVolume} onvisualisation={showVisualisation} ondashboard={dashboardButton ? showDashboard : null}
           rootless={lmsOff}
           onhome={lmsOff ? openSettings : openLibraryHome}
-          onminimise={lmsOff ? null : minimise}
+          onminimise={lmsOff ? (radioOn ? openRadio : null) : minimise}
+          minimiseLabel={lmsOff ? 'Back to Radio' : 'Minimise'}
           onartist={lmsOff ? undefined : openLibraryArtist}
           onalbum={lmsOff ? undefined : openLibraryAlbum} />
       {:else}

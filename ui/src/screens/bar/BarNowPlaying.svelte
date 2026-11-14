@@ -19,6 +19,12 @@
   What a bar drops is dropped by design (ADR-0109 decision 7): the Artist and
   Release tabs. Home, the visualiser and the volume live in the pull-down
   tray (BarTray.svelte), which App.svelte mounts over every screen.
+
+  **A station** (ADR-0180; design/source/31, §4, B16-B21, B33): the radio's
+  rule, the heart beside the title and the radio mark at the far right, the
+  quality on a line of its own, how the station is doing under it, the
+  inert rule where the progress was, Stop for Pause. Its art is a found
+  cover, else its logo on a plate, else the radio mark on the radio's tint.
 -->
 <script>
   import { onDestroy, untrack } from 'svelte';
@@ -33,11 +39,17 @@
   import { pull, bandDrag, TRAY_H, trayAsk } from './tray.svelte.js';
   import BarMark from '../group/BarMark.svelte';
   import { group } from '../../lib/group.svelte.js';
+  import HeartIcon from '../../lib/HeartIcon.svelte';
+  import RadioMark from '../../lib/RadioMark.svelte';
+  import StationLogo from '../../lib/StationLogo.svelte';
+  import Icon from '../radio/Icon.svelte';
+  import { radio, addFavourite, removeFavourite, qualityLine } from '../../lib/radio.js';
 
   // The props App.svelte gives NowPlaying, so the two are interchangeable.
   // `onhome` and `onvisualisation` are the tray's on a bar; they are accepted
   // here so App can pass one set to either screen.
-  let { active, metadata, volume, controls = [], available = [], shuffle = null, repeat = null, queue = null, onvolume, onvisualisation, onhome, onartist, onminimise = null, rootless = false } = $props();
+  //: `minimiseLabel`: with Lyrion off the chevron goes back to Radio (B21).
+  let { active, metadata, volume, controls = [], available = [], shuffle = null, repeat = null, queue = null, onvolume, onvisualisation, onhome, onartist, onminimise = null, minimiseLabel = 'Minimise', rootless = false } = $props();
   const artistLinked = $derived(!!onartist);
 
   const transport = $derived(metadata?.transport ?? null);
@@ -76,6 +88,40 @@
   }
 
   const year = $derived(metadata?.year ?? info?.released ?? null);
+
+  // ---- ADR-0180: a station (NowPlaying.svelte's, drawn the bar's way) ------
+  const isRadio = $derived(active === 'radio');
+  const station = $derived(isRadio ? ($radio?.station ?? null) : null);
+  const radioState = $derived(isRadio ? ($radio?.state ?? null) : null);
+  //: Reconnecting or not answering: the art sits back at 0.45.
+  const struggling = $derived(radioState === 'reconnecting' || radioState === 'not_answering');
+  //: The art: a found cover; else the station's logo, on a plate; else the
+  //: radio mark on the radio's tint.
+  const radioArt = $derived(!isRadio ? null : !artwork ? 'mark' : station?.logo && artwork === station.logo ? 'logo' : 'cover');
+  //: The heart beside the title (7b): shown at once, the core's answer after.
+  let favouriteWanted = $state(null);
+  const favourite = $derived(favouriteWanted ?? !!station?.favourite);
+  //: By value: every push of the state is a new station object.
+  const stationId = $derived(station?.id ?? null);
+  $effect(() => {
+    void stationId;
+    untrack(() => (favouriteWanted = null));
+  });
+  async function toggleFavourite() {
+    if (!station) return;
+    const want = !favourite;
+    favouriteWanted = want;
+    try {
+      if (want) await addFavourite(station);
+      else await removeFavourite(station.id);
+    } catch (err) {
+      favouriteWanted = null;
+      console.info('radio:', err.message);
+    }
+  }
+  $effect(() => {
+    if (favouriteWanted !== null && !!station?.favourite === favouriteWanted) untrack(() => (favouriteWanted = null));
+  });
 
   // The queue is LMS's alone, as on the panel.
   const lmsOnly = $derived(active === 'lms');
@@ -162,14 +208,21 @@
   <div class="strip__accent"></div>
 
   <div class="strip__body">
-    <div class="art">
+    <div class="art" class:art--station={radioArt === 'logo' || radioArt === 'mark'}>
       <!-- ADR-0122: back to the library as it was left, Now Playing down to
            the mini strip (George, 2026-10-06: the chevron top left). -->
       {#if onminimise}
-        <button class="minimise" type="button" aria-label="Minimise" data-dpad-back onclick={onminimise}><span class="minimise__chev"></span></button>
+        <button class="minimise" type="button" aria-label={minimiseLabel} data-dpad-back onclick={onminimise}><span class="minimise__chev"></span></button>
       {/if}
-      {#if artwork}
-        <img src={artwork} alt="" onerror={() => (failedArtwork = artwork)} />
+      {#if radioArt === 'logo'}
+        <!-- ADR-0180: a station's logo on a plate, never stretched to a cover. -->
+        <div class="art__plate" class:is-dim={struggling}>
+          <StationLogo src={artwork} size={248} radius="var(--r-30)" />
+        </div>
+      {:else if radioArt === 'mark'}
+        <div class="art__mark" class:is-dim={struggling}><RadioMark size={168} stroke={1.6} /></div>
+      {:else if artwork}
+        <img src={artwork} alt="" class:is-dim={struggling} onerror={() => (failedArtwork = artwork)} />
       {:else}
         <div class="art__empty">
           <div class="art__glyph"></div>
@@ -181,7 +234,32 @@
     <div class="main">
       <div class="head">
         <div class="meta">
-          {#if !lyricsOn}
+          {#if !lyricsOn && isRadio}
+            <!-- §4 Bars: title, then the artist and the station (none when
+                 the station sends nothing: its name is the title), the
+                 quality line, and the status 40 under it. -->
+            <div class="title title--radio" class:is-empty={!metadata?.title}>{metadata?.title ?? ''}</div>
+            {#if metadata?.artist || metadata?.album}
+              <div class="metaline metaline--radio">
+                {#if metadata?.artist}<span class="artist">{metadata.artist}</span>{/if}
+                {#if metadata?.album}<span class="album">{metadata.album}</span>{/if}
+              </div>
+            {/if}
+            <div class="quality" class:quality--alone={!metadata?.artist && !metadata?.album}>{qualityLine(station)}</div>
+            {#if radioState === 'reconnecting'}
+              <div class="status" role="status">
+                <span class="status__spin"><Icon name="spinner" size={26} width={3} /></span>
+                <span class="status__head">Reconnecting</span>
+                <span class="status__try">try {Math.max(1, $radio?.attempt ?? 1)} of {$radio?.tries ?? 3}</span>
+              </div>
+            {:else if radioState === 'not_answering'}
+              <div class="status" role="status">
+                <Icon name="warning" size={26} />
+                <span class="status__head">The station is not answering</span>
+                <span class="status__note">Play tries again.</span>
+              </div>
+            {/if}
+          {:else if !lyricsOn}
             <div class="title" class:is-empty={!metadata?.title}>{metadata?.title ?? ''}</div>
             <div class="metaline">
               {#if artistLinked}
@@ -229,8 +307,15 @@
         </div>
 
         <!-- The source's mark at the top right, where the lyrics switch was
-             (George, 2026-10-04); the switch is with the transport. -->
-        <span class="mark"><SourceMark source={active} size={30} color="var(--src-accent)" /></span>
+             (George, 2026-10-04); the switch is with the transport. A
+             station's heart beside it (7b; B16). -->
+        {#if isRadio && station}
+          <button class="fav" type="button" aria-label={favourite ? 'Remove from favourites' : 'Add to favourites'}
+            aria-pressed={favourite} onclick={toggleFavourite}>
+            <HeartIcon filled={favourite} size={30} />
+          </button>
+        {/if}
+        <span class="mark" class:mark--radio={isRadio}><SourceMark source={active} size={isRadio ? 40 : 30} color="var(--src-accent)" /></span>
       </div>
 
       <div class="progress">
@@ -260,15 +345,20 @@
             </button>
           {/if}
           {#if has('previous')}
-            <button class="btn btn--lg" type="button" aria-label="Previous" disabled={!can('previous')} onclick={() => skip('previous')}><span class="i-prev"></span></button>
+            <button class="btn btn--lg" type="button" aria-label={isRadio ? 'Previous favourite' : 'Previous'} disabled={!can('previous')} onclick={() => skip('previous')}><span class="i-prev"></span></button>
           {/if}
           {#if hasPlayPause}
-            <button class="btn btn--play" type="button" data-dpad-main data-shows={toggle.shows} aria-label={toggle.shows === 'playing' ? 'Pause' : 'Play'} onclick={toggle.toggle}>
+            <!-- ADR-0180: for a station Pause stops it, so it is drawn as Stop;
+                 reconnecting, a spinner. -->
+            <button class="btn btn--play" type="button" data-dpad-main data-shows={toggle.shows}
+              data-radio={isRadio ? (radioState === 'reconnecting' ? 'reconnecting' : 'stop') : null}
+              aria-label={toggle.shows === 'playing' ? (isRadio ? 'Stop' : 'Pause') : 'Play'} onclick={toggle.toggle}>
               <span class="i-play"></span><span class="i-pause"></span>
+              {#if isRadio}<span class="i-stop"></span><span class="i-spin"><Icon name="spinner" size={40} width={3.2} /></span>{/if}
             </button>
           {/if}
           {#if has('next')}
-            <button class="btn btn--lg" type="button" aria-label="Next" disabled={!can('next')} onclick={() => skip('next')}><span class="i-next"></span></button>
+            <button class="btn btn--lg" type="button" aria-label={isRadio ? 'Next favourite' : 'Next'} disabled={!can('next')} onclick={() => skip('next')}><span class="i-next"></span></button>
           {/if}
           {#if has('repeat')}
             <button class="btn btn--toggle" class:is-on={repeat === 'all' || repeat === 'one'} type="button" aria-label={`Repeat ${repeat ?? 'off'}`}
@@ -327,6 +417,10 @@
     z-index: 3;
     background: var(--src-accent);
   }
+  /* ADR-0180: a station's own rule. */
+  .strip[data-source='radio'] .strip__accent {
+    background: var(--radio-rule);
+  }
 
   /* **The art from corner to corner** - the bar's full height, against its
      left edge, no inset (George, 2026-10-04); the rest keeps its margins. */
@@ -353,6 +447,29 @@
     height: 100%;
     object-fit: cover;
     display: block;
+  }
+  /* A station's logo on a plate, and the radio mark on its tint (B17). */
+  .art--station {
+    background: none;
+  }
+  .art__plate,
+  .art__mark {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .art__plate {
+    background: var(--station-logo-plate);
+    box-shadow: inset 0 0 0 1px var(--station-logo-plate-line);
+  }
+  .art__mark {
+    background: radial-gradient(90% 90% at 30% 25%, rgba(var(--c-radio-rgb), 0.24), rgba(var(--c-radio-rgb), 0.08));
+    box-shadow: inset 0 0 0 1px rgba(var(--c-radio-rgb), 0.3);
+  }
+  .art .is-dim {
+    opacity: 0.45;
   }
 
   /* The panel's placeholder at the strip's size (Bar States, strip-pending). */
@@ -468,6 +585,78 @@
     flex-shrink: 0;
   }
   .is-empty { visibility: hidden; }
+
+  /* ---- a station (§4, Bars): title 44 from y 28, the second line at 94,
+     the quality line at 150 (100 with no second line), the status 40 under
+     it; the heart 60 and the radio mark 40 at the top right. ---- */
+  .strip[data-source='radio'] .head { gap: 24px; }
+  .title--radio {
+    margin-top: -4px;
+    font-size: 44px;
+    line-height: 60px;
+  }
+  .metaline--radio { margin-top: 6px; }
+  .quality {
+    margin-top: 7px;
+    font-family: var(--font-mono);
+    font-size: 22px;
+    line-height: 30px;
+    letter-spacing: 0.04em;
+    color: var(--ink-quiet);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .quality--alone { margin-top: 12px; }
+  .status {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--accent-warn);
+    min-width: 0;
+  }
+  .status__head {
+    font-size: 24px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .status__try {
+    font-family: var(--font-mono);
+    font-size: 18px;
+    color: var(--ink-muted);
+  }
+  .status__note {
+    font-size: 18px;
+    color: var(--ink-muted);
+    white-space: nowrap;
+  }
+  .status__spin,
+  .i-spin :global(svg) {
+    animation: bar-np-spin 1s linear infinite;
+  }
+  .status__spin { display: flex; }
+  @keyframes bar-np-spin {
+    to { transform: rotate(360deg); }
+  }
+  /* Above the pull band, as the lyrics switch is: the control under the
+     finger wins. */
+  .fav {
+    position: relative;
+    z-index: 5;
+    margin-top: -8px;
+    width: var(--ctl);
+    height: var(--ctl);
+    border-radius: var(--r-circle);
+    background: var(--ink-fill);
+    border: 0;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .fav:active { transform: scale(0.95); }
 
   /* ---- lyrics ---- */
   /* **The lyrics, centred and larger** in the space the title and artist
@@ -604,6 +793,10 @@
     align-items: center;
     flex-shrink: 0;
   }
+  .mark--radio {
+    height: 40px;
+    margin-top: 2px;
+  }
 
   /* Three bars; on, the artist coral (Bar Frame's lyrBg / lyrLine / lyrInk).
      Above the pull band: see `band` in the script. */
@@ -684,6 +877,12 @@
     );
   }
   .strip[data-position='none'] .progress__time { visibility: hidden; }
+  /* A station has no position: the inert rule alone, the bar's width, at
+     y 236; grouped, at 204 with the chip at 224 (B20). */
+  .strip[data-source='radio'] .progress__time { display: none; }
+  .strip[data-source='radio'] .progress { margin-bottom: 8px; }
+  .strip[data-source='radio'] .groupmark { margin-top: 2px; }
+  .strip[data-source='radio'] .groupmark + .transport { margin-top: 16px; }
 
   /* ---- transport ---- */
   .transport {
@@ -748,6 +947,19 @@
   }
   .btn--play[data-shows='playing'] .i-play,
   .btn--play:not([data-shows='playing']) .i-pause { display: none; }
+  /* ADR-0180: a station's Stop, and its spinner while it reconnects. */
+  .i-stop,
+  .i-spin { display: none; }
+  .btn--play[data-radio] .i-pause { display: none; }
+  .btn--play[data-radio='stop'][data-shows='playing'] .i-stop {
+    display: block;
+    width: 17px;
+    height: 17px;
+    border-radius: 3px;
+    background: currentColor;
+  }
+  .btn--play[data-radio='reconnecting'] .i-play { display: none; }
+  .btn--play[data-radio='reconnecting'] .i-spin { display: flex; }
 
   .i-prev,
   .i-next { display: flex; align-items: center; }
