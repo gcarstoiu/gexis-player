@@ -142,7 +142,10 @@ Notes on the diagram:
 - **Uploaded plugins**, and those installed from the plugin catalogue
   (ADR-0168), run under sandboxed template units,
   `gexis-uploaded-renderer@` and `gexis-uploaded-service@` (ADR-0106).
-  They may not bind port 5353; a plugin that wants to be found sends
+  They may not bind port 5353 (`SocketBindDeny=`). systemd 257 drops that
+  block from running units at every `daemon-reload`, so the core sets it again
+  on each running uploaded plugin after each reload systemd reports, and once
+  at start (`mdns_block.py`, Finding 148). A plugin that wants to be found sends
   `announce`, and the core writes `/etc/avahi/services/gexis-plugin-<id>.service`
   (`announce.py`), removed when the plugin disconnects or announces
   `services: []`, and cleared at every core start (ADR-0142). A name is at

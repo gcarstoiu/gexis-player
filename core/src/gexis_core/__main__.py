@@ -22,6 +22,7 @@ from dbus_next.aio import MessageBus
 
 from gexis_core import alsa, bluetooth_adapter_state, bluetooth_agent, device_name, journal, meters, screen_detect, skins, wifi
 from gexis_core import board_apply, panel_token, placement, plugin_permissions, plugin_store, screen_apply, screen_watch, screens, skin_packs, skin_previews
+from gexis_core import mdns_block
 from gexis_core.adapters.base import VolumeMechanism
 from gexis_core.adapters.bluetooth import BluetoothAdapter
 from gexis_core.adapters.lms import LmsAdapter
@@ -5513,6 +5514,9 @@ async def main() -> None:
         # ADR-0084: the socket plugins connect to. Served for the life of the
         # process, beside the one the browser uses.
         plugin_server.run(),
+        # ADR-0142, Finding 148: a systemd reload takes the uploaded plugins'
+        # port-5353 block off; it is set again after each one.
+        mdns_block.watch(),
         state_server.run(),
         lyrion_known.run(),
     )
