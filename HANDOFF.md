@@ -200,7 +200,10 @@ the temporary branch `preview-radio-mdns` at 8dc68f52 (run 43626907114;
 `~/preview-all` on each, the packages only; mpv came with it on the three
 new to radio): installed idle, rebooted - each kept its own name
 (BedroomPi had been `bedroompi-2` on 1.16.2), every plugin blocked, the
-block set again right after the core's own reload. The uploaded test
+block set again right after the core's own reload. Since 22:17 all four
+run the branch at b11e28f4 (run 43641044154, `~/preview-relay` on each;
+gexis-core and gexis-player git60, gexis-ui git58; installed idle, the core
+restarted, not rebooted), with ADR-0136 item 5. The uploaded test
 renderer's newer build is on bedroompi and guestpi (private notes).
 
 **BedroomPi and GuestPi cannot reach each other** (2026-11-14, George asked
@@ -208,10 +211,12 @@ why GuestPi was missing from BedroomPi's menu): the home network, not the
 player. Each is on a different access point of the mesh; nothing sent from
 one straight to the other arrives, over IPv4 or IPv6, before and after
 BedroomPi's reboot, while multicast does - so each hears the other announced,
-its status request times out, and each lists the other two but not the
-other. Every other pair answers. A group with only those two would fail the
-same way. On those two a list opening waits the 2 s status timeout for the
-fresh answer; the kept list shows meanwhile. Masked probes in
+its status request times out. Every other pair answers. A group with only
+those two would fail the same way. **Now each lists the other through
+ShelvesPi** (ADR-0136 item 5, George chose it: *Can't group from here*, no
+Join), seen on the players. On those two a list opening waits 2 s, up to 4 s
+behind a background look, for the fresh answer; the kept list shows
+meanwhile. Masked probes in
 `~/projects/scratch/ph31/dbg/` (`reach.py`, `link.py`, `seen.py`).
 
 **The lists of players in alphabetical order** (George 2026-11-14, ADR-0136
@@ -223,7 +228,9 @@ for up to a minute). Checked with invented players on the phone, panel and
 bar (`PLAYERS=alone|mine` in `~/projects/scratch/ph31/harness`); the
 manual's group picture retaken (`~/projects/scratch/ph22/manual/run-order.sh`).
 The group volume's members alphabetical too (George), the manual's three
-group pictures retaken. In sofapi's preview.
+group pictures retaken. Item 5, a player reached only through another
+(`via`), built there too (6840f817, 8ee9222d, e2265e00): mocked with
+`PLAYERS=via|mine-via`. In the preview on all four.
 
 **The Home Assistant integration's `radio` branch:** a stopped station shows
 as paused with Play (George); the card keeps one column under its 440 px cap.
@@ -232,7 +239,7 @@ as paused with Play (George); the card keeps one column under its 440 px cap.
 players, a group made on ShelvesPi showed in sofapi's kept list 0.64 s later,
 undone 1.48 s later, without sofapi being asked.
 
-**Next: George's regression pass** covers all three (to-do
+**Next: George's regression pass** covers all of it (to-do
 `ph31-regression`, `fix-mdns-block`, `players-menu-order`); each branch then
 merges into `next` on its own, `preview-radio-mdns` deleted after. Merging
 `fix-players-order` and `ph-radio` both into `next` conflicts once in

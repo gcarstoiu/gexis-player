@@ -92,3 +92,13 @@ Items 1-4 built on `fix-players-order`, checked with invented players on the pho
 the panel and the bar, and the manual's three group pictures retaken with the
 demo library (the switcher, reached only on a narrow standalone Settings, not
 seen).
+
+Item 5 built on `fix-players-order` the same evening: checked with invented
+players on the phone (at 390 and 320 px), the panel and the bar; on the four
+players, bedroompi and guestpi each list the other through ShelvesPi, the
+other two list all three directly. Found there and fixed: after its core
+restarted, bedroompi listed itself through ShelvesPi for one look, as
+ShelvesPi's list still held its status from before the restart; the check
+for this player now also takes the board's id and the player's name. On
+either of the two, a list opening waits 2 s, up to 4 s behind a background
+look, for its fresh answer; the kept list shows meanwhile.
