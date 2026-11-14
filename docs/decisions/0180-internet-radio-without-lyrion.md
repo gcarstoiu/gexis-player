@@ -196,6 +196,70 @@ radio on a Pi 4 were found published: to be measured.
    the card, and the directory is browsed and searched from the media
    browser.
 
+## The core, built 2026-11-14 (step 4)
+
+On `ph-radio`, the screens not yet (the design had not reached the
+repository). What the build settled that the decision above leaves open:
+
+- **Routes under `/stations`**: Lyrion's `/radio` stays as it is. The
+  overview (favourites, the country, whether the directory answered),
+  *Popular here*, a list by genre, country or language, search, play (a
+  station a list gave, or a favourite by id), the favourites (add, order,
+  remove) and a station added by its address. The renderer is `radio`; the
+  published state gains `radio` (the station; connecting, playing,
+  reconnecting with its try, stopped, not answering; a favourites revision).
+- **The volume** (`VolumeMechanism.OUTPUT`): mpv plays at its own 100 % and
+  the panel's slider is the output's level. Nothing is kept per station.
+- **Favourites** are kept with the settings as `_radio_favourites`, a value
+  no Settings row shows; the whole store is what a backup carries.
+- ***Popular here*'s country** is chosen from tzdata's `iso3166.tab`; until
+  it is set, the time zone's country, as setup's Wi-Fi country is found.
+- **The artwork**: the cover is looked up as for any renderer that sends
+  none (the recording, as for Lyrion's radio; the album-based lookup is
+  skipped, the album line being the station's name); the station's logo
+  stands in until one is found, and when none is.
+- **A station added by its address** must sound within 20 s to be kept; it
+  plays at the address given and is not counted with the directory.
+- **A takeover while a station is still being looked up** stops that play;
+  a reload the watchdog has begun always finishes. Stop stops the unit.
+- **A rewritten chain** (an output, a group, the visualiser's tuning): the
+  radio's unit is stopped with the other renderers and the station loaded
+  again after; the switch stops what plays and never enables the unit.
+- **Checked against a real mpv** (0.41, on the development machine, a silent
+  output, the unit's own options): the options are accepted; a 22.05 kHz
+  mono stream left mpv at 48 kHz in stereo; a stream that ended was loaded
+  again after the watchdog and played; an address that answered nothing
+  stopped as not answering after three tries; titles arrived as `icy-title`.
+  **Not yet**: a player (mpv 0.40), the format at the card, the stage, a
+  group, the CPU, an hour's memory.
+- **Placeholders until the design**: the source's accent (the warning
+  token's colour today) and its mark (none).
+
+## The design, and George's answers on it (2026-11-14)
+
+Claude Design's handover is `design/source/31/` (its PNGs kept outside the
+repository). George's picks are in its README. His answers the same day:
+
+- **The nine choices made while drawing, and the new words: as drawn.** With
+  Lyrion off, Radio shows the mini strip while something plays; the radio
+  mark is a broadcast mark; the panel's favourites row has *All N* and its
+  tiles only play; the bars' move buttons read *Earlier* and *Later*;
+  *Popular here* starts as the time zone's country; Internet radio's section
+  in Settings → Sources comes after Bluetooth, with *Ready*; it is in every
+  first-use preset, with a *Radio* group in *My own mix*; the card says the
+  other stations are in Home Assistant's media browser; the phone's *Add by
+  address* sits beside *Edit*.
+- **A station added by its address keeps playing** once its check passes.
+- **Logos come through the player**: it fetches, keeps and serves them, so
+  only the player's address reaches a station's site (item 7 stays true).
+- **Two limits appended to ADR-0022** as [H]: the check's 20 s, and at most
+  200 favourites.
+
+Settled by this record, not asked: three tries (ADR-0022, confirmed
+2026-11-13); favourites belong to the player (item 5). *By language*'s
+tint is built as drawn (`--accent-display`). With nothing sent, the
+station's name is the title (George, in the design's picks).
+
 ## Decided 2026-11-13 (George)
 
 Decisions 1-7 as recommended: radio-browser.info; one Radio screen with

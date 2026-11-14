@@ -3940,6 +3940,15 @@ Assistant in this phase. Settings in ADR-0022. The brief for Claude Design:
 confirmed, at 3-6 % of a core; its reconnect on and a 5 s network timeout,
 the watchdog for the rest.
 
+**The core built 2026-11-14** on `ph-radio` (ADR-0180 step 4, its choices
+in the ADR's *The core, built* section): the directory client, the
+favourites, mpv as `gexis-radio.service`, the `/stations` routes, the two
+settings rows, the unit and mpv in the packages; tests against a fake
+directory and a fake mpv that fail as the real ones did, and a check
+against a real mpv with a silent output. **Next:** the screens from Claude
+Design's handover once it is in the repository; then a preview on a player
+not in a group.
+
 **Acceptance:**
 
 1. With Lyrion off, a station found by country, genre or name plays from the
