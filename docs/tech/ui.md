@@ -615,7 +615,8 @@ On a phone, `screens/remote/PhoneRemote.svelte` fills the page (ADR-0164,
 built from `design/source/21`): a player picker over `/players` (ADR-0136;
 another player opens its own page, C1; its menu in alphabetical order, this
 player in its place, a group where its first player falls - George,
-2026-11-14 - and `/players?fresh=1` asked on opening) and a Remote / Settings switch, the
+2026-11-14 - and `/players?fresh=1` asked on opening; a player reached only
+through another, `via`, has no Join, ADR-0136 item 5) and a Remote / Settings switch, the
 two pages side by side. Settings is `Settings.svelte` with
 `switcher={false}` and `flat` (its pages, choosers and the equaliser editor
 on the modals' solid `--bg-panel`, no weave or veil), mounted on its first

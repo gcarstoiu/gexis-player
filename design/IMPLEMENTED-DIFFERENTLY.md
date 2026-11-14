@@ -920,6 +920,10 @@ is silent or production differs, confirmed by George (2026-10-28):
   leader tagged where it falls. The phone's *Other players* heading is gone:
   this player no longer divides the list. The drawing put this player, or
   its group, first, the leader first within a group.
+- **[U]** **A player reached only through another** (ADR-0136 item 5,
+  George 2026-11-14) is listed with its status, which ends *Can't group
+  from here*, and no Join; a group it leads has no *Join this group*. The
+  words follow *Update to join*; the drawing has no such state.
 - **[S]** *Add players* on the panel and the bar lists the group's own
   members first, with their state and no button, as the drawing's data does.
 - **[S]** On a panel shorter than 800 (720 at 13.3"), the grouped drawer

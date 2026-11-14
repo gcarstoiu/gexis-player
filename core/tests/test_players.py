@@ -130,6 +130,70 @@ async def test_hearing_of_a_change_asks_again_once_for_several_then_says_so(monk
     assert told == [None], "said once, after asking again"
 
 
+def _peer(name, status, others, asked):
+    """A player answering its status and, asked, its own list."""
+    app = web.Application()
+    app.router.add_get("/player/status", lambda r: web.json_response({"name": name, **status}))
+
+    def players(request):
+        asked.append(name)
+        return web.json_response({"self": {"name": name, **status}, "others": others})
+    app.router.add_get("/players", players)
+    return app
+
+
+GUEST = {"name": "GuestPi", "host": "guestpi.local", "id": "g", "instance": "gi", "transport": "playing",
+         "renderer": "Radio", "url": "http://guestpi.local:8090/"}
+
+
+async def test_a_player_found_that_does_not_answer_is_listed_through_one_that_does():
+    """ADR-0136 item 5 (George, 2026-11-14): bedroompi and guestpi could not
+    reach each other on the home network; each reached the other two."""
+    asked = []
+    me = {"name": "BedroomPi", "host": "bedroompi.local", "id": "b", "instance": "me",
+          "url": "http://bedroompi.local:8090/"}
+    third = {"name": "Kitchen", "host": "kitchen.local", "id": "k", "url": "http://kitchen.local:8090/",
+             "via": "Study"}
+    shelves = _peer("ShelvesPi", {"host": "shelvespi.local", "id": "s"}, [GUEST, me], asked)
+    sofa = _peer("SofaPi", {"host": "sofapi.local", "id": "a"},
+                 [GUEST, me, third, {"name": "ShelvesPi", "host": "shelvespi.local", "id": "s",
+                                     "url": "http://shelvespi.local:8090/"}], asked)
+    async with TestServer(shelves) as s, TestServer(sofa) as a:
+        async def browse():
+            return (f"=;wlan0;IPv4;shelvespi;_gexis._tcp;local;shelvespi.local;127.0.0.1;{s.port};\n"
+                    f"=;wlan0;IPv4;sofapi;_gexis._tcp;local;sofapi.local;127.0.0.1;{a.port};\n"
+                    "=;wlan0;IPv4;guestpi;_gexis._tcp;local;guestpi.local;127.0.0.1;9;\n")
+        finder = pl.Players(lambda: "bedroompi", own_instance="me", browse=browse)
+        seen = []
+
+        async def on_refresh(statuses):
+            seen.append(sorted(statuses))
+        finder.on_refresh = on_refresh
+        async with aiohttp.ClientSession() as session:
+            listed = await finder.refresh(session)
+    # Each listed once; this player and one had through a third, not at all.
+    assert sorted(p["name"] for p in listed) == ["GuestPi", "ShelvesPi", "SofaPi"]
+    guest = next(p for p in listed if p["name"] == "GuestPi")
+    assert guest["via"] == "ShelvesPi" and guest["url"] == "http://guestpi.local:8090/"
+    assert guest["transport"] == "playing" and sorted(asked) == ["ShelvesPi", "SofaPi"]
+    assert not any(p.get("via") for p in listed if p["name"] != "GuestPi")
+    # Not one the group reaches, follows or tells.
+    assert "g" not in finder.addresses and finder.status_of("g") is None
+    assert finder.status_of("s")["name"] == "ShelvesPi"
+    assert seen == [["a", "s"]]
+
+
+async def test_when_every_player_found_answers_no_list_is_asked():
+    asked = []
+    async with TestServer(_peer("SofaPi", {"host": "sofapi.local", "id": "a"}, [GUEST], asked)) as a:
+        async def browse():
+            return f"=;wlan0;IPv4;sofapi;_gexis._tcp;local;sofapi.local;127.0.0.1;{a.port};\n"
+        finder = pl.Players(lambda: "bedroompi", own_instance="me", browse=browse)
+        async with aiohttp.ClientSession() as session:
+            listed = await finder.refresh(session)
+    assert [p["name"] for p in listed] == ["SofaPi"] and asked == []
+
+
 async def test_a_peer_that_answers_something_other_than_an_object_is_left_out():
     """Review, 2026-10-12: `{**body}` on a list raised TypeError, which failed
     the whole refresh and with it `/players`."""

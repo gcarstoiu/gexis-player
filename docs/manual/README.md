@@ -341,6 +341,12 @@ volume included, so a player keeps its place whichever player the list is
 opened on - the one you are on too, with its check. A group's players stay
 together, in alphabetical order, where its first player falls.
 
+**Can't group from here.** A player that this one cannot reach on the
+network, though another player can, is still listed, with what it is
+doing, and opens as usual from the phone. It cannot be grouped with this
+one, so it has no Join; it says *Can't group from here*. The network
+between the two is the cause (see the FAQ).
+
 ![The group on the phone](images/phone-group.webp)
 
 **What a group plays.** Music started on any player of the group plays on

@@ -3668,7 +3668,7 @@
           "Playback"
         ],
         "summary": "This player and the other players on the network",
-        "description": "This player's status and those of the other Gexis players found on the network, for the phone's switcher (ADR-0136). The others are found by browsing `_gexis._tcp` over mDNS and asking each one's `/player/status`; the list is kept warm in the background and refreshed every 30 seconds, so the answer is normally immediate. A player that is off, unreachable, too old to announce itself, or that is this player under another mDNS name, is left out.",
+        "description": "This player's status and those of the other Gexis players found on the network, for the phone's switcher (ADR-0136). The others are found by browsing `_gexis._tcp` over mDNS and asking each one's `/player/status`; the list is kept warm in the background and refreshed every 30 seconds, so the answer is normally immediate. A player that is off, unreachable, too old to announce itself, or that is this player under another mDNS name, is left out. A player found that does not answer this one, but that another player found reached itself, is listed through that player, with `via` (ADR-0136 item 5).",
         "responses": {
           "200": {
             "description": "This player and the others found.",
@@ -10165,6 +10165,13 @@
                 "examples": [
                   "http://livingroom.local:8090/"
                 ]
+              },
+              "via": {
+                "type": "string",
+                "description": "Present when this player did not answer, but the player named here reached it and listed it (ADR-0136 item 5). Its page opens as any other's; it cannot be grouped from here, and it is not told of a group change.",
+                "examples": [
+                  "Living Room"
+                ]
               }
             }
           }
@@ -10469,7 +10476,7 @@
             "items": {
               "$ref": "#/components/schemas/PlaybackOtherPlayer"
             },
-            "description": "The other players that answered, sorted by host; empty when none were found."
+            "description": "The other players that answered, sorted by host, then any reached only through one of them (`via`); empty when none were found."
           }
         }
       },

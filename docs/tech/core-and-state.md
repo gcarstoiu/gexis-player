@@ -857,7 +857,15 @@ says of it), multiroom tells every player found (`POST /players/changed`,
 (`Players.heard`; several told together are one look) and moves the
 state's `players_revision`, on which an open list reads `/players` again
 (`onPlayersChanged`). A player older than this answers 404 and waits for
-its next look. The lists are in alphabetical order, the group
+its next look. **A player found that does not answer** is asked for through the others (ADR-0136 item 5; George, 2026-11-14, after bedroompi
+and guestpi could not reach each other on the home network): when a look
+leaves one found unanswered, each player that answered is asked for its
+own `/players` (`Players._through`), and a player one of them reached
+itself is listed with `via`, that player's name - one hop, never one it
+had through a third. It gets no address, so the group neither follows,
+joins nor tells it (`status_of` and `on_refresh` leave it out), and the
+screens give it no Join (`joinable`, `canEnter`) and end its status
+*Can't group from here* (`CANT_GROUP`). The lists are in alphabetical order, the group
 volume's members too, a group's players together where its first player falls (`inOrder` and its helpers in
 `lib/group.svelte.js`). `/player/status` is `{name, host, instance, id, screen, transport, renderer}` - the
 renderer named as the source list names it; `instance` a token made at each

@@ -240,6 +240,14 @@ Fixed volume is not moved. Each keeps its own equaliser setting.
 It runs a release from before groups; update it (*Settings → System →
 Software update*) and it can be joined.
 
+**Why does a player in the list say *Can't group from here*?**
+The player whose list it is cannot reach that one on the network, while
+another player can, so it is listed through that one: you can open it,
+but not group the two. A mesh Wi-Fi can pass the players' announcements
+between two access points but not their traffic; restarting those access
+points, updating their firmware or joining both players to the same one
+may bring them back.
+
 **Can I name a group, or keep several?**
 No. A group is made by joining players and lasts until it is undone, across
 restarts.

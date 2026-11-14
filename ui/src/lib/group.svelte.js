@@ -149,20 +149,28 @@ export function memberStatus(g, m) {
   return g.silent ? 'In this group · silent' : 'In this group';
 }
 
+/** ADR-0136 item 5: a player this one reaches only through another (`via`)
+ *  opens like any other but cannot be grouped from here. */
+export const CANT_GROUP = "Can't group from here";
+
 /** Another player's row, from what it says of itself (`/players`): in a
- *  group of its own, or playing alone. One older than multiroom says so. */
+ *  group of its own, or playing alone. One older than multiroom says so,
+ *  and one reached only through another. */
 export function otherStatus(p) {
   const named = alphabetical(p?.group?.members).filter((m) => m.id !== p.id).map((m) => m.name);
   if (p?.group && named.length) {
-    return `In a group with ${joinNames(named)}${p.renderer ? ` · ${p.renderer}` : ''}`;
+    const grouped = `In a group with ${joinNames(named)}${p.renderer ? ` · ${p.renderer}` : ''}`;
+    return p.via ? `${grouped} · ${CANT_GROUP}` : grouped;
   }
   const status = plays(p?.transport, p?.renderer);
+  if (p?.via) return `${status} · ${CANT_GROUP}`;
   return p?.multiroom ? status : `${status} · Update to join`;
 }
 
 /** Whether another player can be joined from here: one in no group of its
- *  own (ADR-0166 decision 11 - another group is joined whole, not raided). */
-export const joinable = (p) => !!(p?.multiroom && p?.id) && !(p?.group?.members?.length > 1);
+ *  own (ADR-0166 decision 11 - another group is joined whole, not raided),
+ *  that this player reaches itself. */
+export const joinable = (p) => !!(p?.multiroom && p?.id && !p?.via) && !(p?.group?.members?.length > 1);
 
 /** **The other players as they are now, seen from this one** (`self`, its
  *  id; `mine`, the ids in its group). `/players` is up to half a minute old:
@@ -240,9 +248,12 @@ export function othersByGroup(others, mine = new Set()) {
     return {
       id, leader, members,
       title: joinNames(members.map((m) => m.name)),
-      status: lead ? plays(lead.transport, lead.renderer) : 'Its leader is off',
-      // Joined through its leader, which has to be there and new enough.
-      canEnter: !!(lead?.multiroom && any),
+      status: !lead ? 'Its leader is off'
+        : lead.via ? `${plays(lead.transport, lead.renderer)} · ${CANT_GROUP}`
+        : plays(lead.transport, lead.renderer),
+      // Joined through its leader, which has to be there, new enough, and
+      // reached by this player itself.
+      canEnter: !!(lead?.multiroom && any && !lead.via),
     };
   });
   return { loose, groups };

@@ -4,7 +4,9 @@
 Each player announces `_gexis._tcp` through avahi. This finds them with
 `avahi-browse`, asks each for its `/player/status`, and answers the phone with
 the list - the browser never reaches across addresses itself. A player that
-is off, unreachable or too old to announce is simply not listed.
+is off, unreachable or too old to announce is simply not listed; one that
+does not answer this player but answers another is listed through it
+(`via`).
 """
 from __future__ import annotations
 
@@ -181,13 +183,56 @@ class Players:
             for peer, answer in zip(peers, answers):
                 if answer is not None and answer.get("id") and answer in listed:
                     self.addresses[str(answer["id"])] = (peer["address"], peer["port"])
+            if any(a is None for a in answers) and listed:
+                direct = [(peer, a) for peer, a in zip(peers, answers) if a is not None and a in listed]
+                listed = listed + await self._through(session, direct, listed)
             self._kept = (self._clock(), listed)
         if self.on_refresh is not None:
             try:
-                await self.on_refresh({str(a["id"]): a for a in listed if a.get("id")})
+                # The group reaches only the players it can itself.
+                await self.on_refresh({str(a["id"]): a for a in listed if a.get("id") and not a.get("via")})
             except Exception:  # noqa: BLE001 - a look must not fail for what is done with it
                 logger.exception("players: what was found could not be passed on")
         return listed
+
+    async def _through(self, session: aiohttp.ClientSession, direct: list[tuple[dict, dict]],
+                       listed: list[dict]) -> list[dict]:
+        """**A player found that did not answer, listed through one that
+        did** (ADR-0136 item 5; George, 2026-11-14: bedroompi and guestpi
+        could not reach each other on the home network, each reached the
+        other two). Each player that answered is asked for its own list; a
+        player one of them reached itself, and this one did not, is added
+        with `via`, that player's name. One hop: never one it had through a
+        third."""
+        ids = {str(p["id"]) for p in listed if p.get("id")}
+        urls = {p.get("url") for p in listed}
+        lists = await asyncio.gather(*(self._list_of(session, peer) for peer, _ in direct))
+        added: dict[str, dict] = {}
+        for (peer, answer), theirs in zip(direct, lists):
+            for other in theirs:
+                if not isinstance(other, dict) or other.get("via") or not other.get("url"):
+                    continue
+                if self._own_instance and other.get("instance") == self._own_instance:
+                    continue
+                key = str(other["id"]) if other.get("id") else other["url"]
+                if key in ids or key in added or other["url"] in urls:
+                    continue
+                added[key] = {**other, "via": answer.get("name") or peer["host"]}
+        return list(added.values())
+
+    @staticmethod
+    async def _list_of(session: aiohttp.ClientSession, peer: dict) -> list:
+        """The players another player lists (`GET /players`), as it keeps them."""
+        try:
+            async with session.get(f"http://{peer['address']}:{peer['port']}/players",
+                                   timeout=aiohttp.ClientTimeout(total=STATUS_TIMEOUT_S)) as response:
+                if response.status != 200:
+                    return []
+                body = await response.json()
+        except (aiohttp.ClientError, asyncio.TimeoutError, ValueError):
+            return []
+        others = body.get("others") if isinstance(body, dict) else None
+        return others if isinstance(others, list) else []
 
     async def tell_others(self) -> int:
         """**This player's group changed: every player found is told**
@@ -232,9 +277,10 @@ class Players:
                 self.on_heard()
 
     def status_of(self, player_id: str) -> dict | None:
-        """What a player last said of itself, by id."""
+        """What a player last said of itself, by id; not one listed only
+        through another, which the group cannot reach."""
         listed = self._kept[1] if self._kept else []
-        return next((p for p in listed if str(p.get("id")) == player_id), None)
+        return next((p for p in listed if str(p.get("id")) == player_id and not p.get("via")), None)
 
     async def watch(self, every: float = FRESH_S) -> None:
         """Look for the others every `every` seconds, for the life of the core."""
