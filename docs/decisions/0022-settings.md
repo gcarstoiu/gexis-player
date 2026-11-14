@@ -683,5 +683,7 @@ Confirmed by George, 2026-11-13, [ADR-0180](0180-internet-radio-without-lyrion.m
 | Directory cache | [H] | Each answer kept on the player for a day |
 | Low-rate streams | [H] | 32 kHz and below resampled to 48 kHz, so the equaliser and room correction apply |
 | Stream reconnect | [H] | FFmpeg's reconnect on, at most 4 s between tries, and a 5 s network timeout: a cut or a freeze goes unheard on a station that buffers more than 5 s; the watchdog handles the rest (confirmed by George 2026-11-14, after [Finding 146](../findings/146-mpv-as-the-radio-engine-on-a-pi-4.md)) |
+| Added by address: the check | [H] | A station added by its address is kept only if it plays within 20 s (confirmed by George 2026-11-14) |
+| Favourites: how many | [H] | At most 200 (confirmed by George 2026-11-14) |
 
 Counting a play with the directory has no setting (decision 5).
