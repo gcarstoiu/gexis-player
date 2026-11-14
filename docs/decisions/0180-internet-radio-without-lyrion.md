@@ -255,6 +255,19 @@ repository). George's picks are in its README. His answers the same day:
 - **Two limits appended to ADR-0022** as [H]: the check's 20 s, and at most
   200 favourites.
 
+**And on what the screens' build found undrawn** (George, the same day):
+the phone hides *Lyrion's radio* (it has no Lyrion browsing; a control that
+does nothing is not shown); *Popular here*'s sheet lists only countries with
+stations when the directory answers, every country when it cannot be
+reached; Settings' heading says *Directory unreachable* then; first use's
+*Your setup* gains an Internet radio row; and, as built, *No country is
+called "…"*, a search count of *50+* while more results remain, the phone's
+search closing when emptied, Undo after the heart removes a favourite on
+the phone, Home on a Radio sub-page going to the library's top with Lyrion
+on and Radio's top with it off, a station played with nothing playing
+opening Now Playing, and a preset in first use asked again turning the
+radio on. Four more values appended to ADR-0022 as [H].
+
 Settled by this record, not asked: three tries (ADR-0022, confirmed
 2026-11-13); favourites belong to the player (item 5). *By language*'s
 tint is built as drawn (`--accent-display`). With nothing sent, the
