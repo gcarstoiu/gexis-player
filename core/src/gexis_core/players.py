@@ -28,6 +28,11 @@ STATUS_TIMEOUT_S = 2.0
 #: The core looks every `FRESH_S`, so the phone's request is answered from
 #: what was found.
 FRESH_S = 30.0
+#: **Asked again when a list opens** (George, 2026-11-14: bedroompi's menu
+#: still showed a group he had undone on sofapi). Older than this, the
+#: players already found are asked for their status once more - not the
+#: network search, which takes up to `BROWSE_TIMEOUT_S`.
+ASK_AGAIN_S = 5.0
 #: ADR-0160 D5: the board's own serial number, which every Pi carries.
 SERIAL = Path("/proc/device-tree/serial-number")
 
@@ -122,6 +127,8 @@ class Players:
         self._browse = browse
         self._clock = clock
         self._kept: tuple[float, list[dict]] | None = None
+        #: Where the last search found them, for asking again without one.
+        self._found: list[dict] = []
         self._lock = asyncio.Lock()
         #: **Where each player answered, by its id** (ADR-0166): a group's
         #: members reach each other here. Not in the list the phone is given.
@@ -130,16 +137,31 @@ class Players:
         #: `reconcile`).
         self.on_refresh: Callable[[dict[str, dict]], Awaitable[None]] | None = None
 
-    async def others(self, session: aiohttp.ClientSession) -> list[dict]:
+    async def others(self, session: aiohttp.ClientSession, *, fresh: bool = False) -> list[dict]:
         """What was last found; looked for now only if nothing has been yet,
-        or what was found has gone stale (the watch not running)."""
+        or what was found has gone stale (the watch not running). `fresh`
+        (a list opening): older than `ASK_AGAIN_S`, the players found are
+        asked again what they are doing and with whom."""
         if self._kept and self._clock() - self._kept[0] < 2 * FRESH_S:
+            if fresh and self._clock() - self._kept[0] >= ASK_AGAIN_S:
+                return await self.ask_again(session)
             return self._kept[1]
         return await self.refresh(session)
 
     async def refresh(self, session: aiohttp.ClientSession) -> list[dict]:
+        """The network searched, and each player found asked its status."""
+        return await self._look(session, search=True)
+
+    async def ask_again(self, session: aiohttp.ClientSession) -> list[dict]:
+        """The players the last search found, asked their status again; a
+        player that has come since waits for the next search."""
+        return await self._look(session, search=False)
+
+    async def _look(self, session: aiohttp.ClientSession, *, search: bool) -> list[dict]:
         async with self._lock:
-            peers = parse_browse(await self._browse(), self._own_host())
+            if search:
+                self._found = parse_browse(await self._browse(), self._own_host())
+            peers = self._found
             answers = await asyncio.gather(*(self._status(session, p) for p in peers))
             # **This player, found under another name, is still this player**
             # (George, 2026-10-12: GuestPi twice in the switcher). avahi had

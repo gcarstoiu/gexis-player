@@ -60,6 +60,34 @@ async def test_the_others_are_asked_for_their_status_and_kept_a_while():
     assert again == first and len(calls) == 1
 
 
+async def test_a_list_opening_asks_the_players_again_without_a_search():
+    """George, 2026-11-14: bedroompi's menu still showed a group undone on
+    sofapi. A list opening asks what is a few seconds old again."""
+    group = {"value": {"id": "g1", "members": [{"id": "a"}, {"id": "b"}]}}
+    app = web.Application()
+    app.router.add_get("/player/status", lambda r: web.json_response(
+        {"name": "SofaPi", "host": "sofapi.local", "id": "a", "group": group["value"]}))
+    async with TestServer(app) as peer:
+        searches, now = [], [100.0]
+
+        async def browse():
+            searches.append(1)
+            return f"=;wlan0;IPv4;sofapi;_gexis._tcp;local;sofapi.local;127.0.0.1;{peer.port};\n"
+        finder = pl.Players(lambda: "bedroompi", browse=browse, clock=lambda: now[0])
+        async with aiohttp.ClientSession() as session:
+            assert (await finder.others(session))[0]["group"]["id"] == "g1"
+            group["value"] = None                       # undone on sofapi
+            now[0] += pl.ASK_AGAIN_S - 1
+            assert (await finder.others(session, fresh=True))[0]["group"] is not None, "still fresh enough"
+            now[0] += 2
+            assert (await finder.others(session))[0]["group"] is not None, "kept, unless a list opens"
+            fresh = await finder.others(session, fresh=True)
+            assert fresh[0]["group"] is None and fresh[0]["url"] == f"http://sofapi.local:{peer.port}/"
+            assert len(searches) == 1, "asked again, not searched again"
+            # Kept from then on, as a search's answer is.
+            assert (await finder.others(session))[0]["group"] is None
+
+
 async def test_a_peer_that_answers_something_other_than_an_object_is_left_out():
     """Review, 2026-10-12: `{**body}` on a list raised TypeError, which failed
     the whole refresh and with it `/players`."""

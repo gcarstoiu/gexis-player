@@ -137,7 +137,7 @@ export function memberStatus(g, m) {
 /** Another player's row, from what it says of itself (`/players`): in a
  *  group of its own, or playing alone. One older than multiroom says so. */
 export function otherStatus(p) {
-  const named = p?.group?.members?.filter((m) => m.id !== p.id).map((m) => m.name) ?? [];
+  const named = alphabetical(p?.group?.members).filter((m) => m.id !== p.id).map((m) => m.name);
   if (p?.group && named.length) {
     return `In a group with ${joinNames(named)}${p.renderer ? ` · ${p.renderer}` : ''}`;
   }
@@ -166,12 +166,42 @@ export function withoutMe(others, self, mine = new Set()) {
   });
 }
 
+// -- the order of a list of players (George, 2026-11-14) ----------------------
+// Alphabetical, so that a player keeps its place whichever player the list
+// is opened on - this one included, in its place with its check. A group's
+// players stay together, alphabetical within it, the leader tagged where it
+// falls; the group goes where its first player falls.
+
+const collator = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true });
+
+/** Two names in the lists' order. */
+export const byName = (a, b) => collator.compare(a ?? '', b ?? '');
+
+/** Players (anything with a `name`) in alphabetical order, as a new array. */
+export const alphabetical = (players) => [...(players ?? [])].sort((a, b) => byName(a?.name, b?.name));
+
+/** Where a group falls: at its first player's name. */
+export const groupPlace = (members) => alphabetical(members)[0]?.name ?? '';
+
+/** Where another player falls, from what it says of itself: in a group of
+ *  its own, at that group's place. */
+export const playerPlace = (p) => (p?.group?.members?.length > 1 ? groupPlace(p.group.members) : p?.name ?? '');
+
+/** `entries` in the lists' order: each by `[place, name]` - its group's
+ *  place (its own name when in none), then its own name. */
+export function inOrder(entries, place, name = place) {
+  return [...entries].sort((a, b) => byName(place(a), place(b)) || byName(name(a), name(b)));
+}
+
+/** The leader's name in another group, wherever the order puts it. */
+export const leaderName = (og) => og.members.find((m) => m.leads)?.name ?? '';
+
 /** **The other players, another group's together** (ADR-0166 decision 11,
  *  George 2026-10-28: a group seen from outside it is a group, not loose
  *  players). `{loose, groups}`: a group is `{id, leader, title, status,
- *  members, canEnter}`, its leader first; a member the list has not found
- *  (switched off) is `listed: false`. `mine`: this player's own group's ids,
- *  left out. */
+ *  members, canEnter}`, its members alphabetical, the leader tagged `leads`
+ *  (George, 2026-11-14); a member the list has not found (switched off) is
+ *  `listed: false`. `mine`: this player's own group's ids, left out. */
 export function othersByGroup(others, mine = new Set()) {
   const loose = [];
   const found = new Map();
@@ -188,10 +218,9 @@ export function othersByGroup(others, mine = new Set()) {
   const groups = [...found.entries()].map(([id, { summary, listed }]) => {
     const leader = summary.leader;
     const lead = listed.get(leader);
-    const members = (summary.members ?? [])
+    const members = alphabetical((summary.members ?? [])
       .map((m) => ({ id: m.id, name: m.name, leads: m.id === leader, listed: listed.has(m.id),
-                     url: listed.get(m.id)?.url ?? null }))
-      .sort((a, b) => Number(b.leads) - Number(a.leads));
+                     url: listed.get(m.id)?.url ?? null })));
     const any = lead ?? [...listed.values()][0];
     return {
       id, leader, members,

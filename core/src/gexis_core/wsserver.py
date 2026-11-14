@@ -1501,8 +1501,10 @@ class StateServer:
     async def _handle_players(self, request: web.Request) -> web.Response:
         """ADR-0136: this player and the others found, each with its status;
         the phone moves its tab to the one chosen."""
+        # `?fresh=1` when a list opens: the others asked again if what was
+        # found is a few seconds old (George, 2026-11-14).
         async with aiohttp.ClientSession() as session:
-            others = await self._players.others(session)
+            others = await self._players.others(session, fresh=request.query.get("fresh") == "1")
         return web.json_response({"self": self._player_status(), "others": others})
 
     # -- ADR-0166: the group ----------------------------------------------------

@@ -5,8 +5,9 @@
 
   A button at the right end of the *Settings* line, when another player is on
   the network (George, 2026-10-11: larger, in line with the title). It opens
-  the players, this one first and marked, each
-  with what it is doing; choosing another opens its page in the same tab. The
+  the players, this one marked, each with what it is doing, in alphabetical
+  order with a group's players together where its first player falls
+  (George, 2026-11-14); choosing another opens its page in the same tab. The
   list comes from this player (`/players`): the browser does not reach across
   addresses itself.
 -->
@@ -14,11 +15,14 @@
   import { onMount } from 'svelte';
   //: ADR-0166 decision 11: a player in a group says so here as in the
   //: remote's menu (*In a group with Garage · Plexamp*).
-  import { otherStatus } from '../lib/group.svelte.js';
+  import { inOrder, otherStatus, playerPlace } from '../lib/group.svelte.js';
 
   let me = $state(null);
   let others = $state([]);
   let open = $state(false);
+  //: Everyone in the lists' order, this player in its place.
+  const listed = $derived(inOrder([...(me ? [{ ...me, isMe: true }] : []), ...others],
+                                  (p) => playerPlace(p), (p) => p.name));
 
 
   //: **The last list, remembered on this phone** (George, 2026-10-11: the
@@ -34,9 +38,11 @@
     }
   }
 
-  async function load() {
+  //: `fresh` when the list opens: the others asked again if what this
+  //: player has is a few seconds old.
+  async function load(fresh = false) {
     try {
-      const response = await fetch('/players');
+      const response = await fetch(fresh ? '/players?fresh=1' : '/players');
       if (!response.ok) return;
       const body = await response.json();
       me = body.self;
@@ -53,7 +59,7 @@
 
   function show() {
     open = true;
-    load();
+    load(true);
   }
 
   onMount(() => {
@@ -79,23 +85,24 @@
   <div class="sheet" role="dialog" aria-label="Players">
     <div class="sheet__title">Players</div>
     <div class="list">
-      {#if me}
-        <div class="player is-current">
-          <span class="player__text">
-            <span class="player__name">{me.name}</span>
-            <span class="player__status">{otherStatus(me)}</span>
-          </span>
-          <span class="player__here">This player</span>
-        </div>
-      {/if}
-      {#each others as p (p.url)}
-        <a class="player" href={p.url}>
-          <span class="player__text">
-            <span class="player__name">{p.name}</span>
-            <span class="player__status">{otherStatus(p)}</span>
-          </span>
-          <span class="chev" aria-hidden="true"></span>
-        </a>
+      {#each listed as p (p.isMe ? 'me' : p.url)}
+        {#if p.isMe}
+          <div class="player is-current">
+            <span class="player__text">
+              <span class="player__name">{p.name}</span>
+              <span class="player__status">{otherStatus(p)}</span>
+            </span>
+            <span class="player__here">This player</span>
+          </div>
+        {:else}
+          <a class="player" href={p.url}>
+            <span class="player__text">
+              <span class="player__name">{p.name}</span>
+              <span class="player__status">{otherStatus(p)}</span>
+            </span>
+            <span class="chev" aria-hidden="true"></span>
+          </a>
+        {/if}
       {/each}
     </div>
     <button class="close" type="button" onclick={() => (open = false)}>Close</button>

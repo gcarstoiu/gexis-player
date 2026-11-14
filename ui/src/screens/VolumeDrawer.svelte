@@ -50,9 +50,11 @@
   let others = $state([]);
   let selfName = $state('');
   let selfId = $state(null);
-  async function loadPlayers() {
+  //: `fresh` on opening: the others asked again if what this player has
+  //: is a few seconds old (George, 2026-11-14).
+  async function loadPlayers(fresh = false) {
     try {
-      const response = await fetch('/players');
+      const response = await fetch(fresh ? '/players?fresh=1' : '/players');
       if (!response.ok) return;
       const body = await response.json();
       others = Array.isArray(body.others) ? body.others : [];
@@ -67,7 +69,7 @@
   let confirming = $state(false);
   $effect(() => {
     if (open) {
-      loadPlayers();
+      loadPlayers(true);
     } else {
       page = 'main';
       confirming = false;
