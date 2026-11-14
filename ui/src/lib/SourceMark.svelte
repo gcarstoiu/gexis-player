@@ -8,6 +8,7 @@
 <script>
   import spotifyMark from '../assets/icon-spotify.png';
   import BluetoothMark from './BluetoothMark.svelte';
+  import RadioMark from './RadioMark.svelte';
   import { sources } from './state.js';
 
   //: **ADR-0086: `mark` is a manifest's own glyph**, served by the daemon at
@@ -42,7 +43,7 @@
   const gap = $derived(Math.max(2, Math.round(size * 0.11)));
 </script>
 
-{#if glyph && source !== 'lms' && source !== 'spotify' && source !== 'bluetooth'}
+{#if glyph && source !== 'lms' && source !== 'spotify' && source !== 'bluetooth' && source !== 'radio'}
   <img class="mark" src={glyph} alt="" style:height={`${size}px`} style:opacity />
 {:else if source === 'lms'}
   <span class="bars" style:height={`${size}px`} style:gap={`${gap}px`} style:opacity>
@@ -52,6 +53,10 @@
   </span>
 {:else if source === 'bluetooth'}
   <BluetoothMark {size} {opacity} />
+{:else if source === 'radio'}
+  <!-- ADR-0180: internet radio's broadcast mark (design/source/31, decided
+       while drawing #2), in the radio's accent unless a colour is given. -->
+  <span class="radio" style:opacity><RadioMark {size} ink={color === 'currentColor' ? undefined : color} /></span>
 {:else if source === 'spotify'}
   <img
     class="mark"
@@ -94,6 +99,10 @@
     font-weight: 800;
     line-height: 1;
     color: var(--ink);
+  }
+  .radio {
+    display: flex;
+    flex-shrink: 0;
   }
   .mark {
     width: auto;
