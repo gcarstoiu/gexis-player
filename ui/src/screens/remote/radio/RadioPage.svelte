@@ -9,13 +9,13 @@
   each one's stations, the favourites and their edit - each have Back.
 
   Search types with the phone's own keyboard; results come as it types.
-  *Lyrion's radio* shows while Lyrion's library is on, as on the panel; the
-  phone has no Lyrion browsing of its own, so it opens nothing here.
+  No *Lyrion's radio* chip: the phone has no Lyrion browsing of its own, and
+  a chip that opens nothing is not shown (George, 2026-11-14). It stays on
+  the panel and the bars.
 -->
 <script>
   import { onMount, untrack } from 'svelte';
   import { active } from '../../../lib/state.js';
-  import { settingValues } from '../../../lib/settings.js';
   import {
     addFavourite, favourites, loadCountries, loadFavourites, loadGenres, loadLanguages, loadOverview, loadPopular,
     loadStations, orderFavourites, playFavourite, playStation, radio, refreshFavourites, removeFavourite,
@@ -275,8 +275,6 @@
   }
 
   // ── The chips (H01): §8's discs ─────────────────────────────────────────
-  //: *Lyrion's radio* while Lyrion's library is on (as the panel, ADR-0149).
-  const lyrionOn = $derived($settingValues.lms_enabled !== false && $settingValues.lms_library !== false);
   const CHIPS = [
     { key: 'popular', name: 'Popular here', tint: 'bluetooth', glyph: 'pin' },
     { key: 'genres', name: 'By genre', tint: 'artist', glyph: 'note' },
@@ -295,8 +293,6 @@
     <svg viewBox="0 0 24 24" width="14" height="14" class="stroke" aria-hidden="true"><circle cx="12" cy="12" r="8.6" /><ellipse cx="12" cy="12" rx="3.8" ry="8.6" /><path d={RADIO.globe} /></svg>
   {:else if kind === 'speech'}
     <svg viewBox="0 0 24 24" width="14" height="14" class="stroke" aria-hidden="true"><path d={RADIO.speech} /></svg>
-  {:else}
-    <span class="lyrion" aria-hidden="true"><i style:height="6px"></i><i style:height="13px"></i><i style:height="9px"></i><i style:height="11px"></i></span>
   {/if}
 {/snippet}
 
@@ -353,11 +349,6 @@
               <span class="disc">{@render glyph(chip.glyph)}</span>{chip.name}
             </button>
           {/each}
-          {#if lyrionOn}
-            <button class="chip" type="button" style:--tint="var(--accent-lms)" style:--tint-rgb="var(--c-lms-rgb)">
-              <span class="disc">{@render glyph('lyrion')}</span>Lyrion’s radio
-            </button>
-          {/if}
         </div>
         <div class="kicker">
           <span class="kicker__text">{favs.length ? `Favourites · ${favs.length}` : 'Favourites'}</span>
@@ -651,18 +642,6 @@
   }
   .disc .fill {
     fill: currentColor;
-  }
-  .lyrion {
-    height: 13px;
-    display: flex;
-    align-items: center;
-    gap: 2px;
-  }
-  .lyrion i {
-    display: block;
-    width: 3px;
-    border-radius: 3px;
-    background: currentColor;
   }
 
   /* *Favourites · 7*, with Add by address and Edit at its right. */
