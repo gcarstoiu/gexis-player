@@ -150,11 +150,14 @@ async def test_a_player_found_that_does_not_answer_is_listed_through_one_that_do
     """ADR-0136 item 5 (George, 2026-11-14): bedroompi and guestpi could not
     reach each other on the home network; each reached the other two."""
     asked = []
-    me = {"name": "BedroomPi", "host": "bedroompi.local", "id": "b", "instance": "me",
+    # This player as the others last heard it: before its restart (another
+    # token) - by its board's id, and, from one without ids, by its name.
+    me = {"name": "BedroomPi", "host": "bedroompi.local", "id": "b", "instance": "before-restart",
           "url": "http://bedroompi.local:8090/"}
+    me_by_name = {"name": "BedroomPi", "host": "bedroompi.local", "url": "http://bedroompi-2.local:8090/"}
     third = {"name": "Kitchen", "host": "kitchen.local", "id": "k", "url": "http://kitchen.local:8090/",
              "via": "Study"}
-    shelves = _peer("ShelvesPi", {"host": "shelvespi.local", "id": "s"}, [GUEST, me], asked)
+    shelves = _peer("ShelvesPi", {"host": "shelvespi.local", "id": "s"}, [GUEST, me, me_by_name], asked)
     sofa = _peer("SofaPi", {"host": "sofapi.local", "id": "a"},
                  [GUEST, me, third, {"name": "ShelvesPi", "host": "shelvespi.local", "id": "s",
                                      "url": "http://shelvespi.local:8090/"}], asked)
@@ -163,7 +166,7 @@ async def test_a_player_found_that_does_not_answer_is_listed_through_one_that_do
             return (f"=;wlan0;IPv4;shelvespi;_gexis._tcp;local;shelvespi.local;127.0.0.1;{s.port};\n"
                     f"=;wlan0;IPv4;sofapi;_gexis._tcp;local;sofapi.local;127.0.0.1;{a.port};\n"
                     "=;wlan0;IPv4;guestpi;_gexis._tcp;local;guestpi.local;127.0.0.1;9;\n")
-        finder = pl.Players(lambda: "bedroompi", own_instance="me", browse=browse)
+        finder = pl.Players(lambda: "bedroompi", own_instance="me", browse=browse, own_board=lambda: "b")
         seen = []
 
         async def on_refresh(statuses):

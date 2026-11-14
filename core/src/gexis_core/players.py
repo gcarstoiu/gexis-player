@@ -125,8 +125,10 @@ class Players:
     """The others, with their status, kept for `FRESH_S`."""
 
     def __init__(self, own_host, *, own_instance: str | None = None, browse=_browse,
-                 clock=time.monotonic) -> None:
+                 clock=time.monotonic, own_board=None) -> None:
         self._own_host = own_host
+        #: The board's id (`own_id`), as this player's status carries it.
+        self._own_id = own_board or own_id
         #: What this core's own status carries: an answer with it is this
         #: player, whatever name it was found under (see `refresh`).
         self._own_instance = own_instance
@@ -212,13 +214,26 @@ class Players:
             for other in theirs:
                 if not isinstance(other, dict) or other.get("via") or not other.get("url"):
                     continue
-                if self._own_instance and other.get("instance") == self._own_instance:
+                if self._is_me(other):
                     continue
                 key = str(other["id"]) if other.get("id") else other["url"]
                 if key in ids or key in added or other["url"] in urls:
                     continue
                 added[key] = {**other, "via": answer.get("name") or peer["host"]}
         return list(added.values())
+
+    def _is_me(self, status: dict) -> bool:
+        """This player, in another's list: by this core's token, or - that
+        list older than this core's start, which gives a new token (bedroompi
+        listed itself through ShelvesPi for a look after a restart, 2026-11-14)
+        - by the board's id or the name it says of itself."""
+        if self._own_instance and status.get("instance") == self._own_instance:
+            return True
+        mine = self._own_id()
+        if mine and str(status.get("id")) == mine:
+            return True
+        host = str(status.get("host") or "").lower().removesuffix(".local")
+        return bool(host) and host == self._own_host().lower().removesuffix(".local")
 
     @staticmethod
     async def _list_of(session: aiohttp.ClientSession, peer: dict) -> list:
