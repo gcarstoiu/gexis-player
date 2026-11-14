@@ -174,8 +174,13 @@ group's loopback): the rate at the card, the stage, 32 kHz, CPU, an hour. **Done
 sofapi ungrouped, the preview of 439ac89 installed (mpv with it), measured,
 grouped again with the bar; the preview **stays installed on sofapi** for
 George's regression pass (`~/preview-ph31`, the packages only). Acceptance 7
-restated by George as 7 % or less through the real chain: met. **Now:** the
-Home Assistant integration (George, 2026-11-14).
+restated by George as 7 % or less through the real chain: met. **The Home
+Assistant integration built 2026-11-14** on its `radio` branch (pushed, not
+merged; released after the player's, as multiroom): the favourites as
+sources, the directory in the media browser and its search,
+`gexis.radio_favourite`, the `gexis/radio` WebSocket command, the card's
+Radio view (C01-C06; harness in `~/projects/scratch/ph31/card`). Its version
+is bumped at its release.
 
 **Phase 35** (a page from Home Assistant, ADR-0176 as amended) **on Stable
 with 1.16.1**, with the integration's 0.6.0. **Not yet on a player:** the
