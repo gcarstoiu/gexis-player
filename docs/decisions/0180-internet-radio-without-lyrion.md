@@ -141,6 +141,8 @@ radio on a Pi 4 were found published: to be measured.
      default);
    - **[H]** the watchdog's 10 s and three tries; **[H]** a day's cache;
      **[H]** streams at 32 kHz and below resampled to 48 kHz;
+   - **[H]** FFmpeg's reconnect on and a 5 s network timeout, confirmed by
+     George 2026-11-14 after Finding 146 and appended;
    - counting a play has no setting (decision 5).
 7. **What leaves the player**: the directory sees the player's address and
    what is browsed and searched; each station's server sees the address
