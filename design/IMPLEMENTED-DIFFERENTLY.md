@@ -914,8 +914,8 @@ is silent or production differs, confirmed by George (2026-10-28):
   nor on the leader's (Undo group is). A Fixed member's mute shows only
   where its output has a control to silence.
 - **[U]** The lists of players are in alphabetical order (George,
-  2026-11-14): the phone's menu, the panel's *Add players*, the bar's band
-  and the switcher. This player sits in its place with its check, not first;
+  2026-11-14): the phone's menu, the panel's *Add players*, the bar's band,
+  the switcher, and the group volume on the panel, the bar and the phone. This player sits in its place with its check, not first;
   a group goes where its first player falls, its players alphabetical, the
   leader tagged where it falls. The phone's *Other players* heading is gone:
   this player no longer divides the list. The drawing put this player, or

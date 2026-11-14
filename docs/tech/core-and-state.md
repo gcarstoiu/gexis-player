@@ -851,8 +851,8 @@ remembers the last list (`localStorage`), so the button shows at once.
 drawer, the bar's tray, the switcher): if what was found is older than
 `ASK_AGAIN_S` (5 s), the players already found are asked their status again,
 without a search (`Players.ask_again`), so a group made or undone elsewhere
-shows (George, 2026-11-14). The lists are in alphabetical order, a group's
-players together where its first player falls (`inOrder` and its helpers in
+shows (George, 2026-11-14). The lists are in alphabetical order, the group
+volume's members too, a group's players together where its first player falls (`inOrder` and its helpers in
 `lib/group.svelte.js`). `/player/status` is `{name, host, instance, id, screen, transport, renderer}` - the
 renderer named as the source list names it; `instance` a token made at each
 core start, by which a player found under a name avahi changed after a
