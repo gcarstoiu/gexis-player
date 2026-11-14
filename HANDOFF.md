@@ -161,14 +161,15 @@ is in ADR-0180's *The core, built*): directory, favourites, mpv as
 settings, packaging. **The design arrived 2026-11-14** (`design/source/31/`;
 its PNGs and per-artboard markup in `~/projects/scratch/ph31/design`);
 George's answers in ADR-0180 (as drawn; an added station keeps playing;
-logos through the player; two limits in ADR-0022). **Building the screens**
-on branches off `ph-radio`, one worktree each (`~/projects/gexis-radio-panel`,
-`-phone`, `-settings`), merged into `ph-radio` when done; the bars after the
-panel; the Home Assistant card in its own repository last. Layouts are
-checked with invented stations in `~/projects/scratch/ph31/harness`
-(`WT` names the worktree). Then a preview on a player not in a group
-(sofapi's `output` feeds the group's loopback): the rate at the card, the
-stage, 32 kHz, CPU, an hour.
+logos through the player; six limits in ADR-0022). **The screens built
+2026-11-14** on `ph-radio` (CI green at 439ac897): the panel, the bars, the
+phone, Settings and first use, each checked against its artboards with
+invented stations (`~/projects/scratch/ph31/harness`, `WT` names the
+worktree; the screenshots in its `out/`). **Next:** the public documents'
+Radio sections; the Home Assistant integration (favourites as sources, the
+media browser, the card's Radio view, C01–C06), released after the
+player's; a preview on a player not in a group (sofapi's `output` feeds the
+group's loopback): the rate at the card, the stage, 32 kHz, CPU, an hour.
 
 **Phase 35** (a page from Home Assistant, ADR-0176 as amended) **on Stable
 with 1.16.1**, with the integration's 0.6.0. **Not yet on a player:** the
