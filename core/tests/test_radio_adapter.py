@@ -67,6 +67,10 @@ class FakeMpv:
                 writer.write((json.dumps(message) + "\n").encode())
 
     def set(self, name: str, value) -> None:
+        """As mpv: an observed property is reported when it changes, not when
+        it is set to what it already was."""
+        if self.props.get(name) == value and name != "metadata":
+            return
         self.props[name] = value
         for number, observed in self.observed.items():
             if observed == name:
@@ -74,7 +78,8 @@ class FakeMpv:
 
     async def _command(self, command: list, request_id, writer) -> None:
         self.commands.append(command)
-        reply = {"request_id": request_id, "error": "success", "data": None}
+        data = self.props.get(command[1]) if command[0] == "get_property" else None
+        reply = {"request_id": request_id, "error": "success", "data": data}
         writer.write((json.dumps(reply) + "\n").encode())
         name = command[0]
         if name == "observe_property":
@@ -82,6 +87,9 @@ class FakeMpv:
             self.set(command[2], self.props.get(command[2]))
         elif name == "loadfile":
             self.loaded.append(command[1])
+            # As mpv: the file playing ends and the core idles while the next
+            # one opens; the stream's own properties stay as they were.
+            self.set("core-idle", True)
             asyncio.get_running_loop().call_soon(self._play, command[1])
 
     def _play(self, url: str) -> None:
@@ -91,6 +99,8 @@ class FakeMpv:
             self._send({"event": "end-file", "reason": "error", "file_error": "loading failed"})
             return
         rate = 22050 if "lowrate" in url else 44100
+        self.props["audio-codec-name"] = "aac"
+        self.props["audio-bitrate"] = 127_400
         self.set("audio-params", {"samplerate": rate, "channels": "stereo", "format": "floatp"})
         self.set("core-idle", False)
         if "titled" in url:
@@ -340,3 +350,34 @@ async def test_nothing_sent_the_station_s_name_is_the_title(rig):
     rig.mpv.set("metadata", {"icy-title": ""})
     await until(lambda: rig.adapter.state.lines == "none")
     assert rig.metadata[-1].title == "Station 1" and rig.metadata[-1].album is None
+
+
+async def test_the_rate_is_asked_for_after_a_station_at_the_same_rate(rig):
+    """Found on sofapi, 2026-11-14: mpv reports a property only when it
+    changes, so the second of two 44.1 kHz stations had no rate."""
+    await rig.adapter.play_station(station(1))
+    await until(lambda: rig.metadata[-1].sample_rate == 44100)
+    await rig.adapter.play_station(station(2))
+    await until(lambda: rig.adapter.state.state == radio_mod.PLAYING)
+    await until(lambda: rig.metadata[-1].sample_rate == 44100)
+
+
+async def test_a_station_without_its_codec_learns_mpv_s(rig):
+    learned = []
+    rig.adapter.on_station_learned(learned.append)
+    bare = Station(id="address-x", name="Added", url="http://example.org/x", listed=False)
+    await rig.adapter.play_station(bare)
+    await until(lambda: learned)
+    assert (learned[0].codec, learned[0].bitrate) == ("AAC", 127)
+    assert rig.adapter.state.station.codec == "AAC" and rig.metadata[-1].codec == "AAC"
+    # A station that has its own keeps them.
+    learned.clear()
+    await rig.adapter.play_station(station(1))
+    await until(lambda: rig.adapter.state.state == radio_mod.PLAYING)
+    await asyncio.sleep(0.1)
+    assert learned == [] and rig.adapter.state.station.codec == "AAC" and rig.adapter.state.station.bitrate == 128
+
+
+def test_codec_names():
+    assert radio_mod.codec_name("mp3float") == "MP3" and radio_mod.codec_name("opus") == "OPUS"
+    assert radio_mod.codec_name("wavpack") == "WAVPACK" and radio_mod.codec_name(None) is None

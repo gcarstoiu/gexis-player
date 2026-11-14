@@ -191,8 +191,16 @@ class RadioService:
                     and self.adapter.state.station.id == station.id:
                 await self.adapter.pause()
             return None
+        # What mpv told the radio once it sounded (codec, bitrate) is kept.
+        playing = self.adapter.state.station
+        if playing is not None and playing.id == station.id:
+            station = playing
         self.add(station)
         return station
+
+    def learned(self, station: Station) -> None:
+        """A favourite added without its codec or bitrate keeps mpv's."""
+        self.favourites.complete(station.id, station.codec, station.bitrate)
 
     async def _sounds(self, station_id: str) -> bool:
         loop = asyncio.get_running_loop()

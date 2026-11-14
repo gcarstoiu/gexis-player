@@ -116,6 +116,17 @@ class Favourites:
         if changed:
             self._save(stations)
 
+    def complete(self, station_id: str, codec: str | None, bitrate: int | None) -> None:
+        """Fill in what a favourite lacks - never replace what it has."""
+        stations = self.all()
+        changed = False
+        for i, s in enumerate(stations):
+            if s.id == station_id and ((not s.codec and codec) or (not s.bitrate and bitrate)):
+                stations[i] = replace(s, codec=s.codec or codec, bitrate=s.bitrate or bitrate)
+                changed = True
+        if changed:
+            self._save(stations)
+
     def step(self, station_id: str, by: int) -> Station | None:
         """The favourite `by` places on from this one, round the ends; None
         when this station is not a favourite."""

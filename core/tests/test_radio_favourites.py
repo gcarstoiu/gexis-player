@@ -118,3 +118,13 @@ def test_a_long_name_is_cut(store):
 def test_address_id_is_stable_and_trims():
     assert rf.address_id("http://a/b") == rf.address_id(" http://a/b ")
     assert rf.address_id("http://a/b") != rf.address_id("http://a/c")
+
+
+def test_complete_fills_only_what_is_missing(store):
+    fav = favourites(store)
+    fav.add(make_station(1, codec=None, bitrate=None))
+    fav.add(make_station(2))
+    fav.complete("id-1", "AAC", 96)
+    fav.complete("id-2", "FLAC", 1411)
+    assert (fav.get("id-1").codec, fav.get("id-1").bitrate) == ("AAC", 96)
+    assert (fav.get("id-2").codec, fav.get("id-2").bitrate) == ("MP3", 128)

@@ -5055,6 +5055,7 @@ async def main() -> None:
         acquire=supervisor.acquire, active=lambda: supervisor.active,
         enabled=lambda: renderer_enabled("radio"),
         country=lambda: settings.value("radio_country"), logos=station_logos)
+    radio.on_station_learned(radio_service.learned)
     _publish_radio()
     state_server = StateServer(
         state_store,

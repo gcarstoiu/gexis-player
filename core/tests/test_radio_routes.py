@@ -114,6 +114,7 @@ async def rig(monkeypatch):
                            acquire=supervisor.acquire, active=lambda: supervisor.active,
                            enabled=lambda: switched["on"], country=lambda: "DE",
                            logos=Logos(user_agent="GexisPlayer/test", cache_dir=Path(folder) / "logos"))
+    radio.on_station_learned(service.learned)   # as __main__ wires it
     server = StateServer(StateStore({rid: a.capabilities for rid, a in adapters.items()}),
                          stations=service)
     client = TestClient(TestServer(server.make_app()))
@@ -216,6 +217,8 @@ async def test_a_station_added_by_its_address_is_kept_only_if_it_plays(rig):
     kept = rig.favourites.all()
     assert [(s.name, s.url, s.listed) for s in kept] == [("My station", "http://example.org/fine", False)]
     assert rig.mpv.loaded[-1] == "http://example.org/fine", "an unlisted address is played as given"
+    # What mpv said it plays is kept with it (the phone's *Added by address · AAC · 127 kb/s*).
+    await until(lambda: (rig.favourites.all()[0].codec, rig.favourites.all()[0].bitrate) == ("AAC", 127))
 
     resp = await rig.client.post("/stations/favourites/address", json={"url": "file:///etc/passwd", "name": "x"})
     assert resp.status == 400

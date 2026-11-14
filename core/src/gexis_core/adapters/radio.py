@@ -72,6 +72,17 @@ NOT_ANSWERING = "not_answering"
 #: The properties mpv reports as they change.
 OBSERVED = ("core-idle", "metadata", "audio-params", "audio-codec-name")
 
+#: mpv's decoder names as the screens write a codec, beside the directory's.
+CODECS = {"mp3": "MP3", "mp3float": "MP3", "aac": "AAC", "aac_fixed": "AAC", "opus": "OPUS",
+          "vorbis": "OGG", "flac": "FLAC", "mp2": "MP2", "alac": "ALAC"}
+
+
+def codec_name(mpv_name) -> str | None:
+    """`aac` → *AAC*; a name not here is shown as mpv gives it, upper case."""
+    if not isinstance(mpv_name, str) or not mpv_name:
+        return None
+    return CODECS.get(mpv_name.lower(), mpv_name.upper())
+
 
 @dataclass(frozen=True)
 class RadioState:
@@ -147,6 +158,7 @@ class RadioAdapter(Adapter):
         self._on_state: Callable[[RadioState], None] | None = None
         self._on_release: Callable[[], None] | None = None
         self._on_availability: Callable[[bool], None] | None = None
+        self._on_learned: Callable[[Station], None] | None = None
         self._state = RadioState()
         self._metadata = TrackMetadata()
         #: Whether a station should be sounding now: the watchdog's question.
@@ -171,6 +183,11 @@ class RadioAdapter(Adapter):
 
     def on_state_change(self, callback: Callable[[RadioState], None]) -> None:
         self._on_state = callback
+
+    def on_station_learned(self, callback: Callable[[Station], None]) -> None:
+        """A station that came without its codec or bitrate (one added by its
+        address) has them from mpv once it sounds."""
+        self._on_learned = callback
 
     def on_availability_change(self, callback: Callable[[bool], None]) -> None:
         """Available while the source is on: there is no daemon of its own to
@@ -434,6 +451,36 @@ class RadioAdapter(Adapter):
             self._set_state(replace(self._state, state=PLAYING))
         if self._settled is None and self._state.attempt:
             self._settled = asyncio.ensure_future(self._settle())
+        asyncio.ensure_future(self._learn())
+
+    async def _learn(self) -> None:
+        """**What is playing, asked of mpv once it sounds** (found on sofapi,
+        2026-11-14): mpv reports a property only when it changes, so after a
+        station at the same rate as the one before, the rate never came and
+        Now Playing had none. And a station that came without its codec or
+        bitrate - one added by its address - takes mpv's."""
+        mpv, station = self._mpv, self._state.station
+        if mpv is None or station is None:
+            return
+        try:
+            params = await mpv.command("get_property", "audio-params")
+            name = await mpv.command("get_property", "audio-codec-name")
+            bits = await mpv.command("get_property", "audio-bitrate")
+        except MpvError:
+            return
+        if self._state.station is not station:
+            return
+        rate = params.get("samplerate") if isinstance(params, dict) else None
+        if isinstance(rate, int) and rate > 0 and rate != self._metadata.sample_rate:
+            self._publish_metadata(replace(self._metadata, sample_rate=rate))
+        codec = station.codec or codec_name(name)
+        bitrate = station.bitrate or (round(bits / 1000) if isinstance(bits, (int, float)) and bits > 0 else None)
+        if (codec, bitrate) != (station.codec, station.bitrate):
+            learned = replace(station, codec=codec, bitrate=bitrate)
+            self._set_state(replace(self._state, station=learned))
+            self._publish_metadata(replace(self._metadata, codec=codec))
+            if self._on_learned is not None:
+                self._on_learned(learned)
 
     async def _settle(self) -> None:
         try:
