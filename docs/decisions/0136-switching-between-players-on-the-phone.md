@@ -3,7 +3,8 @@
 **Status:** **Accepted** — George, 2026-10-11: *"The switcher on the phone we
 can do now. Simple switch with status and renderer connected."*
 **Amended** 2026-11-14 (George): every list of players in alphabetical order,
-and a list asks for a fresh answer when it opens (below).
+a list asks for a fresh answer when it opens, and a player reached only
+through another is listed through it (below).
 
 ## Context
 
@@ -71,8 +72,23 @@ opened on:
    it tells every player found (`POST /players/changed`); each asks the
    others again 0.3 s later and its open lists read `/players` again. A
    player older than this answers 404 and waits for its next look.
+5. **A player reached only through another is listed through it** (George,
+   the same evening, choosing this over leaving it out or listing it without
+   a word: bedroompi and guestpi could not reach each other on the home
+   network, while each reached the other two and the phone reached all
+   four). When a player the search found does not answer, the core asks the
+   players that did for their own lists (`GET /players`) and adds each
+   player one of them reached directly and it did not, with `via` naming the
+   player it came through - one hop: never one that player had itself
+   through a third. Its row shows its status and opens its page like any
+   other, as the phone reaches it itself. It cannot be grouped from here -
+   a group's music goes straight from its leader to each member - so it has
+   no Join, its status ends *Can't group from here* as one older than
+   multiroom ends *Update to join*, and a group it leads has no *Join this
+   group*. A group change is not told to it, and a group does not follow
+   it. Everything else is as before when every player found answers.
 
-Built on `fix-players-order`, checked with invented players on the phone,
+Items 1-4 built on `fix-players-order`, checked with invented players on the phone,
 the panel and the bar, and the manual's three group pictures retaken with the
 demo library (the switcher, reached only on a narrow standalone Settings, not
 seen).
