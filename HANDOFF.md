@@ -153,18 +153,20 @@ for room correction, research first; whether more positions help is checked
 there (George).
 
 **Phase 31** (internet radio without Lyrion, `ph-radio`) **started
-2026-11-13**: ADR-0180 accepted (George: 1-7 as recommended; 8 as (b), the
-phone and Home Assistant in this phase, a Radio view on the card); settings
-in ADR-0022. The brief for Claude Design is `design/briefs/31-radio.md`,
-with George. **mpv measured 2026-11-13** (Finding 146, on sofapi, unpacked
-under `/tmp`, nothing installed, all removed): confirmed. **The core built
-2026-11-14** on `ph-radio` (worktree `~/projects/gexis-player-radio`; what
-the build settled is in ADR-0180's *The core, built*): directory,
-favourites, mpv as `gexis-radio.service`, `/stations` routes, settings,
-packaging. **Next:** the screens - George said the design was in the
-project as `design/source/31/`, but it was not on this computer or any
-branch on 2026-11-14; asked for. The source's accent and mark are
-placeholders until it comes. Then a preview on a player not in a group
+2026-11-13**: ADR-0180 accepted; settings in ADR-0022. **mpv measured
+2026-11-13** (Finding 146): confirmed. **The core built 2026-11-14** on
+`ph-radio` (worktree `~/projects/gexis-player-radio`; what the build settled
+is in ADR-0180's *The core, built*): directory, favourites, mpv as
+`gexis-radio.service`, `/stations` routes, logos through the player,
+settings, packaging. **The design arrived 2026-11-14** (`design/source/31/`;
+its PNGs and per-artboard markup in `~/projects/scratch/ph31/design`);
+George's answers in ADR-0180 (as drawn; an added station keeps playing;
+logos through the player; two limits in ADR-0022). **Building the screens**
+on branches off `ph-radio`, one worktree each (`~/projects/gexis-radio-panel`,
+`-phone`, `-settings`), merged into `ph-radio` when done; the bars after the
+panel; the Home Assistant card in its own repository last. Layouts are
+checked with invented stations in `~/projects/scratch/ph31/harness`
+(`WT` names the worktree). Then a preview on a player not in a group
 (sofapi's `output` feeds the group's loopback): the rate at the card, the
 stage, 32 kHz, CPU, an hour.
 
