@@ -29,8 +29,9 @@ Start-up order, in brief:
    on Software it also swaps in the software stage (`Gexis`) as the control
    and makes it (ADR-0124, ADR-0127). Meters are available when the software
    stage is in the chain or the card needs no conversion.
-4. The three built-in adapters are built: `LmsAdapter`, `SpotifyAdapter`,
-   `BluetoothAdapter`.
+4. The built-in adapters are built: `LmsAdapter`, `SpotifyAdapter`,
+   `BluetoothAdapter` and `RadioAdapter` (internet radio, with its
+   directory, logos and favourites; ADR-0180).
 5. Plugin manifests are read (`plugins.installed()` plus `uploads.installed()`),
    so the built-ins and any plugin are described the same way (ADR-0086).
 6. `StateStore` is built from the adapters' capabilities and the manifests.
@@ -50,10 +51,11 @@ flowchart TB
     SP[adapters/spotify.py<br/>go-librespot HTTP + WS]
     BT[adapters/bluetooth.py<br/>BlueZ D-Bus]
     PA[adapters/plugin.py<br/>per connected plugin]
+    RA[adapters/radio.py<br/>mpv JSON socket]
   end
   PS[plugin_server.py<br/>/run/gexis/plugins.sock] --> PA
-  LMS & SP & BT & PA -- acquire / release --> SUP[arbitration.py<br/>Supervisor]
-  LMS & SP & BT & PA -- metadata, availability, queue --> ST[state.py<br/>StateStore]
+  LMS & SP & BT & PA & RA -- acquire / release --> SUP[arbitration.py<br/>Supervisor]
+  LMS & SP & BT & PA & RA -- metadata, availability, queue --> ST[state.py<br/>StateStore]
   SUP -- active, handoff --> ST
   VOL[volume.py, remote_volume.py<br/>bluealsa_volume.py] -- level --> ST
   SET[settings_registry.py<br/>Settings] -- settings_revision --> ST
@@ -65,6 +67,7 @@ flowchart TB
   EN --- PR[providers.py] --- CACHE[(enrichment.db)]
   WS --> LIB[library.py<br/>typed LMS queries]
   WS --> RAD[radio.py / menus.py<br/>handle walkers]
+  WS --> RS[radio_service.py<br/>directory, favourites, logos] --> RA
   WS --> EN
   WS --> SET
   WS --> SUP
@@ -129,6 +132,7 @@ Top-level fields of the `/state` payload:
 | `screen_check` | The hardware feedback's test pattern and the measured corner taps (ADR-0126) |
 | `settling` | The first start after setup, until its downloads have finished: `phase`, each item's state, and `hidden` when put away (ADR-0128); the Lyrion Server's item also its `steps` and Lyrion's own `label`, `line` and `share` until it has read the music, and `modal`, false while only Lyrion is followed (ADR-0149 decision 43) |
 | `resetting` | `true` once a factory reset is confirmed, for the 3 s before the restart; every screen shows the reset screen (ADR-0132) |
+| `radio` | Internet radio's own state: the station, null until one is played (its logo at the player's address, and whether it is a favourite), `state`, the watchdog's `attempt` of `tries`, `lines`, and `favourites`, a revision raised on every change of the list ([Internet radio](#internet-radio), ADR-0180) |
 | `settings_revision`, `pictures_revision` | Refetch triggers |
 
 ### How a change reaches the screen
@@ -207,7 +211,8 @@ something the panel is not showing).
 | Panel view | `POST /touch`, `POST /panel/painted`, `POST /panel/shown`, `POST /panel/idle/{show,hide}`, `POST /panel/standby/{on,off}` (ADR-0135), `GET /player/status` and `GET /players` (ADR-0136), `POST /panel/go/{to}`, `POST /peppy/{action}` | Panel reports; phone asks |
 | Idle screen | `GET /idle`, `/idle/weather`, `/idle/wallpaper`, `/idle/wallpaper/{name}`, `/idle/wallpaper/local/{path}` | Panel (ADR-0047) |
 | Library | `GET /library/{counts,strip,new,artists,playlists}`, `/library/artists/{id}/{albums,genres}`, `/library/albums/{id}`, `/library/playlists/{id}`, `/library/artist-photos`, `/library/artist-info`; `POST /library/action` | Panel (ADR-0038) |
-| Radio | `GET /radio?handle=…`, `POST /radio/play` | Panel (ADR-0030) |
+| Lyrion's radio | `GET /radio?handle=…`, `POST /radio/play` | Panel (ADR-0030) |
+| Internet radio | `GET /stations` (the overview), `/stations/{popular,list,search}` (pages of stations), `/stations/{genres,countries,languages}`, `/stations/favourites`, `/stations/logo/{key}`; `POST /stations/play`, `/stations/favourites`, `/stations/favourites/address`; `PUT /stations/favourites` (the order); `DELETE /stations/favourites/{id}` | Panel, phone (ADR-0180; [Internet radio](#internet-radio)) |
 | Lyrion menus | `GET /menus`, `/menus/browse`, `/menus/letters`; `POST /menus/act`, `/menus/search` | Panel, when Extended navigation is on (ADR-0118) |
 | Enrichment | `GET /enrichment` | Panel, phone |
 | Equaliser | `GET`/`PUT /equaliser`, `POST /equaliser/settings`, `PUT`/`DELETE /equaliser/settings/{key}` - for the output in use; `equaliser` on `/state` (ADR-0162; `eq_control.py`, `eq_engine.py`) | Both |
@@ -245,7 +250,8 @@ the built-ins to implement the same contract a plugin does.
   published in `/state`: `audio_connection` (always `output`, ADR-0009),
   `acquisition_events`, `supports_artwork`, `supports_sample_rate`,
   `sample_rate_is_source`, `volume_managed`, `volume_mechanism`
-  (`dummy_mixer` or `software_api`), `dummy_mixer_card`,
+  (`dummy_mixer`, `software_api`, or `output` for a renderer with no level
+  of its own, ADR-0180), `dummy_mixer_card`,
   `volume_over_bluealsa`, `volume_handed`, `controls`.
 - **`Adapter`** (abstract) - `renderer_id`, `release_action` (`pause` or
   `disconnect`), `unit_name` (the systemd unit that opens the device, used to
@@ -266,6 +272,7 @@ the built-ins to implement the same contract a plugin does.
 | `spotify.py` | go-librespot's HTTP API and `/events` WebSocket | `software_api` |
 | `bluetooth.py` | BlueZ `MediaPlayer1` over D-Bus `PropertiesChanged` | declares `dummy_mixer` with `volume_over_bluealsa`; the level travels over bluealsa's D-Bus API (ADR-0054 §1) |
 | `plugin.py` | Nothing; events arrive on the plugin socket | Declared by the plugin |
+| `radio.py` | mpv's JSON socket (`mpv_ipc.py`), while a station plays; a station starts from a route, never from an event outside the core | `output`: mpv at its own 100 %, the slider the output's level |
 
 Arbitration (who wins the device, the release ladder, the transition screen)
 is described in `audio-path.md`.
@@ -384,7 +391,7 @@ a Spotty or Qobuz track not yet played has a `coverid` whose cover is LMS's
 generic placeholder (`coverart: 0`). A library track keeps its `coverid`
 cover.
 
-**Radio** (`radio.py:RadioBrowser`) and **Lyrion's menus**
+**Lyrion's radio** (`radio.py:RadioBrowser`) and **Lyrion's menus**
 (`menus.py:LyrionMenus`, ADR-0118) are SlimBrowse walkers built on one idea:
 
 - The core walks LMS's menu tree and gives the panel an **opaque handle**
@@ -403,6 +410,94 @@ cover.
   nodes, entries that write, preset buttons and one-off actions. It adds
   letter indexes (cached 30 minutes) and search with text typed on the phone.
   It is only served while the `lms_extended_nav` row is on.
+
+## Internet radio
+
+ADR-0180, Finding 146. The player's own radio, with or without Lyrion: a
+directory client, the logos, the favourites and a renderer (mpv, in
+[audio-path.md](audio-path.md#the-renderers)), behind
+`radio_service.py:RadioService`, which the `/stations` routes call for the
+panel, the phone and Home Assistant alike. Lyrion's radio (`radio.py`,
+above) is untouched; the Radio screen opens it as *Lyrion's radio*.
+
+- **The directory** (`radio_directory.py`) is radio-browser.info, read by
+  the core with `User-Agent: GexisPlayer/<version>`. **Its servers are
+  found, never written in**: every address `all.api.radio-browser.info`
+  gives is named back to its host (`de1.api.radio-browser.info`), a name
+  outside `.api.radio-browser.info` passed over, and they are tried in turn
+  in a random order, looked up again after an hour or once all have failed.
+  A 5xx, a timeout (6 s) or a refused connection passes to the next; when
+  none answers the directory is *unreachable* (`Unreachable`; with nothing
+  kept, a 503 with `reachable: false`), an answer of its own, never an
+  empty list.
+- **Every list is kept on the device for a day** (`/var/cache/gexis-core/radio/`,
+  ADR-0022 [H]): browsing again costs nothing, and a directory that is down
+  still shows that day's lists, with `reachable: false` once an ask has
+  failed. Older than
+  a day, a list is asked for again; with the directory down it is not shown
+  stale. Only stations whose last check passed (`hidebroken`); pages of 50,
+  the most played first (`clickcount`); the 200 best-filled genres and 120
+  languages. **A station on a home-network address is left out** - a
+  private, loopback or link-local number, `localhost` or a `.local` name,
+  for its stream or its logo (`on_the_internet`): the directory is public
+  and anyone may edit it. A logo that is missing, not a web address or an
+  `.ico` counts as none.
+- **A play is counted** (decision 5): playing a listed station asks
+  `url/{uuid}`, which counts the play and answers the station's address
+  now; a favourite whose address moved keeps the new one (stations move
+  hosts). With no answer in 3 s the kept address plays. A station added by
+  its address is neither asked for nor counted.
+- **The logos come through the player** (`radio_logos.py`, George
+  2026-11-14), so only the player's address reaches a station's site.
+  Every station a screen is given names its logo as `/stations/logo/<key>`,
+  the key the first 16 hexadecimal digits of the address's sha256, and only
+  an address the core handed out is fetched: a key is no way to make the
+  player fetch something. A host that resolves to a home-network address is
+  refused, and so is a redirect to one (three at most). A picture is told by
+  its first bytes, not by what the site says - PNG, JPEG, GIF or WebP, at
+  most 512 KiB; SVG is refused, as it can carry script and would be served
+  from the player's own address. Logos are kept in
+  `/var/cache/gexis-core/radio-logos/` for 30 days (600 at most); one that
+  could not be fetched is not asked for again for a day. None is a 404, and
+  the screens draw the radio mark.
+- **The favourites** (`radio_favourites.py`) are the player's own list,
+  apart from Lyrion's, kept in the settings store as `_radio_favourites` - a
+  value no Settings row shows - so a backup carries it, a restore brings it
+  back and a factory reset clears it. Each keeps the directory's id (or
+  `address-` and a hash of the address, for one added by its address), its
+  name, logo, address, country, codec and bitrate, so it plays with the
+  directory down; an entry that is not a station is passed over. At most 200
+  (ADR-0022 [H]). A new order must name every favourite once, or it is
+  refused (409), so a phone and the panel reordering at once cannot lose
+  one. Next and Previous step through them, from the last round to the
+  first.
+- **A station added by its address** (`POST /stations/favourites/address`,
+  the phone's *Add by address*): an http or https address and a name. It is
+  played as any station is, and kept only if it sounds within 20 s
+  (`CHECK_S`, ADR-0022 [H]), then goes on playing; otherwise the radio stops
+  and the answer is a 422. Its codec and bitrate are mpv's, once it sounds.
+- **Playing** (`RadioService.play`): refused with a 409 while the source is
+  off; the device is acquired for `radio` through the supervisor first, so
+  whoever held it is released as in any takeover, and only then does the
+  renderer look the address up and load it. A takeover while a station is
+  still being looked up stops that play.
+- **`/state`'s `radio`**: the station (its logo by the player's address,
+  `favourite`); `state` - `connecting`, `playing`, `reconnecting`, `stopped`
+  or `not_answering`; the watchdog's `attempt` of `tries`; `lines` -
+  `split` (artist and title, ICY's `StreamTitle` split at its first `" -
+  "`), `whole` (the line as the title) or `none` (nothing sent, or only the
+  station's name: the name is the title, and there is no album line); and
+  `favourites`, a revision raised on every change of the list, on which
+  every surface reads `GET /stations/favourites` again (`ui/src/lib/radio.js`).
+  In the metadata, the station's name is the album when something was sent,
+  the title when nothing was. The track's cover is looked up as for any
+  renderer that sends none, by the recording (the album being the station's
+  name); the station's logo stands in until one is found, and when none is
+  (`fallback_artwork`).
+- ***Popular here*'s country** is `radio_country`, chosen from tzdata's
+  `iso3166.tab`; until it is set, the time zone's country. Settings' *Ready*
+  and *Directory unreachable* on its heading come from `GET
+  /stations/countries` (see [The registry](#the-registry)).
 
 ## Enrichment
 
@@ -717,6 +812,7 @@ plugin may send: `acquire`, `release`, `available`, `metadata`, `queue`,
 | `/var/lib/gexis-core/settings.db` | User settings (SQLite) |
 | `/var/lib/gexis-core/enrichment.db` | Enrichment cache and notes (SQLite) |
 | `/var/cache/gexis-core/fanart/` | The visualiser's artist photos |
+| `/var/cache/gexis-core/radio/`, `/var/cache/gexis-core/radio-logos/` | Internet radio's directory lists (a day) and station logos (30 days) |
 | `/var/local/www/currentsong.txt` | moOde-compatible metadata file |
 | `/run/gexis/` | Runtime files: plugin socket, plugin env files, meter FIFOs, visualiser selection |
 | `/usr/share/gexis/plugins/` | Shipped plugin manifests |

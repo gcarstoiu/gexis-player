@@ -97,7 +97,7 @@ newest deliberate choice wins, and the others are told.
 
 Join Gexis players into a group, from the phone, the screen or a bar's tray,
 and they play the same music together, whatever the source: Lyrion, Spotify,
-AirPlay, Bluetooth, Plexamp, Roon or a plugin. Music started on any of them plays on all,
+AirPlay, Bluetooth, Plexamp, Roon, internet radio or a plugin. Music started on any of them plays on all,
 each keeps its own volume and equaliser, and one slider moves them all. A
 Lyrion group stays Lyrion's own sync, gapless and bit-perfect, and syncing
 players in a Lyrion app groups them too.
@@ -170,7 +170,7 @@ library; it uses one of the most mature there is:
   on the Lyrion Server plugin and the player keeps your library itself; its
   scans run at the lowest priority, and a full scan of a large library played
   through 40 minutes without a gap. Or leave Lyrion out: Spotify, AirPlay,
-  Plexamp and Bluetooth work without it.
+  Plexamp, Bluetooth and internet radio work without it.
 
 ## 🔌 Plugins: make it yours
 
@@ -202,12 +202,12 @@ or removed from Settings, with its progress shown in the switch itself.
 
 | | |
 |---|---|
-| 🔊 **Sources** | Spotify Connect · AirPlay 2 (Shairport Sync) · Lyrion (squeezelite) · Bluetooth (A2DP) · Plexamp · Roon (Roon Bridge) · plugins, your own or from the catalogue |
+| 🔊 **Sources** | Spotify Connect · AirPlay 2 (Shairport Sync) · Lyrion (squeezelite) · Bluetooth (A2DP) · Plexamp · Roon (Roon Bridge) · internet radio (mpv), from a public directory, with your own favourites · plugins, your own or from the catalogue |
 | 🎚️ **Sound** | Bit-perfect, tested up to 24/192 on DAC boards and to 768 kHz on a USB DAC · native DSD on a DAC that takes it · hardware, software or fixed volume · a maximum level for every source · a starting volume Spotify never exceeds · a ten-band equaliser with presets and your own settings, for each output, off (and bit-perfect) until you switch it on · room correction measured from the phone with a UMIK-1 at three positions round your seat: the peaks the room adds to the bass cut, and above the bass its broad bumps and dips evened out by 3 dB at most (in limited testing), with an A/B to compare |
 | 🔀 **Handover** | One source at a time, never mixed · takeover in any direction · the previous source released before the next one plays |
 | 📡 **Multiroom** | Players joined into a group play the same music in sync, for every source · music started on any of them plays on all · each keeps its own level and equaliser, and an *All* slider moves them together · Lyrion's own sync for Lyrion, and Lyrion's synced players grouped too · groups last until undone, restarts included |
 | 🖼️ **Now playing** | Artwork · synced or plain lyrics · artist information and photos · the Lyrion queue |
-| 📚 **Library** | Lyrion's albums, artists, genres, playlists and radio on the screen, with search · the Lyrion server you already run, or the Lyrion Server plugin on the player, reading the folders you tick on USB drives, network shares and its own Music share, its progress shown, at the lowest priority |
+| 📚 **Library** | Lyrion's albums, artists, genres and playlists on the screen, with search, and Lyrion's radio inside the player's own · the Lyrion server you already run, or the Lyrion Server plugin on the player, reading the folders you tick on USB drives, network shares and its own Music share, its progress shown, at the lowest priority |
 | 📈 **Visualiser** | Up to 287 skins, depending on the screen · VU meters, spectrum, turntables and tape decks · progress, time, volume and play-state in each skin's own style · skins that rotate per track |
 | 🌙 **Idle screen** | A clock, 24 h or 12 h · the weather with a three-day forecast and, at night, the moon in tonight's phase · seven styles of weather icons, animated or still · behind it the player's own public-domain wallpapers, following the time of day, the seasons and the holidays, or artist pictures, photos from Pixabay, pictures copied onto the player, or black · or a web page of your choice · standby at set times |
 | 🖥️ **Screens** | HDMI touchscreens from 7" to 13.3", including 7.9" and 11.9" bar displays, and DSI screens on the Pi's own display connector, leaving HDMI free for sound · recognised and laid out for their shape · or Headless, with no screen at all |
@@ -236,7 +236,7 @@ I'd rather you knew these up front:
   testing is very welcome and is how this list grows: if you run Gexis on
   other hardware, *Hardware feedback* on the player tests it and fills in
   most of the report for you.
-- **On a phone you get a remote and Settings, not the whole player.**
+- **On a phone you get a remote, internet radio and Settings, not the whole player.**
   The remote has what plays, the volume and a touch area that drives the
   panel; the library is browsed on the panel, in a Lyrion app or in your
   streaming app.
@@ -288,7 +288,8 @@ Rough, and subject to change:
   there. Room correction with a USB microphone, for the bass or the full
   range. A page from Home Assistant on the screen for a while, such as
   cameras when the doorbell rings.
-- 🔜 **Next:** internet radio without a Lyrion server.
+- 🔜 **Next:** internet radio without a Lyrion server, being built now
+  (Phase 31).
 - 🎨 **Later:** with Plex switched on, your own Plex server fills in
   the artist and album information other sources leave out.
 - 💭 **Maybe:** the DAC's own filter and polarity options.

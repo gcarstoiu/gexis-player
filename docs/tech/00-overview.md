@@ -33,7 +33,9 @@ These come up on every page, so they are stated once here.
 - **Everything stays resident.** Renderers stay loaded while idle, Chromium
   never restarts, and the visualiser is raised and hidden rather than
   started (ARCHITECTURE.md §10, ADR-0026). A source switched off in Settings
-  is the exception: its unit is stopped and disabled (ADR-0077).
+  is the exception: its unit is stopped and disabled (ADR-0077). So is
+  internet radio's mpv, which the core starts when a station is played and
+  stops with it (ADR-0180).
 - **Plugins are separate processes** that speak JSON lines over a Unix socket
   (ADR-0016, ADR-0084). The built-in renderers describe themselves with the
   same manifest a plugin uses (ADR-0086), though their adapters still live
@@ -48,7 +50,7 @@ These come up on every page, so they are stated once here.
 flowchart TB
     subgraph Presentation
         kiosk["Chromium kiosk under labwc<br/>(the panel)"]
-        phone["Phone browser<br/>(the remote and Settings)"]
+        phone["Phone browser<br/>(the remote, Radio and Settings)"]
         peppy["Peppy screen<br/>native PeppyMeter / PeppySpectrum"]
     end
     subgraph Control["Control plane (Python)"]
@@ -62,6 +64,7 @@ flowchart TB
         px["Plexamp<br/>(catalogue plugin)"]
         ap["Shairport Sync<br/>(AirPlay, plugin)"]
         rn["Roon Bridge<br/>(Roon, plugin)"]
+        rd["mpv<br/>(internet radio)"]
     end
     subgraph Audio["ALSA (pcm.output)"]
         out["type meter + peppyalsa scope"]
@@ -167,6 +170,7 @@ Notes on the diagram:
 | `gexis-splash-backstop.*` | Quits the boot splash if the panel never reports a first frame (ADR-0043) |
 | `gexis-bluetooth-setup.service` | Unblocks and powers the Bluetooth adapter before bluealsa |
 | `gexis-equaliser.service` | CamillaDSP behind the equaliser's loopback; started and stopped by the core while the equaliser is on for the output in use, never enabled (ADR-0162) |
+| `gexis-radio.service` | mpv, internet radio's renderer, driven over its JSON socket; started by the core when a station is played and stopped with it, never enabled (ADR-0180) |
 | `gexis-snapserver.service` / `gexis-snapclient.service` | Snapcast for a group of players: the server on every member, the client playing from the leader; started and stopped by the core while the player is in a group, never enabled; Debian's own `snapserver` and `snapclient` units are masked (ADR-0166) |
 
 ## Hardware path

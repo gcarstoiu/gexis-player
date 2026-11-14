@@ -202,8 +202,8 @@ music started on any player of the group plays on all of them, in sync. See
 the manual, section 6.
 
 **Which sources play in a group?**
-Every one: Lyrion, Spotify, Bluetooth, Plexamp, and what plugins add. A
-plugin has nothing to do for it.
+Every one: Lyrion, Spotify, Bluetooth, Plexamp, internet radio, and what
+plugins add. A plugin has nothing to do for it.
 
 **Why does a group play a moment late?**
 To play together, every player of a group holds the music for about a
@@ -376,8 +376,8 @@ on the phone.
 
 **How do I get back from Now Playing to where I was?**
 Tap the Minimise button in Now Playing's top-left corner. It returns to the
-screen Now Playing was opened from. Home stays where it is, for the start of
-the library.
+screen Now Playing was opened from; with the Lyrion client off, to Radio.
+Home stays where it is, for the start of the library.
 
 ---
 
@@ -587,8 +587,9 @@ It is a remote: what is playing with its controls, the volume and the
 equaliser, and for a player with a screen a touch area that drives the
 screen, with Home, Lyrics, Back and Meters at its corners, and Standby, the
 idle screen, Now Playing and the Home Assistant dashboard below it. Its
-second page is everything in Settings. Browsing the library happens on the
-screen, or in the streaming app.
+second page is internet radio - the favourites, and the directory to browse
+and search - and its third is everything in Settings. Browsing the library
+happens on the screen, or in the streaming app.
 
 **How does the touchpad work?**
 The touch area is a **trackpad**: one finger moves a pointer on the screen,
@@ -769,8 +770,8 @@ firmly; a board that is not found by itself can be chosen later in
 
 **Does the player need a Lyrion server?**
 For browsing and playing your own music files, yes. It can use a Lyrion
-server elsewhere on the network, or run one itself. Spotify, Bluetooth and
-Plexamp work without one.
+server elsewhere on the network, or run one itself. Spotify, Bluetooth,
+Plexamp and internet radio work without one.
 
 **How do I run the Lyrion server on the player itself?**
 Switch on *Lyrion Server* on the Plugins page (under *Library*); its rows
@@ -864,6 +865,47 @@ it on again downloads it and starts a new library.
 Choose *Extended* in *Settings → Sources → Lyrion Client → Navigation*. The
 home screen then has My Music with every library view, Favourites, and Apps,
 including what Lyrion's apps add. It is off by default.
+
+---
+
+## Internet radio
+
+**Where do the stations come from?**
+From radio-browser.info, a public directory of internet radio kept by its
+community: about 50,000 stations, free to use, with no account and no key.
+Each station is checked at least once a day, and the player lists only those
+whose last check passed. The directory runs on one server, which has been
+down at times; then the favourites still play, and the lists seen in the
+last day are still shown, with a line saying the directory cannot be
+reached.
+
+**What leaves the player when I use the radio?**
+The directory sees the player's address and what is browsed and searched.
+Each play is counted with it: that is how *Popular here* is ranked, and the
+directory keeps the address for a day to count each station once a day. A
+station added by its address is not counted. Each station's own server sees
+the address of the player that plays it. Logos come through the player,
+which fetches and keeps them itself, so a phone or the panel never contacts a
+station's site. There is no account, and nothing else is sent.
+
+**A station does not play, or stops. Why?**
+It may be down, or have moved since the directory last checked it. When a
+stream drops, the player tries again by itself, three times (*Reconnecting ·
+try 2 of 3*), then stops and says *The station is not answering*; Play tries
+again. Some stations play only in their own country, or only in their own
+app. A station the directory does not have can be added by its address from
+the phone: *Radio → Add by address*. It is kept only if it plays.
+
+**Are the favourites kept?**
+Yes. They are the player's own, kept with its settings, so a backup carries
+them - up to 200, in your order. Each keeps the station's address, so the
+favourites play while the directory cannot be reached. They are separate from
+Lyrion's favourites.
+
+**Does internet radio need Lyrion?**
+No. With the Lyrion client off, the waiting screen's **Radio** button opens
+it. With Lyrion on, Lyrion's own radio is inside Radio as *Lyrion's radio*.
+*Settings → Sources → Internet radio* switches it off.
 
 ---
 

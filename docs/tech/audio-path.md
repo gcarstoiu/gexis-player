@@ -19,6 +19,7 @@ flowchart LR
         PX["Plexamp<br/>(plugin renderer)"]
         AP["Shairport Sync<br/>(AirPlay 2, plugin renderer)"]
         RN["Roon Bridge → hw:Roon,0<br/>(plugin renderer)"]
+        RD["mpv<br/>(internet radio)"]
     end
 
     subgraph ALSA["ALSA (/etc/alsa/conf.d)"]
@@ -35,6 +36,7 @@ flowchart LR
     PX -- "ALSA default" --> DEF --> OUT
     AP -- "output_device output" --> OUT
     RN -- "gexis-roon copies hw:Roon,1" --> OUT
+    RD -- "--audio-device=alsa/output" --> OUT
     OW --> HW
     OUT --> HW
     OW -.-> SCOPE
@@ -62,7 +64,7 @@ refused rather than converted, because nothing in the chain is a `plug`
 
 | Name | What it is | Who uses it |
 |---|---|---|
-| `pcm.output` | `type meter` over `hw:sndrpihifiberry`, with the peppyalsa scope | go-librespot, bluealsa-aplay, and (through `default`) Plexamp |
+| `pcm.output` | `type meter` over `hw:sndrpihifiberry`, with the peppyalsa scope | go-librespot, bluealsa-aplay, mpv (internet radio), and (through `default`) Plexamp |
 | `pcm.output_wait` | The same chain, but the slave is opened with `nonblock 0` so a busy DAC makes the open *wait* instead of failing (ADR-0095) | squeezelite only |
 | `gexis_softvol`, `gexis_softvol_wait` | **With Volume on Software (ADR-0124, ADR-0127):** `meter → copy → softvol → card`; on HDMI `meter → copy → softvol → plug → card` (the meter there since 2026-10-07, Finding 116; HDMI on Fixed is `plug → card` with no meter). One control for both, `Gexis Playback Volume` (`Gexis` to amixer), -90..0 dB in 0.25 dB steps; at 0 dB it passes every sample unchanged (Finding 115). Before any renderer starts, `gexis-softvol-restore.service` (ADR-0140) makes the control and writes the saved level, so a renderer resuming after a power cut never plays through it at the 0 dB ALSA makes it with; the core makes it again at start and sets the same level (`softvol_boot.start_level`), parks the card's own control at 0 dB only after that level reads back, and gives the card the level back when Hardware is chosen again. On every change of output the core closes its mixer handles and frees libasound's cached configuration (`volume.forget_mixers`): a running process otherwise keeps resolving `output` to the card it first saw | every renderer, through `output` / `output_wait` |
 | `gexis_eq_out` | **With the equaliser or room correction on (ADR-0162, ADR-0175):** what CamillaDSP plays to - the rest of the output's chain: `hw:` the card, `plug → card` on HDMI, `gexis_softvol → card` on Software. `pcm.output` and `pcm.output_wait` then end on the loopback, `hw:Loopback,0,0` (see [The equaliser](#the-equaliser)) | CamillaDSP |
@@ -92,7 +94,8 @@ each through that renderer's own control API, via an **adapter**
 (`core/src/gexis_core/adapters/`). **Each runs under an account of its own**
 (ADR-0179), none as `pi`, the screen's: `gexis-squeezelite`,
 `gexis-spotify` (go-librespot), `gexis-airplay` (Shairport Sync and its
-plugin), `gexis-snap` (the Snapcast server and client), `roonbridge`; each
+plugin), `gexis-snap` (the Snapcast server and client), `gexis-radio` (mpv,
+ADR-0180), `roonbridge`; each
 package makes its account with `systemd-sysusers`, and a unit that opens a
 sound device adds `audio`. go-librespot's unit gives its folder to its
 account at every start, since a restore puts the Spotify sign-in back as
@@ -106,6 +109,7 @@ account at every start, since a restore puts the Spotify sign-in back as
 | AirPlay (plugin, ADR-0167) | `gexis-shairport-sync.service`, with `gexis-nqptp` and the `gexis-airplay` plugin | the plugin over the socket; it reads Shairport Sync's metadata pipe and calls its D-Bus | the active-state hook asks the plugin, which sends `acquire` and lets Shairport Sync open the device on `device_freed` | `release`: D-Bus `DropSession`, then the ladder |
 | Roon (plugin, ADR-0172) | `gexis-roonbridge.service` (Roon Bridge, user `roonbridge`), with the `gexis-roon` plugin | the plugin over the socket; it reads the `Roon` loopback's state in `/proc/asound` and Roon's extension API (`python3-roonapi`) | the loopback's device 0 running: the plugin sends `acquire` and copies on `device_freed` | `release`: the copy stops, and Roon's zone is paused through the extension |
 | Plugin renderer (Plexamp) | the sandbox's `gexis-uploaded-renderer@plexamp.service` (a catalogue plugin, ADR-0174), with Plexamp as the plugin's child | JSON lines over a Unix socket (`adapters/plugin.py`, ADR-0084/0089) | the plugin sends `acquire` | the plugin is sent `release`, then the core kills the unit (ADR-0091) |
+| Internet radio (ADR-0180) | `gexis-radio.service` (mpv), started by the core for a station and never enabled | mpv's JSON socket, `/run/gexis-radio/mpv.sock` (`adapters/radio.py`, `mpv_ipc.py`) | a station played through `POST /stations/play` (`station_played`): the route acquires for `radio`, then the station is loaded | `disconnect`: the stream and the unit stopped |
 
 Notes per renderer:
 
@@ -192,6 +196,55 @@ Notes per renderer:
   its zone by the loopback (the zone that plays while it plays) and remembers
   it (ADR-0172 decision 6). A player whose loaded `snd-aloop` lacks the card
   is marked for a reboot by `gexis-system`'s install.
+- **mpv** (ADR-0180, Finding 146) is internet radio's engine, Debian's
+  package, run by the core as `gexis-radio.service` under the `gexis-radio`
+  account, with the system read-only and the chain's control address denied
+  (`IPAddressDeny=127.0.0.2`), as for go-librespot and the plugins. **The
+  unit is started when a station is played and stopped with it, never
+  enabled**, so it costs nothing until then; the core's start stops one left
+  running. Nothing of mpv's own is loaded (`--no-config`, no scripts, no
+  youtube-dl hook). The core drives it over its JSON socket
+  (`--input-ipc-server`): `loadfile` for each station, `core-idle`,
+  `metadata` and `audio-params` observed, and the rate, codec and bitrate
+  asked for once it sounds (mpv reports a property only when it changes).
+  - **What it plays**: to `output` at the stream's own rate, in stereo
+    (`--audio-channels=stereo`: a mono station otherwise decodes as one
+    channel), at its own 100 % - the volume is the output's
+    (`VolumeMechanism.OUTPUT`: the slider is the output's level, nothing is
+    kept per station). 8 MiB ahead and no back buffer: a live stream is
+    never sought. Titles are ICY's `StreamTitle` (`icy-title`) or an Ogg
+    stream's own tags, read as UTF-8, else Latin-1
+    (`--metadata-codepage=latin1`).
+  - **A stream at 32 kHz or below is converted to 48 kHz** inside mpv (`af
+    add @gexisrate:format=srate=48000`, once `audio-params` names the
+    rate), so the equaliser's and room correction's stage, which cannot run
+    that low (`equaliser.runs_at`), still applies; such a stream is lossy
+    already (ADR-0022 [H]).
+  - **Reconnecting**: FFmpeg's reconnect is on (`reconnect`,
+    `reconnect_streamed`, `reconnect_on_network_error`, at most 4 s between
+    tries) with a 5 s network timeout (`--network-timeout=5`), so a cut or a
+    freeze goes unheard on a station that buffers more than that (ADR-0022
+    [H]). **The watchdog** does the rest: mpv reports a cut and a station gone
+    as an ordinary end of file, and a freeze as nothing at all, so **any stop
+    of the audio while a station should play counts as a drop**
+    (`core-idle`). After 10 s without audio the station is loaded again, up
+    to three times, 10 s apart (`reconnecting`, try 1 to 3); then the unit
+    is stopped and the radio is `not_answering`. It counts from the audio
+    stopping, not from the drop - the buffer plays first, 3 to 30 s in
+    Finding 146 - and 30 s of audio starts the count again. A reload once
+    begun always finishes.
+  - **A live stream stops, never pauses** (`release_action` `disconnect`):
+    Pause, a takeover and the source switched off stop the stream and the
+    unit; Play loads the same station afresh. No position, no seek. Next
+    and Previous step through the favourites while a favourite plays, from
+    the last round to the first, and are unavailable for any other station.
+  - **A rewritten chain** (an output, the volume type, a group, the
+    visualiser's tuning): `gexis-radio.service` is among `RENDERER_UNITS`,
+    stopped with the other renderers before `output.conf` is written. It is
+    not restarted with them, as it would start with nothing to play: a
+    station that was playing is loaded again after (`reopen`).
+  - The directory, the favourites, the logos and `/state`'s `radio` are in
+    [core-and-state.md](core-and-state.md#internet-radio).
 - **Any renderer plugin** declares its capabilities in its `hello`
   (`docs/PLUGIN-CONTRACT.md`): acquisition events, release action, an
   optional release ladder, controls, and how its volume is handled.
@@ -201,7 +254,9 @@ Notes per renderer:
 A source switched off in Settings has its unit **stopped and disabled**, not
 just ignored, and the supervisor refuses an acquisition from it whatever
 fires (ADR-0077; `renderer_enabled()` in `__main__.py`). LMS is also treated
-as off when no server is configured.
+as off when no server is configured. Internet radio's unit is never enabled
+either way (`CORE_STARTED`): off, what plays is released and the unit
+stopped; on, it waits for a station to be played.
 
 The Lyrion *server* is a separate optional plugin that runs on the device
 itself (ADR-0115); squeezelite does not care whether its server is local or
@@ -434,6 +489,11 @@ Mechanics behind the picture:
   volume on pause, and the fade must not be taken as a level), and the core
   asks LMS over JSON-RPC what its volume really is (ADR-0054 §2). A second
   dummy, `gexisbtvol`, is still created but no longer used.
+- **No number of its own** (`VolumeMechanism.OUTPUT`, ADR-0180): internet
+  radio's mpv plays at its own 100 % and keeps no level, so the slider is
+  the output's level, written straight to its control. mpv has a volume of
+  its own; a second number to keep in step would only be one more way for
+  the two to disagree.
 - **Ramping.** `write_hardware()` walks the control to a new target one raw
   step of the output's own scale at a time (0.5 dB on the DAC2 HD, 0.25 dB on
   the software stage), capped at about 120 ms, so a slider drag that arrives as a few
@@ -1003,3 +1063,4 @@ flowchart LR
 | Meters | `core/src/gexis_core/meters.py`, `meter_service.py` | `output.conf` peppyalsa section |
 | Peppy screen | `core/src/gexis_core/peppy.py`, `peppy_metadata.py`, `skins.py` | `image/stage-gexis/05-peppy/files/` |
 | Plugin renderers | `core/src/gexis_core/adapters/plugin.py`, `plugin_server.py` | `docs/PLUGIN-CONTRACT.md` |
+| Internet radio | `core/src/gexis_core/adapters/radio.py`, `mpv_ipc.py`, `radio_lines.py`, `radio_service.py` | `image/stage-gexis/02-renderers/files/gexis-radio.service` |

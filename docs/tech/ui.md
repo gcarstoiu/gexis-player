@@ -78,7 +78,10 @@ flowchart LR
 - **Reads go over GET.** Library data comes from `/library/...` (typed LMS
   queries the core runs, ADR-0038), from `/menus/...` (Lyrion's own menus,
   addressed by handles the core issued, ADR-0118) and from `/radio`. Cover
-  URLs point straight at LMS (ADR-0020).
+  URLs point straight at LMS (ADR-0020). Internet radio reads `/stations/...`
+  through `lib/radio.js` on every surface (ADR-0180); a station's logo is
+  the player's own address for it (`/stations/logo/<key>`), never the
+  station's site.
 - **Settings** are loaded from `/settings` (ADR-0035) and loaded again
   whenever `settings_revision` changes in the state. A change made on the
   phone therefore reaches the panel. The page that saved reloads **once**:
@@ -360,7 +363,12 @@ few values:
 - `$active`: the renderer holding the device, or `null` (ADR-0027 makes "no
   renderer" a routine state).
 - `lms_enabled`: the *setting*, not LMS's reachability. With LMS off the panel
-  has no library and is two screens (ADR-0079).
+  has no library and is two screens (ADR-0079); three with internet radio on
+  (ADR-0180).
+- `radioOpen`: with LMS off or its navigation off (`lmsOff`) and internet
+  radio on, the Radio screen as a screen of its own, opened by the waiting
+  screen's Radio button and by Now Playing's Minimise, closed by its Back or
+  a renderer arriving.
 - `libraryRequested`: set by Home or Minimise, cleared by the mini strip.
 - `settingsOpen`, `idle`.
 
@@ -376,6 +384,7 @@ stateDiagram-v2
   state "Settings" as Set
   state "Idle screen" as Idle
   state "Waiting home (LMS off)" as Wait
+  state "Radio (LMS off)" as Rad
 
   Home --> Lib: open a card / tile
   Lib --> Home: back to root
@@ -387,6 +396,10 @@ stateDiagram-v2
   Set --> Home: Back
   Wait --> NP: renderer becomes active (LMS off)
   NP --> Set: Home button acts as Settings (LMS off)
+  Wait --> Rad: Radio button
+  Rad --> Wait: Back
+  Rad --> NP: renderer becomes active, or the mini strip
+  NP --> Rad: Minimise (LMS off, ADR-0180)
 
   Home --> Idle: not playing and not touched for idle_timeout
   Lib --> Idle: same
@@ -425,8 +438,8 @@ Details worth knowing:
 ### Library structure
 
 `Library.svelte` holds the navigation path (`path`, with `here.kind` in
-`artists`, `artist`, `album`, `browse`, `playlists`, `playlist`, `radio`,
-`menu`, `menusearch`), the header and the footer. The region between them is
+`artists`, `artist`, `album`, `browse`, `playlists`, `playlist`, `stations`,
+`radio`, `menu`, `menusearch`), the header and the footer. The region between them is
 drawn per kind:
 
 - **Typed screens** (Artists grid, artist page, album, Browse, playlists)
@@ -437,7 +450,15 @@ drawn per kind:
   `artist` shows under its title when it is not the album's
   (`trackArtist` in `lib/library.js`, compared through `foldedName`): a
   guest on one track, every track of a compilation (George, 2026-10-21).
-- **Radio** uses the core's SlimBrowse walker (ADR-0030, ADR-0038 §5).
+- **Radio** is internet radio (`stations`, ADR-0180) while that source is
+  on: `screens/radio/RadioScreen.svelte` draws its own header (Back, the
+  title, the search field) and its own steps - the favourites as presets,
+  Browse's cards, the lists and Search - with the library's mini strip
+  under it. Its *Lyrion's radio* card opens Lyrion's tree (`radio`) over
+  it, through the core's SlimBrowse walker (ADR-0030, ADR-0038 §5); with
+  internet radio off, the home's Radio card opens that tree directly. A bar
+  draws the same steps as tiles and sideways rows of cards
+  (`screens/bar/BarRadio.svelte`, `bar/radio/`).
 - **Lyrion's own menus** (My Music, Favourites, Apps) are added by the
   *Extended navigation* setting (`lms_extended_nav`, default off; ADR-0118),
   chosen as *Navigation → Extended* (`library_navigation`, below).
@@ -531,7 +552,12 @@ pulsing marks with their names and states straight on the picture, no plate
 (George, 2026-10-18: tiles cut the names with five sources). From four
 sources the columns narrow to fit, on the panel and on a bar. The picture's credit sits at the foot. With
 every source off it says so, and the Settings button stays in the corner.
-Tiles are a translucent plate: ADR-0041 bans live backdrop blur.
+Tiles are a translucent plate: ADR-0041 bans live backdrop blur. While
+internet radio is on, `RadioCornerButton` sits beside Settings and opens the
+Radio screen as a screen of its own (`standalone`: its veil over the
+picture, no *Lyrion's radio*, and the mini strip while something plays;
+ADR-0180). The same waiting screen, and the same button, show with LMS on
+and its navigation *Off* (`lms_library` off).
 
 `Backdrop.svelte` is the background picture for both this and the idle
 screen, each from its own rows since 2026-10-11 (ADR-0133 amended): with
@@ -559,6 +585,17 @@ and artist text that is not on the track's own record comes from enrichment
 (`lib/enrichment.js`), held at module level so the mini strip sees the same
 answer. Enrichment only adds; it never overwrites what the renderer supplied
 (ADR-0012).
+
+**A station** (`active === 'radio'`, ADR-0180, from `/state`'s `radio`):
+the heart beside the title; the quality line (`qualityLine`: codec, bitrate,
+country) and, under the rule, *Reconnecting · try n of 3* or *The station is
+not answering*; Stop drawn in Pause's place, with a spinner while it
+reconnects; the progress an inert rule. Release is dimmed and inert, and
+Lyrics and Artist too while the station sends nothing (`lines` `none`). The
+art is a found cover, else the station's logo on a plate, else the radio
+mark on the radio's tint. With LMS off, Minimise opens Radio. The bar
+(`BarNowPlaying.svelte`) and the phone (`RemoteTransport.svelte`,
+`RemoteNoScreen.svelte`) draw the same.
 
 ### Idle screen
 
@@ -614,17 +651,26 @@ are NASA photographs (`assets/weather/`, credited in Credits).
 
 On a phone, `screens/remote/PhoneRemote.svelte` fills the page (ADR-0164,
 built from `design/source/21`): a player picker over `/players` (ADR-0136;
-another player opens its own page, C1) and a Remote / Settings switch, the
-two pages side by side. Settings is `Settings.svelte` with
+another player opens its own page, C1) and a Remote / Radio / Settings
+switch (ADR-0180), the three pages side by side. Settings is `Settings.svelte` with
 `switcher={false}` and `flat` (its pages, choosers and the equaliser editor
 on the modals' solid `--bg-panel`, no weave or veil), mounted on its first
 visit; while it shows, the remote's own `--bg-panel` layer fades in over its
-background, behind the top bar too. The two pages are one track slid by
-half its width, so nothing inside Settings may be `position: fixed`: its
+background, behind the top bar too. The pages are one track slid by a third
+of its width for each, so nothing inside Settings may be `position: fixed`: its
 confirm, its progress card and the update dialog are `absolute` there
 (`.settings.is-flat`), over Settings' own area, as its sheets are (found
 2026-10-29: fixed, they sat half off the screen). During setup, first use
 and *Personalise*, `FirstUsePage` takes the page instead, as before.
+
+The Radio page (`radio/RadioPage.svelte`, design/source/31), mounted on its
+first visit: the search field, the chips, then the favourites with *Add by
+address* and *Edit* (`FavouritesEdit.svelte`: a drag by the grip, the minus
+to remove, with the page's Undo); its sub-pages each have Back, and its
+segment tapped again returns to its top. `AddStationSheet.svelte` is held by
+the remote, over the whole screen as its other sheets, and waits for `POST
+/stations/favourites/address` to answer. No *Lyrion's radio* chip: the phone
+has no Lyrion browsing of its own (George, 2026-11-14).
 
 The Remote page, **with a screen** (`RemoteScreen.svelte`): the cover
 (`RemoteCover.svelte`: the renderer's or the core's found one, else the

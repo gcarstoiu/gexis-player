@@ -9,7 +9,7 @@ Schiller's *Ode to Joy* (1785). The addresses shown are examples.
 Gexis Player is a music player for the Raspberry Pi with a high-quality
 DAC; it needs a Raspberry Pi 4 or newer, and the Pi 4 is the model it is
 built and tested on. It plays your Lyrion (Logitech Media Server) library,
-Spotify Connect, AirPlay, Bluetooth, Plexamp and Roon, one at a time, and switches to
+internet radio, Spotify Connect, AirPlay, Bluetooth, Plexamp and Roon, one at a time, and switches to
 whichever one you start. Several players can play the same music together,
 in sync, in several rooms (section 6). You control it
 from its own touch screen (the *panel*), from any phone or computer on the
@@ -57,7 +57,7 @@ name over the same picture as the idle screen, and each source waiting to be
 played to pulsing at the foot - its mark, its name and its state, as under
 the library. Start music from a phone
 and the panel moves to Now Playing. Settings is the button in the top right
-corner.
+corner, and beside it **Radio** opens internet radio (see [Radio](#radio)).
 
 ![The waiting screen](images/panel-waiting.webp)
 
@@ -75,7 +75,7 @@ letter to jump there.
 | Part | What it does |
 | --- | --- |
 | Cover | The album's art. With none from the source, the player looks one up. |
-| Chevron (top left) | Minimise: back to the library where you left it. |
+| Chevron (top left) | Minimise: back to the library where you left it; with the Lyrion client off, to Radio. |
 | Tabs | **Track**, **Lyrics**, **Artist**, **Release** (below). |
 | Visualiser button (top right) | Shows the visualiser (section 7). |
 | Progress bar | Elapsed and remaining time; tap to move through the track where the source allows it. |
@@ -105,6 +105,33 @@ the album's page.
 
 **Release** shows the album's year, number of tracks, length and label,
 with a note about the release when one is available.
+
+### A radio station
+
+A station from Radio (see [Radio](#radio)) shows on Now Playing with a few
+differences:
+
+- **The lines.** A station that sends what it plays as *Artist - Title*
+  shows the title and the artist, with the station's name where the album
+  would be; a line in any other form is the title, whole. A station that
+  sends nothing has its name as the title.
+- **The heart** beside the title adds the station to the favourites, or
+  takes it out.
+- **The quality line** under them: the stream's format, its bitrate and the
+  station's country (*AAC · 128 kb/s · Germany*). There is no progress bar:
+  a live station has no position.
+- **The picture**: a cover the player finds for the song, else the
+  station's logo, else the radio mark.
+- **Stop, not Pause.** A live station cannot be paused: Stop stops it, and
+  Play starts it afresh. Another source taking over stops it too.
+- **Previous and Next** step through the favourites while a favourite plays,
+  like a radio's presets; after the last comes the first again. For any
+  other station they are greyed out.
+- **Release** is greyed out, and so are **Lyrics** and **Artist** while the
+  station sends nothing.
+- **When the stream drops**, the player tries again by itself:
+  *Reconnecting · try 2 of 3*. After three tries it stops and says *The
+  station is not answering* (*Tried three times. Play tries again.*).
 
 ### The queue
 
@@ -161,7 +188,7 @@ The library is your Lyrion server's music. Home offers:
 | Playlists | Your Lyrion playlists. |
 | Favourites | Your Lyrion favourites (Extended navigation). |
 | New Music | The newest albums (also the row under the cards). |
-| Radio | Lyrion's radio directory. |
+| Radio | Internet radio: your favourite stations and a public directory to browse and search, with *Lyrion's radio* inside it (below). With internet radio switched off, Lyrion's radio directory. |
 | Apps | Lyrion's apps, such as streaming services (Extended navigation). |
 | Settings | The player's settings (section 10). |
 
@@ -206,10 +233,62 @@ to show its actions, twice to play it.
 
 ### Radio
 
-![Radio](images/panel-radio.webp)
+**Radio** is internet radio: stations from a public directory,
+radio-browser.info, and your own favourites among them. It needs no account
+and no Lyrion server. *Settings → Sources → Internet radio* switches it on or
+off and sets the country *Popular here* lists.
 
-Lyrion's radio directory, by category. Tap a station once to show **Play**
-and **Add**, twice to play it.
+**Favourites** come first, as numbered tiles in your order, up to seven in a
+row. Tap a tile to select it: **Play** plays it, and its heart takes it out
+of the favourites. The one playing says *PLAYING*. **All 7** (the number is
+how many there are) opens the whole list, numbered: tap a station to select
+it, then **Play**, **Move up** or **Move down**. Its heart takes it out at
+once; the row stays, struck through, with **Undo** in the heart's place until
+the list is left. With none yet, *No favourites yet* says how to add one: the
+heart on any station. Favourites are the player's own, kept with its
+settings, so a backup carries them; there can be up to 200, and they are
+separate from Lyrion's.
+
+**Browse**, under them:
+
+| Card | Opens |
+| --- | --- |
+| Popular here | The most played stations of the country set in Settings; at first, the time zone's. |
+| By genre | Genres A to Z (the 200 with the most stations), each with its number of stations. |
+| By country | *Your country* first, then every country A to Z, with a letter rail. |
+| By language | Languages, the most stations first. |
+| Lyrion's radio | Lyrion's own radio directory, as below; only while the Lyrion client is on. |
+
+A genre, a country or a language opens its stations, the most played first;
+more arrive as the list scrolls, and its end says how many there were (*End
+of Jazz · 1,240 stations*).
+
+**Search**: tap **Search stations** at the top and type a station's name,
+on a keyboard plugged into the player or on the phone (section 8). Results
+come as you type, from the second letter, with the letters that match picked
+out. Search looks at stations' names only.
+
+**A station** shows its logo, its name, and its country, format and bitrate
+(*Germany · MP3 · 128 kb/s*). Tap it once to select it and show **Play**;
+only Play plays it. The heart adds it to the favourites, or takes it out, at
+once, selected or not.
+
+**When the directory cannot be reached**, a line at the top says so, with
+**Try again**: the lists show what was seen in the last day, or, with nothing
+kept from the last day, browsing is greyed out. The favourites play either
+way.
+
+**With the Lyrion client off**, or its *Navigation* on *Off*, the waiting
+screen has a **Radio** button beside Settings: it opens Radio, without
+*Lyrion's radio*, and Back returns to the waiting screen. Playing a station
+opens Now Playing, whose Minimise chevron comes back to Radio. While
+something plays, the mini strip shows at the foot of Radio; tap it for Now
+Playing.
+
+**Lyrion's radio** is Lyrion's radio directory, by category. Tap a station
+once to show **Play** and **Add**, twice to play it.
+
+![Lyrion's radio](images/panel-radio.webp)
 
 ## 4. Lyrion's own menus (Extended navigation)
 
@@ -316,7 +395,7 @@ Roon Core on the same network.
 
 Gexis players on the same home network can play the same music together, in
 sync - a **group**. It works for every source: Lyrion, Spotify, AirPlay,
-Bluetooth, Plexamp and what plugins add. AirPlay can also send to several
+Bluetooth, Plexamp, internet radio and what plugins add. AirPlay can also send to several
 players itself, picked together in the Apple device's AirPlay list: that is
 for players not in a group here. With a group, choose one of its players in
 the AirPlay list, and the whole group plays.
@@ -673,6 +752,39 @@ between that and *Without* (amber), to compare; when it is off it opens room
 correction's page. Room correction is measured from the phone: see [Room
 correction](#room-correction).
 
+### Radio on the phone
+
+**Radio**, the second page, is internet radio (see [Radio](#radio)), laid
+out for the phone:
+
+- **Search stations** at the top: type a station's name on the phone's
+  keyboard; results come as you type.
+- Under it, **Popular here**, **By genre**, **By country** and **By
+  language**, in a row that scrolls sideways. *Lyrion's radio* is on the
+  player's screen only.
+- Then the **favourites**, numbered, in your order. Tap one to select it and
+  show **Play**. Its heart takes it out, and the page says so, with **Undo**,
+  for a few seconds.
+- **Edit**, over the favourites, puts them in order: drag a station by the
+  grip at its left; the minus at its right takes it out, with Undo. **Done**
+  goes back.
+- **Add by address**, beside Edit, adds a station the directory does not
+  have: its address (starting `http://` or `https://`) and a name, then
+  **Check and add**. The player plays it out loud first - the sheet says
+  *Checking · playing it on* and the player's name - and keeps it only if it
+  plays within 20 seconds; it then goes on playing, and the page says *…
+  played, and is in your favourites*. One that does not play says *It did
+  not play* and is not kept; **Try again** asks once more. A station added
+  this way shows *Added by address* where the others show their country.
+- While something plays, the mini player sits at the foot; tap it for the
+  Remote.
+- When the directory cannot be reached, a line above the row of choices
+  says so, as on the panel; the favourites still play.
+
+On the **Remote** page, a station has **Stop** in place of pause, the heart
+beside the controls, and previous and next for the favourites, as on Now
+Playing (see [A radio station](#a-radio-station)).
+
 ### Settings on the phone
 
 ![Phone: Settings](images/phone-settings.webp)
@@ -724,6 +836,13 @@ played on the right.
 
 ![Bar: an album](images/bar-album.webp)
 
+**Radio** on a bar opens on tiles - Favourites, Popular here, By genre, By
+country, By language, Search, and *Lyrion's radio* while the Lyrion client
+is on - and each list runs sideways in two rows of cards. A selected
+favourite has **Play**, **Earlier** and **Later**, as the cards run down,
+then across. With the Lyrion client off, the waiting screen's **Radio**
+button opens it, and Now Playing's chevron goes back to it.
+
 ## 10. Settings
 
 Settings is reached from the **Settings** card on Home, or on the phone
@@ -764,7 +883,7 @@ still mounted.
 | --- | --- |
 | Lyrion Client: Enabled | Plays your Lyrion server's music. |
 | Lyrion Client: Server | Which Lyrion server. Servers announce themselves on the network, each shown by its machine's name, else the library name set in Lyrion, else its address; typing an address is the fallback. Choosing another one restarts the player's software, so it is used at once. |
-| Lyrion Client: Navigation | How you move around your library on the screen, one choice: **Simple** - the home tiles, albums, artists, playlists and radio; **Extended** - Lyrion's own menus as well: My Music, Favourites, Apps (section 4); **Off** - only what is playing and the sources, with no library to browse; Lyrion's apps on your phone still play to the player. |
+| Lyrion Client: Navigation | How you move around your library on the screen, one choice: **Simple** - the home tiles, albums, artists, playlists and radio; **Extended** - Lyrion's own menus as well: My Music, Favourites, Apps (section 4); **Off** - only what is playing, the sources and internet radio, with no library to browse; Lyrion's apps on your phone still play to the player. |
 | Spotify Connect: Enabled | The player appears as a Spotify Connect device. |
 | Spotify Connect: Starting volume | The loudest Spotify starts at when it takes over. Hidden with Volume on *Fixed*. |
 | Bluetooth: Enabled | The player accepts Bluetooth audio. |
