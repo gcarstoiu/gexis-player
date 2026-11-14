@@ -324,6 +324,18 @@
       ]
     },
     {
+      "name": "mpv",
+      "group": "renderer",
+      "role": "Plays internet radio: reads each station's stream and playlist, decodes it and plays it to the output (ADR-0180).",
+      "author": "The mpv developers",
+      "licence": "See /usr/share/doc/mpv/copyright on the device",
+      "url": "https://mpv.io",
+      "arrives": "Debian package",
+      "packages": [
+        "mpv"
+      ]
+    },
+    {
       "name": "Shairport Sync",
       "group": "renderer",
       "role": "Receives AirPlay 2 from an iPhone, iPad or Mac.",

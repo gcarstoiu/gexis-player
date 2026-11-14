@@ -71,7 +71,8 @@ export const orderFavourites = (ids) => call('/stations/favourites', json('PUT',
 export const addByAddress = (url, name) => call('/stations/favourites/address', json('POST', { url, name }));
 
 /** The radio's own state from `/state`: `{station, state, attempt, tries,
- *  lines, favourites}` or null before a station was played. `state` is
+ *  lines, favourites}`, published from the start; `station` is null before
+ *  one was played. `state` is
  *  connecting, playing, reconnecting, stopped or not_answering; `lines` is
  *  split, whole or none; `favourites` a revision raised on every change. */
 export const radio = derived(playback, ($s) => $s?.radio ?? null);

@@ -14264,6 +14264,52 @@
               }
             ],
             "description": "The group this player is in, or null (ADR-0166). On a member, `active`, `metadata`, `controls` and `queue` are the leader's while nothing of the member's own plays (D5)."
+          },
+          "radio": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "ADR-0180: internet radio - the station (with `favourite`), `state` (connecting, playing, reconnecting, stopped, not_answering), the watchdog's `attempt` of `tries`, what the station sent for the lines (`split`, `whole`, `none`), and `favourites`, a revision raised on every change of the favourites. The station is null before one is played.",
+            "properties": {
+              "station": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Station"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "state": {
+                "type": "string",
+                "enum": [
+                  "connecting",
+                  "playing",
+                  "reconnecting",
+                  "stopped",
+                  "not_answering"
+                ]
+              },
+              "attempt": {
+                "type": "integer"
+              },
+              "tries": {
+                "type": "integer"
+              },
+              "lines": {
+                "type": "string",
+                "enum": [
+                  "split",
+                  "whole",
+                  "none"
+                ]
+              },
+              "favourites": {
+                "type": "integer"
+              }
+            }
           }
         }
       },

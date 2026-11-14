@@ -144,8 +144,9 @@ class RadioService:
     async def resolve(self, station: Station) -> str:
         """**The address to play** (item 5, decision 5): a listed station's
         address now from the directory, which also counts the play; the kept
-        one when the directory does not answer. A favourite keeps the
-        address it was given."""
+        one when the directory does not answer. A favourite keeps the address
+        the directory gave last, so it plays from there when the directory is
+        down next time."""
         if not station.listed:
             return station.url
         url = await self.directory.count_play(station.id)
