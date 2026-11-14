@@ -114,6 +114,13 @@ radio on a Pi 4 were found published: to be measured.
      for (a mono station decodes as one channel). The rate at the card,
      the stage and a stream at 32 kHz or below are measured in the build,
      on a player not in a group.
+   - **On a player 2026-11-14**
+     ([Finding 147](../findings/147-internet-radio-through-the-real-chain.md)):
+     the stream's own rate reaches the DAC, 32-bit stereo; 22.05 kHz is
+     raised to 48 kHz with the stage running; a cut recovers and a station
+     that stays down stops with the message; 4.8-7.0 % of a core through the
+     real chain (the meter and the conversion run in mpv's process); memory
+     flat over an hour.
 4. **How a station plays and shows**:
    - Tapping a station plays it: the radio renderer acquires the output as
      the others do (arbitration, ADR-0027); another source takes over and
