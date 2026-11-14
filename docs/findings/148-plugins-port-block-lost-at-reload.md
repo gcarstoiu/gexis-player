@@ -23,10 +23,8 @@ for the mDNS side first.
 - **Changed, on the players:** systemd reloaded on bedroompi seven times; the
   block set again at runtime on its plugins and guestpi's; the test renderer
   restarted on both, then updated; both names claimed back once.
-- **Not tested:** `daemon-reexec`; the fix from a package after a fresh boot
-  (the new module was run by hand on bedroompi); another systemd version;
-  which device on the network answers from a cache (not a player; left
-  alone).
+- **Not tested:** `daemon-reexec`; another systemd version; which device on
+  the network answers from a cache (not a player; left alone).
 
 ## Results
 
@@ -113,6 +111,18 @@ days, the last hours of them with its plugin blocked by a restart.
   block set again on their other plugins; both names claimed back, and both
   held while another player looked them up. sofapi was playing and was left
   `sofapi-2`; its plugins are blocked.
+
+### 5. The fix from a package, after a reboot
+
+sofapi, the preview of `ph-radio` with this fix and the menu order
+(`gexis-core 1.16.2+git52.b0140ba`), installed while idle, then rebooted.
+Four minutes after boot: avahi announced `sofapi`, no clash in its log, the
+repair timer had not needed a try; all five plugin units had the bind
+programs; only avahi held port 5353. systemd reloaded twice: once before the
+plugins started, once at 18:31:28 at the core's start, which took the block
+off; the watch set it again at 18:31:31. Those 3 s are now closed: the core
+sets it again right after its own reload (`fix-mdns-block` 25ec0855, not in
+that preview).
 
 ## What it means
 

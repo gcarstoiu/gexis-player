@@ -190,15 +190,15 @@ uploaded test renderer's own mDNS responder made avahi rename sofapi,
 bedroompi and guestpi ([Finding 148](docs/findings/148-plugins-port-block-lost-at-reload.md),
 ADR-0142 amended, Lesson 96). The core now sets the block again after each
 reload (`mdns_block.py`), and the name repair retries every 30 min after its
-five (ADR-0022's [H] row, confirmed). Tests and CI pass; the module checked
-by hand on bedroompi. **The preview of radio and this fix together** (George:
-both on sofapi) is built from the temporary branch `preview-radio-mdns`
-(run 43618076456; packages in `~/projects/scratch/ph31/preview-radio-mdns`;
-core, player, system and UI change). **Not installed yet:** sofapi was
-playing. Then: dry run, install, core restarted, a reboot to see the names
-and the blocks at boot. bedroompi and guestpi have their names back and run
-the uploaded test renderer's newer build (private notes); sofapi is still
-`sofapi-2`.
+five (ADR-0022's [H] row, confirmed), and since 25ec0855 sets the block
+right after the core's own reload at start (3 s open before). Tests and CI
+pass. **On sofapi since 2026-11-14 18:30: the preview of radio, this fix and
+the menu order together** (George's choice), from the temporary branch
+`preview-radio-mdns` at b0140bad (run 43620767986; `~/preview-sofapi` there,
+the packages only): installed while idle (George let its music be paused),
+rebooted - the name `sofapi` held, every plugin blocked (Finding 148 §5).
+bedroompi and guestpi have their names back and run the uploaded test
+renderer's newer build (private notes).
 
 **The lists of players in alphabetical order** (George 2026-11-14, ADR-0136
 amended): built on `fix-players-order` (worktree
@@ -208,11 +208,17 @@ group where its first player falls, `/players?fresh=1` when a list opens
 for up to a minute). Checked with invented players on the phone, panel and
 bar (`PLAYERS=alone|mine` in `~/projects/scratch/ph31/harness`); the
 manual's group picture retaken (`~/projects/scratch/ph22/manual/run-order.sh`).
-Not previewed yet. **Open:** whether the group volume lists (panel drawer,
-bar band, phone sheet) go alphabetical too; they still put the leader first.
+The group volume's members alphabetical too (George), the manual's three
+group pictures retaken. In sofapi's preview.
 
 **The Home Assistant integration's `radio` branch:** a stopped station shows
 as paused with Play (George); the card keeps one column under its 440 px cap.
+
+**Next: George's regression pass on sofapi** covers all three (to-do
+`ph31-regression`, `fix-mdns-block`, `players-menu-order`); each branch then
+merges into `next` on its own, `preview-radio-mdns` deleted after. Merging
+`fix-players-order` and `ph-radio` both into `next` conflicts once in
+`docs/tech/ui.md` (resolved on the preview branch: both sentences kept).
 
 **Phase 35** (a page from Home Assistant, ADR-0176 as amended) **on Stable
 with 1.16.1**, with the integration's 0.6.0. **Not yet on a player:** the
