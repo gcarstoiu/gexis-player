@@ -677,7 +677,7 @@ Confirmed by George, 2026-11-13, [ADR-0180](0180-internet-radio-without-lyrion.m
 | Setting | Mark | Notes |
 |---|---|---|
 | Internet radio | [N] | On or off, as each source; on by default and offered in first use (decision 7); the service runs only while a station plays |
-| Popular here country | [N] | The country *Popular here* lists; setup's Wi-Fi country by default, changeable |
+| Popular here country | [N] | The country *Popular here* lists; by default the time zone's country, as setup finds the Wi-Fi country (`setup_network.country_for`), changeable |
 | Radio favourites | [N] | The player's own list, in the owner's order, kept in its settings and backups; a station added by its address from the phone (decision 4) |
 | Stream watchdog | [H] | No audio for 10 s: reconnect, three times, then stop with a message |
 | Directory cache | [H] | Each answer kept on the player for a day |

@@ -169,7 +169,12 @@ worktree; the screenshots in its `out/`). **Next:** the public documents'
 Radio sections; the Home Assistant integration (favourites as sources, the
 media browser, the card's Radio view, C01–C06), released after the
 player's; a preview on a player not in a group (sofapi's `output` feeds the
-group's loopback): the rate at the card, the stage, 32 kHz, CPU, an hour.
+group's loopback): the rate at the card, the stage, 32 kHz, CPU, an hour. **Done 2026-11-14**
+([Finding 147](docs/findings/147-internet-radio-through-the-real-chain.md)):
+sofapi ungrouped, the preview of 439ac89 installed (mpv with it), measured,
+grouped again with the bar; the preview **stays installed on sofapi** for
+George's regression pass (`~/preview-ph31`, the packages only). Acceptance 7
+waits on George (4.8-7.0 % of a core through the real chain).
 
 **Phase 35** (a page from Home Assistant, ADR-0176 as amended) **on Stable
 with 1.16.1**, with the integration's 0.6.0. **Not yet on a player:** the
