@@ -57,12 +57,16 @@ opened on:
 2. **A group's players stay together**, alphabetical within it, the leader
    tagged where it falls, and **the group goes where its first player
    falls** (George chose this over groups at the top). Names in a sentence
-   (*with Kitchen, Study*, *Undo group*'s) follow the same order.
+   (*with Kitchen, Study*, *Undo group*'s) follow the same order, and so do
+   the group volume's members on the panel, the bar and the phone (George,
+   the same evening: the leader changes whenever another player starts
+   music, and a leader-first list reshuffled with it).
 3. **A list opening asks `/players?fresh=1`**: if what the player found is
    older than 5 s, it asks the players already found for their status again,
    without the network search (up to 5 s); the list kept on the phone shows
    meanwhile. The background search every 30 s is unchanged.
 
 Built on `fix-players-order`, checked with invented players on the phone,
-the panel and the bar (the switcher, reached only on a narrow standalone
-Settings, not seen).
+the panel and the bar, and the manual's three group pictures retaken with the
+demo library (the switcher, reached only on a narrow standalone Settings, not
+seen).
