@@ -343,7 +343,11 @@ country, chosen or not (ADR-0180).
   Internet radio's heading names `radio_enabled` too, but the core says
   nothing there: Settings says *Ready* itself while the radio is on and
   `GET /stations/countries` answers - the directory's list, asked now or
-  kept from the last day - with `reachable` not false (ADR-0180).
+  kept from the last day - with `reachable` not false (ADR-0180). With
+  `reachable` false (the last day's list, or a 503 with nothing kept) it
+  says *Directory unreachable* (`wait`). The same answer is *Popular
+  here*'s country sheet: only the codes it returns, with their counts,
+  and the chosen and the time zone's country; every country without it.
 - Every successful `set` calls the row's callback and then bumps
   `settings_revision`, so every open client refetches. `PUT
   /settings/{key}` answers `{key, value, revision}`, the revision being the

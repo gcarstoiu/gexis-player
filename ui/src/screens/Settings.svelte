@@ -168,20 +168,27 @@
   //: core keeps no reading of its own for the radio, so its heading asks the
   //: radio's routes: Ready is the radio on, and the directory's countries
   //: back - asked now, or kept from the last day - with the directory's last
-  //: ask not failed (`reachable` false is the Radio screen's banner). Else
-  //: the heading says nothing, as a switched-off service's does. The same
-  //: list gives the country sheet its counts.
+  //: ask not failed (`reachable` false is the Radio screen's banner). With
+  //: the radio on and the directory not reached - nothing kept, or only the
+  //: last day's - *Directory unreachable*, in the warn tone (George,
+  //: 2026-11-14). With the radio off, nothing, as a switched-off service's.
+  //: The same list gives the country sheet its countries and counts.
   const READY = { tone: 'ok', text: 'Ready' };
+  const UNREACHABLE = { tone: 'wait', text: 'Directory unreachable' };
   let radioListing = $state(null);
   const radioHere = $derived(rows.some((r) => r.type === 'group' && r.indicatorOf === 'radio_enabled'));
   const radioOn = $derived(valueOf('radio_enabled') !== false);
   const radioReady = $derived(radioOn && !!radioListing?.countries && radioListing.reachable !== false);
+  const radioIndicator = $derived(
+    radioReady ? READY : radioOn && radioListing?.reachable === false ? UNREACHABLE : null
+  );
   async function readRadio() {
     try {
       const body = await loadCountries();
       radioListing = { countries: body.countries ?? [], reachable: body.reachable };
-    } catch {
-      radioListing = { countries: null, reachable: false };
+    } catch (error) {
+      // Only the core's own word (503, `reachable` false) is the directory's.
+      radioListing = { countries: null, reachable: error?.unreachable ? false : null };
     }
   }
   $effect(() => {
@@ -2255,8 +2262,8 @@
             {/if}
             {#each rows as r, i (r.key ?? `group-${i}`)}
               {#if r.type === 'group'}
-                <!-- Internet radio's reading is the screen's own (radioReady). -->
-                {@const indicator = r.indicator ?? (r.indicatorOf === 'radio_enabled' && radioReady ? READY : null)}
+                <!-- Internet radio's reading is the screen's own (radioIndicator). -->
+                {@const indicator = r.indicator ?? (r.indicatorOf === 'radio_enabled' ? radioIndicator : null)}
                 <div class="subhead">
                   <span class="subhead__dot" style:background={tone(r.accent, $theme)}></span>
                   <span class="subhead__label" style:color={tone(r.accent, $theme)}>{r.label}</span>
@@ -4219,17 +4226,20 @@
   .row__value--done {
     color: var(--accent-lms);
   }
+  /* A reading too long for a phone's heading (*Directory unreachable*)
+     wraps beside its mark rather than off the screen; one that fits stays
+     on one line (2026-11-14). */
   .ind {
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    flex-shrink: 0;
+    flex-shrink: 1;
     font-size: 15px;
     font-weight: 600;
-    white-space: nowrap;
     color: var(--ind);
   }
   .ind__mark {
+    flex-shrink: 0;
     display: inline-grid;
     place-items: center;
     width: 20px;

@@ -1,8 +1,10 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <!--
-  **Popular here's country** (ADR-0180; design/source/31 S02, S04): every
-  country tzdata names, the one chosen first and the rest A to Z, each with
-  its count of stations when the directory gave one. A dialog on the panel,
+  **Popular here's country** (ADR-0180; design/source/31 S02, S04): the
+  countries the directory has stations in, with their counts, when it
+  answered - and the one chosen and the time zone's, even if it has none;
+  every country tzdata names when it did not (George, 2026-11-14). The one
+  chosen first and the rest A to Z. A dialog on the panel,
   a bottom sheet on a phone. A tap writes at once; Done, the scrim or Back
   closes. *From your time zone* is the core's tag on the country the row
   falls back to (`defaultTag`).
@@ -13,8 +15,8 @@
   import { SheetPull } from './remote/sheetPull.svelte.js';
 
   //: `row`: the `radio_country` row. `listing`: `/stations/countries`'
-  //: `{countries}` once read, for the counts. `onpick(code)` writes it and
-  //: says whether it was taken.
+  //: `{countries}` once read, for which to list and their counts.
+  //: `onpick(code)` writes it and says whether it was taken.
   let { row, listing = null, phone = false, onpick, onclose } = $props();
 
   const pull = new SheetPull(() => onclose());
@@ -28,11 +30,13 @@
 
   // The order is the one the sheet opened with: a tap does not move a row.
   const first = untrack(() => row.value);
+  const listed = $derived(new Map((listing?.countries ?? []).map((c) => [c.code, c])));
+  //: Without the directory's list (or with an empty one), every country.
+  const kept = (c) => !listed.size || listed.has(c) || c === first || c === row.value || !!row.optionTags?.[c];
   const codes = $derived.by(() => {
-    const all = row.options ?? [];
+    const all = (row.options ?? []).filter(kept);
     return all.includes(first) ? [first, ...all.filter((c) => c !== first)] : all;
   });
-  const listed = $derived(new Map((listing?.countries ?? []).map((c) => [c.code, c])));
   const fold = (text) => String(text ?? '').normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase();
   const shown = $derived.by(() => {
     const q = fold(query.trim());

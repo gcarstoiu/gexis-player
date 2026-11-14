@@ -772,8 +772,8 @@ still mounted.
 | Bluetooth: Discoverable | Whether phones can find the player: *Always* (the default), *3 min after boot* or *Off*. With *Pairing* on *Confirmation required*, a new phone still has to be accepted on the screen. |
 | Bluetooth: Trusted devices | Remembered devices; forget one here. |
 | Bluetooth: Auto-trust on pair | Remembers a device once paired, so it reconnects by itself. |
-| Internet radio: On | Stations from a public directory, and your own favourites. Works with Lyrion off. The heading says *Ready* once the directory has answered. |
-| Internet radio: Popular here | The country whose stations *Popular here* lists; at first, the time zone's. The list marks that country *From your time zone* and gives each country's number of stations. |
+| Internet radio: On | Stations from a public directory, and your own favourites. Works with Lyrion off. The heading says *Ready* once the directory has answered, and *Directory unreachable* while it cannot be reached. |
+| Internet radio: Popular here | The country whose stations *Popular here* lists; at first, the time zone's. The list shows the countries the directory has stations in, each with its number of stations, and marks the time zone's *From your time zone*; while the directory cannot be reached, it shows every country. |
 
 Plugins add their own rows here once switched on: **Plexamp** (claim the
 player into your Plex account).
