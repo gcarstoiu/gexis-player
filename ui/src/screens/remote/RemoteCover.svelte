@@ -4,17 +4,40 @@
   renderer's, or the one the core found for the track (ADR-0081); without
   one, the panel's *artwork pending* glyph (Bluetooth's, as drawn); nothing
   playing, the note. `big` is the layout without a screen. Its size is the
-  parent's; an inner ring lies over it.
+  parent's; an inner ring lies over it. A station (ADR-0180, design/source/31
+  §4): its logo on the plate where no cover came - one smaller than 64 px at
+  its own size, never enlarged - and with neither, the radio mark on the
+  radio's tint.
 -->
 <script>
   import { FILLED } from './icons.js';
+  import { active } from '../../lib/state.js';
+  import { radio } from '../../lib/radio.js';
+  import RadioMark from '../../lib/RadioMark.svelte';
 
   let { artwork = null, hasTrack = false, big = false, onfailed = () => {} } = $props();
+
+  const NATIVE_MAX = 64;
+  const logo = $derived($active === 'radio' && !!artwork && artwork === $radio?.station?.logo);
+  let natural = $state(null);
+  $effect(() => {
+    void artwork;
+    natural = null;
+  });
+  const tiny = $derived(natural !== null && natural < NATIVE_MAX);
 </script>
 
 <div class="cover" class:is-big={big}>
-  {#if hasTrack && artwork}
+  {#if hasTrack && logo}
+    <div class="plate" class:is-tiny={tiny}>
+      <img src={artwork} alt="" style:width={tiny ? `${natural}px` : null} style:height={tiny ? `${natural}px` : null}
+           onload={(e) => (natural = Math.max(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight) || null)}
+           onerror={() => onfailed(artwork)} />
+    </div>
+  {:else if hasTrack && artwork}
     <img src={artwork} alt="" onerror={() => onfailed(artwork)} />
+  {:else if hasTrack && $active === 'radio'}
+    <div class="station"><RadioMark size={big ? 120 : 56} stroke={big ? 1.6 : 2} /></div>
   {:else if hasTrack}
     <div class="pending">
       <span class="pending__ring"><span class="pending__dot"></span></span>
@@ -72,6 +95,30 @@
     justify-content: center;
     gap: var(--gap);
     background: linear-gradient(160deg, var(--c-lms-07), var(--c-artist-06)), var(--bg-well);
+  }
+  .plate {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--station-logo-plate);
+  }
+  .plate img {
+    object-fit: contain;
+  }
+  .plate.is-tiny img {
+    position: static;
+  }
+  .station {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--station-fallback-ground);
+    box-shadow: inset 0 0 0 1px var(--station-fallback-line);
+    border-radius: inherit;
   }
   .pending__ring {
     width: var(--ring);

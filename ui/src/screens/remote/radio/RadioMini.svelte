@@ -31,10 +31,10 @@
 
 <div class="mini" role="button" tabindex="-1" aria-label="Now playing" onclick={onopen}
      onkeydown={(e) => { if (e.key === 'Enter') onopen(); }}>
-  {#if artwork}
+  {#if isRadio && (!artwork || artwork === $radio?.station?.logo)}
+    <StationLogo src={artwork} size={46} radius="var(--r-10)" mark={22} />
+  {:else if artwork}
     <img class="art" src={artwork} alt="" />
-  {:else if isRadio}
-    <StationLogo src={null} size={46} radius="var(--r-10)" mark={22} />
   {:else}
     <span class="art art--none"></span>
   {/if}
