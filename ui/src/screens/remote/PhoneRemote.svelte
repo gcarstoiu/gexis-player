@@ -1,11 +1,12 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <!--
   ADR-0164: the phone's remote (design/source/21). The player picker and the
-  Remote / Settings switch on top; under them the two pages side by side,
-  the pair sliding a page at a time: Remote - with a screen, now playing, the
-  touch area, the quick actions and the volume row; without one, a large
-  cover, a seek bar and larger transport - and Settings as it is, without the
-  mini player, mounted on its first visit. Over them the player menu and the
+  Remote · Radio · Settings switch on top (ADR-0180, design/source/31 11a);
+  under them the three pages side by side, sliding a page at a time: Remote -
+  with a screen, now playing, the touch area, the quick actions and the
+  volume row; without one, a large cover, a seek bar and larger transport -
+  internet radio's page, and Settings as it is, without the mini player; the
+  last two mounted on their first visit. Over them the player menu and the
   EQ sheet. Behind both, inside the column, the panel's background: the
   weave, the blurred cover where there is one, the veil (D9). While Settings shows, the whole screen
   takes the modals' solid grey, as Settings does (George, 2026-10-27).
@@ -28,6 +29,9 @@
   import EqSheet from './EqSheet.svelte';
   import GroupSheet from './GroupSheet.svelte';
   import UndoConfirm from './UndoConfirm.svelte';
+  import RadioPage from './radio/RadioPage.svelte';
+  import AddStationSheet from './radio/AddStationSheet.svelte';
+  import RadioMark from '../../lib/RadioMark.svelte';
   import { group } from '../../lib/group.svelte.js';
   import { said } from './commands.js';
   import { FILLED } from './icons.js';
@@ -43,8 +47,25 @@
 
   // ── The pages ───────────────────────────────────────────────────────────
   let page = $state('remote');
+  const PAGES = ['remote', 'radio', 'settings'];
+  const pageAt = $derived(PAGES.indexOf(page));
   let settingsSeen = $state(false);
   let settingsRow = $state(null);
+  //: Radio's page, mounted on its first visit; its segment tapped while it
+  //: shows takes it back to its top.
+  let radioSeen = $state(false);
+  let radioHome = $state(0);
+  let radioPage = $state(null);
+  let adding = $state(false);
+  function toRadio() {
+    if (page === 'radio') radioHome += 1;
+    radioSeen = true;
+    eqOpen = false;
+    groupOpen = false;
+    menuOpen = false;
+    stopTyping();
+    page = 'radio';
+  }
   function toSettings(row = null) {
     settingsSeen = true;
     settingsRow = row;
@@ -238,12 +259,16 @@
         <svg class="picker__chev" class:is-open={menuOpen} viewBox="0 0 24 24" aria-hidden="true"><path d={FILLED.chevron} /></svg>
       </button>
       <div class="pages-switch">
-        <span class="pages-switch__ind" style:transform={page === 'settings' ? 'translateX(56px)' : 'none'}></span>
+        <span class="pages-switch__ind" class:is-radio={page === 'radio'} style:transform={`translateX(${pageAt * 56}px)`}></span>
         <button class="seg" class:is-on={page === 'remote'} type="button" aria-label="Remote" aria-pressed={page === 'remote'}
                 onclick={() => { page = 'remote'; menuOpen = false; }}>
           <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
             <rect x="7" y="2.5" width="10" height="19" rx="3" /><circle cx="12" cy="8" r="2" /><path d="M10.5 14h3M10.5 17.5h3" />
           </svg>
+        </button>
+        <button class="seg seg--radio" class:is-on={page === 'radio'} type="button" aria-label="Radio" aria-pressed={page === 'radio'}
+                onclick={toRadio}>
+          <RadioMark size={22} ink="currentColor" />
         </button>
         <button class="seg" class:is-on={page === 'settings'} type="button" aria-label="Settings" aria-pressed={page === 'settings'}
                 onclick={() => toSettings()}>
@@ -253,7 +278,7 @@
     </div>
 
     <div class="pages">
-      <div class="track" style:transform={page === 'settings' ? 'translateX(-50%)' : 'none'}>
+      <div class="track" style:transform={`translateX(${(-100 * pageAt) / 3}%)`}>
         <div class="page page--remote" inert={page !== 'remote'}>
           {#if hasScreen}
             <RemoteScreen {artwork} onartfailed={(a) => (failedArt = a)} {pad} onpad={choosePad} padSwitch={padAllowed}
@@ -265,6 +290,12 @@
             <RemoteNoScreen {artwork} onartfailed={(a) => (failedArt = a)} onsay={say} oneq={() => (eqOpen = true)}
                             ongroup={() => (groupOpen = true)} onmark={openMenu}
                             onroom={() => toSettings('room_correction')} />
+          {/if}
+        </div>
+        <div class="page page--radio" inert={page !== 'radio'}>
+          {#if radioSeen}
+            <RadioPage bind:this={radioPage} bind:adding {artwork} home={radioHome} onremote={() => (page = 'remote')}
+                       onsay={say} />
           {/if}
         </div>
         <div class="page page--settings" inert={page !== 'settings'}>
@@ -294,6 +325,10 @@
     <EqSheet open={eqOpen} onclose={() => (eqOpen = false)} onedit={() => toSettings('equaliser')} />
     <GroupSheet open={groupOpen} onclose={() => (groupOpen = false)} onsay={say} />
     <UndoConfirm open={undoAsked} onclose={() => (undoAsked = false)} onsay={say} />
+    {#if radioSeen}
+      <AddStationSheet open={adding && page === 'radio'} player={here.name} onclose={() => radioPage?.addClosed()}
+                       onadded={(s) => radioPage?.added(s)} onsay={say} />
+    {/if}
   </div>
 </div>
 
@@ -452,8 +487,12 @@
     height: 46px;
     border-radius: var(--r-13);
     background: var(--remote-select);
-    transition: transform var(--remote-slide);
+    transition: transform var(--remote-slide), background-color var(--remote-slide);
     pointer-events: none;
+  }
+  /* Radio's segment takes the radio's accent (design/source/31 §6). */
+  .pages-switch__ind.is-radio {
+    background: rgba(var(--c-radio-rgb), 0.2);
   }
   .seg {
     position: relative;
@@ -470,6 +509,9 @@
   .seg.is-on {
     color: var(--accent-lms);
   }
+  .seg--radio.is-on {
+    color: var(--accent-radio);
+  }
   .seg svg {
     width: 22px;
     height: 22px;
@@ -484,14 +526,14 @@
     position: absolute;
     left: 0;
     top: 0;
-    width: 200%;
+    width: 300%;
     height: 100%;
     display: flex;
     transition: transform var(--remote-page);
   }
   .page {
     position: relative;
-    width: 50%;
+    width: calc(100% / 3);
     height: 100%;
     overflow: hidden;
   }
@@ -520,7 +562,8 @@
     border: 1px solid var(--c-ink-14);
     font-size: 14px;
     color: var(--accent-warn);
-    z-index: 20;
+    /* Over the sheets too: Add by address's refusals are said here. */
+    z-index: 60;
   }
   /* Focusable, so the phone's keyboard opens for it, and out of sight; at
      the top, where a keyboard coming up never covers it. */
