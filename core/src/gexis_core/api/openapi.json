@@ -3684,6 +3684,55 @@
         "x-gexis-stability": "stable",
         "x-gexis-adr": [
           "ADR-0136"
+        ],
+        "parameters": [
+          {
+            "name": "fresh",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1"
+              ]
+            },
+            "description": "Sent when a list of players opens: if what was found is more than 5 s old, the players already found are asked for their status again (without a new search) before the answer."
+          }
+        ]
+      }
+    },
+    "/players/changed": {
+      "post": {
+        "operationId": "players_changed",
+        "tags": [
+          "Playback"
+        ],
+        "summary": "Another player says its group changed",
+        "description": "Sent by a player to every other player it has found when its group is made, changed or undone. The players found are asked for their status again a moment later (several such messages together are one look), and the state's `players_revision` moves so a list on a screen reads `/players` again. The request carries nothing.",
+        "responses": {
+          "200": {
+            "description": "Heard.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "heard": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "heard"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "x-gexis-stability": "internal",
+        "x-gexis-adr": [
+          "ADR-0136",
+          "ADR-0166"
         ]
       }
     },
@@ -13249,6 +13298,7 @@
           "sources",
           "settings_revision",
           "pictures_revision",
+          "players_revision",
           "controls",
           "queue",
           "pairing",
@@ -13342,6 +13392,10 @@
           "pictures_revision": {
             "type": "integer",
             "description": "Bumped when the library's pictures change (ADR-0059's sweep finishing); drop cached artist photos when it changes."
+          },
+          "players_revision": {
+            "type": "integer",
+            "description": "Bumped when another player said its group changed and this one has asked the others again; read GET /players again when it changes."
           },
           "controls": {
             "oneOf": [

@@ -17,6 +17,7 @@
 -->
 <script>
   import { onMount, untrack } from 'svelte';
+  import { onPlayersChanged } from '../../lib/group.svelte.js';
   import { active, metadata, sources } from '../../lib/state.js';
   import { settingValues, settingsDevice } from '../../lib/settings.js';
   import { openTouchpad } from '../../lib/touchpad.js';
@@ -97,6 +98,8 @@
       // Nothing kept.
     }
     loadPlayers();
+    // A group changed on another player: the list as it is now.
+    return onPlayersChanged(() => loadPlayers());
   });
   const sourceName = $derived($sources?.[$active]?.name ?? $active);
   //: ADR-0166: a member whose leader is off says so (design/source/22).

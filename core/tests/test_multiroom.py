@@ -73,6 +73,11 @@ class FakePlayers:
         self.net = net
         self.addresses = {}
         self.on_refresh = None
+        #: What this player told the others of its group, each time.
+        self.told = []
+
+    async def tell_others(self):
+        self.told.append(1)
 
     def status_of(self, player_id):
         # As the real list: only a player heard in the last round.
@@ -372,6 +377,25 @@ async def test_undo_keeps_the_music_on_the_leader_until_nothing_holds_the_device
     living.play(None)
     await net.settle()
     assert not living.snap.serving and living.room.chain is None
+
+
+async def test_every_other_player_is_told_when_the_group_is_made_and_undone(tmp_path):
+    """George, 2026-11-14: undone on sofapi, the group still showed on the
+    bar's list. Each member tells the others when what it says of its group
+    changes - not when nothing did."""
+    net = Net(tmp_path)
+    living, kitchen = net.add("living", "Living Room"), net.add("kitchen", "Kitchen")
+    await net.settle()
+    assert living.room._players.told == [] and kitchen.room._players.told == []
+    await living.room.join("kitchen")
+    await net.settle()
+    assert len(living.room._players.told) == 1 and len(kitchen.room._players.told) == 1
+    living.room._changed()
+    await net.settle()
+    assert len(living.room._players.told) == 1, "nothing changed: nobody told again"
+    await kitchen.room.undo()
+    await net.settle()
+    assert len(living.room._players.told) == 2 and len(kitchen.room._players.told) == 2
 
 
 @pytest.mark.parametrize("asked", ["kitchen", "living"])

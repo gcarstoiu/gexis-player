@@ -15,7 +15,7 @@
   import { onMount } from 'svelte';
   //: ADR-0166 decision 11: a player in a group says so here as in the
   //: remote's menu (*In a group with Garage · Plexamp*).
-  import { inOrder, otherStatus, playerPlace } from '../lib/group.svelte.js';
+  import { inOrder, onPlayersChanged, otherStatus, playerPlace } from '../lib/group.svelte.js';
 
   let me = $state(null);
   let others = $state([]);
@@ -69,6 +69,8 @@
       others = kept.others ?? [];
     }
     load();
+    // A group changed on another player: the list as it is now.
+    return onPlayersChanged(() => load());
   });
 </script>
 

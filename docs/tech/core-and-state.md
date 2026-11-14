@@ -851,7 +851,13 @@ remembers the last list (`localStorage`), so the button shows at once.
 drawer, the bar's tray, the switcher): if what was found is older than
 `ASK_AGAIN_S` (5 s), the players already found are asked their status again,
 without a search (`Players.ask_again`), so a group made or undone elsewhere
-shows (George, 2026-11-14). The lists are in alphabetical order, the group
+shows (George, 2026-11-14). And when this player's group changes (what `/player/status`
+says of it), multiroom tells every player found (`POST /players/changed`,
+`Players.tell_others`): a player told asks the others again 0.3 s later
+(`Players.heard`; several told together are one look) and moves the
+state's `players_revision`, on which an open list reads `/players` again
+(`onPlayersChanged`). A player older than this answers 404 and waits for
+its next look. The lists are in alphabetical order, the group
 volume's members too, a group's players together where its first player falls (`inOrder` and its helpers in
 `lib/group.svelte.js`). `/player/status` is `{name, host, instance, id, screen, transport, renderer}` - the
 renderer named as the source list names it; `instance` a token made at each

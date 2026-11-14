@@ -9,6 +9,21 @@ import { playback } from './state.js';
 /** This player's group as the core publishes it, or null alone. */
 export const group = derived(playback, ($s) => $s?.group ?? null);
 
+/** **Another player's group changed** (George, 2026-11-14): this player,
+ *  told, has asked the others again and moved `players_revision`. `fn` runs
+ *  at each move after the first, to read `/players` again; the unsubscriber
+ *  is returned, for `onMount`. */
+export function onPlayersChanged(fn) {
+  let seen;
+  return playback.subscribe(($s) => {
+    const revision = $s?.players_revision;
+    if (revision === undefined || revision === seen) return;
+    const first = seen === undefined;
+    seen = revision;
+    if (!first) fn();
+  });
+}
+
 async function post(path, body) {
   const response = await fetch(path, {
     method: 'POST',

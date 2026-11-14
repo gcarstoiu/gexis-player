@@ -12,7 +12,7 @@
   import EqQuick from './eq/EqQuick.svelte';
   import RoomQuick from './room/RoomQuick.svelte';
   import GroupGlyph from '../lib/GroupGlyph.svelte';
-  import { group } from '../lib/group.svelte.js';
+  import { group, onPlayersChanged } from '../lib/group.svelte.js';
   import PanelGroupVolume from './group/PanelGroupVolume.svelte';
   import PanelAddPlayers from './group/PanelAddPlayers.svelte';
   import PanelUndoConfirm from './group/PanelUndoConfirm.svelte';
@@ -64,6 +64,11 @@
       // No network answer: the row waits for the next opening.
     }
   }
+  //: A group changed on another player: the rows as they are now, if the
+  //: drawer is open (George, 2026-11-14).
+  $effect(() => onPlayersChanged(() => {
+    if (open) loadPlayers();
+  }));
   //: `add`: the card turned to *Add players*; `confirming`: *Undo the group?*.
   let page = $state('main');
   let confirming = $state(false);

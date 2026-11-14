@@ -33,6 +33,10 @@ FRESH_S = 30.0
 #: players already found are asked for their status once more - not the
 #: network search, which takes up to `BROWSE_TIMEOUT_S`.
 ASK_AGAIN_S = 5.0
+#: **Told by another player that its group changed** (George, 2026-11-14:
+#: undone on sofapi, still shown on the bar's list): the others are asked
+#: again this long after, so the members' word, sent together, is one look.
+HEARD_S = 0.3
 #: ADR-0160 D5: the board's own serial number, which every Pi carries.
 SERIAL = Path("/proc/device-tree/serial-number")
 
@@ -136,6 +140,11 @@ class Players:
         #: Told the statuses found, by id, after each look (the group's
         #: `reconcile`).
         self.on_refresh: Callable[[dict[str, dict]], Awaitable[None]] | None = None
+        #: Called once the others are asked again after another player said
+        #: its group changed (the state's `players_revision`).
+        self.on_heard: Callable[[], None] | None = None
+        self._heard = False
+        self._hearing: asyncio.Task | None = None
 
     async def others(self, session: aiohttp.ClientSession, *, fresh: bool = False) -> list[dict]:
         """What was last found; looked for now only if nothing has been yet,
@@ -179,6 +188,48 @@ class Players:
             except Exception:  # noqa: BLE001 - a look must not fail for what is done with it
                 logger.exception("players: what was found could not be passed on")
         return listed
+
+    async def tell_others(self) -> int:
+        """**This player's group changed: every player found is told**
+        (`POST /players/changed`), so its list asks again now rather than at
+        its next look. One older than this answers 404 and waits for that
+        look. The number told."""
+        targets = list(dict.fromkeys(self.addresses.values()))
+        if not targets:
+            return 0
+        async with aiohttp.ClientSession() as session:
+            told = await asyncio.gather(*(self._tell(session, a, p) for a, p in targets))
+        return sum(told)
+
+    @staticmethod
+    async def _tell(session: aiohttp.ClientSession, address: str, port: int) -> bool:
+        try:
+            async with session.post(f"http://{address}:{port}/players/changed",
+                                    timeout=aiohttp.ClientTimeout(total=STATUS_TIMEOUT_S)) as response:
+                return response.status == 200
+        except (aiohttp.ClientError, asyncio.TimeoutError):
+            return False
+
+    def heard(self) -> None:
+        """Another player said its group changed: the players found are
+        asked again `HEARD_S` later - once for several told together, again
+        for one told meanwhile - then `on_heard`."""
+        self._heard = True
+        if self._hearing is None or self._hearing.done():
+            self._hearing = asyncio.ensure_future(self._hear())
+
+    async def _hear(self) -> None:
+        while self._heard:
+            self._heard = False
+            await asyncio.sleep(HEARD_S)
+            try:
+                async with aiohttp.ClientSession() as session:
+                    await self.ask_again(session)
+            except Exception:  # noqa: BLE001 - the next look finds them
+                logger.exception("players: asking again after a change failed")
+                continue
+            if self.on_heard is not None:
+                self.on_heard()
 
     def status_of(self, player_id: str) -> dict | None:
         """What a player last said of itself, by id."""

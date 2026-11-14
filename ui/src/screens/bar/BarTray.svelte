@@ -34,7 +34,7 @@
   import EqQuick from '../eq/EqQuick.svelte';
   import RoomQuick from '../room/RoomQuick.svelte';
   import GroupGlyph from '../../lib/GroupGlyph.svelte';
-  import { dragStart, group, groupLevel, LevelSender, setGroupMute } from '../../lib/group.svelte.js';
+  import { dragStart, group, groupLevel, LevelSender, onPlayersChanged, setGroupMute } from '../../lib/group.svelte.js';
   import BarAddBand from '../group/BarAddBand.svelte';
   import BarGroupBand from '../group/BarGroupBand.svelte';
   import BarUndoConfirm from '../group/BarUndoConfirm.svelte';
@@ -108,7 +108,11 @@
     if (open) loadPlayers(true);
   });
   // Asked once at the start too, so the pill is there the first time.
-  onMount(loadPlayers);
+  onMount(() => {
+    loadPlayers();
+    // A group changed on another player: the pill and Add players as they are now.
+    return onPlayersChanged(() => loadPlayers());
+  });
   const grouped = $derived(!!$group);
   //: Only where there is somebody to group with, or a group already.
   const groupOffered = $derived(grouped || players.length > 0);
