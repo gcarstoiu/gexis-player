@@ -8,6 +8,7 @@
   import Library from './screens/Library.svelte';
   import BarLibrary from './screens/bar/BarLibrary.svelte';
   import WaitingHome from './screens/WaitingHome.svelte';
+  import RadioScreen from './screens/radio/RadioScreen.svelte';
   import PanelBackground from './screens/PanelBackground.svelte';
   import IdleScreen from './screens/IdleScreen.svelte';
   import VolumeDrawer from './screens/VolumeDrawer.svelte';
@@ -426,15 +427,19 @@
       if (ask.to === 'home') {
         libraryRequested = !lmsOff;
         libraryHome += 1;
+        radioOpen = false;
         return;
       }
       if (!$active) return;
-      // ADR-0122 from the phone: down to the strip, the library as left.
+      // ADR-0122 from the phone: down to the strip, the library as left -
+      // or with Lyrion off, Radio (ADR-0180, 6c).
       if (ask.to === 'minimise') {
         libraryRequested = !lmsOff;
+        radioOpen = lmsOff && radioOn;
         return;
       }
       libraryRequested = false;
+      radioOpen = false;
       if (ask.to === 'lyrics' || ask.to === 'track') lyricsAsk.set({ on: ask.to === 'lyrics' });
     });
   });
@@ -444,7 +449,7 @@
   //: 2026-10-06).
   let reportedNow = null;
   $effect(() => {
-    const showing = !!$active && !libraryOpen && !settingsOpen && !eqOpen && !roomOpen && !waitingOpen && !idle;
+    const showing = !!$active && !libraryOpen && !settingsOpen && !eqOpen && !roomOpen && !radioShown && !waitingOpen && !idle;
     if (surface !== 'panel' || showing === reportedNow) return;
     reportedNow = showing;
     reportShown({ now: showing }).catch(() => (reportedNow = null));
@@ -455,7 +460,7 @@
   //: nothing over it, its lyrics on.
   $effect(() => {
     const showing =
-      $lyricsShown && !!$active && !libraryOpen && !settingsOpen && !eqOpen && !roomOpen && !idle && !$panel.visualiser;
+      $lyricsShown && !!$active && !libraryOpen && !settingsOpen && !eqOpen && !roomOpen && !radioShown && !idle && !$panel.visualiser;
     // The state this reads arrives every second; the core hears a change.
     if (surface !== 'panel' || showing === reportedLyrics) return;
     reportedLyrics = showing;
@@ -507,12 +512,25 @@
     return after?.first && after.phase !== 'ready' ? { ...after, steps: c.steps ?? null } : null;
   });
   const waitingOpen = $derived((lmsOff && (!$active || idleSource)) || (!!lyrionFirst && !playing));
+  //: **ADR-0180: the player's own Radio screen with Lyrion off** - or its
+  //: library navigation off - as a screen of its own (design/source/31,
+  //: 5a / 9a / 6c): from the waiting screen's Radio button and from Now
+  //: Playing's Minimise; Back returns to what was under it. With Lyrion on
+  //: it lives in the library (Library.svelte).
+  const radioOn = $derived($settingValues.radio_enabled !== false);
+  let radioOpen = $state(false);
+  const radioShown = $derived(lmsOff && radioOn && radioOpen);
+  const openRadio = () => {
+    closeVolume();
+    radioOpen = true;
+  };
   //: **ADR-0122: the library is kept while Now Playing is up**, mounted and
   //: hidden, so Minimise shows it as it was left - path, levels, scroll.
   //: Home remounts it at its root (`libraryHome`), as the phone's Home does.
   let libraryKept = $state(false);
   $effect(() => {
     if (libraryOpen) libraryKept = true;
+    if (!lmsOff) radioOpen = false;
     if (lmsOff) {
       libraryKept = false;
       // The library is dropped, and mounts afresh when LMS comes back - with
@@ -555,8 +573,12 @@
   let previousActive = null;
   $effect(() => {
     const now = $active;
-    // A renderer arriving shows now playing (ADR-0033's assumption).
-    if (previousActive === null && now !== null) untrack(() => (libraryRequested = false));
+    // A renderer arriving shows now playing (ADR-0033's assumption) - from
+    // the library, and from Radio with Lyrion off.
+    if (previousActive === null && now !== null) untrack(() => {
+      libraryRequested = false;
+      radioOpen = false;
+    });
     previousActive = now;
   });
 
@@ -950,9 +972,22 @@
       <RoomCorrection surface={screen.family === 'bar' ? 'bar' : 'panel'} onback={() => (roomOpen = false)}
         onhome={screen.family === 'bar' ? (lmsOff ? openSettings : openLibraryHome) : null} />
     </div>
+  {:else if radioShown}
+    <div class="screen-layer">
+      {#if screen.family === 'bar'}
+        <!-- ADR-0180, Bar family: the bars' Radio screen (BarRadio) goes
+             here, with the panel's props below - not built yet, so nothing
+             is drawn; Back is `radioOpen = false`. -->
+      {:else}
+        <RadioScreen standalone active={$active} metadata={$metadata} volume={$volume}
+          controls={$active ? ($capabilities[$active]?.controls ?? []) : []}
+          onback={() => (radioOpen = false)} onopen={() => (radioOpen = false)} onvolume={openVolume} />
+      {/if}
+    </div>
   {:else if waitingOpen}
     <div class="screen-layer">
-      <WaitingHome availability={$availability} onsettings={openSettings} settings={$settingValues} reading={lyrionFirst} />
+      <WaitingHome availability={$availability} onsettings={openSettings} onradio={radioOn ? openRadio : null}
+        settings={$settingValues} reading={lyrionFirst} />
     </div>
   {:else if libraryOpen}
     <!-- The library's layer, below: kept mounted (ADR-0122). -->
@@ -970,10 +1005,11 @@
           onartist={lmsOff ? undefined : openLibraryArtist}
           onalbum={lmsOff ? undefined : openLibraryAlbum} />
       {:else}
+      <!-- ADR-0180 (6c): with Lyrion off, Minimise comes back and opens Radio. -->
       <NowPlaying active={$active} metadata={$metadata} volume={$volume} controls={$capabilities[$active]?.controls ?? []} available={$available} shuffle={$shuffle} repeat={$repeat} queue={$queue} onvolume={openVolume} onvisualisation={showVisualisation} ondashboard={dashboardButton ? showDashboard : null}
         rootless={lmsOff}
         onhome={lmsOff ? openSettings : openLibraryHome}
-        onminimise={lmsOff ? null : minimise}
+        onminimise={lmsOff ? (radioOn ? openRadio : null) : minimise}
         onartist={lmsOff ? undefined : openLibraryArtist}
           onalbum={lmsOff ? undefined : openLibraryAlbum} />
       {/if}

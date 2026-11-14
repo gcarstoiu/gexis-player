@@ -19,6 +19,11 @@
   import QueueRail from './QueueRail.svelte';
   import PanelGroupMark from './group/PanelGroupMark.svelte';
   import { group } from '../lib/group.svelte.js';
+  import HeartIcon from '../lib/HeartIcon.svelte';
+  import RadioMark from '../lib/RadioMark.svelte';
+  import StationLogo from '../lib/StationLogo.svelte';
+  import Icon from './radio/Icon.svelte';
+  import { radio, addFavourite, removeFavourite, qualityLine } from '../lib/radio.js';
 
   import { sendTransport, fixedMute, fixedOutput, meters } from '../lib/state.js';
   import { playhead, mmss } from '../lib/playhead.svelte.js';
@@ -362,6 +367,51 @@
     return out;
   });
 
+  // ── ADR-0180: a station (design/source/31, picks 6c and 7b; P23-P31) ──
+  const isRadio = $derived(active === 'radio');
+  const station = $derived(isRadio ? ($radio?.station ?? null) : null);
+  const radioState = $derived(isRadio ? ($radio?.state ?? null) : null);
+  //: split: artist and title; whole: the line as the title; none: the
+  //: station's name as the title (George, 2026-11-14).
+  const radioLines = $derived(isRadio ? ($radio?.lines ?? 'split') : null);
+  //: Reconnecting or not answering: the art sits back at 0.45.
+  const struggling = $derived(radioState === 'reconnecting' || radioState === 'not_answering');
+  //: The art: a found cover; else the station's logo, on a plate; else the
+  //: radio mark on the radio's tint.
+  const radioArt = $derived(!isRadio ? null : !artwork ? 'mark' : station?.logo && artwork === station.logo ? 'logo' : 'cover');
+  let artSide = $state(500);
+  //: What a station cannot fill: no release; and with nothing sent, no
+  //: lyrics or artist either. Drawn at 0.30 and inert.
+  const dimTabs = $derived(!isRadio ? [] : radioLines === 'none' ? ['lyrics', 'artist', 'release'] : ['release']);
+  $effect(() => {
+    if (dimTabs.includes(tab)) untrack(() => (tab = 'track'));
+  });
+  //: The heart beside the title (7b): shown at once, the core's answer after.
+  let favouriteWanted = $state(null);
+  const favourite = $derived(favouriteWanted ?? !!station?.favourite);
+  //: By value: every push of the state is a new station object.
+  const stationId = $derived(station?.id ?? null);
+  $effect(() => {
+    void stationId;
+    untrack(() => (favouriteWanted = null));
+  });
+  async function toggleFavourite() {
+    if (!station) return;
+    const want = !favourite;
+    favouriteWanted = want;
+    try {
+      if (want) await addFavourite(station);
+      else await removeFavourite(station.id);
+    } catch (err) {
+      favouriteWanted = null;
+      console.info('radio:', err.message);
+    }
+  }
+  $effect(() => {
+    if (favouriteWanted !== null && !!station?.favourite === favouriteWanted) untrack(() => (favouriteWanted = null));
+  });
+  const tried = $derived(($radio?.tries ?? 3) === 3 ? 'three times' : `${$radio?.tries} times`);
+
   let queueOpen = $state(false);
   // Leaving LMS takes the rail's subject with it.
   $effect(() => {
@@ -392,14 +442,23 @@
 
   <div class="screen__body">
     <div class="top">
-      <div class="art">
+      <div class="art" class:art--station={radioArt === 'logo' || radioArt === 'mark' || struggling} bind:clientWidth={artSide}>
         <!-- ADR-0122: back to the library as it was left, Now Playing down to
              the mini strip (George, 2026-10-06: the chevron top left). -->
         {#if onminimise}
           <button class="minimise" type="button" aria-label="Minimise" data-dpad-back onclick={onminimise}><span class="minimise__chev"></span></button>
         {/if}
-        {#if artwork}
-          <img src={artwork} alt="" onerror={() => (failedArtwork = artwork)} />
+        {#if radioArt === 'logo'}
+          <!-- ADR-0180: a station's logo on a plate, never stretched to a cover. -->
+          <div class="art__plate" class:is-dim={struggling}>
+            <StationLogo src={artwork} size={Math.round(artSide * 0.62)} radius="var(--r-30)" />
+          </div>
+        {:else if radioArt === 'mark'}
+          <div class="art__mark" class:is-dim={struggling}>
+            <RadioMark size={Math.round(artSide * 0.42)} stroke={1.6} />
+          </div>
+        {:else if artwork}
+          <img src={artwork} alt="" class:is-dim={struggling} onerror={() => (failedArtwork = artwork)} />
         {:else}
           <div class="art__empty">
             <div class="art__glyph"></div>
@@ -411,9 +470,9 @@
       <div class="meta">
         <div class="tabs" role="tablist" aria-label="Track detail">
           <button class="tab" data-tab="track" data-pointer="underline" type="button" role="tab" aria-selected={tab === 'track'} onclick={() => (tab = 'track')}>Track</button>
-          <button class="tab" data-tab="lyrics" data-pointer="underline" type="button" role="tab" aria-selected={tab === 'lyrics'} onclick={() => (tab = 'lyrics')}>Lyrics</button>
-          <button class="tab" data-tab="artist" data-pointer="underline" type="button" role="tab" aria-selected={tab === 'artist'} onclick={() => (tab = 'artist')}>Artist</button>
-          <button class="tab" data-tab="release" data-pointer="underline" type="button" role="tab" aria-selected={tab === 'release'} onclick={() => (tab = 'release')}>Release</button>
+          <button class="tab" data-tab="lyrics" data-pointer="underline" type="button" role="tab" aria-selected={tab === 'lyrics'} disabled={dimTabs.includes('lyrics')} onclick={() => (tab = 'lyrics')}>Lyrics</button>
+          <button class="tab" data-tab="artist" data-pointer="underline" type="button" role="tab" aria-selected={tab === 'artist'} disabled={dimTabs.includes('artist')} onclick={() => (tab = 'artist')}>Artist</button>
+          <button class="tab" data-tab="release" data-pointer="underline" type="button" role="tab" aria-selected={tab === 'release'} disabled={dimTabs.includes('release')} onclick={() => (tab = 'release')}>Release</button>
         </div>
 
         <div class="panel">
@@ -427,12 +486,23 @@
                  the block is pinned to the top of the panel and the words,
                  when they exist, sit under a hairline below it. -->
             <div class="trackblock">
-              <div class="title" class:is-empty={!metadata?.title}>{metadata?.title ?? ''}</div>
-              <!-- Artist, album and year share one baseline row. -->
+              <div class="title" class:title--radio={isRadio} class:is-empty={!metadata?.title}>{metadata?.title ?? ''}</div>
+              {#if isRadio && station}
+                <!-- 7b: the heart beside the title; a tap adds or removes the station. -->
+                <button class="fav" type="button" aria-label={favourite ? 'Remove from favourites' : 'Add to favourites'}
+                  aria-pressed={favourite} onclick={toggleFavourite}>
+                  <HeartIcon filled={favourite} size={34} />
+                </button>
+              {/if}
+              <!-- Artist, album and year share one baseline row. A station
+                   that sends nothing has neither (its name is the title). -->
+              {#if !isRadio || metadata?.artist || metadata?.album}
               <div class="metaline">
                 <!-- The design links the artist line to that artist's page
                      (`onNpArtist`). -->
-                {#if artistLinked}
+                {#if isRadio && !metadata?.artist}
+                  <!-- The whole line as the title: the station's name alone. -->
+                {:else if artistLinked}
                   <button
                     class="artist artist--link"
                     class:is-empty={!metadata?.artist}
@@ -447,8 +517,9 @@
                   <span class="artist" class:is-empty={!metadata?.artist}
                     >{metadata?.artist ?? ''}</span>
                 {/if}
-                {#if onalbum && metadata?.album}
-                  <!-- George, 2026-10-14: the release title opens its album. -->
+                {#if onalbum && metadata?.album && !isRadio}
+                  <!-- George, 2026-10-14: the release title opens its album.
+                       A station's name on this line is not an album. -->
                   <button class="album album--link" type="button"
                     onclick={() => onalbum(metadata.album, metadata.artist)}>{metadata.album}</button>
                 {:else}
@@ -462,12 +533,30 @@
                      the only source Spotify and Bluetooth have.
                      Rendered only when there is one, rather than holding an
                      empty slot open. -->
-                {#if year}
+                {#if year && !isRadio}
                   <span class="year">{year}</span>
                 {/if}
               </div>
+              {/if}
 
-              {#if sungLines.length || lyricsPending}
+              {#if isRadio}
+                <!-- 7b: the quality on its own line, then the rule; under it
+                     how the station is doing, when it is not well. -->
+                <div class="quality">{qualityLine(station)}</div>
+                <div class="trackblock__rule"></div>
+                {#if radioState === 'reconnecting'}
+                  <div class="status" role="status">
+                    <span class="status__spin"><Icon name="spinner" size={34} width={3} /></span>
+                    <span class="status__head">Reconnecting</span>
+                    <span class="status__try">try {Math.max(1, $radio?.attempt ?? 1)} of {$radio?.tries ?? 3}</span>
+                  </div>
+                {:else if radioState === 'not_answering'}
+                  <div class="status status--stack" role="status">
+                    <span class="status__head"><Icon name="warning" size={32} />The station is not answering</span>
+                    <span class="status__note">Tried {tried}. Play tries again.</span>
+                  </div>
+                {/if}
+              {:else if sungLines.length || lyricsPending}
                 <div class="trackblock__rule"></div>
                 <!-- The words take whatever height is left and are centred in
                      it: the design positions the compact lyric view against
@@ -776,17 +865,22 @@
           {/if}
           {#if controls.includes('previous')}
             <!-- ADR-0037 §3: has it but cannot work now - shown, disabled. -->
-            <button class="btn btn--lg" type="button" aria-label="Previous" disabled={!available.includes('previous')} onclick={() => skip('previous')}>
+            <button class="btn btn--lg" type="button" aria-label={isRadio ? 'Previous favourite' : 'Previous'} disabled={!available.includes('previous')} onclick={() => skip('previous')}>
               <span class="i-prev"></span>
             </button>
           {/if}
           {#if hasPlayPause}
-            <button class="btn btn--play" type="button" data-dpad-main data-shows={toggle.shows} aria-label={toggle.shows === 'playing' ? 'Pause' : 'Play'} onclick={toggle.toggle}>
+            <!-- ADR-0180: for a station Pause stops it, so it is drawn as Stop;
+                 reconnecting, a spinner. -->
+            <button class="btn btn--play" type="button" data-dpad-main data-shows={toggle.shows}
+              data-radio={isRadio ? (radioState === 'reconnecting' ? 'reconnecting' : 'stop') : null}
+              aria-label={toggle.shows === 'playing' ? (isRadio ? 'Stop' : 'Pause') : 'Play'} onclick={toggle.toggle}>
               <span class="i-play"></span><span class="i-pause"></span>
+              {#if isRadio}<span class="i-stop"></span><span class="i-spin"><Icon name="spinner" size={40} width={3.2} /></span>{/if}
             </button>
           {/if}
           {#if controls.includes('next')}
-            <button class="btn btn--lg" type="button" aria-label="Next" disabled={!available.includes('next')} onclick={() => skip('next')}>
+            <button class="btn btn--lg" type="button" aria-label={isRadio ? 'Next favourite' : 'Next'} disabled={!available.includes('next')} onclick={() => skip('next')}>
               <span class="i-next"></span>
             </button>
           {/if}
@@ -853,6 +947,10 @@
     inset: 0 0 auto 0;
     height: 3px;
     background: linear-gradient(90deg, var(--src-accent), var(--accent-artist));
+  }
+  /* ADR-0180: a station's own rule. */
+  .screen[data-source='radio'] .screen__accent {
+    background: var(--radio-rule);
   }
 
   /* Mark and word only. The pill ground, border and radius were removed from
@@ -938,6 +1036,30 @@
     border-radius: var(--r-circle);
     background: color-mix(in oklab, var(--accent-lms) 45%, transparent);
   }
+  /* A station's logo on a plate, and the radio mark on its tint (P24, P25). */
+  .art--station {
+    background: none;
+  }
+  .art__plate,
+  .art__mark {
+    position: absolute;
+    inset: 0;
+    border-radius: var(--r-card);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .art__plate {
+    background: var(--station-logo-plate);
+    box-shadow: inset 0 0 0 1px var(--station-logo-plate-line);
+  }
+  .art__mark {
+    background: radial-gradient(90% 90% at 30% 25%, rgba(var(--c-radio-rgb), 0.24), rgba(var(--c-radio-rgb), 0.08));
+    box-shadow: inset 0 0 0 1px rgba(var(--c-radio-rgb), 0.3);
+  }
+  .art .is-dim {
+    opacity: 0.45;
+  }
   .art__empty span {
     font-family: var(--font-mono);
     font-size: var(--t-label);
@@ -985,6 +1107,8 @@
      tab row that also tracked it would say the same thing three times and
      would recolour when the renderer changed, which the tab did not. */
   .tab[aria-selected='true'] { color: var(--ink); }
+  /* What a station cannot fill (ADR-0180): at 0.30, inert. */
+  .tab:disabled { color: var(--c-ink-30); }
   .tab[data-tab='track'][aria-selected='true']   { border-bottom-color: var(--ink); }
   .tab[data-tab='lyrics'][aria-selected='true']  { border-bottom-color: var(--accent-artist); }
   .tab[data-tab='artist'][aria-selected='true']  { border-bottom-color: var(--accent-bluetooth); }
@@ -1579,6 +1703,78 @@
 
   .is-empty { visibility: hidden; }
 
+  /* ADR-0180 (7b): the title stops short of the heart beside it. */
+  .title--radio {
+    padding-right: 84px;
+  }
+  .fav {
+    position: absolute;
+    right: 0;
+    top: 6px;
+    width: 68px;
+    height: 68px;
+    border-radius: var(--r-circle);
+    background: var(--ink-fill);
+    border: 0;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .fav:active {
+    transform: scale(0.95);
+  }
+  .quality {
+    margin-top: 12px;
+    font-family: var(--font-mono);
+    font-size: 20px;
+    letter-spacing: 0.04em;
+    color: var(--ink-quiet);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 0;
+  }
+  .status {
+    margin-top: 40px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    color: var(--accent-warn);
+    flex-shrink: 0;
+  }
+  .status--stack {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .status__head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 30px;
+    font-weight: 700;
+  }
+  .status__try {
+    font-family: var(--font-mono);
+    font-size: 20px;
+    color: var(--ink-muted);
+  }
+  .status__note {
+    font-size: 20px;
+    color: var(--ink-muted);
+  }
+  .status__spin,
+  .i-spin :global(svg) {
+    animation: np-spin 1s linear infinite;
+  }
+  .status__spin {
+    display: flex;
+  }
+  @keyframes np-spin {
+    to { transform: rotate(360deg); }
+  }
+
   .spacer { min-height: 0; }
   .footer { flex-shrink: 0; position: relative; }
   /* ADR-0166 (3a): centred on the transport (the footer's middle, where the
@@ -1725,6 +1921,19 @@
   }
   .btn--play[data-shows='playing'] .i-play,
   .btn--play:not([data-shows='playing']) .i-pause { display: none; }
+  /* ADR-0180: a station's Stop, and its spinner while it reconnects. */
+  .i-stop,
+  .i-spin { display: none; }
+  .btn--play[data-radio] .i-pause { display: none; }
+  .btn--play[data-radio='stop'][data-shows='playing'] .i-stop {
+    display: block;
+    width: 17px;
+    height: 17px;
+    border-radius: 3px;
+    background: currentColor;
+  }
+  .btn--play[data-radio='reconnecting'] .i-play { display: none; }
+  .btn--play[data-radio='reconnecting'] .i-spin { display: flex; }
 
   .i-prev,
   .i-next { display: flex; align-items: center; }

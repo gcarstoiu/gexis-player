@@ -46,6 +46,7 @@
   import { inView, watchScroller } from '../lib/window.svelte.js';
   import MiniStrip from './MiniStrip.svelte';
   import WaitingServices from './WaitingServices.svelte';
+  import RadioScreen from './radio/RadioScreen.svelte';
 
   let {
     active,
@@ -843,9 +844,13 @@
       radio = page;
       revealed = null;
       if (!push) return;
+      //: From the player's own Radio screen, Lyrion's tree goes on top of
+      //: it, so Back returns there (ADR-0180; design/source/31).
       path = handle
         ? [...path, { kind: 'radio', handle, label }]
-        : [{ kind: 'radio', handle: null, label: 'Radio' }];
+        : here?.kind === 'stations'
+          ? [...path, { kind: 'radio', handle: null, label: "Lyrion's radio" }]
+          : [{ kind: 'radio', handle: null, label: 'Radio' }];
     } catch (err) {
       flash(err.message);
       console.info('radio:', err.message);
@@ -862,6 +867,15 @@
       flash(err.message);
       console.info('radio:', err.message);
     }
+  }
+
+  //: **ADR-0180: the player's own Radio screen** (design/source/31), where
+  //: the home's Radio card leads while internet radio is on; Lyrion's tree
+  //: is its *Lyrion's radio*. With it off, the card opens Lyrion's tree as
+  //: before.
+  const radioOn = $derived($settingValues.radio_enabled !== false);
+  function openStations() {
+    path = [{ kind: 'stations', label: 'Radio' }];
   }
 
   // ── ADR-0118: Lyrion's own menus, behind Extended navigation ─────────
@@ -1329,6 +1343,18 @@
   <!-- Weave and bleed are the panel's, drawn once (PanelBackground.svelte). -->
   <div class="veil"></div>
 
+  {#if here?.kind === 'stations'}
+    <!-- ADR-0180: the Radio screen draws its own header (the search field
+         at its right) and its own steps; the strip below stays the
+         library's. -->
+    <RadioScreen
+      {active}
+      lyrion
+      onback={() => opening(back)}
+      onhome={() => opening(() => (path = []))}
+      onlyrion={() => openRadio()}
+    />
+  {:else}
   {#if path.length}
     <div class="header">
       {#if path.length > 1}
@@ -1491,7 +1517,7 @@
             onpointerdown={() => press('radio')}
             onpointerup={lift}
             onpointercancel={lift}
-            onclick={() => opening(() => openRadio())}
+            onclick={() => opening(() => (radioOn ? openStations() : openRadio()))}
           >
             <span class="glyph glyph--waves"><i></i><b></b><b></b></span>
             <span>
@@ -2152,6 +2178,7 @@
       </div>
     {/if}
   </div>
+  {/if}
 
   {#if picker}
     <div class="sheet__scrim" role="presentation" onclick={() => (picker = null)}></div>
