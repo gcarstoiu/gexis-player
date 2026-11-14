@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-11-13 (on R2D2).
+Last updated: 2026-11-14 (on R2D2).
 
 ## Start here
 
@@ -157,10 +157,16 @@ there (George).
 phone and Home Assistant in this phase, a Radio view on the card); settings
 in ADR-0022. The brief for Claude Design is `design/briefs/31-radio.md`,
 with George. **mpv measured 2026-11-13** (Finding 146, on sofapi, unpacked
-under `/tmp`, nothing installed, all removed): confirmed. **Next:** George's
-picks from the design, then the core (`ph-radio` branch). The rate at the
-card, the stage and a stream at 32 kHz or below are measured in the build,
-on a player not in a group (sofapi's `output` feeds the group's loopback).
+under `/tmp`, nothing installed, all removed): confirmed. **The core built
+2026-11-14** on `ph-radio` (worktree `~/projects/gexis-player-radio`; what
+the build settled is in ADR-0180's *The core, built*): directory,
+favourites, mpv as `gexis-radio.service`, `/stations` routes, settings,
+packaging. **Next:** the screens - George said the design was in the
+project as `design/source/31/`, but it was not on this computer or any
+branch on 2026-11-14; asked for. The source's accent and mark are
+placeholders until it comes. Then a preview on a player not in a group
+(sofapi's `output` feeds the group's loopback): the rate at the card, the
+stage, 32 kHz, CPU, an hour.
 
 **Phase 35** (a page from Home Assistant, ADR-0176 as amended) **on Stable
 with 1.16.1**, with the integration's 0.6.0. **Not yet on a player:** the
