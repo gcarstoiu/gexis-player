@@ -2,6 +2,8 @@
 
 **Status:** **Accepted** — George, 2026-10-11: *"The switcher on the phone we
 can do now. Simple switch with status and renderer connected."*
+**Amended** 2026-11-14 (George): every list of players in alphabetical order,
+and a list asks for a fresh answer when it opens (below).
 
 ## Context
 
@@ -41,3 +43,26 @@ over mDNS (avahi), and avahi already advertises each player's share
 As decided. Tried on sofapi and the bar player, both on the preview: each
 lists the other with its status (*Stopped · Lyrion*), and the phone's list
 opens from the header line.
+
+## Amended 2026-11-14: alphabetical, and fresh when opened
+
+George, 2026-11-14, after bedroompi's menu showed a group he had undone on
+sofapi a minute before, and the menu's order changed with the player it was
+opened on:
+
+1. **Every list of players is in alphabetical order** - the phone's menu
+   (ADR-0164), the panel's *Add players*, the bar's band (ADR-0166) and the
+   switcher - so a player keeps its place whichever player a list is opened
+   on. This player sits in its place with its check, not first.
+2. **A group's players stay together**, alphabetical within it, the leader
+   tagged where it falls, and **the group goes where its first player
+   falls** (George chose this over groups at the top). Names in a sentence
+   (*with Kitchen, Study*, *Undo group*'s) follow the same order.
+3. **A list opening asks `/players?fresh=1`**: if what the player found is
+   older than 5 s, it asks the players already found for their status again,
+   without the network search (up to 5 s); the list kept on the phone shows
+   meanwhile. The background search every 30 s is unchanged.
+
+Built on `fix-players-order`, checked with invented players on the phone,
+the panel and the bar (the switcher, reached only on a narrow standalone
+Settings, not seen).

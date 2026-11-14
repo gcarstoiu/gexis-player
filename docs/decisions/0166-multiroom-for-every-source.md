@@ -1,7 +1,9 @@
 # ADR-0166 — Multiroom for every source
 
 **Status:** **Accepted** 2026-10-27 (George: his answers, and C1-C6
-confirmed the same day; C3 he called an edge case). Amended 2026-11-12
+confirmed the same day; C3 he called an edge case). Amended 2026-11-14
+(George, ADR-0136's amendment): the lists of players alphabetical, another
+group where its first player falls, its players alphabetical. Amended 2026-11-12
 (George): D7's buffer is a second, and decision 8 holds for a member on
 Wi-Fi too - no resampling to spare the link. Amended 2026-10-28:
 the design back from Claude Design (`design/source/22/`), decision 10 and

@@ -695,3 +695,11 @@ Confirmed by George, 2026-11-13, [ADR-0180](0180-internet-radio-without-lyrion.m
 | A play: the directory's wait | [H] | A play waits up to 3 s for the directory's count and address, then plays the kept address (confirmed by George 2026-11-14) |
 
 Counting a play with the directory has no setting (decision 5).
+
+### Appended 2026-11-14 — the player's own name after a clash
+
+Confirmed by George, 2026-11-14, [Finding 148](../findings/148-plugins-port-block-lost-at-reload.md):
+
+| Setting | Mark | Notes |
+|---|---|---|
+| Name repair after a clash | [H] | When avahi announces the player as `<name>-2`, the player asks for its own name every 2 min, five times, then once every 30 min (`mdns-name.sh`) |

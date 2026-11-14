@@ -190,14 +190,29 @@ uploaded test renderer's own mDNS responder made avahi rename sofapi,
 bedroompi and guestpi ([Finding 148](docs/findings/148-plugins-port-block-lost-at-reload.md),
 ADR-0142 amended, Lesson 96). The core now sets the block again after each
 reload (`mdns_block.py`), and the name repair retries every 30 min after its
-five (an [H] row for ADR-0022 proposed, not yet confirmed). Tests pass; the
-module checked by hand on bedroompi. **Next:** a preview (with radio, on
-sofapi, or on its own) and George's pass, including a reboot. On the
-players: bedroompi and guestpi have their names back; sofapi is still
-`sofapi-2` (left alone while it played; its plugins are blocked, so one name
-claim fixes it). **Still open from the same afternoon:** whether the 16:21
-*Undo group* on sofapi was George's (the stale group on bedroompi's menu),
-and two decisions on the player menu's alphabetical order.
+five (ADR-0022's [H] row, confirmed). Tests and CI pass; the module checked
+by hand on bedroompi. **The preview of radio and this fix together** (George:
+both on sofapi) is built from the temporary branch `preview-radio-mdns`
+(run 43618076456; packages in `~/projects/scratch/ph31/preview-radio-mdns`;
+core, player, system and UI change). **Not installed yet:** sofapi was
+playing. Then: dry run, install, core restarted, a reboot to see the names
+and the blocks at boot. bedroompi and guestpi have their names back and run
+the uploaded test renderer's newer build (private notes); sofapi is still
+`sofapi-2`.
+
+**The lists of players in alphabetical order** (George 2026-11-14, ADR-0136
+amended): built on `fix-players-order` (worktree
+`~/projects/gexis-player-fix-order`, off `next`): this player in its place, a
+group where its first player falls, `/players?fresh=1` when a list opens
+(the 16:21 *Undo group* was George's; bedroompi's menu had shown the group
+for up to a minute). Checked with invented players on the phone, panel and
+bar (`PLAYERS=alone|mine` in `~/projects/scratch/ph31/harness`); the
+manual's group picture retaken (`~/projects/scratch/ph22/manual/run-order.sh`).
+Not previewed yet. **Open:** whether the group volume lists (panel drawer,
+bar band, phone sheet) go alphabetical too; they still put the leader first.
+
+**The Home Assistant integration's `radio` branch:** a stopped station shows
+as paused with Play (George); the card keeps one column under its 440 px cap.
 
 **Phase 35** (a page from Home Assistant, ADR-0176 as amended) **on Stable
 with 1.16.1**, with the integration's 0.6.0. **Not yet on a player:** the
