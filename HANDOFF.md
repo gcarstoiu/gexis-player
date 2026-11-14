@@ -174,7 +174,8 @@ group's loopback): the rate at the card, the stage, 32 kHz, CPU, an hour. **Done
 sofapi ungrouped, the preview of 439ac89 installed (mpv with it), measured,
 grouped again with the bar; the preview **stays installed on sofapi** for
 George's regression pass (`~/preview-ph31`, the packages only). Acceptance 7
-waits on George (4.8-7.0 % of a core through the real chain).
+restated by George as 7 % or less through the real chain: met. **Now:** the
+Home Assistant integration (George, 2026-11-14).
 
 **Phase 35** (a page from Home Assistant, ADR-0176 as amended) **on Stable
 with 1.16.1**, with the integration's 0.6.0. **Not yet on a player:** the

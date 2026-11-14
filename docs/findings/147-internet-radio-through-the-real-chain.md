@@ -100,8 +100,9 @@ The stream served from the player, then stopped (acceptance 5):
   or 48 kHz, a 22 kHz one raised.
 - **Acceptance 5 met**: a cut recovers, a station that stays down stops with
   *The station is not answering*.
-- **Acceptance 7 is George's to read**: through the real chain the radio
-  takes 4.8-7.0 % of a core, against the criterion's 3-6 % taken from Finding
-  146's silent output. The difference is the chain every renderer plays
-  through, inside its own process.
+- **Acceptance 7**: through the real chain the radio takes 4.8-7.0 % of a
+  core, against the criterion's 3-6 % taken from Finding 146's silent output.
+  The difference is the chain every renderer plays through, inside its own
+  process. George restated the criterion the same day as 7 % or less through
+  the real chain, no more digging: met.
 - No restart of mpv per station is needed: its memory is bounded.

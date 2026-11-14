@@ -3970,8 +3970,10 @@ sofapi (the preview stays installed); the Home Assistant integration.
 5. A stream cut mid-play recovers; one that stays down stops with a
    message.
 6. With Lyrion on, Lyrion's radio opens from Radio and works as before.
-7. The CPU it takes on a Pi 4, measured at Finding 146's figures (3-6 % of
-   a core) or better.
+7. The CPU it takes on a Pi 4: **7 % of a core or less, through the real
+   chain** (restated by George 2026-11-14 after Finding 147, no more digging;
+   it read *Finding 146's figures (3-6 % of a core) or better*, which were
+   measured with a silent output). **Met** (Finding 147: 4.8-7.0 %).
 8. In Home Assistant, a favourite plays from the player's sources and from
    the card, and the directory is browsed and searched from the media
    browser.
