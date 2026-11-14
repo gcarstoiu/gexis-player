@@ -43,7 +43,7 @@ been written properly. **0098 has no record either.**
 | [0019](0019-peppy-screen-lifecycle.md) | Peppy screen: entry, exit and lifecycle | Accepted 2026-09-04 |
 | [0020](0020-library-browse-tree.md) | Library browse as a normalised tree | Accepted 2026-09-04; **partly superseded by [0030](0030-library-typed-radio-slimbrowse.md)**; cross-cutting table amended by 0029 |
 | [0021](0021-deployment-flashable-image.md) | Deployment as a flashable image | Accepted 2026-09-04; distribution channel deferred |
-| [0022](0022-settings.md) | Settings | Accepted 2026-09-04; remote-only text entry **superseded by [0029](0029-text-entry-on-every-surface.md)**; first-boot blocker answered by 0031; rows appended as confirmed (latest 2026-10-18) |
+| [0022](0022-settings.md) | Settings | Accepted 2026-09-04; remote-only text entry **superseded by [0029](0029-text-entry-on-every-surface.md)**; first-boot blocker answered by 0031; rows appended as confirmed (latest 2026-11-14) |
 | [0023](0023-svelte-ui.md) | The UI is Svelte | Accepted 2026-09-04 |
 | [0024](0024-bluetooth-pairing-no-pin.md) | Bluetooth pairing: no PIN, for this installation | Accepted 2026-09-06; **reversed by [0045](0045-bluetooth-pairing-confirmation.md)** |
 | [0025](0025-project-licence-gplv3.md) | gexis-player is licensed GPL v3 | Accepted 2026-09-08 |
