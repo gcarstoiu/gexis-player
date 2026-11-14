@@ -174,7 +174,30 @@ group's loopback): the rate at the card, the stage, 32 kHz, CPU, an hour. **Done
 sofapi ungrouped, the preview of 439ac89 installed (mpv with it), measured,
 grouped again with the bar; the preview **stays installed on sofapi** for
 George's regression pass (`~/preview-ph31`, the packages only). Acceptance 7
-waits on George (4.8-7.0 % of a core through the real chain).
+restated by George as 7 % or less through the real chain: met. **The Home
+Assistant integration built 2026-11-14** on its `radio` branch (pushed, not
+merged; released after the player's, as multiroom): the favourites as
+sources, the directory in the media browser and its search,
+`gexis.radio_favourite`, the `gexis/radio` WebSocket command, the card's
+Radio view (C01-C06; harness in `~/projects/scratch/ph31/card`). Its version
+is bumped at its release.
+
+**Players renamed `name-2`: fixed on `fix-mdns-block`** (worktree
+`~/projects/gexis-player-fix-mdns`, off `next`; asked for by George
+2026-11-14):
+systemd drops the uploaded plugins' port-5353 block at every reload, so an
+uploaded test renderer's own mDNS responder made avahi rename sofapi,
+bedroompi and guestpi ([Finding 148](docs/findings/148-plugins-port-block-lost-at-reload.md),
+ADR-0142 amended, Lesson 96). The core now sets the block again after each
+reload (`mdns_block.py`), and the name repair retries every 30 min after its
+five (an [H] row for ADR-0022 proposed, not yet confirmed). Tests pass; the
+module checked by hand on bedroompi. **Next:** a preview (with radio, on
+sofapi, or on its own) and George's pass, including a reboot. On the
+players: bedroompi and guestpi have their names back; sofapi is still
+`sofapi-2` (left alone while it played; its plugins are blocked, so one name
+claim fixes it). **Still open from the same afternoon:** whether the 16:21
+*Undo group* on sofapi was George's (the stale group on bedroompi's menu),
+and two decisions on the player menu's alphabetical order.
 
 **Phase 35** (a page from Home Assistant, ADR-0176 as amended) **on Stable
 with 1.16.1**, with the integration's 0.6.0. **Not yet on a player:** the

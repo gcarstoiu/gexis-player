@@ -689,5 +689,9 @@ Confirmed by George, 2026-11-13, [ADR-0180](0180-internet-radio-without-lyrion.m
 | Favourite tiles | [H] | The panel's Radio screen shows at most 7 favourites as tiles; *All N* lists the rest (confirmed by George 2026-11-14) |
 | Phone toasts | [H] | *Removed* stays 6 s (with Undo), *… played, and is in your favourites* 5 s (confirmed by George 2026-11-14) |
 | Phone's heart: the wait | [H] | The heart on the phone's remote waits 8 s for the player to confirm (confirmed by George 2026-11-14) |
+| Station logos: kept | [H] | Each logo the player fetches is kept on it for 30 days; one that could not be had is not asked for again for a day (confirmed by George 2026-11-14) |
+| Watchdog: the count again | [H] | 30 s of steady sound and the reconnect tries count from 0 again (confirmed by George 2026-11-14) |
+| Genres and languages listed | [H] | *By genre* lists the 200 best-filled genres, *By language* the 120 best-filled languages; search finds the rest (confirmed by George 2026-11-14) |
+| A play: the directory's wait | [H] | A play waits up to 3 s for the directory's count and address, then plays the kept address (confirmed by George 2026-11-14) |
 
 Counting a play with the directory has no setting (decision 5).

@@ -1409,6 +1409,21 @@ a rule that one change needs another lives in a test, not a comment:
 revision and a hash of its own files, and `test_package_revisions.py` fails
 until a changed one's revision is raised.
 
+**96. A block tested once, right after a start** (2026-11-14, Finding 148).
+ADR-0142 denied the uploaded plugins port 5353 with `SocketBindDeny=`, and
+the test on guestpi (2026-10-12) showed it working: the plugin's responder
+could not answer and avahi took its name back. The test started the unit and
+checked; nothing checked the block later in the unit's life. systemd 257
+takes that block off every running unit at each `daemon-reload`, and the
+core runs one at every start, after the plugins have started: an uploaded
+test plugin's own responder ran on three players, answered for their names,
+and avahi renamed them `-2`, for days. Found after George could not open
+sofapi, by asking the kernel which programs were attached to each plugin's
+unit: those started after the last reload had the block, the others not.
+**Rule:** a guard is checked after the events of an ordinary day - a
+reload, a restart of what it guards, a reconnection - not only right after
+it is set up.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target — the build

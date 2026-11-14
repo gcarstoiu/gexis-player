@@ -2,7 +2,9 @@
 
 **Status:** **Accepted** — 2026-10-12. George, on the approach (*"Go with the
 first approach and let's make this work to learn from it"*); the announcing
-side moved from the plugin to the player after the test below.
+side moved from the plugin to the player after the test below. **Amended**
+2026-11-14 (George, to fix it): decision 1's block is set again after every
+systemd reload ([Finding 148](../findings/148-plugins-port-block-lost-at-reload.md)).
 **Amends:** [ADR-0106](0106-plugins-you-install-and-update.md) (the uploaded plugins'
 sandbox), the plugin contract (one event added, contract still 1).
 
@@ -57,6 +59,25 @@ Tested the same day:
 - The player keeps every name on the network: no plugin can claim the host
   name, or announce one of the player's own services.
 - Shipped plugins are untouched; they publish as they do today.
+
+## Amendment, 2026-11-14 — the block kept through reloads
+
+Finding 148: systemd 257 takes the `SocketBindDeny=` block off every running
+unit at each `daemon-reload` and leaves the units' other filters in place.
+The core reloads at every start, after the plugins have started, so a plugin
+started at boot ran with port 5353 open, and the test renderer's own
+responder had avahi rename three players `name-2` for days. The test above
+looked only at a freshly started unit.
+
+1. **The core sets the block again** on every running uploaded plugin
+   (`systemctl set-property --runtime`, the list emptied first) after each
+   `Reloading(false)` systemd sends on the system bus, and once when it
+   starts listening (`mdns_block.py`). It does not restart the plugin.
+2. **The name repair keeps trying:** `mdns-name.sh` asks for the name five
+   times in a row, then once every 30 min, so a clash whose cause has gone
+   clears without a restart.
+
+Not tried: `daemon-reexec`.
 
 ## Unverified
 
