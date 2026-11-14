@@ -210,6 +210,33 @@
         "marks": "H",
         "note": "Remembers a device once its pairing is confirmed, so it reconnects on its own. Off means every connection is a fresh pair.",
         "default": true
+      },
+      {
+        "type": "group",
+        "label": "Internet radio",
+        "accent": "#e0a758"
+      },
+      {
+        "key": "radio_enabled",
+        "type": "toggle",
+        "label": "Enabled",
+        "marks": "N",
+        "note": "Stations from radio-browser.info, with or without Lyrion.",
+        "default": true
+      },
+      {
+        "key": "radio_country",
+        "type": "choice",
+        "label": "Popular here",
+        "marks": "N",
+        "note": "The country whose most played stations Popular here lists. Taken from the time zone until it is set.",
+        "options": [],
+        "optionsFrom": "countries",
+        "onlyWhen": [
+          "radio_enabled",
+          true
+        ],
+        "default": null
       }
     ]
   },

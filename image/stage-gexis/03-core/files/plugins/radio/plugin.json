@@ -1,0 +1,10 @@
+{
+  "id": "radio",
+  "name": "Internet radio",
+  "kind": "renderer",
+  "unit": "gexis-radio.service",
+  "label": "Radio Active",
+  "accent": "#e0a758",
+  "status": "Listening",
+  "enabled_row": "radio_enabled"
+}

@@ -828,7 +828,9 @@ class CoverArtProvider:
         self._http = http
 
     def serves(self, renderer) -> bool:
-        return True
+        # ADR-0180: the internet radio's album line is the station's name,
+        # never a release; its covers come by the recording below.
+        return renderer != "radio"
 
     async def _search(self, artist: str, album: str):
         """MusicBrainz's best release group for one spelling of the album."""

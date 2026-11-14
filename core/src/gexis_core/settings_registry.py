@@ -61,7 +61,8 @@ ONLY_WHEN_IN = "in"
 #: Sources a `choice` may draw its options from instead of a literal list
 #: (ADR-0044 §4). Adding one is a code change, not a registry edit, which is
 #: the point: an unknown name is a typo and must fail the load.
-OPTION_SOURCES = {"skin_corpus", "timezones", "output_device", "screens", "boards", "screen_port"}
+OPTION_SOURCES = {"skin_corpus", "timezones", "output_device", "screens", "boards", "screen_port",
+                  "countries"}
 
 
 @lru_cache(maxsize=1)
@@ -136,6 +137,35 @@ def _screen_problems() -> dict[str, str]:
     return out
 
 
+#: tzdata's own list of countries: code, then name (`iso3166.tab`).
+ISO3166 = "/usr/share/zoneinfo/iso3166.tab"
+
+
+@lru_cache(maxsize=1)
+def country_names(path: str = ISO3166) -> dict[str, str]:
+    """**Every country by its two-letter code**, as tzdata names it - the
+    radio's *Popular here* (ADR-0180 item 2). Read once: the file is part
+    of the image. Empty when it cannot be read; the row then offers none."""
+    names: dict[str, str] = {}
+    try:
+        with open(path, encoding="utf-8") as table:
+            for line in table:
+                if line.startswith("#"):
+                    continue
+                code, _, name = line.rstrip("\n").partition("\t")
+                if len(code) == 2 and name:
+                    names[code] = name
+    except OSError:
+        return {}
+    return names
+
+
+def _countries() -> tuple[str, ...]:
+    """The codes, in the order of their names."""
+    names = country_names()
+    return tuple(sorted(names, key=lambda code: names[code].casefold()))
+
+
 def _boards() -> tuple[str, ...]:
     """ADR-0117 decision 3: Found by itself, then every board offered."""
     from . import board_apply
@@ -157,7 +187,8 @@ def _board_problems() -> dict[str, str]:
 #: DSI panel's too, while its driver is loaded or a port was chosen over
 #: it) - the two HDMI ports until the daemon says what is there.
 OPTION_RESOLVERS = {"timezones": _timezones, "skin_corpus": tuple, "output_device": tuple,
-                    "screens": _screens, "boards": _boards, "screen_port": lambda: ("HDMI 1", "HDMI 2")}
+                    "screens": _screens, "boards": _boards, "screen_port": lambda: ("HDMI 1", "HDMI 2"),
+                    "countries": _countries}
 #: Sources only the daemon can answer: the resolvers above are placeholders
 #: for them, and the daemon's own are injected into `Settings`.
 INJECTED_ONLY = {"skin_corpus", "output_device", "screen_port"}

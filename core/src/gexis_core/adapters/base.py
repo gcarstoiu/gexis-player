@@ -48,6 +48,12 @@ class VolumeMechanism(enum.Enum):
 
     DUMMY_MIXER = "dummy_mixer"
     SOFTWARE_API = "software_api"
+    #: **No level of its own** (ADR-0180): the renderer plays at its own full
+    #: scale and the panel's slider is the output's level, written straight
+    #: to the hardware. Internet radio's mpv: it has a software volume, but a
+    #: second number to keep in step with the output's would only be one
+    #: more way for them to disagree.
+    OUTPUT = "output"
 
 
 class SoftwareVolumeAdapter(typing.Protocol):

@@ -96,6 +96,11 @@ class TrackMetadata:
     #: for a renderer with no such thing. Published under `controls`.
     shuffle: bool | None = None
     repeat: str | None = None
+    #: **A picture for when no cover is found** (ADR-0180 item 4): a radio
+    #: station's logo. Not the renderer's own cover - which would stop the
+    #: lookup (ADR-0081) - so the state applies it only where neither the
+    #: renderer nor the lookup has one. Not published on its own.
+    fallback_artwork: str | None = None
 
     @property
     def remaining_time(self) -> float | None:
@@ -339,6 +344,10 @@ class PlaybackState:
     #: **ADR-0166: the group this player is in**, as `group.view` gives it -
     #: the members with their levels, the leader, what plays - or None.
     group: dict | None = None
+    #: **ADR-0180: internet radio** - the station, and whether it is
+    #: connecting, playing, reconnecting, stopped or not answering - or None
+    #: before a station has been played.
+    radio: dict | None = None
 
     @property
     def controls(self) -> dict | None:
@@ -395,4 +404,5 @@ class PlaybackState:
             "equaliser": dict(self.equaliser) if self.equaliser else None,
             "room": dict(self.room) if self.room else None,
             "group": dict(self.group) if self.group else None,
+            "radio": dict(self.radio) if self.radio else None,
         }

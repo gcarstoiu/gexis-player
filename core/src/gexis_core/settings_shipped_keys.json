@@ -71,6 +71,8 @@
  "pointer_style",
  "power",
  "problem_report",
+ "radio_country",
+ "radio_enabled",
  "reboot",
  "reclaim_lms",
  "record_speed",

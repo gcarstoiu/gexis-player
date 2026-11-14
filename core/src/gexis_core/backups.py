@@ -1103,7 +1103,7 @@ UNREADABLE = "The settings in that backup cannot be read by this version of gexi
 #: What setup applies from a backup as its own answers, in this order
 #: (ADR-0131 §5.3): Headless before the screen, as setup's own steps go.
 APPLIED = ("device_name", "timezone", "clock_format", "output_device", "lms_enabled", "lms_server",
-           "spotify_enabled", "bt_enabled", "headless", "screen", "visualiser_skins")
+           "spotify_enabled", "bt_enabled", "radio_enabled", "headless", "screen", "visualiser_skins")
 
 _PAIRED = re.compile(r"^var/lib/bluetooth/[0-9A-F:]{17}/[0-9A-F:]{17}$")
 

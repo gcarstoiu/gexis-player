@@ -57,6 +57,7 @@ RENDERER_LABELS = {
     "lms": "Squeezelite Active",
     "spotify": "Spotify Active",
     "bluetooth": "Bluetooth Active",
+    "radio": "Radio Active",
 }
 
 _FIELDS = ("file", "artist", "album", "title", "coverurl")

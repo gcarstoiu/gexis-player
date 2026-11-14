@@ -167,6 +167,7 @@ class StateServer:
         notes=None,
         enrichment=None,
         radio=None,
+        stations=None,
         menus=None,
         pairing_answer=None,
         restore=None,
@@ -266,6 +267,8 @@ class StateServer:
         self._artistinfo = artistinfo
         self._enrichment = enrichment
         self._radio = radio
+        #: ADR-0180: the player's own internet radio (`radio_service`).
+        self._stations = stations
         #: ADR-0118: Lyrion's own menus, behind Extended navigation.
         self._menus = menus
         self._pairing_answer = pairing_answer
@@ -1221,6 +1224,170 @@ class StateServer:
             return web.json_response({"error": f"unknown handle: {exc}"}, status=404)
         except RadioUnavailable as exc:
             return web.json_response({"error": f"Lyrion unreachable: {exc}"}, status=502)
+
+    # --- ADR-0180: internet radio ---------------------------------------
+
+    def _stations_off(self) -> web.Response | None:
+        if self._stations is None:
+            return web.json_response({"error": "internet radio is not wired up"}, status=503)
+        return None
+
+    @staticmethod
+    def _offset(request: web.Request) -> int:
+        try:
+            return max(0, min(int(request.query.get("offset", "0")), 10_000))
+        except ValueError:
+            return 0
+
+    async def _stations_answer(self, call) -> web.Response:
+        """A directory list, or why there is none: the directory could not
+        be reached and nothing from the last day is kept (503)."""
+        from gexis_core.radio_directory import Unreachable
+        try:
+            return web.json_response(await call)
+        except Unreachable:
+            return web.json_response({"error": "The station directory cannot be reached.",
+                                      "reachable": False}, status=503)
+
+    async def _handle_stations(self, request: web.Request) -> web.Response:
+        """The Radio screen's top: favourites, the country, the directory's
+        last answer. Needs no directory."""
+        return self._stations_off() or web.json_response(self._stations.overview())
+
+    async def _handle_stations_popular(self, request: web.Request) -> web.Response:
+        return self._stations_off() or await self._stations_answer(
+            self._stations.popular(self._offset(request)))
+
+    async def _handle_stations_list(self, request: web.Request) -> web.Response:
+        """`?genre=` or `?country=` (two letters) or `?language=`."""
+        off = self._stations_off()
+        if off:
+            return off
+        query = request.query
+        country = query.get("country")
+        if country is not None and not (len(country) == 2 and country.isalpha()):
+            return web.json_response({"error": "a country is two letters"}, status=400)
+        genre, language = query.get("genre"), query.get("language")
+        if not (genre or country or language):
+            return web.json_response({"error": "expected ?genre=, ?country= or ?language="}, status=400)
+        return await self._stations_answer(self._stations.stations(
+            genre=genre[:100] if genre else None, country=country,
+            language=language[:100] if language else None, offset=self._offset(request)))
+
+    async def _handle_stations_search(self, request: web.Request) -> web.Response:
+        return self._stations_off() or await self._stations_answer(
+            self._stations.search(request.query.get("q", ""), self._offset(request)))
+
+    async def _handle_stations_genres(self, request: web.Request) -> web.Response:
+        return self._stations_off() or await self._stations_answer(self._stations.genres())
+
+    async def _handle_stations_countries(self, request: web.Request) -> web.Response:
+        return self._stations_off() or await self._stations_answer(self._stations.countries())
+
+    async def _handle_stations_languages(self, request: web.Request) -> web.Response:
+        return self._stations_off() or await self._stations_answer(self._stations.languages())
+
+    async def _station_body(self, request: web.Request):
+        """The station a body names: `{"station": {...}}` as a list gave it,
+        or `{"favourite": id}`. None if it names neither."""
+        from gexis_core.radio_directory import Station
+        try:
+            body = await request.json()
+        except (ValueError, json.JSONDecodeError):
+            return None
+        if not isinstance(body, dict):
+            return None
+        if isinstance(body.get("favourite"), str):
+            return self._stations.favourites.get(body["favourite"])
+        return Station.from_json(body.get("station"))
+
+    async def _handle_stations_play(self, request: web.Request) -> web.Response:
+        """`{"station": {...}}` or `{"favourite": id}`: the radio takes the
+        device, as any takeover, and plays it."""
+        from gexis_core.radio_service import Off, Refused
+        off = self._stations_off()
+        if off:
+            return off
+        station = await self._station_body(request)
+        if station is None:
+            return web.json_response({"error": 'expected {"station": {...}} or {"favourite": id}'}, status=400)
+        try:
+            await self._stations.play(station)
+        except Off:
+            return web.json_response({"error": "Internet radio is switched off."}, status=409)
+        except Refused:
+            return web.json_response({"error": "The player cannot play now."}, status=409)
+        return web.json_response({"ok": True, "station": station.to_json()})
+
+    async def _handle_favourites(self, request: web.Request) -> web.Response:
+        off = self._stations_off()
+        if off:
+            return off
+        return web.json_response({"favourites": [s.to_json() for s in self._stations.favourites.all()]})
+
+    async def _handle_favourites_add(self, request: web.Request) -> web.Response:
+        from gexis_core.radio_favourites import Full
+        off = self._stations_off()
+        if off:
+            return off
+        station = await self._station_body(request)
+        if station is None:
+            return web.json_response({"error": 'expected {"station": {...}}'}, status=400)
+        try:
+            added = self._stations.add(station)
+        except Full:
+            return web.json_response({"error": "The favourites are full."}, status=409)
+        return web.json_response({"added": added})
+
+    async def _handle_favourites_order(self, request: web.Request) -> web.Response:
+        """`{"ids": [...]}`: every favourite, once, in the new order."""
+        off = self._stations_off()
+        if off:
+            return off
+        try:
+            ids = (await request.json())["ids"]
+        except (ValueError, KeyError, TypeError, json.JSONDecodeError):
+            ids = None
+        if not isinstance(ids, list) or not all(isinstance(i, str) for i in ids):
+            return web.json_response({"error": 'expected {"ids": [...]}'}, status=400)
+        if not self._stations.order(ids):
+            return web.json_response({"error": "The order must name every favourite once."}, status=409)
+        return web.json_response({"ok": True})
+
+    async def _handle_favourites_remove(self, request: web.Request) -> web.Response:
+        off = self._stations_off()
+        if off:
+            return off
+        if not self._stations.remove(request.match_info["id"]):
+            return web.json_response({"error": "no such favourite"}, status=404)
+        return web.json_response({"ok": True})
+
+    async def _handle_favourites_address(self, request: web.Request) -> web.Response:
+        """**A station added by its address** (decision 4): `{"url", "name"}`.
+        Played first; kept only if it sounds. Answers when it is known."""
+        from gexis_core.radio_favourites import Full
+        from gexis_core.radio_service import Off, Refused
+        off = self._stations_off()
+        if off:
+            return off
+        try:
+            body = await request.json()
+            url, name = str(body["url"]), str(body["name"])
+        except (ValueError, KeyError, TypeError, json.JSONDecodeError):
+            return web.json_response({"error": 'expected {"url": ..., "name": ...}'}, status=400)
+        try:
+            station = await self._stations.add_by_address(url, name)
+        except ValueError as exc:
+            return web.json_response({"error": str(exc)}, status=400)
+        except Off:
+            return web.json_response({"error": "Internet radio is switched off."}, status=409)
+        except Refused:
+            return web.json_response({"error": "The player cannot play now."}, status=409)
+        except Full:
+            return web.json_response({"error": "The favourites are full."}, status=409)
+        if station is None:
+            return web.json_response({"error": "That address did not play.", "played": False}, status=422)
+        return web.json_response({"ok": True, "station": station.to_json()})
 
     async def _handle_artist_photos(self, request: web.Request) -> web.Response:
         """`?ids=1,2,3[&size=200]` -> `{"<id>": url|null}`.
@@ -3877,6 +4044,20 @@ class StateServer:
         app.router.add_post("/menus/search", self._handle_menus_search)
         app.router.add_get("/radio", self._handle_radio)
         app.router.add_post("/radio/play", self._handle_radio_play)
+        # ADR-0180: the player's own internet radio, with or without Lyrion.
+        app.router.add_get("/stations", self._handle_stations)
+        app.router.add_get("/stations/popular", self._handle_stations_popular)
+        app.router.add_get("/stations/list", self._handle_stations_list)
+        app.router.add_get("/stations/search", self._handle_stations_search)
+        app.router.add_get("/stations/genres", self._handle_stations_genres)
+        app.router.add_get("/stations/countries", self._handle_stations_countries)
+        app.router.add_get("/stations/languages", self._handle_stations_languages)
+        app.router.add_post("/stations/play", self._handle_stations_play)
+        app.router.add_get("/stations/favourites", self._handle_favourites)
+        app.router.add_post("/stations/favourites", self._handle_favourites_add)
+        app.router.add_put("/stations/favourites", self._handle_favourites_order)
+        app.router.add_delete("/stations/favourites/{id}", self._handle_favourites_remove)
+        app.router.add_post("/stations/favourites/address", self._handle_favourites_address)
         app.router.add_get("/library/artist-photos", self._handle_artist_photos)
         app.router.add_get("/library/artist-info", self._handle_artist_info)
         app.router.add_get("/enrichment", self._handle_enrichment)

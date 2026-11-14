@@ -61,6 +61,7 @@ image/stage-gexis/10-lyrion/files/gexis-music.conf /etc/samba/smb.conf.d/gexis-m
 image/stage-gexis/11-equaliser/files/gexis-equaliser.service /usr/lib/systemd/system/gexis-equaliser.service
 image/stage-gexis/12-multiroom/files/gexis-snapserver.service /usr/lib/systemd/system/gexis-snapserver.service
 image/stage-gexis/12-multiroom/files/gexis-snapclient.service /usr/lib/systemd/system/gexis-snapclient.service
+image/stage-gexis/02-renderers/files/gexis-radio.service /usr/lib/systemd/system/gexis-radio.service
 image/stage-gexis/00-alsa/files/gexis-loopback-load.conf /etc/modules-load.d/gexis-loopback.conf
 image/stage-gexis/00-alsa/files/gexis-loopback-modprobe.conf /etc/modprobe.d/gexis-loopback.conf
 EOF
@@ -231,11 +232,17 @@ for unit in gexis-snapserver gexis-snapclient; do
 		ok "${unit} not enabled (the core starts it in a group)"
 	fi
 done
+# ADR-0180: internet radio's mpv, started by the core for a station.
+if dfs "stat /etc/systemd/system/multi-user.target.wants/gexis-radio.service" | grep -q 'Inode:'; then
+	bad "gexis-radio is enabled in the image - the core starts it for a station (ADR-0180)"
+else
+	ok "gexis-radio not enabled (the core starts it for a station)"
+fi
 
 # ADR-0179: the music services' accounts, made by their packages; none of
 # them runs as pi, the screen's user.
 passwd=$(dfs "cat /etc/passwd")
-for account in gexis-squeezelite gexis-spotify gexis-airplay gexis-snap; do
+for account in gexis-squeezelite gexis-spotify gexis-airplay gexis-snap gexis-radio; do
 	printf '%s\n' "$passwd" | grep -q "^${account}:" && ok "account ${account}" || bad "account ${account} missing"
 done
 
@@ -248,7 +255,7 @@ done
 plugins=$(dfs "ls -l /usr/share/gexis/plugins" | awk '{print $NF}' \
 	| grep -vE '^(\.|\.\.)?$' | sort -u | tr '\n' ' ')
 missing=""
-for want in lms spotify bluetooth; do
+for want in lms spotify bluetooth radio; do
 	case " $plugins " in *" $want "*) ;; *) missing="$missing $want" ;; esac
 done
 if [ -n "$missing" ]; then

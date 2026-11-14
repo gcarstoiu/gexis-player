@@ -81,6 +81,8 @@ class StateStore:
         #: (`set_mirror`).
         self._group: dict | None = None
         self._mirror: tuple | None = None
+        #: ADR-0180: the radio's own state (`adapters/radio.RadioState`).
+        self._radio: dict | None = None
         #: **ADR-0081: the cover the daemon found for a renderer that sent
         #: none.** `renderer_id -> (track, url)`, applied in `state` below
         #: only where the renderer's own artwork is absent. Keyed on the
@@ -123,6 +125,9 @@ class StateStore:
             found = self._found_artwork.get(self._active)
             if found is not None and found[0] == self._track_of(metadata):
                 metadata = replace(metadata, artwork=found[1])
+            elif metadata.fallback_artwork:
+                # ADR-0180 item 4: a station's logo, where no cover is found.
+                metadata = replace(metadata, artwork=metadata.fallback_artwork)
         return PlaybackState(
             active=self._active,
             queue=self._queues.get(self._active) if self._active else None,
@@ -151,6 +156,7 @@ class StateStore:
             equaliser=self._equaliser,
             room=self._room,
             group=self._group,
+            radio=self._radio,
         )
 
     def _mirrored(self, own: PlaybackState) -> PlaybackState:
@@ -494,6 +500,13 @@ class StateStore:
         if snapshot == self._equaliser:
             return
         self._equaliser = snapshot
+        self._notify()
+
+    def set_radio(self, radio: dict | None) -> None:
+        """ADR-0180: the radio's station or state changed."""
+        if radio == self._radio:
+            return
+        self._radio = radio
         self._notify()
 
     def set_room(self, summary: dict | None) -> None:

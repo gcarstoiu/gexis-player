@@ -63,6 +63,10 @@
       "description": "Internet radio through Lyrion."
     },
     {
+      "name": "Internet radio",
+      "description": "The player's own radio, with or without Lyrion: stations from radio-browser.info, kept a day, and the player's favourites (ADR-0180)."
+    },
+    {
       "name": "Settings",
       "description": "Every setting: reading, changing, the lists some rows hold."
     },
@@ -4112,6 +4116,727 @@
         "x-gexis-adr": [
           "ADR-0038"
         ]
+      }
+    },
+    "/stations": {
+      "get": {
+        "operationId": "stations",
+        "tags": [
+          "Internet radio"
+        ],
+        "summary": "Internet radio's overview",
+        "description": "The favourites, Popular here's country and whether the directory answered last time. Answers with the directory down.",
+        "x-gexis-stability": "stable",
+        "responses": {
+          "200": {
+            "description": "The overview.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StationsOverview"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/stations/popular": {
+      "get": {
+        "operationId": "stations_popular",
+        "tags": [
+          "Internet radio"
+        ],
+        "summary": "Popular here",
+        "description": "The most played stations of the country set for Popular here.",
+        "x-gexis-stability": "stable",
+        "parameters": [
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "description": "Where the page starts; pages are 50."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of stations.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StationPage"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The directory cannot be reached and nothing from the last day is kept.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/stations/list": {
+      "get": {
+        "operationId": "stations_list",
+        "tags": [
+          "Internet radio"
+        ],
+        "summary": "Stations by genre, country or language",
+        "description": "One of `genre`, `country` (two letters) or `language`, the most played first.",
+        "x-gexis-stability": "stable",
+        "parameters": [
+          {
+            "name": "genre",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 2
+            }
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "description": "Where the page starts; pages are 50."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of stations.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StationPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "None of the three, or a country that is not two letters.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The directory cannot be reached and nothing from the last day is kept.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/stations/search": {
+      "get": {
+        "operationId": "stations_search",
+        "tags": [
+          "Internet radio"
+        ],
+        "summary": "Search stations by name",
+        "description": "Stations whose name holds the text, the most played first; under two letters finds nothing.",
+        "x-gexis-stability": "stable",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "description": "Where the page starts; pages are 50."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of stations.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StationPage"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The directory cannot be reached and nothing from the last day is kept.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/stations/genres": {
+      "get": {
+        "operationId": "stations_genres",
+        "tags": [
+          "Internet radio"
+        ],
+        "summary": "The directory's genres",
+        "description": "The best-filled genres (the directory's tags).",
+        "x-gexis-stability": "stable",
+        "responses": {
+          "200": {
+            "description": "The genres.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "genres": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "stations": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    },
+                    "reachable": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "genres"
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The directory cannot be reached and nothing from the last day is kept.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/stations/countries": {
+      "get": {
+        "operationId": "stations_countries",
+        "tags": [
+          "Internet radio"
+        ],
+        "summary": "The directory's countries",
+        "description": "Countries with stations, the best-filled first.",
+        "x-gexis-stability": "stable",
+        "responses": {
+          "200": {
+            "description": "The countries.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "countries": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "stations": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    },
+                    "reachable": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "countries"
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The directory cannot be reached and nothing from the last day is kept.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/stations/languages": {
+      "get": {
+        "operationId": "stations_languages",
+        "tags": [
+          "Internet radio"
+        ],
+        "summary": "The directory's languages",
+        "description": "Languages with stations, the best-filled first.",
+        "x-gexis-stability": "stable",
+        "responses": {
+          "200": {
+            "description": "The languages.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "languages": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "code": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "stations": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    },
+                    "reachable": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "languages"
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The directory cannot be reached and nothing from the last day is kept.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/stations/play": {
+      "post": {
+        "operationId": "stations_play",
+        "tags": [
+          "Internet radio"
+        ],
+        "summary": "Play a station",
+        "description": "Internet radio takes the output, as any takeover, and plays the station: one a list gave, or a favourite by its id. A listed station's play is counted with the directory, which also gives its address now.",
+        "x-gexis-stability": "stable",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StationChoice"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "It is starting; `radio` in `/state` says how it goes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StationPlayed"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The body names no playable station.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Internet radio is switched off, or the player cannot play now.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/stations/favourites": {
+      "get": {
+        "operationId": "favourites",
+        "tags": [
+          "Internet radio"
+        ],
+        "summary": "The favourites",
+        "description": "The player's own list, in its order.",
+        "x-gexis-stability": "stable",
+        "responses": {
+          "200": {
+            "description": "The favourites.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "favourites": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Station"
+                      }
+                    }
+                  },
+                  "required": [
+                    "favourites"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "favourites_add",
+        "tags": [
+          "Internet radio"
+        ],
+        "summary": "Add a favourite",
+        "description": "At the end of the list; a station already there is not added twice.",
+        "x-gexis-stability": "stable",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StationChoice"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Whether it was added.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "added": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "added"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The body names no playable station.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The favourites are full.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "favourites_order",
+        "tags": [
+          "Internet radio"
+        ],
+        "summary": "Reorder the favourites",
+        "description": "Every favourite's id, once, in the new order.",
+        "x-gexis-stability": "stable",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "ids"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reordered.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "No list of ids.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The ids are not every favourite once.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/stations/favourites/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "delete": {
+        "operationId": "favourites_remove",
+        "tags": [
+          "Internet radio"
+        ],
+        "summary": "Remove a favourite",
+        "description": "Removed from the list.",
+        "x-gexis-stability": "stable",
+        "responses": {
+          "200": {
+            "description": "Removed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such favourite.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/stations/favourites/address": {
+      "post": {
+        "operationId": "favourites_address",
+        "tags": [
+          "Internet radio"
+        ],
+        "summary": "Add a station by its address",
+        "description": "Plays the address first and keeps it as a favourite only if it sounds within 20 s; answers when that is known.",
+        "x-gexis-stability": "stable",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "url",
+                  "name"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "It played and is kept.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StationPlayed"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Not an http or https address, or no name.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Switched off, the player cannot play now, or the favourites are full.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "It did not play; it was not kept.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/renderer/{renderer_id}/activate": {
@@ -9983,9 +10708,10 @@
             "type": "string",
             "enum": [
               "dummy_mixer",
-              "software_api"
+              "software_api",
+              "output"
             ],
-            "description": "How the renderer's volume is bridged onto the hardware mixer."
+            "description": "How the renderer's volume is bridged onto the hardware mixer; `output` has no level of its own and the slider is the output's."
           },
           "dummy_mixer_card": {
             "type": [
@@ -14637,6 +15363,160 @@
             "type": "string"
           }
         }
+      },
+      "Station": {
+        "type": "object",
+        "description": "One station, as the player keeps and shows it.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The directory's id, or one of the player's own for a station added by its address."
+          },
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "description": "The address mpv plays."
+          },
+          "logo": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The directory's logo; none where it has none or an `.ico`."
+          },
+          "country": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "countrycode": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "codec": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "bitrate": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "kb/s."
+          },
+          "hls": {
+            "type": "boolean"
+          },
+          "listed": {
+            "type": "boolean",
+            "description": "Whether the id is the directory's."
+          },
+          "favourite": {
+            "type": "boolean",
+            "description": "In a list: whether it is one of the favourites."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "url"
+        ]
+      },
+      "StationPage": {
+        "type": "object",
+        "description": "A page of stations from the directory.",
+        "properties": {
+          "stations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Station"
+            }
+          },
+          "offset": {
+            "type": "integer"
+          },
+          "end": {
+            "type": "boolean",
+            "description": "No more pages after this one."
+          },
+          "reachable": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Whether the directory answered when it was last asked; this page may be the day's kept one."
+          }
+        },
+        "required": [
+          "stations",
+          "offset",
+          "end"
+        ]
+      },
+      "StationsOverview": {
+        "type": "object",
+        "description": "The Radio screen's top; needs no directory.",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "country": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Popular here's country."
+          },
+          "reachable": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "favourites": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Station"
+            }
+          }
+        },
+        "required": [
+          "enabled",
+          "favourites"
+        ]
+      },
+      "StationChoice": {
+        "type": "object",
+        "description": "A station as a list gave it, or a favourite by its id.",
+        "properties": {
+          "station": {
+            "$ref": "#/components/schemas/Station"
+          },
+          "favourite": {
+            "type": "string"
+          }
+        }
+      },
+      "StationPlayed": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "station": {
+            "$ref": "#/components/schemas/Station"
+          }
+        },
+        "required": [
+          "ok"
+        ]
       }
     }
   }
