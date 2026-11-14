@@ -593,7 +593,9 @@ over a slider, with two fingers on the touchpad, moves it.
 
 The phone page is a **remote** for the player. At the top, the player's
 name with what it is doing (*Playing · Lyrion*, *Paused · Spotify*,
-*Idle*) and a switch between two pages, **Remote** and **Settings**. Tap
+*Idle*) and a switch between three pages, **Remote**, **Radio** (internet
+radio: your favourite stations, and the directory's to browse and search)
+and **Settings**. Tap
 the name for every Gexis player on the network, each with what it is
 doing, and choose one to open its remote in the same tab. **Join** beside a
 player plays the same music on it (section 6); grouped, the list starts

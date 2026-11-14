@@ -159,8 +159,9 @@ flowchart TD
   ends the boot animation, ADR-0043), and what it shows (`/panel/shown`).
   Only the panel reports touches, so that a tap on a phone does not count as
   attention and take the visualiser down (ADR-0036).
-- **Remote (phone)**: the phone's remote, with Settings - the only
-  responsive screen (ADR-0032) - as its second page (ADR-0164). During
+- **Remote (phone)**: the phone's remote, with internet radio's page
+  (`screens/remote/radio/`, ADR-0180) and Settings - the only responsive
+  screen (ADR-0032) - as its second and third pages (ADR-0164). During
   setup it shows
   `FirstUsePage` instead (ADR-0104, ADR-0149). The first-boot flow is covered in
   `setup-and-network.md`.

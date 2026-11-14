@@ -6,6 +6,9 @@
   progress to read, the touch area, which takes the height that is left,
   the quick actions and the volume row. Shorter than the drawing, the touch
   area gives way to its floor (C10) before the page scrolls.
+
+  A station (ADR-0180, design/source/31 H17-H19): the station's name after
+  the artist, and the heart at the transport's right.
 -->
 <script>
   import { active, metadata } from '../../lib/state.js';
@@ -21,17 +24,21 @@
 
   const hasTrack = $derived(!!$active);
   const head = playhead(() => $metadata);
+  //: The station goes on the album line; it is the title when it sends nothing.
+  const byline = $derived($active === 'radio'
+    ? [$metadata?.artist, $metadata?.album !== $metadata?.title ? $metadata?.album : null].filter(Boolean).join(' · ')
+    : $metadata?.artist);
 </script>
 
 <div class="page">
   <div class="now">
     <div class="cover"><RemoteCover {artwork} {hasTrack} onfailed={onartfailed} /></div>
-    <div class="side">
+    <div class="side" class:is-radio={$active === 'radio'}>
       <div class="text">
         <span class="title" class:is-none={!hasTrack}>{hasTrack ? ($metadata?.title ?? 'Playing') : 'Nothing playing'}</span>
-        {#if hasTrack && $metadata?.artist}<span class="artist">{$metadata.artist}</span>{/if}
+        {#if hasTrack && byline}<span class="artist" class:is-station={$active === 'radio'}>{byline}</span>{/if}
       </div>
-      <RemoteTransport />
+      <RemoteTransport heart="end" {onsay} />
     </div>
   </div>
 
@@ -83,6 +90,12 @@
     gap: 10px;
     padding: 2px 0;
   }
+  /* A station's row holds the heart too (H17): 202 wide, so on a narrow
+     phone the cover gives way first. */
+  .side.is-radio {
+    flex-basis: 202px;
+    min-width: 202px;
+  }
   .text {
     display: flex;
     flex-direction: column;
@@ -108,6 +121,13 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  /* H17: *Claude Debussy · Morgenrot Klassik* wraps to a second line. */
+  .artist.is-station {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
   }
   .progress {
     flex-shrink: 0;
