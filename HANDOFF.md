@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-11-14 (on R2D2).
+Last updated: 2026-11-15 (on R2D2).
 
 ## Start here
 
@@ -20,27 +20,36 @@ and the ideas as Must / Should / Could. It follows `docs/DEVELOPMENT.md`'s
 phases; change it when a phase opens, closes or moves, and show George first. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Stable: 1.16.1** (2026-11-10; serial 15): room correction's Full range marked *Limited testing* (George),
-on 1.16.0 (room correction for the full range, Phase 30), with 1.14.0 (Phase
-29) and 1.15.0 (Phase 35) - Stable came from 1.13.0. Built by run
-42864483931 (`verify-image.sh` all 151 checks passed); signed on R2D2; both
-channels read back with a good signature; `releases/latest` is r1.16.1 and
-its image (1.1 GB) downloads through README's link, matching its checksum
-and signature. Notes approved by George; PRs #98 and #99 merged by George
-(README names 1.16.1). `v1.16.0` is
-a lightweight tag (the others annotated); `build.sh` reads tags with
-`--tags`, so its versions are right.
+**Stable and Testing: 1.16.4** (2026-11-15; Stable serial 16, Testing serial
+72; George asked for it on Stable once released): 1.16.2 (the 55 fixes from
+the review of 1.16.1, ADR-0178; a group's buffer of a second), 1.16.3 and
+1.16.4 reach Stable together from 1.16.1. **1.16.3** (PR #101): go-librespot
+from upstream's own build of `master` at `775ba5883` (ADR-0181), for the
+Android app closing while it casts, released from `main` as ADR-0182's
+one-part patch release. **1.16.4** (PR #102, run 43725033111, `verify-image.sh`
+all checks passed): Lyrion after a player leaves a group (CamillaDSP asked
+every 2 s under a stream and started again; a play on a player already on
+takes a free device), `fix-mdns-block` (Finding 148) and `fix-players-order`
+(ADR-0136 as amended). Both channels read back with a good signature;
+`releases/latest` is r1.16.4, README names it, its checksum matches and its
+signature is there. Release output in `~/projects/gexis-release-out`: this
+session signed without the `out` link (BUILD-TRAPS), so r1.16.3's was lost
+with its worktree and rebuilt from GitHub (the published files and the three
+parts' signed indexes; not the local `history.json`, `notes.md`, `notes.txt`).
 
-**Testing: 1.16.2** (2026-11-12, serial 70; Stable stays 1.16.1): the 55
-fixes from the review of 1.16.1 (the four users see: ADR-0178) and a
-group's buffer of a second (ADR-0166 amended). Built by run 43305560359
-(`verify-image.sh` all 155 checks passed), signed on R2D2, read back with a
-good signature; notes approved and PR #100 merged by George. **Owed after
-the merge:** `main` into `docs` and `next` and the routine clean-up; Finding
-145; then the worktrees (`gexis-player-fixes`, `gexis-player-fixes-b`,
-`gexis-fix-*`, `gexis-review`, `gexis-review-fixes`,
-`gexis-release-1.16.2`) and the local `fix-*` branches removed.
-`publish.sh` keeps a serial floor in `out/serials/`.
+**go-librespot is upstream's build of `775ba5883`** (ADR-0181), kept in the
+`inputs` mirror with its source; `packaging/check-upstream.sh` reports it
+waiting until a release contains the commit, which then replaces it by the
+usual route. **ADR-0182 next** (to-do `upstream-daily`):
+`.github/workflows/upstream.yml` (daily; a bump branch from `main`, its PR,
+the tests and a preview started by the workflow) and a checklist per part in
+`docs/tech/updates-and-releases.md`. Beszel's catalogue pin (0.21.1) is
+behind 0.21.2.
+
+**Decision owed by George:** a group change restarts go-librespot
+(*outputs: stopping the renderers - the group changed*), which ends a
+Spotify cast, where ADR-0166 B2 says it interrupts it a moment. Either B2 and
+the manual say Spotify must be picked again, or a new ADR keeps the cast.
 
 **The plugin catalogue** (Phase 24, closed 2026-10-31):
 `gcarstoiu/gexis-plugins` (local `~/projects/gexis-plugins`; `tools/publish.sh`
@@ -106,14 +115,13 @@ Assistant integration's join and unjoin (its `multiroom` branch, `9744bb3`),
 released after the player's; Lyrion-app grouping back and forth with the
 player's.
 
-**The players** (2026-11-10): sofapi on the preview of 1.16.0's code
-(`~/preview-ph30b`; its 10 Nov measurement reads as bass-only), *Pages from
-Home Assistant* on, Plexamp 0.5.1 and Beszel from the catalogue;
-`rpi-eeprom-update` reports a bootloader update available, not applied (not
-looked into). Roon's extension enabled in George's Roon; the other three last
-seen on 1.9.1 through their updaters (2026-10-29). All four on Testing, which
-offers 1.16.1. sofapi and the bar grouped; AirPlay on at sofapi and guestpi.
-Each has its own Lyrion server.
+**The players** (2026-11-15): all four on the preview branch
+`preview-radio-mdns` at 8897a71e (1.16.4 and `ph-radio`; gexis-core and
+gexis-player 1.16.4+git31, go-librespot 775ba58-4; run 43725073814),
+installed idle, cores restarted; each reports 1.16.4, nothing offered. All
+four on Testing; room correction on at sofapi; each has its own Lyrion
+server. Lyrion stops on a player that leaves its sync (Lyrion's own); the
+screen now keeps Lyrion as the source.
 
 **The test venv imports the core from `~/projects/gexis-player-next`** (an
 editable install): in another worktree run the suite with `PYTHONPATH=src`
@@ -173,8 +181,8 @@ player's; a preview on a player not in a group (sofapi's `output` feeds the
 group's loopback): the rate at the card, the stage, 32 kHz, CPU, an hour. **Done 2026-11-14**
 ([Finding 147](docs/findings/147-internet-radio-through-the-real-chain.md)):
 sofapi ungrouped, the preview of 439ac89 installed (mpv with it), measured,
-grouped again with the bar; the preview **stays installed on sofapi** for
-George's regression pass (`~/preview-ph31`, the packages only). Acceptance 7
+grouped again with the bar; the preview is now the one on all four players
+(below), for George's regression pass. Acceptance 7
 restated by George as 7 % or less through the real chain: met. **The Home
 Assistant integration built 2026-11-14** on its `radio` branch (pushed, not
 merged; released after the player's, as multiroom): the favourites as
@@ -182,29 +190,6 @@ sources, the directory in the media browser and its search,
 `gexis.radio_favourite`, the `gexis/radio` WebSocket command, the card's
 Radio view (C01-C06; harness in `~/projects/scratch/ph31/card`). Its version
 is bumped at its release.
-
-**Players renamed `name-2`: fixed on `fix-mdns-block`** (worktree
-`~/projects/gexis-player-fix-mdns`, off `next`; asked for by George
-2026-11-14):
-systemd drops the uploaded plugins' port-5353 block at every reload, so an
-uploaded test renderer's own mDNS responder made avahi rename sofapi,
-bedroompi and guestpi ([Finding 148](docs/findings/148-plugins-port-block-lost-at-reload.md),
-ADR-0142 amended, Lesson 96). The core now sets the block again after each
-reload (`mdns_block.py`), and the name repair retries every 30 min after its
-five (ADR-0022's [H] row, confirmed), and since 25ec0855 sets the block
-right after the core's own reload at start (3 s open before). Tests and CI
-pass. **The preview (radio, this fix, the menu order and a group change
-told to every player) on all four players**: sofapi, ShelvesPi and GuestPi
-since 2026-11-14 19:44, BedroomPi since 20:50 (it had been playing), from
-the temporary branch `preview-radio-mdns` at 8dc68f52 (run 43626907114;
-`~/preview-all` on each, the packages only; mpv came with it on the three
-new to radio): installed idle, rebooted - each kept its own name
-(BedroomPi had been `bedroompi-2` on 1.16.2), every plugin blocked, the
-block set again right after the core's own reload. Since 22:17 all four
-run the branch at b11e28f4 (run 43641044154, `~/preview-relay` on each;
-gexis-core and gexis-player git60, gexis-ui git58; installed idle, the core
-restarted, not rebooted), with ADR-0136 item 5. The uploaded test
-renderer's newer build is on bedroompi and guestpi (private notes).
 
 **BedroomPi and GuestPi cannot reach each other** (2026-11-14, George asked
 why GuestPi was missing from BedroomPi's menu): the home network, not the
@@ -219,42 +204,18 @@ behind a background look, for the fresh answer; the kept list shows
 meanwhile. Masked probes in
 `~/projects/scratch/ph31/dbg/` (`reach.py`, `link.py`, `seen.py`).
 
-**The lists of players in alphabetical order** (George 2026-11-14, ADR-0136
-amended): built on `fix-players-order` (worktree
-`~/projects/gexis-player-fix-order`, off `next`): this player in its place, a
-group where its first player falls, `/players?fresh=1` when a list opens
-(the 16:21 *Undo group* was George's; bedroompi's menu had shown the group
-for up to a minute). Checked with invented players on the phone, panel and
-bar (`PLAYERS=alone|mine` in `~/projects/scratch/ph31/harness`); the
-manual's group picture retaken (`~/projects/scratch/ph22/manual/run-order.sh`).
-The group volume's members alphabetical too (George), the manual's three
-group pictures retaken. Item 5, a player reached only through another
-(`via`), built there too (6840f817, 8ee9222d, e2265e00): mocked with
-`PLAYERS=via|mine-via`. In the preview on all four.
-
 **The Home Assistant integration's `radio` branch:** a stopped station shows
 as paused with Play (George); the card keeps one column under its 440 px cap.
 
-**A group change is told to every player** (George, ADR-0136 item 4): on the
-players, a group made on ShelvesPi showed in sofapi's kept list 0.64 s later,
-undone 1.48 s later, without sofapi being asked.
-
-**Next: George's regression pass** covers all of it (to-do
-`ph31-regression`, `fix-mdns-block`, `players-menu-order`); each branch then
-merges into `next` on its own, `preview-radio-mdns` deleted after. Merging
-`fix-players-order` and `ph-radio` both into `next` conflicts once in
-`docs/tech/ui.md` (resolved on the preview branch: both sentences kept).
+**Next: George's regression pass of radio** (to-do `ph31-regression`) on
+that preview; `ph-radio` then merges into `next` (one conflict with the
+merged lists of players in `docs/tech/ui.md`, resolved on the preview branch:
+both sentences kept), and `preview-radio-mdns` is deleted.
 
 **Phase 35** (a page from Home Assistant, ADR-0176 as amended) **on Stable
 with 1.16.1**, with the integration's 0.6.0. **Not yet on a player:** the
 heat take-down, a USB keyboard's key, one page replacing another, the switch
 turned off while a page is up; acceptance 4 (192 kHz with room correction).
-
-**A multi-agent review** of everything since 0.10.2 runs on a read-only
-worktree at v1.16.1 (`~/projects/gexis-review`, George 2026-11-10): ten
-reviewers, each finding checked by an independent refuter, then explained to
-George by severity; **fixes only after his go**. Remove the worktree when it
-is done.
 
 Phases and their IDs: `docs/DEVELOPMENT.md`. MPD parked (ADR-0151). **Raspberry
 Pi Imager** (ADR-0159, a task): Imager's own list stays open as it is
@@ -265,7 +226,8 @@ in Claude's memory, not here) holds the open items with their detail.
 
 **Routine clean-up** (`docs/ROUTINE-CLEANUP.md`, George 2026-10-12): after
 every merged release PR, otherwise weekly on Sunday evening. **Last run:
-2026-11-10, after 1.16.1.**
+2026-11-15, after 1.16.3 and 1.16.4.** Owed from it: `docs/LESSONS.md`
+(5,183 words) cut back; the start-of-session set was about 10,100 words.
 
 ## Phases
 
