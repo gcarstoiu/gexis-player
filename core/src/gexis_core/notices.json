@@ -293,9 +293,10 @@
       "author": "devgianlu and contributors",
       "licence": "GPL-3.0",
       "url": "https://github.com/devgianlu/go-librespot",
-      "arrives": "Fetched from its release when the image is built, checked against a pinned checksum",
+      "arrives": "Upstream's own build of a commit after its 0.10.5 release, kept in this project's download mirror and checked against a pinned checksum when the image is built",
       "sources": [
-        "github.com/devgianlu/go-librespot"
+        "github.com/devgianlu/go-librespot",
+        "github.com/gcarstoiu/gexis-player/releases/download/inputs/6bc182075bb3037896001707037f9de91030988a5a1489295fdee32c5953127b"
       ]
     },
     {
