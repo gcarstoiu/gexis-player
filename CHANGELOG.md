@@ -6,6 +6,20 @@
 Every release of Gexis Player and its notes, newest first. The player
 shows the last 10 under Settings → System → Change logs.
 
+## 1.16.4 — 15 November 2026
+
+### Fixed
+
+- A player that leaves a group playing Lyrion shows Lyrion when it plays again, instead of every source waiting.
+- With the equaliser or room correction on, music no longer stays silent after a brief stall, as Lyrion did when a player left a group.
+- A player keeps its own name on the network with plugins installed, so name.local keeps opening it.
+- Lists of players show a group change made on another player at once.
+
+### Good to know
+
+- Every list of players is in alphabetical order, with a group together where its first player falls.
+- A player that another cannot reach directly is listed through one that can; it cannot be grouped from there.
+
 ## 1.16.3 — 15 November 2026
 
 ### Fixed
