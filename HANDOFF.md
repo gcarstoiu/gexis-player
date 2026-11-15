@@ -40,16 +40,22 @@ parts' signed indexes; not the local `history.json`, `notes.md`, `notes.txt`).
 **go-librespot is upstream's build of `775ba5883`** (ADR-0181), kept in the
 `inputs` mirror with its source; `packaging/check-upstream.sh` reports it
 waiting until a release contains the commit, which then replaces it by the
-usual route. **ADR-0182 next** (to-do `upstream-daily`):
-`.github/workflows/upstream.yml` (daily; a bump branch from `main`, its PR,
-the tests and a preview started by the workflow) and a checklist per part in
-`docs/tech/updates-and-releases.md`. Beszel's catalogue pin (0.21.1) is
-behind 0.21.2.
+usual route. **ADR-0182 built** on `upstream-daily`, **PR #103 into
+`main`** for George: `.github/workflows/upstream.yml` runs
+`packaging/upstream-daily.sh` daily (a bump branch, its PR, tests and a
+preview; an issue for what is not pinned here), `packaging/upstream-bump.py`
+moves a pin, the steps and checklists in `docs/tech/updates-and-releases.md`.
+**Owed by George:** *Allow GitHub Actions to create and approve pull
+requests* is off, so its first PR would fail; the ADR's *Claude's choices*.
+After the merge: `main` into `next` and `docs`; the first run will open an
+issue for Beszel (0.21.1, 0.21.2 is out).
 
-**Decision owed by George:** a group change restarts go-librespot
-(*outputs: stopping the renderers - the group changed*), which ends a
-Spotify cast, where ADR-0166 B2 says it interrupts it a moment. Either B2 and
-the manual say Spotify must be picked again, or a new ADR keeps the cast.
+**Spotify on the lead through a group change** (George, 2026-11-15: it
+should keep playing): a group change stops go-librespot, which ends the
+cast. [ADR-0183](docs/decisions/0183-spotify-keeps-playing-on-the-lead-through-a-group-change.md)
+**proposed**: pause it, rewrite, resume (go-librespot reopens its device on
+resume with the ALSA configuration read afresh); not built until George
+accepts it.
 
 **The plugin catalogue** (Phase 24, closed 2026-10-31):
 `gcarstoiu/gexis-plugins` (local `~/projects/gexis-plugins`; `tools/publish.sh`
@@ -207,8 +213,14 @@ meanwhile. Masked probes in
 **The Home Assistant integration's `radio` branch:** a stopped station shows
 as paused with Play (George); the card keeps one column under its 440 px cap.
 
-**Next: George's regression pass of radio** (to-do `ph31-regression`) on
-that preview; `ph-radio` then merges into `next` (one conflict with the
+**George's regression pass of radio** (to-do `ph31-regression`), two
+findings fixed on `ph-radio` 2026-11-15: a follower's phone drew Pause for
+the group's station (the member now publishes the leader's radio state,
+its favourites its own; the panel and bar already drew Stop), and the panel
+pointer's outline round Playing's Minimise filled only near its middle (the
+covering check asked down the button's middle; measured in Chromium,
+`~/projects/scratch/ph31/ring`). Merged into `preview-radio-mdns`
+(065e2a63), preview run 43742027577; not yet on the players. Once the pass is done, `ph-radio` merges into `next` (one conflict with the
 merged lists of players in `docs/tech/ui.md`, resolved on the preview branch:
 both sentences kept), and `preview-radio-mdns` is deleted.
 
