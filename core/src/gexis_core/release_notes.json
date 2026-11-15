@@ -1,6 +1,10 @@
 {
  "_about": "Every release's notes, newest first, exactly as published and signed (ADR-0116). publish.sh reads a release's notes from here; Settings -> Change logs shows the last 10.",
  "releases": {
+  "1.16.4": {
+   "date": "2026-11-15",
+   "notes": "Fixed\n• A player that leaves a group playing Lyrion shows Lyrion when it plays again, instead of every source waiting.\n• With the equaliser or room correction on, music no longer stays silent after a brief stall, as Lyrion did when a player left a group.\n• A player keeps its own name on the network with plugins installed, so name.local keeps opening it.\n• Lists of players show a group change made on another player at once.\n\nGood to know\n• Every list of players is in alphabetical order, with a group together where its first player falls.\n• A player that another cannot reach directly is listed through one that can; it cannot be grouped from there."
+  },
   "1.16.3": {
    "date": "2026-11-15",
    "notes": "Fixed\n• Spotify on Android no longer closes while it casts to a player and a song from another playlist or album is picked.\n\nGood to know\n• Spotify Connect comes from a development build of go-librespot that carries this fix, until go-librespot's next release."

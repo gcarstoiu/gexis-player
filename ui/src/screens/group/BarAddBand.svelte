@@ -10,7 +10,9 @@
 <script>
   import mark from '../../assets/gexis-mark.svg';
   import GroupGlyph from '../../lib/GroupGlyph.svelte';
-  import { enterGroup, joinable, joinPlayer, memberStatus, othersByGroup, otherStatus, withoutMe } from '../../lib/group.svelte.js';
+  import {
+    enterGroup, groupPlace, inOrder, joinable, joinPlayer, leaderName as ledBy, memberStatus, othersByGroup, otherStatus, withoutMe,
+  } from '../../lib/group.svelte.js';
 
   //: `players`: `/players`' others; `here`: this player's own status.
   let { g, players = [], here = null, ondone, onerror = () => {} } = $props();
@@ -34,11 +36,14 @@
     const members = new Map((g?.members ?? []).map((m) => [m.id, m]));
     const list = withoutMe(players, here?.id, new Set(members.keys()));
     const split = othersByGroup(list, new Set(members.keys()));
+    //: The lists' order (George, 2026-11-14): this player's group's players
+    //: together where its first player falls, another group where its does.
+    const mine = groupPlace(g?.members ?? []);
     const out = [];
     for (const og of split.groups) {
       out.push({ id: `group:${og.id}`, name: og.title, group: og, joining: entering === og.id, off: false, join: false,
-                 status: entering === og.id ? 'Joining · catching up' : `Led by ${og.members[0]?.name} · ${og.status}`,
-                 enter: !g && og.canEnter && entering !== og.id });
+                 status: entering === og.id ? 'Joining · catching up' : `Led by ${ledBy(og)} · ${og.status}`,
+                 enter: !g && og.canEnter && entering !== og.id, place: groupPlace(og.members) });
     }
     const inOther = new Set(split.groups.flatMap((og) => og.members.map((m) => m.id)));
     for (const p of list) {
@@ -46,16 +51,19 @@
       const m = members.get(p.id);
       if (m?.me) continue;
       out.push(m
-        ? { id: p.id, name: m.name, status: memberStatus(g, m), joining: m.joining, off: !m.reachable, join: false }
-        : { id: p.id, name: p.name, status: otherStatus(p), joining: false, off: false, join: joinable(p) && !asked.has(p.id) });
+        ? { id: p.id, name: m.name, status: memberStatus(g, m), joining: m.joining, off: !m.reachable, join: false,
+            place: mine }
+        : { id: p.id, name: p.name, status: otherStatus(p), joining: false, off: false, join: joinable(p) && !asked.has(p.id),
+            place: p.name });
       members.delete(p.id);
     }
     // A member the network search does not find now: out of reach.
     for (const m of members.values()) {
       if (m.me) continue;
-      out.push({ id: m.id, name: m.name, status: memberStatus(g, m), joining: false, off: !m.reachable, join: false });
+      out.push({ id: m.id, name: m.name, status: memberStatus(g, m), joining: false, off: !m.reachable, join: false,
+                 place: mine });
     }
-    return out;
+    return inOrder(out, (r) => r.place, (r) => (r.group ? r.place : r.name));
   });
 
   async function enter(og) {

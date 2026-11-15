@@ -3668,7 +3668,7 @@
           "Playback"
         ],
         "summary": "This player and the other players on the network",
-        "description": "This player's status and those of the other Gexis players found on the network, for the phone's switcher (ADR-0136). The others are found by browsing `_gexis._tcp` over mDNS and asking each one's `/player/status`; the list is kept warm in the background and refreshed every 30 seconds, so the answer is normally immediate. A player that is off, unreachable, too old to announce itself, or that is this player under another mDNS name, is left out.",
+        "description": "This player's status and those of the other Gexis players found on the network, for the phone's switcher (ADR-0136). The others are found by browsing `_gexis._tcp` over mDNS and asking each one's `/player/status`; the list is kept warm in the background and refreshed every 30 seconds, so the answer is normally immediate. A player that is off, unreachable, too old to announce itself, or that is this player under another mDNS name, is left out. A player found that does not answer this one, but that another player found reached itself, is listed through that player, with `via` (ADR-0136 item 5).",
         "responses": {
           "200": {
             "description": "This player and the others found.",
@@ -3684,6 +3684,55 @@
         "x-gexis-stability": "stable",
         "x-gexis-adr": [
           "ADR-0136"
+        ],
+        "parameters": [
+          {
+            "name": "fresh",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1"
+              ]
+            },
+            "description": "Sent when a list of players opens: if what was found is more than 5 s old, the players already found are asked for their status again (without a new search) before the answer."
+          }
+        ]
+      }
+    },
+    "/players/changed": {
+      "post": {
+        "operationId": "players_changed",
+        "tags": [
+          "Playback"
+        ],
+        "summary": "Another player says its group changed",
+        "description": "Sent by a player to every other player it has found when its group is made, changed or undone. The players found are asked for their status again a moment later (several such messages together are one look), and the state's `players_revision` moves so a list on a screen reads `/players` again. The request carries nothing.",
+        "responses": {
+          "200": {
+            "description": "Heard.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "heard": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "heard"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "x-gexis-stability": "internal",
+        "x-gexis-adr": [
+          "ADR-0136",
+          "ADR-0166"
         ]
       }
     },
@@ -10116,6 +10165,13 @@
                 "examples": [
                   "http://livingroom.local:8090/"
                 ]
+              },
+              "via": {
+                "type": "string",
+                "description": "Present when this player did not answer, but the player named here reached it and listed it (ADR-0136 item 5). Its page opens as any other's; it cannot be grouped from here, and it is not told of a group change.",
+                "examples": [
+                  "Living Room"
+                ]
               }
             }
           }
@@ -10420,7 +10476,7 @@
             "items": {
               "$ref": "#/components/schemas/PlaybackOtherPlayer"
             },
-            "description": "The other players that answered, sorted by host; empty when none were found."
+            "description": "The other players that answered, sorted by host, then any reached only through one of them (`via`); empty when none were found."
           }
         }
       },
@@ -13249,6 +13305,7 @@
           "sources",
           "settings_revision",
           "pictures_revision",
+          "players_revision",
           "controls",
           "queue",
           "pairing",
@@ -13342,6 +13399,10 @@
           "pictures_revision": {
             "type": "integer",
             "description": "Bumped when the library's pictures change (ADR-0059's sweep finishing); drop cached artist photos when it changes."
+          },
+          "players_revision": {
+            "type": "integer",
+            "description": "Bumped when another player said its group changed and this one has asked the others again; read GET /players again when it changes."
           },
           "controls": {
             "oneOf": [

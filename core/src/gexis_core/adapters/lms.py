@@ -333,6 +333,9 @@ class LmsAdapter(Adapter):
         #: only if it was playing - is what this answers when nobody has
         #: said otherwise, and it stays the default.
         self._restore_transport = None
+        #: Whether nothing holds the device now (`on_device_idle`); None
+        #: until the core says how to tell.
+        self._device_idle = None
         self._artist_id: int | None = None
         self._album_id: int | None = None
         self._on_availability: Callable[[bool], None] | None = None
@@ -452,6 +455,19 @@ class LmsAdapter(Adapter):
         copy of it.
         """
         self._restore_transport = reading
+
+    def on_device_idle(self, reading) -> None:
+        """A callable answering whether nothing holds the device now - the
+        supervisor's `active` is None - for a play on a player already on."""
+        self._device_idle = reading
+
+    def _nothing_holds_the_device(self) -> bool:
+        if self._device_idle is None:
+            return False
+        try:
+            return bool(self._device_idle())
+        except Exception:  # noqa: BLE001 - a reading that fails takes nothing
+            return False
 
     def on_queue_change(self, callback) -> None:
         """The queue rail's contents (ADR-0038 §1). Read only when LMS says
@@ -1046,6 +1062,16 @@ class LmsAdapter(Adapter):
                         # squeezelite that reconnects after the ladder is not
                         # the listener's play.
                         logger.info("lms: played on the still-on player (acquisition; the owed power-off is cancelled)")
+                        on_acquire()
+                    elif deliberate_play and self._nothing_holds_the_device():
+                        # **Play on a player already on, while nothing holds
+                        # the device** (sofapi, 2026-11-15): Lyrion's sync
+                        # keeps a group's players on, so after the group
+                        # ended there was no power-on edge; Lyrion played
+                        # and the screen showed every source waiting. Only
+                        # while the device is free: nothing is taken from
+                        # another source this way.
+                        logger.info("lms: played on the player, already on, while nothing held the device (acquisition)")
                         on_acquire()
                     elif power and not last_power:
                         # ADR-0027: activating the player is the

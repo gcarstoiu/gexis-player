@@ -4,6 +4,7 @@ bar answered as shelvespi-2.local for a day). The script is run as it is, with
 `hostname` and `busctl` stood in for on the PATH."""
 import os
 import subprocess
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -40,10 +41,25 @@ def test_its_own_name_or_another_is_left_alone(tmp_path):
     assert run(tmp_path, "shelvespi-two")[1] == []
 
 
-def test_it_stops_after_five_tries_a_start(tmp_path):
+def test_five_tries_in_a_row_then_it_waits(tmp_path):
     for _ in range(7):
         _, sets = run(tmp_path, "shelvespi-2")
     assert len(sets) == 5
+
+
+def test_after_the_five_it_tries_every_half_hour(tmp_path):
+    """Finding 148: the five were spent while a plugin still answered for the
+    name, and the player kept -2 for days after it had stopped."""
+    for _ in range(5):
+        run(tmp_path, "shelvespi-2")
+    count = tmp_path / "run/tries"
+    half_an_hour_ago = time.time() - 1801
+    os.utime(count, (half_an_hour_ago, half_an_hour_ago))
+    out, sets = run(tmp_path, "shelvespi-2")
+    assert len(sets) == 6
+    assert "(try 6 every 30 min now)" in out
+    # And not again until another half hour has gone.
+    assert len(run(tmp_path, "shelvespi-2")[1]) == 6
 
 
 def test_the_system_package_installs_and_enables_it():

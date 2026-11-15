@@ -9,6 +9,21 @@ import { playback } from './state.js';
 /** This player's group as the core publishes it, or null alone. */
 export const group = derived(playback, ($s) => $s?.group ?? null);
 
+/** **Another player's group changed** (George, 2026-11-14): this player,
+ *  told, has asked the others again and moved `players_revision`. `fn` runs
+ *  at each move after the first, to read `/players` again; the unsubscriber
+ *  is returned, for `onMount`. */
+export function onPlayersChanged(fn) {
+  let seen;
+  return playback.subscribe(($s) => {
+    const revision = $s?.players_revision;
+    if (revision === undefined || revision === seen) return;
+    const first = seen === undefined;
+    seen = revision;
+    if (!first) fn();
+  });
+}
+
 async function post(path, body) {
   const response = await fetch(path, {
     method: 'POST',
@@ -113,7 +128,7 @@ export function joinNames(names) {
  *  [text, more]. Empty when not grouped. */
 export function withText(g) {
   if (!g) return ['', ''];
-  const others = g.members.filter((m) => !m.me).map((m) => m.name);
+  const others = alphabetical(g.members).filter((m) => !m.me).map((m) => m.name);
   if (others.length <= 2) return [`with ${others.join(', ')}`, ''];
   return [`with ${others.slice(0, 2).join(', ')}`, ` + ${others.length - 2}`];
 }
@@ -134,20 +149,28 @@ export function memberStatus(g, m) {
   return g.silent ? 'In this group · silent' : 'In this group';
 }
 
+/** ADR-0136 item 5: a player this one reaches only through another (`via`)
+ *  opens like any other but cannot be grouped from here. */
+export const CANT_GROUP = "Can't group from here";
+
 /** Another player's row, from what it says of itself (`/players`): in a
- *  group of its own, or playing alone. One older than multiroom says so. */
+ *  group of its own, or playing alone. One older than multiroom says so,
+ *  and one reached only through another. */
 export function otherStatus(p) {
-  const named = p?.group?.members?.filter((m) => m.id !== p.id).map((m) => m.name) ?? [];
+  const named = alphabetical(p?.group?.members).filter((m) => m.id !== p.id).map((m) => m.name);
   if (p?.group && named.length) {
-    return `In a group with ${joinNames(named)}${p.renderer ? ` · ${p.renderer}` : ''}`;
+    const grouped = `In a group with ${joinNames(named)}${p.renderer ? ` · ${p.renderer}` : ''}`;
+    return p.via ? `${grouped} · ${CANT_GROUP}` : grouped;
   }
   const status = plays(p?.transport, p?.renderer);
+  if (p?.via) return `${status} · ${CANT_GROUP}`;
   return p?.multiroom ? status : `${status} · Update to join`;
 }
 
 /** Whether another player can be joined from here: one in no group of its
- *  own (ADR-0166 decision 11 - another group is joined whole, not raided). */
-export const joinable = (p) => !!(p?.multiroom && p?.id) && !(p?.group?.members?.length > 1);
+ *  own (ADR-0166 decision 11 - another group is joined whole, not raided),
+ *  that this player reaches itself. */
+export const joinable = (p) => !!(p?.multiroom && p?.id && !p?.via) && !(p?.group?.members?.length > 1);
 
 /** **The other players as they are now, seen from this one** (`self`, its
  *  id; `mine`, the ids in its group). `/players` is up to half a minute old:
@@ -166,12 +189,42 @@ export function withoutMe(others, self, mine = new Set()) {
   });
 }
 
+// -- the order of a list of players (George, 2026-11-14) ----------------------
+// Alphabetical, so that a player keeps its place whichever player the list
+// is opened on - this one included, in its place with its check. A group's
+// players stay together, alphabetical within it, the leader tagged where it
+// falls; the group goes where its first player falls.
+
+const collator = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true });
+
+/** Two names in the lists' order. */
+export const byName = (a, b) => collator.compare(a ?? '', b ?? '');
+
+/** Players (anything with a `name`) in alphabetical order, as a new array. */
+export const alphabetical = (players) => [...(players ?? [])].sort((a, b) => byName(a?.name, b?.name));
+
+/** Where a group falls: at its first player's name. */
+export const groupPlace = (members) => alphabetical(members)[0]?.name ?? '';
+
+/** Where another player falls, from what it says of itself: in a group of
+ *  its own, at that group's place. */
+export const playerPlace = (p) => (p?.group?.members?.length > 1 ? groupPlace(p.group.members) : p?.name ?? '');
+
+/** `entries` in the lists' order: each by `[place, name]` - its group's
+ *  place (its own name when in none), then its own name. */
+export function inOrder(entries, place, name = place) {
+  return [...entries].sort((a, b) => byName(place(a), place(b)) || byName(name(a), name(b)));
+}
+
+/** The leader's name in another group, wherever the order puts it. */
+export const leaderName = (og) => og.members.find((m) => m.leads)?.name ?? '';
+
 /** **The other players, another group's together** (ADR-0166 decision 11,
  *  George 2026-10-28: a group seen from outside it is a group, not loose
  *  players). `{loose, groups}`: a group is `{id, leader, title, status,
- *  members, canEnter}`, its leader first; a member the list has not found
- *  (switched off) is `listed: false`. `mine`: this player's own group's ids,
- *  left out. */
+ *  members, canEnter}`, its members alphabetical, the leader tagged `leads`
+ *  (George, 2026-11-14); a member the list has not found (switched off) is
+ *  `listed: false`. `mine`: this player's own group's ids, left out. */
 export function othersByGroup(others, mine = new Set()) {
   const loose = [];
   const found = new Map();
@@ -188,17 +241,19 @@ export function othersByGroup(others, mine = new Set()) {
   const groups = [...found.entries()].map(([id, { summary, listed }]) => {
     const leader = summary.leader;
     const lead = listed.get(leader);
-    const members = (summary.members ?? [])
+    const members = alphabetical((summary.members ?? [])
       .map((m) => ({ id: m.id, name: m.name, leads: m.id === leader, listed: listed.has(m.id),
-                     url: listed.get(m.id)?.url ?? null }))
-      .sort((a, b) => Number(b.leads) - Number(a.leads));
+                     url: listed.get(m.id)?.url ?? null })));
     const any = lead ?? [...listed.values()][0];
     return {
       id, leader, members,
       title: joinNames(members.map((m) => m.name)),
-      status: lead ? plays(lead.transport, lead.renderer) : 'Its leader is off',
-      // Joined through its leader, which has to be there and new enough.
-      canEnter: !!(lead?.multiroom && any),
+      status: !lead ? 'Its leader is off'
+        : lead.via ? `${plays(lead.transport, lead.renderer)} · ${CANT_GROUP}`
+        : plays(lead.transport, lead.renderer),
+      // Joined through its leader, which has to be there, new enough, and
+      // reached by this player itself.
+      canEnter: !!(lead?.multiroom && any && !lead.via),
     };
   });
   return { loose, groups };
@@ -233,7 +288,7 @@ export function silentNote(g, panel = false) {
 /** *Undo the group?* - the body. With the leader gone there is no music to
  *  stay on it (the design's `undoBody`). */
 export function undoBody(g) {
-  const names = g.members.map((m) => m.name);
+  const names = alphabetical(g.members).map((m) => m.name);
   const leader = g.members.find((m) => m.leads)?.name ?? names[0];
   const again = `${joinNames(names)} each play on their own again.`;
   return g.silent ? again : `${again} The music stays on ${leader}.`;
