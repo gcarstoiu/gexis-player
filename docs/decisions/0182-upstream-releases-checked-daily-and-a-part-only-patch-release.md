@@ -57,3 +57,33 @@ fixed renderer could wait weeks for both.
 - The workflow writes branches, opens pull requests and issues, and starts
   the two workflows, so it gets those permissions and no others; `main`'s
   ruleset still takes the change only through George's merge.
+
+## Built (2026-11-15)
+
+`.github/workflows/upstream.yml` runs `packaging/upstream-daily.sh` daily
+(05:23 UTC) and on demand; `packaging/upstream-bump.py` moves a pin;
+`check-upstream.sh` also lists what is behind for them (`UPSTREAM_TSV`). The
+steps and the checklists are in `docs/tech/updates-and-releases.md`, *A
+release of one part*. Checked against the real releases: CamillaDSP moved to
+v4.1.3 and go-librespot to v0.10.5 gave the sums already recorded, byte for
+byte; the whole run, against a local copy and a stand-in for `gh`, made the
+branch, the commit, the mirror's two files, the pull request and the two
+workflow starts, and the next runs repeated none of it.
+
+*Claude's choices*, for George to confirm:
+
+- **Beszel gets an issue**, not a pull request: since ADR-0174 its pin is in
+  `gcarstoiu/gexis-beszel`, which this repository's token cannot write.
+- **The workflow puts the two files in the `inputs` mirror** itself, with
+  the permission that pushes the branch, so the branch never names a file
+  the mirror lacks.
+- **CamillaDSP's binary checksum** in `image/verify-image.sh` moves with its
+  pin (BUILD-TRAPS), or the release's image check would fail.
+- **The tests are started by `workflow_dispatch`** (`tests.yml` gains it);
+  the release notes' push later runs them as any push does.
+- CamillaDSP's checklist.
+
+**Needs George:** GitHub's *Allow GitHub Actions to create and approve pull
+requests* (Settings → Actions → General) is off, so the workflow cannot open
+its pull request until it is on. `main`'s ruleset asks for no approvals, so
+the setting adds nothing to what an approval could do there.
