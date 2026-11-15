@@ -6,6 +6,16 @@
 Every release of Gexis Player and its notes, newest first. The player
 shows the last 10 under Settings → System → Change logs.
 
+## 1.16.3 — 15 November 2026
+
+### Fixed
+
+- Spotify on Android no longer closes while it casts to a player and a song from another playlist or album is picked.
+
+### Good to know
+
+- Spotify Connect comes from a development build of go-librespot that carries this fix, until go-librespot's next release.
+
 ## 1.16.2 — 12 November 2026
 
 ### Fixed
