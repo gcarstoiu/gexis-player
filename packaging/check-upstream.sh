@@ -53,7 +53,28 @@ gh_latest() {
 beszel_have=$(curl -fsS --max-time 20 https://raw.githubusercontent.com/gcarstoiu/gexis-beszel/main/pins.sh 2>/dev/null \
 	| sed -n 's/^BESZEL_VERSION="\(.*\)"/\1/p')
 report "Beszel (gexis-beszel)" "$beszel_have" "$(gh_latest henrygd/beszel)"
-report go-librespot "$(pin packaging/go-librespot/pins.sh GO_LIBRESPOT_VERSION)" "$(gh_latest devgianlu/go-librespot)"
+# **A pin on upstream's own build** (ADR-0181) waits for the first release
+# that contains its commit: GitHub's compare says whether the release tag is
+# that commit or after it.
+report_build() {  # name pinned repo commit latest-tag
+	local how
+	how=$(curl -fsS --max-time 20 "https://api.github.com/repos/$3/compare/$4...$5" 2>/dev/null \
+		| python3 -c 'import json, sys; print(json.load(sys.stdin)["status"])' 2>/dev/null)
+	if [ -z "$5" ] || [ -z "$how" ]; then
+		echo "?  $1: pinned $2, the maker's feed could not be read"; [ $status -eq 0 ] && status=2
+	elif [ "$how" = ahead ] || [ "$how" = identical ]; then
+		echo "!! $1: pinned $2, upstream's build; $5 contains it"; status=1
+	else
+		echo "ok $1: $2, upstream's build; no release contains it yet ($5 is the latest)"
+	fi
+}
+librespot_pin=$(pin packaging/go-librespot/pins.sh GO_LIBRESPOT_VERSION)
+librespot_latest=$(gh_latest devgianlu/go-librespot)
+case "$librespot_pin" in
+*+git*) report_build go-librespot "$librespot_pin" devgianlu/go-librespot \
+	"$(pin packaging/go-librespot/pins.sh GO_LIBRESPOT_COMMIT)" "$librespot_latest" ;;
+*) report go-librespot "$librespot_pin" "$librespot_latest" ;;
+esac
 report CamillaDSP "$(pin packaging/camilladsp/pins.sh CAMILLADSP_VERSION)" "$(gh_latest HEnquist/camilladsp)"
 
 exit $status
