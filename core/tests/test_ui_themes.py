@@ -63,7 +63,8 @@ SOURCES = sorted(p for p in UI.rglob("*") if p.suffix in (".svelte", ".css")
 
 
 def test_the_rule_is_read():
-    assert len(FAMILY) == 16 and len(SPECIAL) == 6, "themeRule.js's tables, not nothing"
+    # 18 since Phase 31: the radio's accent and the heart, picked per theme.
+    assert len(FAMILY) == 18 and len(SPECIAL) == 6, "themeRule.js's tables, not nothing"
 
 
 @pytest.mark.parametrize("path", SOURCES, ids=lambda p: p.relative_to(UI).as_posix())

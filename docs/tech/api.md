@@ -48,7 +48,8 @@ description is an OpenAPI 3.1 file,
 Every operation carries `x-gexis-stability`:
 
 - **stable** - what an integration may rely on: the state, playback,
-  volume, sources, the library and radio, settings, backups;
+  volume, sources, the library, Lyrion's radio and internet radio,
+  settings, backups;
 - **internal** - the player's own pages and plumbing: setup and first use,
   the panel's signals, the problem and hardware reports. Free to change
   between releases.
@@ -65,7 +66,8 @@ commands go over HTTP. Its JSON is the schema `State` in the file:
 `active` (the source playing, or null), `available`, `metadata` (title,
 artist, album, artwork, position), `volume`, `controls` (which transport
 commands work now; `seek` only with a known duration, ADR-0164), `sources`, `queue`, `pairing` (a Bluetooth request
-waiting for an answer), `panel` (standby, what the screen shows), and the
+waiting for an answer), `panel` (standby, what the screen shows), `radio`
+(internet radio's station and how it is doing, below), and the
 first-use and update fields the player's own pages use.
 
 ## The touchpad: `GET /touchpad`
@@ -135,6 +137,30 @@ began); `POST /group/mute {muted}`; `POST /group/members/{id}/volume` and
 clients. A record whose member's `host` is not a name or an address
 (`group.HOST`) is refused with a 400; the client's environment takes only
 plain words (`snapcast.client_env`).
+
+## Internet radio
+
+ADR-0180, *stable*: the player's own radio, `/stations…`, apart from
+Lyrion's (`/radio`). `GET /stations` is the Radio screen's top: whether the
+source is on, *Popular here*'s country, whether the directory answered last
+time (`reachable`) and the favourites; it needs no directory. Lists come in
+pages of 50 (`?offset=`, `end` on the last): `GET /stations/popular`, `GET
+/stations/list` with `genre`, `country` (two letters) or `language`, and
+`GET /stations/search?q=` (names, from two letters); `GET /stations/genres`,
+`/countries` and `/languages` give the branches with their counts. A list
+from the last day's copy while the directory is down says `reachable:
+false`; with nothing kept the answer is a 503, `reachable: false`. `POST
+/stations/play` with `{"station": {...}}` as a list gave it, or
+`{"favourite": id}`, takes the output as any takeover; what follows arrives
+in `/state`'s `radio` (`state`: `connecting`, `playing`, `reconnecting`,
+`stopped`, `not_answering`). The favourites: `GET`, `POST` (`{"station"}`)
+and `PUT` (`{"ids"}`, every favourite once, in the new order)
+`/stations/favourites`, `DELETE /stations/favourites/{id}`, and `POST
+/stations/favourites/address` (`{"url", "name"}`), which answers once the
+station has played - or a 422 when it did not within 20 s. `GET
+/stations/logo/{key}` is a station's logo through the player, only for a key
+the player handed out. A refusal is a 409 with the sentence to show
+(*Internet radio is switched off.*, *The favourites are full.*).
 
 ## Home Assistant
 

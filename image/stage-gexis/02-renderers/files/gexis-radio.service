@@ -1,0 +1,55 @@
+# ADR-0180 item 3: internet radio's engine, mpv. Never enabled: the core
+# starts it when a station is played and stops it when the station stops or
+# another source takes the output; it costs nothing until then. The core
+# drives it over the JSON socket below and loads each station itself.
+#
+# What Finding 146 measured it with, and asks of it:
+# - FFmpeg's reconnect on, at most 4 s between tries, and a 5 s network
+#   timeout: a cut or a freeze goes unheard on a station that buffers more
+#   than 5 s; the core's watchdog handles the rest (ADR-0022, [H]);
+# - stereo, as a mono station otherwise decodes as one channel;
+# - no back buffer and 8 MiB ahead: a live stream is never sought.
+# Nothing of mpv's own is loaded - no configuration, no scripts, no
+# youtube-dl hook - and a playlist from the network cannot name a local
+# file (mpv's default, kept).
+[Unit]
+Description=Gexis Player internet radio (mpv)
+Documentation=https://mpv.io/manual/stable/
+After=sound.target network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+RuntimeDirectory=gexis-radio
+ExecStart=/usr/bin/mpv --idle=yes --no-config --load-scripts=no --ytdl=no \
+	--no-video --no-terminal --input-ipc-server=/run/gexis-radio/mpv.sock \
+	--audio-device=alsa/output --audio-channels=stereo --volume=100 \
+	--demuxer-max-back-bytes=0 --demuxer-max-bytes=8MiB --cache=yes \
+	--network-timeout=5 \
+	--stream-lavf-o=reconnect=1,reconnect_streamed=1,reconnect_on_network_error=1,reconnect_delay_max=4 \
+	--metadata-codepage=latin1 --msg-level=all=warn
+Restart=on-failure
+RestartSec=1
+# ADR-0179: an account of its own.
+User=gexis-radio
+Group=gexis-radio
+SupplementaryGroups=audio
+# The audio chain's control ports take orders from anyone; a stream's
+# address has no business there (as go-librespot and the plugins).
+IPAddressDeny=127.0.0.2
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+RestrictSUIDSGID=yes
+LockPersonality=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6

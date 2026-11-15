@@ -116,6 +116,26 @@ for (const T of THEMES) {
     }
   }
 }
+//: **Phase 31's tokens** (design/source/31/tokens-radio-31.css): every colour
+//: the rule gives must be the design's, the two picked accents with them. Its
+//: corners are left out: that file kept them unscaled, while its artboards
+//: scale them as the rule does (Bauhaus's row logo 10 px, Gauge's 6).
+{
+  const radio = readFileSync(join(design, 'source/31/tokens-radio-31.css'), 'utf8');
+  const blocksOf = {};
+  for (const b of radio.matchAll(/:root(?:\[data-theme="(\w+)"\])?\s*\{([^}]*)\}/g)) blocksOf[b[1] || 'default'] = decls(b[2]);
+  for (const T of THEMES) {
+    for (const [name, value] of blocksOf.default) {
+      if (/radius/.test(name) || !blocksOf[T.id]?.has(name)) continue;
+      compared++;
+      const mine = themed(name, today.get(name) ?? value, T);
+      if (norm(mine) !== norm(blocksOf[T.id].get(name))) {
+        console.error(`${T.id} ${name}: ${mine} here, ${blocksOf[T.id].get(name)} in design/source/31`);
+        failed++;
+      }
+    }
+  }
+}
 console.log(`themes: ${THEMES.length} written; ${compared} values the same as the design's, ` +
   `${ours} names production sets apart today (left to the rule)`);
 process.exit(failed ? 1 : 0);
