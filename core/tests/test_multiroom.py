@@ -482,6 +482,41 @@ async def test_a_member_shows_the_leaders_now_playing_and_sends_it_the_controls(
     assert kitchen.store.state.active == "lms"
 
 
+async def test_a_member_shows_the_leaders_station_as_its_own(tmp_path):
+    """ADR-0180, George's regression pass (2026-11-15): a member's phone drew
+    Pause for the group's station, the member's own radio being stopped. Its
+    favourites stay its own."""
+    net = Net(tmp_path)
+    living, kitchen = net.add("living", "Living Room"), net.add("kitchen", "Kitchen")
+    await living.room.join("kitchen")
+    await net.settle()
+    kitchen.store.set_radio({"station": None, "state": "stopped", "lines": "split", "favourites": 3})
+    kitchen.store.is_favourite = lambda station_id: station_id == "s2"
+    led = {"station": {"id": "s1", "name": "Radio One", "logo": "/stations/logo/s1", "favourite": True},
+           "state": "reconnecting", "attempt": 2, "tries": 5, "lines": "whole", "favourites": 9}
+    kitchen.room.peers.states["living"] = {
+        "active": "radio", "capabilities": {"radio": CAPS.to_json()},
+        "controls": {"available": ["pause", "next"]},
+        "metadata": {"title": "Radio One", "transport": "playing"}, "radio": led}
+    kitchen.room.peers.reachable["living"] = True
+    kitchen.room._changed()
+    await net.settle()
+    radio = kitchen.store.state.radio
+    assert radio["state"] == "reconnecting" and radio["lines"] == "whole" and radio["attempt"] == 2
+    assert radio["station"]["logo"] == "http://living.local:8090/stations/logo/s1", "the leader's logo"
+    assert radio["station"]["favourite"] is False and radio["favourites"] == 3, "this player's favourites"
+    kitchen.store.is_favourite = lambda station_id: station_id == "s1"
+    assert kitchen.store.state.radio["station"]["favourite"] is True
+    assert led["station"]["logo"] == "/stations/logo/s1", "the leader's state is not changed"
+    # Another source on the leader: the member's own radio, as before.
+    kitchen.room.peers.states["living"] = {**kitchen.room.peers.states["living"], "active": "spotify",
+                                           "capabilities": {"spotify": CAPS.to_json()}}
+    kitchen.room._changed()
+    await net.settle()
+    assert kitchen.store.state.active == "spotify"
+    assert kitchen.store.state.radio == {"station": None, "state": "stopped", "lines": "split", "favourites": 3}
+
+
 async def test_the_all_slider_moves_every_variable_member_by_one_step(tmp_path):
     net = Net(tmp_path)
     living, kitchen, study = net.add("living", "Living Room"), net.add("kitchen", "Kitchen"), net.add("study", "Study")

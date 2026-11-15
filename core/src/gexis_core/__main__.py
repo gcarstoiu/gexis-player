@@ -854,6 +854,7 @@ async def main() -> None:
         _publish_radio()
     favourites = radio_favourites.Favourites(settings_store.get, settings_store.set,
                                              on_change=_favourites_changed)
+    state_store.is_favourite = lambda station_id: favourites.get(station_id) is not None
     radio = RadioAdapter(user_agent=radio_agent,
                          resolve=lambda station: radio_service.resolve(station),
                          step=favourites.step,

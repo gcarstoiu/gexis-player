@@ -86,7 +86,7 @@ def absolute(url: str | None, base: str) -> str | None:
 
 def mirror_of(state: dict, base: str) -> tuple | None:
     """**The leader's playback, as this player publishes it** (D5):
-    (active, metadata, capabilities, source, queue), from its `/state`."""
+    (active, metadata, capabilities, source, queue, radio), from its `/state`."""
     active = state.get("active")
     if not active:
         return None
@@ -111,7 +111,15 @@ def mirror_of(state: dict, base: str) -> tuple | None:
                 for key in ("artwork", "artwork_small"):
                     item[key] = absolute(item.get(key), base)
         queue = Queue.from_json(queue_json)
-    return (active, metadata, capabilities, source, queue)
+    # ADR-0180: a station's state is its playback too - which station, and
+    # whether it connects, plays or reconnects (George's regression pass,
+    # 2026-11-15: a member's phone drew Pause, its own radio being stopped).
+    radio = None
+    if active == "radio" and isinstance(state.get("radio"), dict):
+        radio = dict(state["radio"])
+        if isinstance(radio.get("station"), dict):
+            radio["station"] = {**radio["station"], "logo": absolute(radio["station"].get("logo"), base)}
+    return (active, metadata, capabilities, source, queue, radio)
 
 
 class Multiroom:
