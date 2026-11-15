@@ -17,6 +17,7 @@
 -->
 <script>
   import { onMount, untrack } from 'svelte';
+  import { onPlayersChanged } from '../../lib/group.svelte.js';
   import { active, metadata, sources } from '../../lib/state.js';
   import { settingValues, settingsDevice } from '../../lib/settings.js';
   import { openTouchpad } from '../../lib/touchpad.js';
@@ -67,9 +68,12 @@
   //: The last list, remembered on this phone (ADR-0136, George 2026-10-11),
   //: so the menu has its players at once and the fresh answer replaces them.
   const KEPT = 'gexis.players';
-  async function loadPlayers() {
+  //: `fresh` when the menu opens: the player asks the others again if what
+  //: it has is a few seconds old (George, 2026-11-14: a group undone a
+  //: minute before still showed). The kept list shows meanwhile.
+  async function loadPlayers(fresh = false) {
     try {
-      const response = await fetch('/players');
+      const response = await fetch(fresh ? '/players?fresh=1' : '/players');
       if (!response.ok) return;
       const body = await response.json();
       me = body.self;
@@ -94,6 +98,8 @@
       // Nothing kept.
     }
     loadPlayers();
+    // A group changed on another player: the list as it is now.
+    return onPlayersChanged(() => loadPlayers());
   });
   const sourceName = $derived($sources?.[$active]?.name ?? $active);
   //: ADR-0166: a member whose leader is off says so (design/source/22).
@@ -104,7 +110,7 @@
   });
   function toggleMenu() {
     menuOpen = !menuOpen;
-    if (menuOpen) loadPlayers();
+    if (menuOpen) loadPlayers(true);
   }
 
   // ── The pad ─────────────────────────────────────────────────────────────
@@ -210,7 +216,7 @@
   });
   function openMenu() {
     menuOpen = true;
-    loadPlayers();
+    loadPlayers(true);
   }
   let told = $state(null);
   let toldTimer;

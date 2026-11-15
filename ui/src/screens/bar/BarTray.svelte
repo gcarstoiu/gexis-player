@@ -34,7 +34,7 @@
   import EqQuick from '../eq/EqQuick.svelte';
   import RoomQuick from '../room/RoomQuick.svelte';
   import GroupGlyph from '../../lib/GroupGlyph.svelte';
-  import { dragStart, group, groupLevel, LevelSender, setGroupMute } from '../../lib/group.svelte.js';
+  import { dragStart, group, groupLevel, LevelSender, onPlayersChanged, setGroupMute } from '../../lib/group.svelte.js';
   import BarAddBand from '../group/BarAddBand.svelte';
   import BarGroupBand from '../group/BarGroupBand.svelte';
   import BarUndoConfirm from '../group/BarUndoConfirm.svelte';
@@ -91,9 +91,11 @@
   //: tray opens, as the phone's list is.
   let players = $state([]);
   let here = $state(null);
-  async function loadPlayers() {
+  //: `fresh` on opening: the others asked again if what this player has
+  //: is a few seconds old (George, 2026-11-14).
+  async function loadPlayers(fresh = false) {
     try {
-      const response = await fetch('/players');
+      const response = await fetch(fresh ? '/players?fresh=1' : '/players');
       if (!response.ok) return;
       const body = await response.json();
       here = body.self ?? null;
@@ -103,10 +105,14 @@
     }
   }
   $effect(() => {
-    if (open) loadPlayers();
+    if (open) loadPlayers(true);
   });
   // Asked once at the start too, so the pill is there the first time.
-  onMount(loadPlayers);
+  onMount(() => {
+    loadPlayers();
+    // A group changed on another player: the pill and Add players as they are now.
+    return onPlayersChanged(() => loadPlayers());
+  });
   const grouped = $derived(!!$group);
   //: Only where there is somebody to group with, or a group already.
   const groupOffered = $derived(grouped || players.length > 0);

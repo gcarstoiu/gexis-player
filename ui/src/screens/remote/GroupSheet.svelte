@@ -13,7 +13,7 @@
   import { onDestroy } from 'svelte';
   import { FILLED } from './icons.js';
   import {
-    LevelSender, dragStart, fixedNote, group, groupLevel, levelsSub, setGroupMute, setMemberMute,
+    LevelSender, alphabetical, dragStart, fixedNote, group, groupLevel, levelsSub, setGroupMute, setMemberMute,
     setMemberVolume, stepped,
   } from '../../lib/group.svelte.js';
   import { SheetPull } from './sheetPull.svelte.js';
@@ -138,7 +138,7 @@
     </div>
     <div class="rule"></div>
     <div class="rows">
-      {#each g.members as m (m.id)}
+      {#each alphabetical(g.members) as m (m.id)}
         {@const level = levelOf(m)}
         {@const muted = m.muted && memberDrag?.id !== m.id && !(allDrag && m.id in allDrag.from)}
         <div class="member">

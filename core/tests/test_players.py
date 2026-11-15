@@ -1,6 +1,7 @@
 """ADR-0136: the other players on the network, for the phone's switcher."""
 from __future__ import annotations
 
+import asyncio
 import os
 
 import aiohttp
@@ -58,6 +59,142 @@ async def test_the_others_are_asked_for_their_status_and_kept_a_while():
     assert first == [{"name": "ShelvesPi", "host": "shelvespi.local", "transport": "paused",
                       "renderer": "Lyrion", "url": f"http://shelvespi.local:{port}/"}]
     assert again == first and len(calls) == 1
+
+
+async def test_a_list_opening_asks_the_players_again_without_a_search():
+    """George, 2026-11-14: bedroompi's menu still showed a group undone on
+    sofapi. A list opening asks what is a few seconds old again."""
+    group = {"value": {"id": "g1", "members": [{"id": "a"}, {"id": "b"}]}}
+    app = web.Application()
+    app.router.add_get("/player/status", lambda r: web.json_response(
+        {"name": "SofaPi", "host": "sofapi.local", "id": "a", "group": group["value"]}))
+    async with TestServer(app) as peer:
+        searches, now = [], [100.0]
+
+        async def browse():
+            searches.append(1)
+            return f"=;wlan0;IPv4;sofapi;_gexis._tcp;local;sofapi.local;127.0.0.1;{peer.port};\n"
+        finder = pl.Players(lambda: "bedroompi", browse=browse, clock=lambda: now[0])
+        async with aiohttp.ClientSession() as session:
+            assert (await finder.others(session))[0]["group"]["id"] == "g1"
+            group["value"] = None                       # undone on sofapi
+            now[0] += pl.ASK_AGAIN_S - 1
+            assert (await finder.others(session, fresh=True))[0]["group"] is not None, "still fresh enough"
+            now[0] += 2
+            assert (await finder.others(session))[0]["group"] is not None, "kept, unless a list opens"
+            fresh = await finder.others(session, fresh=True)
+            assert fresh[0]["group"] is None and fresh[0]["url"] == f"http://sofapi.local:{peer.port}/"
+            assert len(searches) == 1, "asked again, not searched again"
+            # Kept from then on, as a search's answer is.
+            assert (await finder.others(session))[0]["group"] is None
+
+
+async def test_a_group_change_is_told_to_every_player_found():
+    """George, 2026-11-14: each player found hears of it at once; one older,
+    without the route, answers 404 and is not counted."""
+    heard = []
+    app = web.Application()
+    app.router.add_post("/players/changed", lambda r: heard.append(1) or web.json_response({"heard": True}))
+    older = web.Application()
+    async with TestServer(app) as new, TestServer(older) as old:
+        finder = pl.Players(lambda: "sofapi")
+        finder.addresses = {"a": ("127.0.0.1", new.port), "b": ("127.0.0.1", old.port), "c": ("127.0.0.1", 9)}
+        assert await finder.tell_others() == 1
+    assert heard == [1]
+    assert await pl.Players(lambda: "sofapi").tell_others() == 0, "nobody found: nobody told"
+
+
+async def test_hearing_of_a_change_asks_again_once_for_several_then_says_so(monkeypatch):
+    monkeypatch.setattr(pl, "HEARD_S", 0.05)
+    group = {"value": {"id": "g1", "members": [{"id": "a"}, {"id": "b"}]}}
+    asked = []
+
+    def status(request):
+        asked.append(1)
+        return web.json_response({"name": "GuestPi", "id": "b", "group": group["value"]})
+    app = web.Application()
+    app.router.add_get("/player/status", status)
+    async with TestServer(app) as peer:
+        async def browse():
+            return f"=;wlan0;IPv4;guestpi;_gexis._tcp;local;guestpi.local;127.0.0.1;{peer.port};\n"
+        finder = pl.Players(lambda: "shelvespi", browse=browse)
+        told = []
+        finder.on_heard = lambda: told.append(finder.status_of("b")["group"])
+        async with aiohttp.ClientSession() as session:
+            await finder.refresh(session)
+        group["value"] = None                          # undone
+        for _ in range(3):                             # each member's word
+            finder.heard()
+        await asyncio.sleep(0.4)
+    assert len(asked) == 2, "the search's ask, then one more for the three"
+    assert told == [None], "said once, after asking again"
+
+
+def _peer(name, status, others, asked):
+    """A player answering its status and, asked, its own list."""
+    app = web.Application()
+    app.router.add_get("/player/status", lambda r: web.json_response({"name": name, **status}))
+
+    def players(request):
+        asked.append(name)
+        return web.json_response({"self": {"name": name, **status}, "others": others})
+    app.router.add_get("/players", players)
+    return app
+
+
+GUEST = {"name": "GuestPi", "host": "guestpi.local", "id": "g", "instance": "gi", "transport": "playing",
+         "renderer": "Radio", "url": "http://guestpi.local:8090/"}
+
+
+async def test_a_player_found_that_does_not_answer_is_listed_through_one_that_does():
+    """ADR-0136 item 5 (George, 2026-11-14): bedroompi and guestpi could not
+    reach each other on the home network; each reached the other two."""
+    asked = []
+    # This player as the others last heard it: before its restart (another
+    # token) - by its board's id, and, from one without ids, by its name.
+    me = {"name": "BedroomPi", "host": "bedroompi.local", "id": "b", "instance": "before-restart",
+          "url": "http://bedroompi.local:8090/"}
+    me_by_name = {"name": "BedroomPi", "host": "bedroompi.local", "url": "http://bedroompi-2.local:8090/"}
+    third = {"name": "Kitchen", "host": "kitchen.local", "id": "k", "url": "http://kitchen.local:8090/",
+             "via": "Study"}
+    shelves = _peer("ShelvesPi", {"host": "shelvespi.local", "id": "s"}, [GUEST, me, me_by_name], asked)
+    sofa = _peer("SofaPi", {"host": "sofapi.local", "id": "a"},
+                 [GUEST, me, third, {"name": "ShelvesPi", "host": "shelvespi.local", "id": "s",
+                                     "url": "http://shelvespi.local:8090/"}], asked)
+    async with TestServer(shelves) as s, TestServer(sofa) as a:
+        async def browse():
+            return (f"=;wlan0;IPv4;shelvespi;_gexis._tcp;local;shelvespi.local;127.0.0.1;{s.port};\n"
+                    f"=;wlan0;IPv4;sofapi;_gexis._tcp;local;sofapi.local;127.0.0.1;{a.port};\n"
+                    "=;wlan0;IPv4;guestpi;_gexis._tcp;local;guestpi.local;127.0.0.1;9;\n")
+        finder = pl.Players(lambda: "bedroompi", own_instance="me", browse=browse, own_board=lambda: "b")
+        seen = []
+
+        async def on_refresh(statuses):
+            seen.append(sorted(statuses))
+        finder.on_refresh = on_refresh
+        async with aiohttp.ClientSession() as session:
+            listed = await finder.refresh(session)
+    # Each listed once; this player and one had through a third, not at all.
+    assert sorted(p["name"] for p in listed) == ["GuestPi", "ShelvesPi", "SofaPi"]
+    guest = next(p for p in listed if p["name"] == "GuestPi")
+    assert guest["via"] == "ShelvesPi" and guest["url"] == "http://guestpi.local:8090/"
+    assert guest["transport"] == "playing" and sorted(asked) == ["ShelvesPi", "SofaPi"]
+    assert not any(p.get("via") for p in listed if p["name"] != "GuestPi")
+    # Not one the group reaches, follows or tells.
+    assert "g" not in finder.addresses and finder.status_of("g") is None
+    assert finder.status_of("s")["name"] == "ShelvesPi"
+    assert seen == [["a", "s"]]
+
+
+async def test_when_every_player_found_answers_no_list_is_asked():
+    asked = []
+    async with TestServer(_peer("SofaPi", {"host": "sofapi.local", "id": "a"}, [GUEST], asked)) as a:
+        async def browse():
+            return f"=;wlan0;IPv4;sofapi;_gexis._tcp;local;sofapi.local;127.0.0.1;{a.port};\n"
+        finder = pl.Players(lambda: "bedroompi", own_instance="me", browse=browse)
+        async with aiohttp.ClientSession() as session:
+            listed = await finder.refresh(session)
+    assert [p["name"] for p in listed] == ["SofaPi"] and asked == []
 
 
 async def test_a_peer_that_answers_something_other_than_an_object_is_left_out():
@@ -145,3 +282,28 @@ async def test_the_status_carries_the_id_and_whether_there_is_a_screen(tmp_path,
         assert (await (await client.get("/player/status")).json())["idle_screen"] is True
         settings.set("headless", True)
         assert (await (await client.get("/player/status")).json())["screen"] is False
+
+
+async def test_the_route_hears_a_change_and_the_state_says_so_after_asking_again(monkeypatch):
+    """`POST /players/changed`: the players found asked again, then the
+    state's `players_revision` moves for the screens' lists."""
+    from aiohttp.test_utils import TestClient
+
+    from gexis_core import wsserver
+    from gexis_core.state import StateStore
+    monkeypatch.setattr(pl, "HEARD_S", 0.01)
+    store = StateStore({})
+    server = wsserver.StateServer(store)
+    asked = []
+
+    async def ask_again(session):
+        asked.append(1)
+        return []
+    server._players.ask_again = ask_again
+    before = store.state.players_revision
+    async with TestClient(TestServer(server.make_app())) as client:
+        answer = await client.post("/players/changed")
+        assert answer.status == 200 and (await answer.json()) == {"heard": True}
+        await asyncio.sleep(0.2)
+    assert asked == [1] and store.state.players_revision == before + 1
+    assert store.state.to_json()["players_revision"] == before + 1

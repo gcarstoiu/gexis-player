@@ -262,6 +262,9 @@ class StateServer:
         #: not its hostname, and listed itself as another player.
         self._instance = uuid.uuid4().hex
         self._players = Players(lambda: device_name.hostname(), own_instance=self._instance)
+        # Another player's group changed and the others were asked again:
+        # a list open on a screen reads `/players` again.
+        self._players.on_heard = lambda: self._store.bump_players_revision()
         self._library = library
         self._artistinfo = artistinfo
         self._enrichment = enrichment
@@ -1495,14 +1498,23 @@ class StateServer:
         """ADR-0136: the other players kept warm, so the phone's list is ready."""
         await self._players.watch()
 
+    async def _handle_players_changed(self, request: web.Request) -> web.Response:
+        """**Another player's group changed** (George, 2026-11-14): the
+        players found are asked again a moment later, and the screens' lists
+        read again. Nothing is taken from the request itself."""
+        self._players.heard()
+        return web.json_response({"heard": True})
+
     async def _handle_player_status(self, request: web.Request) -> web.Response:
         return web.json_response(self._player_status())
 
     async def _handle_players(self, request: web.Request) -> web.Response:
         """ADR-0136: this player and the others found, each with its status;
         the phone moves its tab to the one chosen."""
+        # `?fresh=1` when a list opens: the others asked again if what was
+        # found is a few seconds old (George, 2026-11-14).
         async with aiohttp.ClientSession() as session:
-            others = await self._players.others(session)
+            others = await self._players.others(session, fresh=request.query.get("fresh") == "1")
         return web.json_response({"self": self._player_status(), "others": others})
 
     # -- ADR-0166: the group ----------------------------------------------------
@@ -3810,6 +3822,7 @@ class StateServer:
         app.router.add_post("/panel/input", self._handle_panel_input)
         app.router.add_get("/player/status", self._handle_player_status)
         app.router.add_get("/players", self._handle_players)
+        app.router.add_post("/players/changed", self._handle_players_changed)
         app.router.add_get("/group", self._handle_group)
         app.router.add_post("/group/record", self._handle_group_record)
         app.router.add_post("/group/join", self._handle_group_change)

@@ -129,6 +129,10 @@ class Multiroom:
                  group_path: Path = groups.PATH, chain_path: Path = CHAIN_PATH, peers=None) -> None:
         self._store = store
         self._players = players
+        #: What this player last said of its group to the others (George,
+        #: 2026-11-14): a change is told to every player at once.
+        self._told: dict | None = None
+        self._telling: set[asyncio.Task] = set()
         self.snap = snap
         self._me = me
         self._local_active = local_active
@@ -678,6 +682,7 @@ class Multiroom:
         if self._alone_when_idle and self.snap.rate is None and self._local_active() is None:
             await self._alone()
         self._publish(record)
+        self._tell_others(record)
         self._mirror(record)
         if record is not None and not self._claiming:
             await self._settle(record)
@@ -723,6 +728,23 @@ class Multiroom:
             view["silent"] = False
             view["rate"] = self.snap.rate
         self._store.set_group(view)
+
+    def _tell_others(self, record: Record | None) -> None:
+        """**A group made, changed or undone, told to every other player**
+        (George, 2026-11-14: undone on sofapi, it still showed on the bar's
+        list, which asked the others only every 30 s). What `/player/status`
+        says of the group is what the others list; when it changes, each is
+        told, and its list asks again."""
+        said = groups.summary(record)
+        if said == self._told:
+            return
+        self._told = said
+        tell = getattr(self._players, "tell_others", None)
+        if tell is None:
+            return
+        task = asyncio.ensure_future(tell())
+        self._telling.add(task)
+        task.add_done_callback(self._telling.discard)
 
     def _mirror(self, record: Record | None) -> None:
         me = self.group.me

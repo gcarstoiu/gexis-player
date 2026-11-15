@@ -846,7 +846,29 @@ share's). `players.py`: `Players.watch()` (started with the core) runs
 host (`parse_browse`, this player left out by hostname) and asks each `GET
 /player/status` (2 s); `/players` answers from that, in about 10 ms where a
 search on request took 1.1 s (measured on sofapi, 2026-10-11). The phone
-remembers the last list (`localStorage`), so the button shows at once. `/player/status` is `{name, host, instance, id, screen, transport, renderer}` - the
+remembers the last list (`localStorage`), so the button shows at once.
+`/players?fresh=1`, sent when a list opens (the phone's menu, the panel's
+drawer, the bar's tray, the switcher): if what was found is older than
+`ASK_AGAIN_S` (5 s), the players already found are asked their status again,
+without a search (`Players.ask_again`), so a group made or undone elsewhere
+shows (George, 2026-11-14). And when this player's group changes (what `/player/status`
+says of it), multiroom tells every player found (`POST /players/changed`,
+`Players.tell_others`): a player told asks the others again 0.3 s later
+(`Players.heard`; several told together are one look) and moves the
+state's `players_revision`, on which an open list reads `/players` again
+(`onPlayersChanged`). A player older than this answers 404 and waits for
+its next look. **A player found that does not answer** is asked for through the others (ADR-0136 item 5; George, 2026-11-14, after bedroompi
+and guestpi could not reach each other on the home network): when a look
+leaves one found unanswered, each player that answered is asked for its
+own `/players` (`Players._through`), and a player one of them reached
+itself is listed with `via`, that player's name - one hop, never one it
+had through a third, never this player (`_is_me`: its token, or its
+board's id or name, as another's list can be older than this core's start). It gets no address, so the group neither follows,
+joins nor tells it (`status_of` and `on_refresh` leave it out), and the
+screens give it no Join (`joinable`, `canEnter`) and end its status
+*Can't group from here* (`CANT_GROUP`). The lists are in alphabetical order, the group
+volume's members too, a group's players together where its first player falls (`inOrder` and its helpers in
+`lib/group.svelte.js`). `/player/status` is `{name, host, instance, id, screen, transport, renderer}` - the
 renderer named as the source list names it; `instance` a token made at each
 core start, by which a player found under a name avahi changed after a
 conflict (`guestpi-2.local`, 2026-10-12) still leaves itself out; `id` the
