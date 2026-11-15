@@ -681,7 +681,10 @@ a release and is fetched on the next start.
 `packaging/check-upstream.sh` is run before each release: it reads each
 maker's own "latest" feed and reports which pins are behind (exit 1) or
 unreadable (exit 2). It changes nothing; a new version is tried on a device
-before its pin moves.
+before its pin moves. A pin on upstream's own build of a commit, as
+go-librespot's is (ADR-0181: `0.10.5+git20261111.775ba58`, kept in the
+`inputs` mirror since upstream keeps such builds a week), is reported as
+waiting until a release contains that commit, and behind from then on.
 
 **Our plugins** (Lyrion server, AirPlay, Roon) update **with the
 release** - one catalogue, one Updates screen (ADR-0106). Plexamp, and
