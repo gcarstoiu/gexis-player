@@ -58,8 +58,16 @@ days. The build of `775ba5883` (2026-11-11, `master` at the time, run
   listed from the pages fetched before one fails, `prev`
   without rewinding as an option. Read against the core: it ignores the new
   `queue` event (no branch for unknown events) and calls `prev` as before.
-- **The binary names no version** (`running go-librespot` with none):
-  upstream's script takes it from a tag, and a `master` build has none. The
-  package's version says which build it is.
+- **The binary names its commit, not a version** (`running go-librespot
+  775ba588`): upstream's script takes the version from a tag, and a `master`
+  build has none. The package's version says which build it is.
+
+## Preview (2026-11-15)
+
+In the preview from `preview-radio-mdns` (`5dd200f8`, run 43709205656) on
+bedroompi and guestpi at 12:40, both idle: the three packages upgraded and
+nothing removed in the dry run and the install; go-librespot started as
+`775ba588`, the core reconnected to it, Spotify Connect announced, the
+player's own config kept. ShelvesPi and sofapi were playing and were left.
 - Same libraries as 0.10.5 (`readelf -d`: libasound, libc, libm, libpthread,
   libresolv).
