@@ -43,7 +43,7 @@ been written properly. **0098 has no record either.**
 | [0019](0019-peppy-screen-lifecycle.md) | Peppy screen: entry, exit and lifecycle | Accepted 2026-09-04 |
 | [0020](0020-library-browse-tree.md) | Library browse as a normalised tree | Accepted 2026-09-04; **partly superseded by [0030](0030-library-typed-radio-slimbrowse.md)**; cross-cutting table amended by 0029 |
 | [0021](0021-deployment-flashable-image.md) | Deployment as a flashable image | Accepted 2026-09-04; distribution channel deferred |
-| [0022](0022-settings.md) | Settings | Accepted 2026-09-04; remote-only text entry **superseded by [0029](0029-text-entry-on-every-surface.md)**; first-boot blocker answered by 0031; rows appended as confirmed (latest 2026-10-18) |
+| [0022](0022-settings.md) | Settings | Accepted 2026-09-04; remote-only text entry **superseded by [0029](0029-text-entry-on-every-surface.md)**; first-boot blocker answered by 0031; rows appended as confirmed (latest 2026-11-14) |
 | [0023](0023-svelte-ui.md) | The UI is Svelte | Accepted 2026-09-04 |
 | [0024](0024-bluetooth-pairing-no-pin.md) | Bluetooth pairing: no PIN, for this installation | Accepted 2026-09-06; **reversed by [0045](0045-bluetooth-pairing-confirmation.md)** |
 | [0025](0025-project-licence-gplv3.md) | gexis-player is licensed GPL v3 | Accepted 2026-09-08 |
@@ -156,13 +156,13 @@ been written properly. **0098 has no record either.**
 | [0133](0133-the-waiting-screen-and-the-players-own-wallpapers.md) | The waiting screen, and the player's own wallpapers | Accepted 2026-10-10 (amended 2026-10-11): built-in Gexis wallpapers; with LMS off, a waiting screen of clock and source tiles |
 | [0134](0134-the-panel-says-when-the-player-has-no-network.md) | A network lost after boot opens the setup network | Accepted 2026-10-11: after two minutes without a network; the strip withdrawn |
 | [0135](0135-display-standby.md) | Display standby: the screen off on demand and at night | Accepted 2026-10-11: HDMI off while playing; touch, music or phone wake it. Amends 0019; amended 2026-10-20 (kernel tap, real screen at start) |
-| [0136](0136-switching-between-players-on-the-phone.md) | Switching between players on the phone | Accepted 2026-10-11: players announce `_gexis._tcp`; the phone lists them and moves the tab |
+| [0136](0136-switching-between-players-on-the-phone.md) | Switching between players on the phone | Accepted 2026-10-11: players announce `_gexis._tcp`; the phone lists them and moves the tab; amended 2026-11-14: every list alphabetical, a group where its first player falls, asked fresh when opened; a player reached only through another listed through it, without Join |
 | [0137](0137-plugins-are-told-when-output-is-fixed.md) | Plugins are told when the output is Fixed | Accepted 2026-10-11: an `output` message within contract 1; Plexamp held at 100 |
 | [0138](0138-reports-in-steps-and-one-way-to-send.md) | Reports in steps, a visible checklist, and one way to send for both | Accepted 2026-10-11: three steps; one Send step: GitHub issue or a download to e-mail |
 | [0139](0139-no-passwordless-sudo-in-the-public-image.md) | No passwordless sudo in the public image; test cards get it by provisioning | Accepted 2026-10-12: no sudoers rule for `pi`; `DEV_SUDO="yes"` for test cards |
 | [0140](0140-the-software-volume-is-set-before-the-renderers-start.md) | The software volume is set before the renderers start | Accepted and built 2026-10-12: `gexis-softvol-restore.service`, a oneshot before the renderers |
 | [0141](0141-picture-and-sound-on-different-hdmi-ports.md) | Picture and sound on different HDMI ports | Accepted 2026-10-12: both ports listed; Screen port when both connected; sound-only port black; jack stands in |
-| [0142](0142-the-player-announces-for-its-plugins.md) | The player announces for its plugins | Accepted 2026-10-12: uploaded plugins denied port 5353; `announce` event, avahi file per plugin |
+| [0142](0142-the-player-announces-for-its-plugins.md) | The player announces for its plugins | Accepted 2026-10-12: uploaded plugins denied port 5353; `announce` event, avahi file per plugin; amended 2026-11-14: the block set again after systemd reloads (Finding 148) |
 | [0143](0143-usb-dacs-widened-to-32-bits-and-lyrion-at-384-khz.md) | USB DACs: widened to 32 bits, and Lyrion at 384 kHz | Accepted 2026-10-12: `type linear` to S32 for 32-bit-only cards; Squeezelite told rates ≤384 kHz |
 | [0144](0144-native-dsd-on-a-dac-that-takes-it.md) | Native DSD on a DAC that takes it | Accepted 2026-10-12: Fixed volume + card reporting DSD → Squeezelite `-D`; peppyalsa skips non-PCM |
 | [0145](0145-multichannel-folded-down-to-stereo.md) | Multichannel files folded down to stereo | Accepted 2026-10-13: our own Squeezelite folds >2 channels down (ITU, LFE out, no clipping) |
@@ -200,6 +200,7 @@ been written properly. **0098 has no record either.**
 | [0177](0177-room-correction-for-the-full-range.md) | Room correction for the full range | Accepted 2026-11-10 (Phase 30, George: decisions 1-4 as recommended): up to six broad filters, ±3 dB, 250 Hz-14 kHz, towards the speaker's own slope; Bass or Full range at one level |
 | [0178](0178-fixes-from-the-review-of-1-16-1-that-change-what-is-seen.md) | Fixes from the review of 1.16.1 that change what is seen | Accepted 2026-11-10 (George, as recommended): own pages only for browsers; a set-up player's setup network only gives a network; no dashboard pop-ups; bad plugin rows refused at upload; appended 2026-11-11: a TV off stays the screen, *Ready, no music found*, a late update stays, a Remove waits for a download |
 | [0179](0179-the-music-services-under-accounts-of-their-own.md) | The music services under accounts of their own | Accepted 2026-11-11 (Claude, nothing seen changes): Squeezelite, go-librespot, Shairport Sync and its plugin, Snapcast off `pi`, the screen's user |
+| [0180](0180-internet-radio-without-lyrion.md) | Internet radio without Lyrion | Accepted 2026-11-13 (Phase 31, George: 1-7 as recommended, 8 as b): radio-browser.info, mpv, own favourites, phone and Home Assistant |
 
 ## Cross-cutting rules
 

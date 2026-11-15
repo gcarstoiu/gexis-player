@@ -62,6 +62,7 @@ class StateStore:
         self._meters = True
         self._settings_revision = 0
         self._pictures_revision = 0
+        self._players_revision = 0
         self._pairing: dict | None = None
         self._components: dict = {}
         self._panel: dict = {"visualiser": False, "idle": False, "idle_request": None,
@@ -137,6 +138,7 @@ class StateStore:
             sources=self._sources,
             settings_revision=self._settings_revision,
             pictures_revision=self._pictures_revision,
+            players_revision=self._players_revision,
             pairing=self._pairing,
             components=dict(self._components),
             panel=dict(self._panel),
@@ -510,6 +512,12 @@ class StateStore:
 
     def bump_settings_revision(self) -> None:
         self._settings_revision += 1
+        self._notify()
+
+    def bump_players_revision(self) -> None:
+        """The other players asked again after one said its group changed:
+        a list open on a screen reads `/players` again."""
+        self._players_revision += 1
         self._notify()
 
     def bump_pictures_revision(self) -> None:

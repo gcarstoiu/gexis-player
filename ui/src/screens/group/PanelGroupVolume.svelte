@@ -11,7 +11,7 @@
   import GroupGlyph from '../../lib/GroupGlyph.svelte';
   import VolumeIcon from '../../lib/VolumeIcon.svelte';
   import {
-    LevelSender, dragStart, groupLevel, leaveGroup, levelsSub, removePlayer, setGroupMute,
+    LevelSender, alphabetical, dragStart, groupLevel, leaveGroup, levelsSub, removePlayer, setGroupMute,
     setMemberMute, setMemberVolume, silentNote, stepped,
   } from '../../lib/group.svelte.js';
   import PanelMemberRow from './PanelMemberRow.svelte';
@@ -131,7 +131,7 @@
 <div class="rule"></div>
 
 <div class="list" class:is-faded={overflowing} bind:this={list}>
-  {#each g.members as m (m.id)}
+  {#each alphabetical(g.members) as m (m.id)}
     <PanelMemberRow {m} {armsAt} level={levelOf(m)}
                     canremove={m.reachable && !m.me && !m.leads}
                     onlevel={(percent) => memberLevel(m, percent)} ondone={settleLater}

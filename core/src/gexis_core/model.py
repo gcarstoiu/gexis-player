@@ -255,6 +255,10 @@ class PlaybackState:
     #: panel's answer to this is to throw away every artist photo it holds
     #: and ask again.
     pictures_revision: int = 0
+    #: **Bumped when another player said its group changed** and this one
+    #: has asked the others again (George, 2026-11-14): a list of players
+    #: open on a screen reads `/players` again.
+    players_revision: int = 0
     #: The active renderer's queue, or None where it has no such thing.
     queue: Queue | None = None
     #: **ADR-0046: `True` when the device is not attenuating at all.**
@@ -379,6 +383,7 @@ class PlaybackState:
             "sources": [dict(s) for s in self.sources],
             "settings_revision": self.settings_revision,
             "pictures_revision": self.pictures_revision,
+            "players_revision": self.players_revision,
             "controls": self.controls,
             "queue": self.queue.to_json() if self.queue else None,
             "pairing": self.pairing,

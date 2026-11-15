@@ -12,7 +12,9 @@
 <script>
   import mark from '../../assets/gexis-mark.svg';
   import GroupGlyph from '../../lib/GroupGlyph.svelte';
-  import { enterGroup, joinable, joinPlayer, memberStatus, othersByGroup, otherStatus, withoutMe } from '../../lib/group.svelte.js';
+  import {
+    enterGroup, groupPlace, inOrder, joinable, joinPlayer, leaderName, memberStatus, othersByGroup, otherStatus, withoutMe,
+  } from '../../lib/group.svelte.js';
 
   //: `others`: /players' others; `selfId`: this player's id; `leader`: whose
   //: music they will play.
@@ -28,22 +30,26 @@
   $effect(() => {
     if (g && entering) entering = null;
   });
-  const rows = $derived([
+  //: In the lists' order (George, 2026-11-14): alphabetical, this player's
+  //: group's players together where its first player falls, another group
+  //: where its first player does.
+  const mine = $derived(groupPlace(g?.members ?? []));
+  const rows = $derived(inOrder([
     ...(g?.members ?? []).filter((m) => !m.me).map((m) => ({
       id: m.id, name: m.name, leads: m.leads && m.reachable, status: memberStatus(g, m),
-      joining: m.joining, off: !m.reachable, button: false,
+      joining: m.joining, off: !m.reachable, button: false, place: mine,
     })),
     ...split.groups.map((og) => ({
-      id: `group:${og.id}`, name: og.title, leads: false, group: og,
-      status: entering === og.id ? 'Joining · catching up' : `Led by ${og.members[0]?.name} · ${og.status}`,
+      id: `group:${og.id}`, name: og.title, leads: false, group: og, place: groupPlace(og.members),
+      status: entering === og.id ? 'Joining · catching up' : `Led by ${leaderName(og)} · ${og.status}`,
       joining: entering === og.id, off: false, button: false, enter: !g && og.canEnter && entering !== og.id,
     })),
     ...split.loose.map((p) => ({
-      id: p.id ?? p.url, name: p.name, leads: false,
+      id: p.id ?? p.url, name: p.name, leads: false, place: p.name,
       status: asked[p.id] ? 'Joining · catching up' : otherStatus(p),
       joining: !!asked[p.id], off: false, button: joinable(p) && !asked[p.id], player: p,
     })),
-  ]);
+  ], (r) => r.place, (r) => (r.group ? r.place : r.name)));
 
   async function enter(row) {
     entering = row.group.id;

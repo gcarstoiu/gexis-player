@@ -516,6 +516,12 @@ each preview package carries before installing it. A rule that a change
 needs another change belongs in a test (`packaging/revisions.json`), not a
 comment.
 
+**96. A block tested once, right after a start** (2026-11-14, Finding 148).
+ADR-0142's port-5353 block was checked on a freshly started unit; systemd
+drops it at every reload, and the core reloads at each start. A guard is
+checked after the events of an ordinary day - a reload, a restart, a
+reconnection - not only right after it is set up.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target, the check quietly

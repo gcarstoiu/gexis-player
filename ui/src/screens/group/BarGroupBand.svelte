@@ -7,7 +7,7 @@
 -->
 <script>
   import BarMemberCard from './BarMemberCard.svelte';
-  import { leaveGroup } from '../../lib/group.svelte.js';
+  import { alphabetical, leaveGroup } from '../../lib/group.svelte.js';
 
   let { g, onadd, onundo, onerror = () => {} } = $props();
 
@@ -24,7 +24,7 @@
 
 <div class="band">
   <div class="cards" data-pan-x>
-    {#each g.members as m (m.id)}
+    {#each alphabetical(g.members) as m (m.id)}
       <BarMemberCard {m} {g} {onerror} />
     {/each}
   </div>

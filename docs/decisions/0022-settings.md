@@ -669,3 +669,37 @@ Confirmed by George, 2026-11-07 (Phase 30's decisions) and 2026-11-10 (ADR-0177'
 | Positions | [H] | The same three as the bass's (George, 2026-11-10: whether more help is checked later) |
 | Bass target level | [H] | From the speaker's slope line where it meets 250 Hz, for Bass and Full range alike (ADR-0177 decision 1, George 2026-11-10); a measurement from before Phase 30 keeps its own |
 | Broad corrections | [H] | Up to six for each speaker above the bass, Q 0.5 to 2 (0.7 to 2.5 octaves wide); a gap under 1.5 dB left alone (George, 2026-11-10) |
+
+### Appended 2026-11-13 — internet radio without Lyrion
+
+Confirmed by George, 2026-11-13, [ADR-0180](0180-internet-radio-without-lyrion.md):
+
+| Setting | Mark | Notes |
+|---|---|---|
+| Internet radio | [N] | On or off, as each source; on by default and offered in first use (decision 7); the service runs only while a station plays |
+| Popular here country | [N] | The country *Popular here* lists; by default the time zone's country, as setup finds the Wi-Fi country (`setup_network.country_for`), changeable |
+| Radio favourites | [N] | The player's own list, in the owner's order, kept in its settings and backups; a station added by its address from the phone (decision 4) |
+| Stream watchdog | [H] | No audio for 10 s: reconnect, three times, then stop with a message |
+| Directory cache | [H] | Each answer kept on the player for a day |
+| Low-rate streams | [H] | 32 kHz and below resampled to 48 kHz, so the equaliser and room correction apply |
+| Stream reconnect | [H] | FFmpeg's reconnect on, at most 4 s between tries, and a 5 s network timeout: a cut or a freeze goes unheard on a station that buffers more than 5 s; the watchdog handles the rest (confirmed by George 2026-11-14, after [Finding 146](../findings/146-mpv-as-the-radio-engine-on-a-pi-4.md)) |
+| Added by address: the check | [H] | A station added by its address is kept only if it plays within 20 s (confirmed by George 2026-11-14) |
+| Favourites: how many | [H] | At most 200 (confirmed by George 2026-11-14) |
+| Station search: the pause | [H] | Results asked for 300 ms after typing pauses, panel and phone (confirmed by George 2026-11-14) |
+| Favourite tiles | [H] | The panel's Radio screen shows at most 7 favourites as tiles; *All N* lists the rest (confirmed by George 2026-11-14) |
+| Phone toasts | [H] | *Removed* stays 6 s (with Undo), *… played, and is in your favourites* 5 s (confirmed by George 2026-11-14) |
+| Phone's heart: the wait | [H] | The heart on the phone's remote waits 8 s for the player to confirm (confirmed by George 2026-11-14) |
+| Station logos: kept | [H] | Each logo the player fetches is kept on it for 30 days; one that could not be had is not asked for again for a day (confirmed by George 2026-11-14) |
+| Watchdog: the count again | [H] | 30 s of steady sound and the reconnect tries count from 0 again (confirmed by George 2026-11-14) |
+| Genres and languages listed | [H] | *By genre* lists the 200 best-filled genres, *By language* the 120 best-filled languages; search finds the rest (confirmed by George 2026-11-14) |
+| A play: the directory's wait | [H] | A play waits up to 3 s for the directory's count and address, then plays the kept address (confirmed by George 2026-11-14) |
+
+Counting a play with the directory has no setting (decision 5).
+
+### Appended 2026-11-14 — the player's own name after a clash
+
+Confirmed by George, 2026-11-14, [Finding 148](../findings/148-plugins-port-block-lost-at-reload.md):
+
+| Setting | Mark | Notes |
+|---|---|---|
+| Name repair after a clash | [H] | When avahi announces the player as `<name>-2`, the player asks for its own name every 2 min, five times, then once every 30 min (`mdns-name.sh`) |

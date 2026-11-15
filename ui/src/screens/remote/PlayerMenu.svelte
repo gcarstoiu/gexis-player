@@ -1,15 +1,21 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <!--
   ADR-0164: the player menu (design/source/21, *Player menu*), from the
-  picker: *Gexis players*, this one first with its check, then the others on
-  the network (`/players`, ADR-0136), each with what it is doing. Another
-  opens its own page in the same tab (C1), which closes everything here.
+  picker: *Gexis players*, this one with its check and the others on the
+  network (`/players`, ADR-0136), each with what it is doing. Another opens
+  its own page in the same tab (C1), which closes everything here.
+
+  **In alphabetical order** (George, 2026-11-14), so a player keeps its place
+  whichever one the menu is opened on: this one in its place with its check,
+  not first as drawn; a group where its first player falls, its players
+  alphabetical, the leader tagged where it falls. No *Other players* heading:
+  this player is no longer what divides the list.
 
   ADR-0166, design/source/22 (1a): **Join and Remove on each row.** Grouped,
-  the top of the list is the group: its head (*Grouped · 3 players* and what
+  this player's group is a block: its head (*Grouped · 3 players* and what
   plays), its members - the leader tagged *Leads*, Remove on the others but
   this one - the leader gone's note, and Leave group (not for the leader) and
-  Undo group; then *Other players*, each with Join. A player older than
+  Undo group; the other players each with Join. A player older than
   multiroom has no Join and says why.
 
   ADR-0166 decision 11 (George, 2026-10-28): **another group shows as a
@@ -24,8 +30,8 @@
   import { FILLED } from './icons.js';
   import GroupGlyph from '../../lib/GroupGlyph.svelte';
   import {
-    enterGroup, group, groupHead, groupSub, joinPlayer, joinable, leaveGroup, memberStatus, othersByGroup, otherStatus,
-    removePlayer, silentNote, withoutMe,
+    alphabetical, enterGroup, group, groupHead, groupPlace, groupSub, inOrder, joinPlayer, joinable, leaveGroup,
+    memberStatus, othersByGroup, otherStatus, removePlayer, silentNote, withoutMe,
   } from '../../lib/group.svelte.js';
 
   let { open = false, me = null, others = [], here = null, onclose = () => {}, onundo = () => {}, onsay = () => {} } = $props();
@@ -36,6 +42,13 @@
   const rest = $derived(split.loose);
   const otherGroups = $derived(split.groups);
   const leading = $derived(!!g?.members.find((m) => m.me)?.leads);
+  const myName = $derived(here?.name ?? me?.name ?? 'This player');
+  //: One list in the lists' order (George, 2026-11-14): `[place, name]`.
+  const entries = $derived(inOrder([
+    g ? { key: 'mine', place: groupPlace(g.members) } : { key: 'me', place: myName },
+    ...otherGroups.map((og) => ({ key: `group:${og.id}`, og, place: groupPlace(og.members) })),
+    ...rest.map((p) => ({ key: `player:${p.url}`, p, place: p.name })),
+  ], (e) => e.place));
   //: Joined from here and not yet in the group: said at once.
   let joining = $state(new Set());
   $effect(() => {
@@ -82,91 +95,106 @@
   <button class="act" class:is-join={isJoin} type="button" {onclick}>{label}</button>
 {/snippet}
 
+{#snippet myGroup()}
+  <div class="group">
+    <div class="group__head">
+      <GroupGlyph size={20} ink="var(--group-ink)" />
+      <span class="text">
+        <span class="group__title">{groupHead(g)}</span>
+        <span class="state">{groupSub(g)}</span>
+      </span>
+    </div>
+    {#each alphabetical(g.members) as m (m.id)}
+      <svelte:element this={m.me || !m.reachable || !m.url ? 'div' : 'a'} class="row row--member"
+                      class:is-current={m.me} class:is-off={!m.reachable}
+                      href={m.me || !m.reachable ? undefined : m.url}>
+        <img src={mark} alt="" />
+        <span class="text">
+          <span class="name">{m.name}{#if m.leads && !g.silent}<span class="leads">Leads</span>{/if}</span>
+          <span class="state" class:is-joining={m.joining} class:is-off={!m.reachable}>{memberStatus(g, m)}</span>
+        </span>
+        {#if m.me}
+          <svg class="check" viewBox="0 0 24 24" aria-hidden="true"><path d={FILLED.check} /></svg>
+        {:else if m.reachable && !m.leads}
+          {@render act('Remove', false, (e) => remove(e, m))}
+        {/if}
+      </svelte:element>
+    {/each}
+    {#if g.silent}<div class="note">{silentNote(g)}</div>{/if}
+    <div class="group__buttons">
+      {#if !leading}<button class="wide" type="button" onclick={leave}>Leave group</button>{/if}
+      <button class="wide wide--undo" type="button" onclick={onundo}>Undo group</button>
+    </div>
+  </div>
+{/snippet}
+
+{#snippet thisPlayer()}
+  <div class="row is-current">
+    <img src={mark} alt="" />
+    <span class="text">
+      <span class="name">{myName}</span>
+      <span class="state">{here?.state ?? said(me)}</span>
+    </span>
+    <svg class="check" viewBox="0 0 24 24" aria-hidden="true"><path d={FILLED.check} /></svg>
+  </div>
+{/snippet}
+
+{#snippet otherGroup(og)}
+  <div class="group group--other">
+    <div class="group__head">
+      <GroupGlyph size={20} ink="var(--ink-quiet)" />
+      <span class="text">
+        <span class="group__title">{og.title}</span>
+        <span class="state">{og.status}</span>
+      </span>
+    </div>
+    {#each og.members as m (m.id)}
+      <svelte:element this={m.url ? 'a' : 'div'} class="row row--member" class:is-off={!m.listed}
+                      href={m.url ?? undefined}>
+        <img src={mark} alt="" />
+        <span class="text">
+          <span class="name">{m.name}{#if m.leads && m.listed}<span class="leads leads--other">Leads</span>{/if}</span>
+          {#if !m.listed}<span class="state is-off">Not reachable</span>{/if}
+        </span>
+      </svelte:element>
+    {/each}
+    {#if !g && og.canEnter}
+      <div class="group__buttons">
+        <button class="wide wide--join" type="button" disabled={entering === og.id} onclick={(e) => enter(e, og)}>
+          {entering === og.id ? 'Joining · catching up' : 'Join this group'}
+        </button>
+      </div>
+    {/if}
+  </div>
+{/snippet}
+
+{#snippet otherPlayer(p)}
+  <a class="row row--other" href={p.url}>
+    <img src={mark} alt="" />
+    <span class="text">
+      <span class="name">{p.name}</span>
+      <span class="state" class:is-joining={joining.has(p.id)}>{joining.has(p.id) ? 'Joining · catching up' : otherStatus(p)}</span>
+    </span>
+    {#if joinable(p) && !joining.has(p.id)}
+      {@render act('Join', true, (e) => join(e, p))}
+    {/if}
+  </a>
+{/snippet}
+
 {#if open}
   <div class="scrim" role="presentation" onclick={onclose}></div>
   <div class="menu" role="dialog" aria-label="Gexis players">
     <div class="head">Gexis players</div>
-    {#if g}
-      <div class="group">
-        <div class="group__head">
-          <GroupGlyph size={20} ink="var(--group-ink)" />
-          <span class="text">
-            <span class="group__title">{groupHead(g)}</span>
-            <span class="state">{groupSub(g)}</span>
-          </span>
-        </div>
-        {#each g.members as m (m.id)}
-          <svelte:element this={m.me || !m.reachable || !m.url ? 'div' : 'a'} class="row row--member"
-                          class:is-current={m.me} class:is-off={!m.reachable}
-                          href={m.me || !m.reachable ? undefined : m.url}>
-            <img src={mark} alt="" />
-            <span class="text">
-              <span class="name">{m.name}{#if m.leads && !g.silent}<span class="leads">Leads</span>{/if}</span>
-              <span class="state" class:is-joining={m.joining} class:is-off={!m.reachable}>{memberStatus(g, m)}</span>
-            </span>
-            {#if m.me}
-              <svg class="check" viewBox="0 0 24 24" aria-hidden="true"><path d={FILLED.check} /></svg>
-            {:else if m.reachable && !m.leads}
-              {@render act('Remove', false, (e) => remove(e, m))}
-            {/if}
-          </svelte:element>
-        {/each}
-        {#if g.silent}<div class="note">{silentNote(g)}</div>{/if}
-        <div class="group__buttons">
-          {#if !leading}<button class="wide" type="button" onclick={leave}>Leave group</button>{/if}
-          <button class="wide wide--undo" type="button" onclick={onundo}>Undo group</button>
-        </div>
-      </div>
-      {#if rest.length || otherGroups.length}<div class="head head--others">Other players</div>{/if}
-    {:else}
-      <div class="row is-current">
-        <img src={mark} alt="" />
-        <span class="text">
-          <span class="name">{here?.name ?? me?.name ?? 'This player'}</span>
-          <span class="state">{here?.state ?? said(me)}</span>
-        </span>
-        <svg class="check" viewBox="0 0 24 24" aria-hidden="true"><path d={FILLED.check} /></svg>
-      </div>
-    {/if}
-    {#each otherGroups as og (og.id)}
-      <div class="group group--other">
-        <div class="group__head">
-          <GroupGlyph size={20} ink="var(--ink-quiet)" />
-          <span class="text">
-            <span class="group__title">{og.title}</span>
-            <span class="state">{og.status}</span>
-          </span>
-        </div>
-        {#each og.members as m (m.id)}
-          <svelte:element this={m.url ? 'a' : 'div'} class="row row--member" class:is-off={!m.listed}
-                          href={m.url ?? undefined}>
-            <img src={mark} alt="" />
-            <span class="text">
-              <span class="name">{m.name}{#if m.leads && m.listed}<span class="leads leads--other">Leads</span>{/if}</span>
-              {#if !m.listed}<span class="state is-off">Not reachable</span>{/if}
-            </span>
-          </svelte:element>
-        {/each}
-        {#if !g && og.canEnter}
-          <div class="group__buttons">
-            <button class="wide wide--join" type="button" disabled={entering === og.id} onclick={(e) => enter(e, og)}>
-              {entering === og.id ? 'Joining · catching up' : 'Join this group'}
-            </button>
-          </div>
-        {/if}
-      </div>
-    {/each}
-    {#each rest as p (p.url)}
-      <a class="row row--other" href={p.url}>
-        <img src={mark} alt="" />
-        <span class="text">
-          <span class="name">{p.name}</span>
-          <span class="state" class:is-joining={joining.has(p.id)}>{joining.has(p.id) ? 'Joining · catching up' : otherStatus(p)}</span>
-        </span>
-        {#if joinable(p) && !joining.has(p.id)}
-          {@render act('Join', true, (e) => join(e, p))}
-        {/if}
-      </a>
+    {#each entries as e (e.key)}
+      {#if e.key === 'mine'}
+        {@render myGroup()}
+      {:else if e.key === 'me'}
+        {@render thisPlayer()}
+      {:else if e.og}
+        {@render otherGroup(e.og)}
+      {:else}
+        {@render otherPlayer(e.p)}
+      {/if}
     {/each}
   </div>
 {/if}
@@ -203,9 +231,6 @@
     letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--ink-quiet);
-  }
-  .head--others {
-    padding: 6px 18px 4px;
   }
   .row {
     display: flex;

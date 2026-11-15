@@ -913,6 +913,17 @@ is silent or production differs, confirmed by George (2026-10-28):
   group has that player. Remove is not on this player's row (Leave group is)
   nor on the leader's (Undo group is). A Fixed member's mute shows only
   where its output has a control to silence.
+- **[U]** The lists of players are in alphabetical order (George,
+  2026-11-14): the phone's menu, the panel's *Add players*, the bar's band,
+  the switcher, and the group volume on the panel, the bar and the phone. This player sits in its place with its check, not first;
+  a group goes where its first player falls, its players alphabetical, the
+  leader tagged where it falls. The phone's *Other players* heading is gone:
+  this player no longer divides the list. The drawing put this player, or
+  its group, first, the leader first within a group.
+- **[U]** **A player reached only through another** (ADR-0136 item 5,
+  George 2026-11-14) is listed with its status, which ends *Can't group
+  from here*, and no Join; a group it leads has no *Join this group*. The
+  words follow *Update to join*; the drawing has no such state.
 - **[S]** *Add players* on the panel and the bar lists the group's own
   members first, with their state and no button, as the drawing's data does.
 - **[S]** On a panel shorter than 800 (720 at 13.3"), the grouped drawer
@@ -971,8 +982,8 @@ the drawing differs, or says nothing:
   the EQ button, at its height (56); under 380 px wide it is the glyph alone.
 - **[S]** The panel's and the bar's run screen use the existing deep veil;
   the drawing's centred one is not a token.
-- **[S]** New words the drawing has no state for, to be confirmed: the
-  panel's run line while the phone is waited on (*Waiting for the phone*);
+- **[S]** New words the drawing has no state for, confirmed by George
+  (2026-11-14): the panel's run line while the phone is waited on (*Waiting for the phone*);
   a result with a worse position (*Position 3 is 1.4 dB further from the
   target than before.*); unequal cuts (*Three cuts on the left, four on the
   right*); a correction with no dip (*Only cuts: nothing is raised, as more
@@ -1024,7 +1035,8 @@ built; what the build decided where it differs, or says nothing:
 - **[S]** **The correction's heading counts the speaker shown** (*Four cuts
   in the bass, three broad corrections above*); under *Both*, the left's.
   The drawing has the same counts for both speakers.
-- **[S]** **Words the drawing has no state for**, to be confirmed: one of
+- **[S]** **Words the drawing has no state for**, confirmed by George
+  (2026-11-14): one of
   either kind (*One cut in the bass*, *one broad correction above*, *Left
   speaker · 1 correction*); the correction's tail with one dip (*In the bass
   only cuts: the dip at 68 Hz stays, as more power does not fill it.*), with
@@ -1032,8 +1044,8 @@ built; what the build decided where it differs, or says nothing:
   nothing cut in the bass (the part above the bass alone); a speaker with
   nothing to cut while the other has (*Nothing to cut in the bass* as its
   heading).
-- **[S]** **Times** from Finding 144's run (ADR-0177 decision 4, George to
-  confirm): *About five minutes* before a run, *about a minute a position*
+- **[S]** **Times** from Finding 144's run (ADR-0177 decision 4, decided
+  by George 2026-11-10): *About five minutes* before a run, *about a minute a position*
   while it measures. The drawing kept four minutes and 45 seconds until
   that measurement. The check's *about three minutes more* goes with the
   drawing's new line, *Sweeps with the correction on, from each speaker and

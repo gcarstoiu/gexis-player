@@ -240,6 +240,14 @@ Fixed volume is not moved. Each keeps its own equaliser setting.
 It runs a release from before groups; update it (*Settings → System →
 Software update*) and it can be joined.
 
+**Why does a player in the list say *Can't group from here*?**
+The player whose list it is cannot reach that one on the network, while
+another player can, so it is listed through that one: you can open it,
+but not group the two. A mesh Wi-Fi can pass the players' announcements
+between two access points but not their traffic; restarting those access
+points, updating their firmware or joining both players to the same one
+may bring them back.
+
 **Can I name a group, or keep several?**
 No. A group is made by joining players and lasts until it is undone, across
 restarts.
@@ -578,9 +586,10 @@ over time; an artist whose photos were found is not asked again.
 In any browser on the same network, open `http://gexis.local:8090`, with the
 player's own name in place of *gexis*. It can be saved as a bookmark or added
 to the phone's home screen. There is no app to install. If the address
-briefly answers as *gexis-2.local* instead, the network still remembered the
-player from its previous start; the player takes its own name back within a
-few minutes, so keep using the address without the *-2*.
+briefly answers as *gexis-2.local* instead, something on the network answered
+for the player's name, usually a memory of its previous start; the player
+takes its own name back within a few minutes, or within half an hour once
+that has stopped, so keep using the address without the *-2*.
 
 **What can the phone do?**
 It is a remote: what is playing with its controls, the volume and the

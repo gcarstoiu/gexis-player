@@ -3926,7 +3926,57 @@ library's Radio is Lyrion's own directory.
 station plays and shows on Now Playing; favourites; how it sits beside
 Lyrion's Radio on a player that has both.
 
-**Acceptance:** drafted with its ADR.
+**Started 2026-11-13**:
+[ADR-0180](decisions/0180-internet-radio-without-lyrion.md) accepted
+(George: decisions 1-7 as recommended, 8 as (b)). radio-browser.info, read
+by the core; mpv as the engine, measured on sofapi before it is built on;
+one Radio screen with Lyrion's radio inside it; with Lyrion off the waiting
+screen gains Radio; the player's own favourites; the phone and Home
+Assistant in this phase. Settings in ADR-0022. The brief for Claude Design:
+[`design/briefs/31-radio.md`](../design/briefs/31-radio.md).
+
+**The engine measured 2026-11-13**
+([Finding 146](findings/146-mpv-as-the-radio-engine-on-a-pi-4.md)): mpv
+confirmed, at 3-6 % of a core; its reconnect on and a 5 s network timeout,
+the watchdog for the rest.
+
+**The core built 2026-11-14** on `ph-radio` (ADR-0180 step 4, its choices
+in the ADR's *The core, built* section): the directory client, the
+favourites, mpv as `gexis-radio.service`, the `/stations` routes, the two
+settings rows, the unit and mpv in the packages; tests against a fake
+directory and a fake mpv that fail as the real ones did, and a check
+against a real mpv with a silent output. **The screens built 2026-11-14**
+(panel, bars, phone, Settings, first use) from Claude Design's handover
+(`design/source/31/`), and the public documents. **On a player 2026-11-14**
+([Finding 147](findings/147-internet-radio-through-the-real-chain.md), sofapi
+taken out of its group and put back): the stream's rate to the DAC, 22 kHz
+raised to 48 with room correction running (acceptance 4 met), a cut recovered
+and a station down stopped with the message (5 met), 4.8-7.0 % of a core
+through the real chain (7 for George to read against Finding 146's silent
+3-6 %), memory flat over an hour. **Next:** George's regression pass on
+sofapi (the preview stays installed); the Home Assistant integration.
+
+**Acceptance:**
+
+1. With Lyrion off, a station found by country, genre or name plays from the
+   panel and from the phone; Now Playing shows the station, and the title
+   and artist when the stream sends them.
+2. Favourites survive a restart and a backup restored, and play with the
+   directory unreachable.
+3. Another source takes the output and gives it back, and Radio plays in a
+   group, as the other sources do.
+4. The equaliser and room correction apply to every stream, one at 32 kHz
+   included.
+5. A stream cut mid-play recovers; one that stays down stops with a
+   message.
+6. With Lyrion on, Lyrion's radio opens from Radio and works as before.
+7. The CPU it takes on a Pi 4: **7 % of a core or less, through the real
+   chain** (restated by George 2026-11-14 after Finding 147, no more digging;
+   it read *Finding 146's figures (3-6 % of a core) or better*, which were
+   measured with a silent output). **Met** (Finding 147: 4.8-7.0 %).
+8. In Home Assistant, a favourite plays from the player's sources and from
+   the card, and the directory is browsed and searched from the media
+   browser.
 
 ### Phase 32 — The library answers for itself
 
@@ -4151,6 +4201,69 @@ not measured.
 3. With the switch off the player refuses, and Home Assistant offers nothing.
 4. Live cameras while music plays at 192 kHz with room correction: no
    dropouts - recorded as a finding.
+
+### Phase 36 — Glass in place of the visualiser's engines
+
+**ID:** `ph-glass` · added 2026-11-13 as 36 (George).
+
+**Added 2026-11-13** (George, after Glass was checked again that day). The
+visualiser moves to Glass, foonerd's Rust engine for PeppyMeter themes (MIT;
+[Finding 133](findings/133-glass-against-our-visualiser.md): cheaper than
+ours on every skin measured, at a third of the memory). The engines it runs
+today come from foonerd's forks of PeppyMeter, PeppySpectrum and
+peppy_screensaver, archived on 2026-10-04: they still download at their
+pinned commits, with no fixes to come. George also asked what an engine of
+our own would mean, so that the player does not rest on one maintainer.
+
+**Glass on 2026-11-13** (read from GitHub, not measured): 0.11.47, one
+contributor, 819 commits since 2026-09-24, 325 releases, one issue filed. It
+is built around Volumio (its plugin, manager page and state channel), and its
+audio tap is a project of its own since 2026-11-01 (`foonerd/evotap`, with a
+written contract).
+
+**An investigation first, as a finding**: what each way of holding the
+engine costs, its code counted rather than estimated:
+- **Glass as foonerd releases it**, pinned like any other input, and what we
+  would follow or carry ourselves as it changes;
+- **a fork of our own**: which parts we keep (the theme reader, the drawing,
+  the analyser, the tap) and which we leave (the Volumio plugin, the manager,
+  the remotes); Rust in our build; what keeping it has cost upstream so far;
+- **an engine written by us**, with Glass's design and
+  [Finding 134](findings/134-where-the-visualisers-time-goes.md) as the guide.
+
+For each, the licences (Glass MIT, its analyser Apache-2.0, the themes
+GPL-3.0) and how a fix made upstream would reach us.
+
+**An ADR before anything is built**, after the finding. It must settle:
+- which of the three (George);
+- the tap: Glass's in the output chain for every output (ADR-0055, ADR-0124,
+  Finding 116), or peppyalsa feeding Glass; bit-perfect in front of a real
+  card and at a stream's end (Findings 003 and 004); its cost at 192 kHz
+  (Finding 133: 10.4 % against peppyalsa's 1.5 %);
+- the player's state to the engine from the core, not from Volumio;
+- start, stop, standby, the dashboard and Home Assistant's page under the
+  core (ADR-0026's screen ownership);
+- what ours draws that Glass does not, or not the same way: the skins'
+  fonts, badges, fanart (ADR-0112), the ticker and smooth rotation
+  (ADR-0097), the meters following the volume (ADR-0146), the ballistics
+  (ADR-0058);
+- every skin pack we ship (ADR-0111), at every size, and the previews
+  (ADR-0050);
+- a player that updates keeps its skin and settings;
+- the settings, for ADR-0022's inventory.
+
+**Acceptance (draft):**
+
+1. The finding and the ADR, decided by George.
+2. Every skin we ship draws whole at each size, as ours did - checked with
+   made-up data.
+3. Cheaper than ours on a Pi 4 at matched work, its tap included, by Finding
+   133's method, at 44.1 and 192 kHz.
+4. Bit-perfect with the tap in front of the card on every output, a stream's
+   end included.
+5. Standby, the dashboard, Home Assistant's page, touch and the phone's
+   visualiser button behave as before.
+6. Nothing in the build fetched from an archived repository.
 
 
 ### Parked
