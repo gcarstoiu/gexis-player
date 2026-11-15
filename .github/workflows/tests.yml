@@ -1,6 +1,7 @@
 # The core's tests and the UI's build, on every push and every pull request
 # into main (George, 2026-10-18). A release PR shows the result before it is
-# merged, and main's ruleset requires both to pass.
+# merged, and main's ruleset requires both to pass. Also started by
+# upstream.yml on its bump branch (ADR-0182), whose push starts nothing.
 #
 # Python 3.13 is the one the player runs (Raspberry Pi OS trixie). Squeezelite's
 # own tests run in Docker when squeezelite is built, not here.
@@ -10,6 +11,7 @@ on:
   push:
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
