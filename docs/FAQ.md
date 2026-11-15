@@ -578,9 +578,10 @@ over time; an artist whose photos were found is not asked again.
 In any browser on the same network, open `http://gexis.local:8090`, with the
 player's own name in place of *gexis*. It can be saved as a bookmark or added
 to the phone's home screen. There is no app to install. If the address
-briefly answers as *gexis-2.local* instead, the network still remembered the
-player from its previous start; the player takes its own name back within a
-few minutes, so keep using the address without the *-2*.
+briefly answers as *gexis-2.local* instead, something on the network answered
+for the player's name, usually a memory of its previous start; the player
+takes its own name back within a few minutes, or within half an hour once
+that has stopped, so keep using the address without the *-2*.
 
 **What can the phone do?**
 It is a remote: what is playing with its controls, the volume and the
