@@ -3814,6 +3814,9 @@ async def main() -> None:
     # of the takeover rather than held, so a change takes effect without a
     # restart. `settings` is built below, hence the late binding.
     lms.on_restore_transport(lambda: settings.value("restore_transport"))
+    # A play on a player already on takes the device only while nothing
+    # holds it (after a group in Lyrion's sync: no power-on edge).
+    lms.on_device_idle(lambda: supervisor.active is None)
     artistinfo = LmsArtistInfo(library.rpc, f"http://{config.lms_host}:{config.lms_port}",
                                store=enrichment_cache)
     # George, 2026-10-12 (answer 8): LMS's own answers in the enrichment

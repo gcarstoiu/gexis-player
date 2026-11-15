@@ -59,10 +59,12 @@ def test_camilladsp_can_write_nothing_and_open_only_the_sound_devices():
 class FakeCamilla:
     def __init__(self):
         self.sent = []
+        #: What `GetState` answers; None for the tests that never ask.
+        self.state = None
 
     async def cmd(self, name, arg=None):
         self.sent.append((name, arg))
-        return None
+        return self.state if name == "GetState" else None
 
     async def close(self):
         self.sent.append(("close", None))
@@ -364,6 +366,93 @@ async def test_suspended_the_engine_lets_go_of_the_loopback_and_comes_back(monke
     assert rig.engine._watch is not None and rig.units[-1] == ("restart", eq_engine.UNIT)
     await rig.engine.suspend()
 
+
+
+# ---- CamillaDSP stopped under a stream (sofapi, 2026-11-15) -------------------------
+
+def _configs(rig):
+    return [a for n, a in rig.camilla.sent if n == "SetConfigJson"]
+
+
+async def test_camilladsp_stopped_under_the_same_stream_is_started_on_it_again(monkeypatch, tmp_path):
+    """Leaving a group, Lyrion's stream stopped and started again between two
+    looks: the loopback read as before, CamillaDSP had stopped, and the music
+    played into nothing until a pause."""
+    rig = Rig(monkeypatch, tmp_path)
+    await rig.engine.configure("sndrpihifiberry", eq.FLAT)
+    rig.amixer = contents()
+    await rig.engine._look()
+    assert len(_configs(rig)) == 1
+    rig.camilla.state = "Inactive"
+    await rig.engine._check_running()
+    assert len(_configs(rig)) == 2, "started on the stream again"
+    assert rig.engine._applied is not None
+
+
+async def test_a_running_camilladsp_is_left_alone(monkeypatch, tmp_path):
+    rig = Rig(monkeypatch, tmp_path)
+    await rig.engine.configure("sndrpihifiberry", eq.FLAT)
+    rig.amixer = contents()
+    await rig.engine._look()
+    for state in ("Running", "Paused", "Starting", "Stalled"):
+        rig.camilla.state = state
+        await rig.engine._check_running()
+    assert len(_configs(rig)) == 1
+
+
+async def test_nothing_is_asked_while_nothing_plays_through_it(monkeypatch, tmp_path):
+    rig = Rig(monkeypatch, tmp_path)
+    await rig.engine.configure("sndrpihifiberry", eq.FLAT)
+    rig.camilla.state = "Inactive"
+    await rig.engine._check_running()
+    rig.amixer = contents(fmt=52)  # DSD goes past it
+    await rig.engine._look()
+    await rig.engine._check_running()
+    assert not [s for s in rig.camilla.sent if s[0] in ("GetState", "SetConfigJson")]
+
+
+async def test_a_stream_that_ended_meanwhile_is_looked_at_not_started_again(monkeypatch, tmp_path):
+    rig = Rig(monkeypatch, tmp_path)
+    await rig.engine.configure("sndrpihifiberry", eq.FLAT)
+    rig.amixer = contents()
+    await rig.engine._look()
+    rig.camilla.state = "Inactive"
+    rig.amixer = contents(active="off")
+    await rig.engine._check_running()
+    assert len(_configs(rig)) == 1 and rig.engine._stream is None
+
+
+async def test_the_watch_asks_between_the_loopback_s_events(monkeypatch, tmp_path):
+    rig = Rig(monkeypatch, tmp_path)
+    engine = rig.engine
+    monkeypatch.setattr(engine, "_watching", EqEngine._watching.__get__(engine))
+    monkeypatch.setattr(eq_engine, "CHECK_S", 0.01)
+    checks = []
+
+    async def check():
+        checks.append(1)
+    monkeypatch.setattr(engine, "_check_running", check)
+
+    class Quiet:
+        async def readline(self):
+            await asyncio.Event().wait()
+
+    class Monitor:
+        returncode = None
+        stdout = Quiet()
+
+        def kill(self):
+            self.returncode = -9
+
+    async def exec_(*args, **kwargs):
+        return Monitor()
+    monkeypatch.setattr(eq_engine.asyncio, "create_subprocess_exec", exec_)
+    task = asyncio.create_task(engine._watching())
+    await asyncio.sleep(0.4)
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert len(checks) >= 3
 
 # ---- ADR-0175: room correction in the same stage ------------------------------------
 
