@@ -59,6 +59,9 @@ LOOPBACK = f"hw:{outputs.LOOPBACK}"
 #: The fader's ramp, and a little: how long a rising headroom is given before
 #: the boost that needs it.
 RAMP_S = eq.HEADROOM_RAMP_MS / 1000 + 0.03
+#: How often, while a stream plays through it, CamillaDSP is asked whether it
+#: still runs (`_check_running`).
+CHECK_S = 2.0
 
 #: ALSA's `snd_pcm_format_t`, as *PCM Slave Format* reports it, for the
 #: formats a renderer sends (asound.h).
@@ -315,7 +318,8 @@ class EqEngine:
 
     async def _watching(self) -> None:
         """`alsactl monitor` on the loopback, for as long as the equaliser is
-        on; every *PCM Slave* change is looked at."""
+        on; every *PCM Slave* change is looked at, and between them, every
+        `CHECK_S`, whether CamillaDSP still runs."""
         while True:
             try:
                 proc = await asyncio.create_subprocess_exec(
@@ -331,7 +335,14 @@ class EqEngine:
                 await asyncio.sleep(0.2)
                 await self._look()
                 assert proc.stdout is not None
-                while line := await proc.stdout.readline():
+                while True:
+                    try:
+                        line = await asyncio.wait_for(proc.stdout.readline(), CHECK_S)
+                    except asyncio.TimeoutError:
+                        await self._check_running()
+                        continue
+                    if not line:
+                        break
                     if b"PCM Slave" in line:
                         await self._look()
             except asyncio.CancelledError:
@@ -356,6 +367,34 @@ class EqEngine:
             await self._forward_dsd(stream)
         else:
             await self._start_stream(stream)
+        self._set_status()
+
+    async def _check_running(self) -> None:
+        """**CamillaDSP still runs under the stream it was given** (sofapi,
+        2026-11-15). Leaving a group, Lyrion's stream stopped and started
+        again between two looks at the loopback, which then read as it had;
+        CamillaDSP, watching the same control, had stopped for good
+        (`stop_on_inactive`), and the music played into nothing until a
+        pause. Asked every `CHECK_S` while a stream plays; when it has
+        stopped and the loopback still carries that stream, it is started
+        on it again."""
+        stream = self._stream
+        if stream is None or stream.dsd or self._applied is None or self._card is None:
+            return
+        try:
+            state = await self._camilla.cmd("GetState")
+        except (ConnectionError, RuntimeError):
+            return
+        if state != "Inactive" or stream is not self._stream:
+            return
+        now = parse_contents(await self._run("amixer", "-D", LOOPBACK, "contents"))
+        if now != stream:
+            await self._look()
+            return
+        logger.warning("equaliser: CamillaDSP had stopped under the %d Hz stream; started on it again",
+                       stream.rate)
+        self._applied = None
+        await self._start_stream(stream)
         self._set_status()
 
     async def _start_stream(self, stream: Stream) -> None:

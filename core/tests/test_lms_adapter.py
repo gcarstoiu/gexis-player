@@ -1319,6 +1319,46 @@ async def test_play_on_the_still_on_player_takes_the_device_back(monkeypatch):
     assert acquired == [1], "back on, the player is LMS's as at any start"
 
 
+
+@pytest.mark.asyncio
+async def test_play_on_a_player_already_on_takes_the_free_device(monkeypatch):
+    """sofapi, 2026-11-15: Lyrion's sync kept a group's players on, so after
+    the group ended there was no power-on edge; Lyrion stopped, played again,
+    and the screen showed every source waiting. A play from a stop on the
+    connected player, already on, takes the device while nothing holds it."""
+    adapter, rpc = _adapter(monkeypatch, mode="stop")
+    adapter.on_device_idle(lambda: True)
+    acquired, _ = await _watch_pushes(monkeypatch, adapter, [
+        {"power": 1, "mode": "stop", "player_connected": 1},
+        {"power": 1, "mode": "play", "player_connected": 1},
+    ])
+    assert acquired == [1, 1], "the seed's, then the play's"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("idle", [lambda: False, None, lambda: 1 / 0])
+async def test_play_on_a_player_already_on_takes_nothing_another_source_holds(monkeypatch, idle):
+    adapter, rpc = _adapter(monkeypatch, mode="stop")
+    if idle is not None:
+        adapter.on_device_idle(idle)
+    acquired, _ = await _watch_pushes(monkeypatch, adapter, [
+        {"power": 1, "mode": "pause", "player_connected": 1},
+        {"power": 1, "mode": "play", "player_connected": 1},
+    ])
+    assert acquired == [1], "the seed's alone"
+
+
+@pytest.mark.asyncio
+async def test_lyrion_carrying_on_or_reconnecting_is_not_a_play_even_with_the_device_free(monkeypatch):
+    adapter, rpc = _adapter(monkeypatch, mode="play")
+    adapter.on_device_idle(lambda: True)
+    acquired, _ = await _watch_pushes(monkeypatch, adapter, [
+        {"power": 1, "mode": "play", "player_connected": 1},
+        {"power": 1, "mode": "stop", "player_connected": 0},
+        {"power": 1, "mode": "play", "player_connected": 1},
+    ])
+    assert acquired == [1], "the seed's alone"
+
 @pytest.mark.asyncio
 async def test_lms_resuming_a_reconnecting_player_is_not_a_deliberate_play(monkeypatch):
     """The ladder kills squeezelite after a failed release, and LMS carries on

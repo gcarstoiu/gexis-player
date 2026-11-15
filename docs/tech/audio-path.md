@@ -344,6 +344,12 @@ Details worth knowing:
   does not count). A shielded release that finds LMS has acquired since it
   began neither sends its power-off nor leaves one owed
   (`LmsAdapter._acquisitions`).
+- **A deliberate play takes a free device too** (sofapi, 2026-11-15). Lyrion's
+  sync keeps a group's players on, so after a group ends there is no
+  power-on edge; Lyrion played and the screen showed every source waiting.
+  The same deliberate play on a player already on is LMS acquiring while
+  nothing holds the device (`on_device_idle`: the supervisor's `active` is
+  None), never taken from another source.
 - **Echoes of our own release are harmless.** Releasing LMS makes LMS report
   "powered off"; that arrives as `relinquish("lms")`, which the supervisor
   ignores because LMS is no longer the active renderer.
@@ -627,7 +633,12 @@ renderer → pcm.output (meter, peppyalsa; integers only) → hw:Loopback,0,0
   engine watches the loopback's controls (`alsactl monitor hw:Loopback`),
   reads *PCM Slave Active/Rate/Format/Channels* from device 1 and sends the
   configuration at exactly those; CamillaDSP lets the loopback go when the
-  stream ends (`stop_on_inactive`). Measured: 12-24 ms off a stream's start
+  stream ends (`stop_on_inactive`). Every 2 s while a stream plays, the
+  engine also asks CamillaDSP whether it still runs, and starts it on the
+  stream again if it stopped while the loopback still carries it: a stream
+  that stops and starts within one look leaves the controls as they were
+  (sofapi, 2026-11-15, leaving a group: Lyrion played into nothing until a
+  pause). Measured: 12-24 ms off a stream's start
   and up to a chunk off its end, nothing inside it - so at every change of
   rate and every resume after a pause (Squeezelite lets the device go 1 s
   into one). A rate the card lacks is converted to its highest
