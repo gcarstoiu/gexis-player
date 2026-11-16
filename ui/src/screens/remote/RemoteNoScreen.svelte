@@ -8,6 +8,10 @@
   playing: the bar, the times and the transport at 0.38, inert. Shorter than
   the drawing, the cover gives way to its floor (C10) before the page
   scrolls.
+
+  A station (ADR-0180, design/source/31 H20-H22): its quality on a line of
+  its own, the heart at the transport's left, and while it reconnects or
+  does not answer the line that says so, the cover at 0.45.
 -->
 <script>
   import { active, available, metadata } from '../../lib/state.js';
@@ -17,13 +21,22 @@
   import VolumeRow from './VolumeRow.svelte';
   import GroupMark from './GroupMark.svelte';
   import { seek } from './commands.js';
+  import { radio } from '../../lib/radio.js';
+  import { quality } from './radio/words.js';
+  import { RADIO } from './radio/glyphs.js';
 
   let { artwork = null, onartfailed, onsay, oneq, ongroup, onmark, onroom } = $props();
 
   const hasTrack = $derived(!!$active);
   const head = playhead(() => $metadata);
   const canSeek = $derived(hasTrack && head.hasPosition && $available.includes('seek'));
-  const byline = $derived([$metadata?.artist, $metadata?.album].filter(Boolean).join(' · '));
+  //: A station that sends nothing has its name as the title and the album:
+  //: once is enough.
+  const byline = $derived([$metadata?.artist,
+    $active === 'radio' && $metadata?.album === $metadata?.title ? null : $metadata?.album].filter(Boolean).join(' · '));
+
+  const station = $derived($active === 'radio' ? ($radio?.station ?? null) : null);
+  const status = $derived(station && ['reconnecting', 'not_answering'].includes($radio?.state) ? $radio.state : null);
 
   //: While a finger is on the bar it shows where the finger is, and for a
   //: moment after, until the player reports the new position.
@@ -80,12 +93,26 @@
 
 <div class="page">
   <div class="art">
-    <div class="cover"><RemoteCover {artwork} {hasTrack} big onfailed={onartfailed} /></div>
+    <div class="cover" class:is-dim={!!status}><RemoteCover {artwork} {hasTrack} big onfailed={onartfailed} /></div>
   </div>
   <div class="text">
     <span class="title" class:is-none={!hasTrack}>{hasTrack ? ($metadata?.title ?? 'Playing') : 'Nothing playing'}</span>
     {#if hasTrack && byline}<span class="by">{byline}</span>{/if}
+    {#if station && quality(station)}<span class="quality">{quality(station)}</span>{/if}
   </div>
+  {#if status}
+    <div class="status" role="status">
+      {#if status === 'reconnecting'}
+        <svg class="status__turn" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d={RADIO.spinner} /></svg>
+        Reconnecting <span class="status__try">try {$radio.attempt} of {$radio.tries}</span>
+      {:else}
+        <svg class="status__warn" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          {#each RADIO.warn as d (d)}<path {d} />{/each}<circle cx="12" cy="16.9" r="0.6" />
+        </svg>
+        The station is not answering
+      {/if}
+    </div>
+  {/if}
   <div class="played" class:is-idle={!hasTrack} inert={!hasTrack}>
     <div class="seek" class:can-seek={canSeek} role="slider" tabindex="-1" aria-label="Position"
          aria-valuemin="0" aria-valuemax={Math.round(head.duration ?? 0)} aria-valuenow={Math.round(fraction * (head.duration ?? 0))}
@@ -103,7 +130,7 @@
   </div>
   <!-- ADR-0166 (3a): the grouped mark, under the times, above the transport. -->
   <GroupMark onopen={onmark} gap={8} height={20} />
-  <div class="transport"><RemoteTransport big /></div>
+  <div class="transport"><RemoteTransport big heart="start" {onsay} /></div>
   <div class="volume"><VolumeRow {oneq} {ongroup} {onsay} {onroom} /></div>
 </div>
 
@@ -154,6 +181,59 @@
   }
   .title.is-none {
     color: var(--ink-quiet);
+  }
+  .cover.is-dim {
+    opacity: 0.45;
+  }
+  .quality {
+    max-width: 100%;
+    margin-top: 2px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    color: var(--ink-quiet);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .status {
+    flex-shrink: 0;
+    margin-top: 6px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--accent-warn);
+  }
+  .status svg {
+    flex-shrink: 0;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .status__turn {
+    stroke-width: 3;
+    animation: turn 1s linear infinite;
+  }
+  .status__warn {
+    stroke-width: 2;
+  }
+  .status__warn circle {
+    fill: currentColor;
+  }
+  .status__try {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--ink-muted);
+  }
+  @keyframes turn {
+    to {
+      transform: rotate(360deg);
+    }
   }
   .by {
     max-width: 100%;

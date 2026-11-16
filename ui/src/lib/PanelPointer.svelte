@@ -173,7 +173,13 @@
         if (box.bottom < r.bottom - 0.5) seen.bottom = Math.min(seen.bottom, box.bottom);
       }
     }
-    const px = Math.round(x);
+    // Asked down the element's middle, not the pointer's column: a round
+    // button's corners show what lies behind it, and that is not always one
+    // of its ancestors - the cover behind Playing's Minimise is beside it in
+    // the page (George's regression pass, 2026-11-15: the outline filled as
+    // the pointer neared the button's middle, as the bar's did on
+    // 2026-10-14).
+    const px = Math.round((Math.max(r.left, seen.left, 0) + Math.min(r.right, seen.right, window.innerWidth)) / 2);
     // What lies behind the element - the bar a round button sits on, seen
     // past its corners - does not cover it (George, 2026-10-14: the outline
     // round the playback bar's buttons grew as the pointer neared their

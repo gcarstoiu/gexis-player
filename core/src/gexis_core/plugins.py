@@ -282,8 +282,8 @@ def with_software(found: list[Plugin], labels: dict[str, str]) -> list[Plugin]:
 
 
 #: The renderers this repository ships, with rows of their own
-#: (`lms_enabled`, `spotify_enabled`, `bt_enabled`).
-BUILT_IN = frozenset({"lms", "spotify", "bluetooth"})
+#: (`lms_enabled`, `spotify_enabled`, `bt_enabled`, `radio_enabled`).
+BUILT_IN = frozenset({"lms", "spotify", "bluetooth", "radio"})
 
 
 def installed(directory: Path = DEFAULT_DIR) -> list[Plugin]:

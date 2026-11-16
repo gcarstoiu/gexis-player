@@ -41,3 +41,11 @@ criterion 2 for plugins); and a fork is the kind of hidden dependency
 ## Reversal conditions
 
 None. George recorded it as immovable.
+
+## Exception, 2026-11-15
+
+[ADR-0181](0181-go-librespot-from-upstreams-own-build-until-its-release.md)
+(George): until a go-librespot release carries the fix for the Android app's
+crash, the player ships upstream's own build of its `master` - built by
+upstream's workflow, not by us, and unpatched. Building or patching stays
+ruled out.

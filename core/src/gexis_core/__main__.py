@@ -30,6 +30,9 @@ from gexis_core.library import LmsLibrary
 from gexis_core.menus import LyrionMenus
 from gexis_core.radio import RadioBrowser
 from gexis_core.adapters.spotify import SpotifyAdapter
+from gexis_core.adapters.radio import RadioAdapter, UNIT_NAME as RADIO_UNIT
+from gexis_core import radio_directory, radio_favourites, radio_logos
+from gexis_core import radio_service as radio_service_module
 from gexis_core.arbitration import Supervisor
 from dataclasses import replace
 
@@ -97,6 +100,7 @@ from gexis_core.softvol_boot import (
 )
 from gexis_core.settings_registry import InvalidValue, Settings, UnknownSetting, catalogue_note, load_registry
 from gexis_core.settings_registry import plugin_line as settings_registry_line
+from gexis_core import settings_registry as settings_registry_module
 from gexis_core.splash import Splash
 from gexis_core.state import StateStore
 from gexis_core import announce, backups, bluealsa_volume, components, outputs, plugin_env, plugins, uploads
@@ -112,6 +116,7 @@ from gexis_core.eq_engine import EqEngine
 from gexis_core.players import own_id
 from gexis_core.equaliser import Equaliser, latency_ms as eq_latency_ms
 from gexis_core.setup_network import SetupNetwork
+from gexis_core.setup_network import country_for as zone_country
 from gexis_core.setup_flow import SetupFlow
 from gexis_core.adapters.plugin import PluginAdapter
 from gexis_core.plugin_artwork import PluginArtwork, Refused as ArtworkRefused
@@ -160,7 +165,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname
 
 #: How a renderer is named to a person. Only where the id is not simply its
 #: name capitalised, which today is LMS alone.
-RENDERER_LABELS = {"lms": "LMS"}
+RENDERER_LABELS = {"lms": "LMS", "radio": "Internet radio"}
 
 #: **ADR-0077.** Which Settings row switches each source on and off. The three
 #: rows are `R` in ADR-0022's inventory - the design has always had them - and
@@ -169,7 +174,19 @@ RENDERER_ROWS = {
     "lms": "lms_enabled",
     "spotify": "spotify_enabled",
     "bluetooth": "bt_enabled",
+    "radio": "radio_enabled",
 }
+
+#: **ADR-0180: renderers whose unit the core starts itself**, when a station
+#: is played, and stops when it stops - never enabled at boot. Their switch
+#: stops them rather than disabling a unit, and a change of output loads the
+#: station again rather than restarting a unit that may be stopped.
+CORE_STARTED = frozenset({"radio"})
+
+#: Every renderer's unit that holds `output` while it plays: stopped before
+#: the chain is rewritten (LESSONS 21), so the new file is read on the next
+#: open.
+RENDERER_UNITS = ("squeezelite.service", "go-librespot.service", "bluealsa-aplay.service", RADIO_UNIT)
 
 #: **ADR-0077: `headless` turns off three units, not one.** The kiosk is the
 #: screen; the warm-up exists only to read the kiosk's binaries into the page
@@ -821,7 +838,38 @@ async def main() -> None:
                      boot_marker=Path("/run/gexis/lms-boot-checked"))
     spotify = SpotifyAdapter(config.go_librespot_host, config.go_librespot_port)
     bluetooth = BluetoothAdapter()
-    adapters = {"lms": lms, "spotify": spotify, "bluetooth": bluetooth}
+    # **ADR-0180: internet radio**, the core's own renderer: the directory
+    # (radio-browser.info), the player's favourites, and mpv started for a
+    # station. `radio_service` is built further down, once the supervisor
+    # and the settings exist; nothing resolves a station before then.
+    radio_agent = f"GexisPlayer/{updates.short(updates.installed_release()) or 'unknown'}"
+    stations = radio_directory.Directory(user_agent=radio_agent)
+    # George, 2026-11-14: logos through the player, never from the screens.
+    station_logos = radio_logos.Logos(user_agent=radio_agent)
+    #: Raised on every change of the favourites, and published, so a panel,
+    #: a phone and Home Assistant read the list again.
+    favourites_revision = {"n": 0}
+
+    def _favourites_changed() -> None:
+        favourites_revision["n"] += 1
+        _publish_radio()
+    favourites = radio_favourites.Favourites(settings_store.get, settings_store.set,
+                                             on_change=_favourites_changed)
+    radio = RadioAdapter(user_agent=radio_agent,
+                         resolve=lambda station: radio_service.resolve(station),
+                         step=favourites.step,
+                         is_favourite=lambda station_id: favourites.get(station_id) is not None,
+                         logo_path=station_logos.path)
+
+    def _publish_radio() -> None:
+        published = {**radio.state.to_json(), "favourites": favourites_revision["n"]}
+        if radio.state.station is not None:
+            published["station"] = {**published["station"],
+                                    "logo": station_logos.path(radio.state.station.logo),
+                                    "favourite": favourites.get(radio.state.station.id) is not None}
+        state_store.set_radio(published)
+    radio.on_state_change(lambda _state: _publish_radio())
+    adapters = {"lms": lms, "spotify": spotify, "bluetooth": bluetooth, "radio": radio}
 
 
     # Phase 3 criteria 1-2: the normalised playback model plus each
@@ -929,6 +977,8 @@ async def main() -> None:
         {rid: adapter.capabilities for rid, adapter in adapters.items()},
         sources=tuple(p.to_json() for p in installed_plugins),
     )
+    # A member's heart for the leader's station is its own favourites' (ADR-0180).
+    state_store.is_favourite = lambda station_id: favourites.get(station_id) is not None
 
     # Criterion 4: moOde-compatible metadata file, subscribed the same way
     # StateServer is - a plain callback on every published state change.
@@ -1488,8 +1538,7 @@ async def main() -> None:
         if multiroom is not None:
             await multiroom.snap.listen(None)
         stop = await asyncio.create_subprocess_exec(
-            "systemctl", "stop", "squeezelite.service", "go-librespot.service",
-            "bluealsa-aplay.service", *_plugin_renderer_units(),
+            "systemctl", "stop", *RENDERER_UNITS, *_plugin_renderer_units(),
         )
         await stop.wait()
         outputs.write(chosen, tuning=_tuning(), fixed=fixed_wanted["value"])
@@ -1559,7 +1608,13 @@ async def main() -> None:
         off, or squeezelite with no server finding one on the network by
         itself (code review, 2026-10-12)."""
         units = [adapters[rid].unit_name for rid in RENDERER_ROWS
-                 if renderer_enabled(rid) and adapters[rid].unit_name not in keep]
+                 if renderer_enabled(rid) and rid not in CORE_STARTED
+                 and adapters[rid].unit_name not in keep]
+        # ADR-0180: the radio's unit is started for a station, so it is not
+        # restarted with the rest - a stopped one would start with nothing to
+        # play. A station that was playing is loaded again.
+        reopens = [adapters[rid].reopen() for rid in CORE_STARTED
+                   if rid in adapters and renderer_enabled(rid) and adapters[rid].unit_name not in keep]
         # A renderer plugin's unit by its own switch, which is its unit's
         # enabled state (ADR-0086).
         plugin_restarts = [restart_if_enabled(unit) for unit in _plugin_renderer_units() if unit not in keep]
@@ -1573,6 +1628,11 @@ async def main() -> None:
             else:
                 for restart_plugin in plugin_restarts:
                     asyncio.ensure_future(restart_plugin)
+        for reopen in reopens:
+            if wait:
+                await reopen
+            else:
+                asyncio.ensure_future(reopen)
 
     def _plugin_renderer_units() -> list[str]:
         """**A renderer plugin plays through `output` as the built-ins do**, and
@@ -1656,8 +1716,7 @@ async def main() -> None:
         if multiroom is not None:
             await multiroom.snap.listen(None)
         stop = await asyncio.create_subprocess_exec(
-            "systemctl", "stop", "squeezelite.service", "go-librespot.service",
-            "bluealsa-aplay.service", *_plugin_renderer_units(),
+            "systemctl", "stop", *RENDERER_UNITS, *_plugin_renderer_units(),
         )
         await stop.wait()
         outputs.write(chosen, tuning=_tuning(), fixed=fixed_wanted["value"])
@@ -2876,6 +2935,9 @@ async def main() -> None:
             "idle_url": lambda: config.idle_url or None,
             "device_name": device_name.hostname,
             "timezone": read_timezone,
+            # ADR-0180 item 2: the country of the time zone, as setup's Wi-Fi
+            # country is, until it is set.
+            "radio_country": lambda: zone_country(read_timezone()),
             "wifi": wifi.connected_ssid,
             # Nothing stored means the first skin the corpus offers, so the
             # picker opens on something rather than on nothing.
@@ -2928,7 +2990,9 @@ async def main() -> None:
         # ADR-0051 §4: which skins there are depends on where they are
         # installed and on what `skin_corpus` holds, neither of which the
         # registry module can know.
-        labels={"skin_corpus": lambda: skins.labels(skins_at()[0]) if skins_at() else {}},
+        labels={"skin_corpus": lambda: skins.labels(skins_at()[0]) if skins_at() else {},
+                # ADR-0180: *Popular here*'s countries by name.
+                "countries": settings_registry_module.country_names},
         # George, 2026-10-05: a skin type this screen has no skins of is not
         # offered - greyed, with why (ADR-0044's `unavailable`), and a stored
         # one falls back to the first type that has some.
@@ -3087,6 +3151,12 @@ async def main() -> None:
                "bt_enabled": lambda _=None: asyncio.ensure_future(
                    _apply_renderer("bluetooth")
                ),
+               # ADR-0180: off stops a station that plays; on waits for one.
+               "radio_enabled": lambda _=None: asyncio.ensure_future(
+                   _apply_renderer("radio")
+               ),
+               # Read when *Popular here* is asked for.
+               "radio_country": None,
                # ADR-0077. Turning this on from the panel closes the panel; it
                # is reversible from a phone, and only from a phone.
                "headless": lambda value: asyncio.ensure_future(
@@ -3440,7 +3510,13 @@ async def main() -> None:
         # across a reboot; on, it starts it and asks for it at the next boot
         # too. Both are idempotent, so a row rewritten to the value it already
         # had is a no-op rather than a restart.
-        await set_unit_enabled(adapter.unit_name, on)
+        if renderer_id in CORE_STARTED:
+            # ADR-0180: never enabled; off stops what plays, on waits for a
+            # station to be played.
+            if not on:
+                await adapter.release()
+        else:
+            await set_unit_enabled(adapter.unit_name, on)
         if renderer_id == "bluetooth":
             await set_unit_enabled(BLUETOOTH_SETUP_UNIT, on)
             bus = await MessageBus(bus_type=BusType.SYSTEM).connect()
@@ -3527,7 +3603,9 @@ async def main() -> None:
         wanted: dict[str, tuple[bool, object]] = {}
         for renderer_id in RENDERER_ROWS:
             adapter = adapters.get(renderer_id)
-            if adapter is not None:
+            # ADR-0180: a unit the core starts for a station is never enabled,
+            # so it cannot disagree with its switch.
+            if adapter is not None and renderer_id not in CORE_STARTED:
                 wanted[adapter.unit_name] = (
                     renderer_enabled(renderer_id),
                     lambda r=renderer_id: _apply_renderer(r),
@@ -4270,7 +4348,9 @@ async def main() -> None:
             # no cover, and the panel's own `/enrichment` asks these same two
             # providers for it moments later anyway. It rides this debounce
             # so that skipping through an album still costs nothing.
-            if state.active and state.metadata.artwork is None:
+            # ADR-0180: a station's logo stands in for a cover not yet found.
+            if state.active and (state.metadata.artwork is None
+                                 or state.metadata.artwork == state.metadata.fallback_artwork):
                 await _find_cover(state.active, state.metadata)
 
         prefetch_task = asyncio.ensure_future(warm())
@@ -4978,6 +5058,15 @@ async def main() -> None:
     # ADR-0167 T9: covers a plugin hands over as bytes, served by the
     # state server at /plugins/<id>/artwork/<key>.
     plugin_art = PluginArtwork()
+    # ADR-0180: what the radio's routes call. Playing a station takes the
+    # device through the supervisor first, as any takeover does.
+    radio_service = radio_service_module.RadioService(
+        directory=stations, favourites=favourites, adapter=radio,
+        acquire=supervisor.acquire, active=lambda: supervisor.active,
+        enabled=lambda: renderer_enabled("radio"),
+        country=lambda: settings.value("radio_country"), logos=station_logos)
+    radio.on_station_learned(radio_service.learned)
+    _publish_radio()
     state_server = StateServer(
         state_store,
         # ADR-0170: the panel proves itself; a plugin on loopback does not.
@@ -5013,6 +5102,8 @@ async def main() -> None:
         # ADR-0038 §8: the one SlimBrowse subtree, browsed by handles the
         # core issues.
         radio=RadioBrowser(library.rpc, lambda: lms.player_id),
+        # ADR-0180: the player's own radio, with or without Lyrion.
+        stations=radio_service,
         # ADR-0118: Lyrion's own menus, by the same handles, behind
         # Extended navigation.
         menus=LyrionMenus(library.rpc, lambda: lms.player_id, lambda: library.base_url),
@@ -5469,8 +5560,7 @@ async def main() -> None:
         group_renderers_stopped["value"] = True
         await equaliser_engine.suspend()
         stop = await asyncio.create_subprocess_exec(
-            "systemctl", "stop", "squeezelite.service", "go-librespot.service", "bluealsa-aplay.service",
-            eq_engine.UNIT, *_plugin_renderer_units())
+            "systemctl", "stop", *RENDERER_UNITS, eq_engine.UNIT, *_plugin_renderer_units())
         await stop.wait()
 
     multiroom = multiroom_module.Multiroom(

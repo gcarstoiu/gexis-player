@@ -105,11 +105,14 @@
         class="play"
         type="button"
         data-shows={toggle.shows}
-        aria-label={toggle.shows === 'playing' ? 'Pause' : 'Play'}
+        aria-label={toggle.shows === 'playing' ? (active === 'radio' ? 'Stop' : 'Pause') : 'Play'}
         onpointerdown={guard}
         onclick={own(toggle.toggle)}
       >
-        {#if toggle.shows === 'playing'}
+        {#if toggle.shows === 'playing' && active === 'radio'}
+          <!-- ADR-0180: a station's Pause stops it, so it is drawn as Stop. -->
+          <span class="i-stop"></span>
+        {:else if toggle.shows === 'playing'}
           <span class="i-pause"><i></i><i></i></span>
         {:else}
           <span class="i-play"></span>
@@ -285,6 +288,12 @@
   .i-pause i {
     width: 6px;
     height: 23px;
+    border-radius: 2px;
+    background: var(--bg-panel);
+  }
+  .i-stop {
+    width: 13px;
+    height: 13px;
     border-radius: 2px;
     background: var(--bg-panel);
   }

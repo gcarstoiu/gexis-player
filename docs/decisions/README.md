@@ -114,7 +114,7 @@ been written properly. **0098 has no record either.**
 | [0090](0090-plexamp-ships-the-way-beszel-does.md) | Plexamp ships the way Beszel does | Accepted 2026-09-25: Plexamp plus our plugin (`gcarstoiu/gexis-plexamp`), the plugin unit `PartOf=` Plexamp's. Amended by 0100 |
 | [0091](0091-a-plugin-renderer-is-taken-off-the-device.md) | A plugin renderer is taken off the device, not asked to leave | Accepted and built 2026-09-26 (amended 2026-09-26): SIGKILL, back by `Restart=on-failure`; no polite grace; no saved queue |
 | [0092](0092-a-play-queue-is-an-acquisition.md) | A play queue this renderer has not seen is an acquisition | Accepted and built 2026-09-26: the play reissued on `device_freed`; no contract change |
-| [0093](0093-we-do-not-build-or-patch-the-renderers.md) | We do not build or patch the renderers | **Accepted, immovable** 2026-09-26: renderers as upstream ships them; work around or report upstream |
+| [0093](0093-we-do-not-build-or-patch-the-renderers.md) | We do not build or patch the renderers | **Accepted, immovable** 2026-09-26: renderers as upstream ships them; work around or report upstream; one exception, upstream's own build (0181) |
 | [0094](0094-every-takeover-shows-the-transition-screen.md) | Every takeover shows the transition screen, for the length the user sets | Accepted 2026-09-26; **supersedes 0078** and 0010's exempt pairs; `handoff_duration`, default 1.5 s |
 | [0095](0095-a-renderer-waits-for-a-busy-device.md) | squeezelite waits for a busy device instead of failing | Accepted 2026-09-26, amended the same day: only squeezelite waits (`output_wait`); calls under the lock bounded to 2 s. Amends 0009 |
 | [0096](0096-turntable-and-cassette-skins.md) | Turntable and cassette skins move | Accepted 2026-09-27: pinned skins from `foonerd/peppy_templates`, motion in our renderer. Amends 0026 |
@@ -201,6 +201,9 @@ been written properly. **0098 has no record either.**
 | [0178](0178-fixes-from-the-review-of-1-16-1-that-change-what-is-seen.md) | Fixes from the review of 1.16.1 that change what is seen | Accepted 2026-11-10 (George, as recommended): own pages only for browsers; a set-up player's setup network only gives a network; no dashboard pop-ups; bad plugin rows refused at upload; appended 2026-11-11: a TV off stays the screen, *Ready, no music found*, a late update stays, a Remove waits for a download |
 | [0179](0179-the-music-services-under-accounts-of-their-own.md) | The music services under accounts of their own | Accepted 2026-11-11 (Claude, nothing seen changes): Squeezelite, go-librespot, Shairport Sync and its plugin, Snapcast off `pi`, the screen's user |
 | [0180](0180-internet-radio-without-lyrion.md) | Internet radio without Lyrion | Accepted 2026-11-13 (Phase 31, George: 1-7 as recommended, 8 as b): radio-browser.info, mpv, own favourites, phone and Home Assistant |
+| [0181](0181-go-librespot-from-upstreams-own-build-until-its-release.md) | go-librespot from upstream's own build until a release carries its fix | **Accepted** 2026-11-15 (George, B): upstream's build of `775ba5883` (the Android app's crash fixed), kept in the mirror; 1.16.3 from `main` |
+| [0182](0182-upstream-releases-checked-daily-and-a-part-only-patch-release.md) | Upstream releases checked daily, and a patch release for one part | **Accepted** 2026-11-15 (George: 1 and 2): a daily check opens a bump PR into `main` with a preview; a one-part patch release from `main` |
+| [0183](0183-spotify-keeps-playing-on-the-lead-through-a-group-change.md) | Spotify keeps playing on the lead through a group change | Proposed 2026-11-15 (George: keep it going on the lead): pause, rewrite the chain, resume; reopen as the fallback |
 
 ## Cross-cutting rules
 

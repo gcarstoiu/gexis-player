@@ -82,6 +82,11 @@ class StateStore:
         #: (`set_mirror`).
         self._group: dict | None = None
         self._mirror: tuple | None = None
+        #: ADR-0180: the radio's own state (`adapters/radio.RadioState`).
+        self._radio: dict | None = None
+        #: ADR-0180: whether a station is one of this player's favourites,
+        #: for the leader's station shown here (`_led_radio`).
+        self.is_favourite: Callable[[str], bool] | None = None
         #: **ADR-0081: the cover the daemon found for a renderer that sent
         #: none.** `renderer_id -> (track, url)`, applied in `state` below
         #: only where the renderer's own artwork is absent. Keyed on the
@@ -124,6 +129,9 @@ class StateStore:
             found = self._found_artwork.get(self._active)
             if found is not None and found[0] == self._track_of(metadata):
                 metadata = replace(metadata, artwork=found[1])
+            elif metadata.fallback_artwork:
+                # ADR-0180 item 4: a station's logo, where no cover is found.
+                metadata = replace(metadata, artwork=metadata.fallback_artwork)
         return PlaybackState(
             active=self._active,
             queue=self._queues.get(self._active) if self._active else None,
@@ -153,22 +161,36 @@ class StateStore:
             equaliser=self._equaliser,
             room=self._room,
             group=self._group,
+            radio=self._radio,
         )
 
     def _mirrored(self, own: PlaybackState) -> PlaybackState:
         """**The group's Now Playing on a member** (ADR-0166 D5): nothing of
         this player's own plays, and the leader's playback is published as
-        if it were - its source, track, controls and queue."""
-        active, metadata, capabilities, source, queue = self._mirror
+        if it were - its source, track, controls and queue, and a station's
+        state."""
+        active, metadata, capabilities, source, queue, radio = self._mirror
         mine = replace(own, active=active, metadata=metadata, queue=queue,
                        capabilities={**self._capabilities, active: capabilities})
         if source and not any(s.get("id") == active for s in self._sources):
             mine = replace(mine, sources=(*self._sources, dict(source)))
+        if radio is not None:
+            mine = replace(mine, radio=self._led_radio(radio))
         return mine
 
+    def _led_radio(self, radio: dict) -> dict:
+        """**The leader's station as this player shows it** (ADR-0180): the
+        favourites on this player's screens are its own, so whether the
+        station is one, and the list's revision, are this player's."""
+        led = {**radio, "favourites": (self._radio or {}).get("favourites")}
+        station = radio.get("station")
+        if isinstance(station, dict):
+            led["station"] = {**station, "favourite": bool(self.is_favourite and self.is_favourite(station.get("id")))}
+        return led
+
     def set_mirror(self, mirror: tuple | None) -> None:
-        """ADR-0166 D5: `(active, metadata, capabilities, source, queue)` of
-        the leader's playback, shown while this player has nothing of its
+        """ADR-0166 D5: `(active, metadata, capabilities, source, queue,
+        radio)` of the leader's playback, shown while this player has nothing of its
         own active; None to show this player's own again."""
         if mirror == self._mirror:
             return
@@ -496,6 +518,13 @@ class StateStore:
         if snapshot == self._equaliser:
             return
         self._equaliser = snapshot
+        self._notify()
+
+    def set_radio(self, radio: dict | None) -> None:
+        """ADR-0180: the radio's station or state changed."""
+        if radio == self._radio:
+            return
+        self._radio = radio
         self._notify()
 
     def set_room(self, summary: dict | None) -> None:

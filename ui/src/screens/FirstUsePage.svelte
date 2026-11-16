@@ -11,8 +11,9 @@
   replacements where the prototype simulates what the player does. Change
   the design, then generate again; do not restyle by hand.
   **Changed by hand since it was generated**: AirPlay (Phase 23,
-  2026-10-28) and the colours through the tokens (ADR-0171, 2026-11-01);
-  the generator has neither, so generating again would take both out.
+  2026-10-28), the colours through the tokens (ADR-0171, 2026-11-01) and
+  Internet radio (ADR-0180, design/source/31 F01-F03); the generator has
+  none of them, so generating again would take them out.
 -->
 <script>
   import { onMount, untrack } from 'svelte';
@@ -20,6 +21,7 @@
   import lyrionIcon from '../assets/icon-lyrion.svg';
   import spotifyIcon from '../assets/icon-spotify.png';
   import BluetoothMark from '../lib/BluetoothMark.svelte';
+  import RadioMark from '../lib/RadioMark.svelte';
   //: ADR-0167 decision 6: our own neutral mark (design/marks/airplay.svg).
   import airplayIcon from '../assets/icon-airplay.png';
   import calmWall from '../assets/personalise/calm.webp';
@@ -56,7 +58,9 @@ const BTYPES = ['Sub', 'List', 'Note', 'Field', 'Status', 'P', 'Btn', 'Pics', 'W
 const noop = () => {};
 //: ADR-0167 (George, 2026-10-28): beside AirPlay until it is tried with an Apple device.
 const LIMITED = ['Limited testing', 'plain'];
-const SRCN = { lyr: 'Lyrion', spo: 'Spotify', air: 'AirPlay', bt: 'Bluetooth', plex: 'Plexamp' };
+const SRCN = { lyr: 'Lyrion', spo: 'Spotify', air: 'AirPlay', bt: 'Bluetooth', plex: 'Plexamp', rad: 'Internet radio' };
+//: ADR-0180 (design/source/31 F01-F02): Internet radio's chip and row carry its tint.
+const RADB = 'rgba(var(--c-radio-rgb),0.45)';
 const tagOf = tag => {
   if (!tag) return { tagDisplay: 'none', tag: '', tagBg: 'transparent', tagInk: 'var(--ink)' };
   const [text, tone] = Array.isArray(tag) ? tag : [tag, 'plain'];
@@ -64,19 +68,19 @@ const tagOf = tag => {
 };
 function row(o) {
   const k = o.k, radio = k === 'radio', net = k === 'net', ghost = k === 'ghost', sel = (radio || net || k === 'chk' || k === 'pick') && o.on;
-  const img = ['lyr', 'spo', 'air', 'bt'].includes(o.icon), letter = LETTER[o.icon] || '';
+  const img = ['lyr', 'spo', 'air', 'bt', 'rad'].includes(o.icon), letter = LETTER[o.icon] || '';
   const bar = n => n <= (o.lvl || 0) ? '#8fc4d8' : 'var(--c-ink-22)';
   return Object.assign({
     label: o.label, labelInk: ghost ? MUTE : 'var(--ink)', note: o.note || '', noteDisplay: o.note ? 'block' : 'none', meta: o.meta || '', metaDisplay: o.meta ? 'block' : 'none',
     onClick: o.fn || (k === 'pick' ? o.tick : null) || noop, onTick: k === 'pick' && o.fn ? o.tick : null, cursor: o.fn || o.tick ? 'pointer' : 'default',
-    bg: ghost ? 'transparent' : sel ? SEL : OFF, border: ghost ? 'var(--c-ink-30)' : sel ? SELB : OFFB, bs: ghost ? 'dashed' : 'solid',
+    bg: ghost ? 'transparent' : sel ? SEL : OFF, border: o.line || (ghost ? 'var(--c-ink-30)' : sel ? SELB : OFFB), bs: ghost ? 'dashed' : 'solid',
     radioDisplay: radio || net ? 'flex' : 'none', ring: sel ? 'var(--accent-lms)' : RING, dotDisplay: sel ? 'block' : 'none',
-    iconDisplay: img || letter ? 'flex' : 'none', isLyr: o.icon === 'lyr', isSpo: o.icon === 'spo', isAir: o.icon === 'air', isBt: o.icon === 'bt', letter, letterDisplay: letter && !img ? 'flex' : 'none',
+    iconDisplay: img || letter ? 'flex' : 'none', isLyr: o.icon === 'lyr', isSpo: o.icon === 'spo', isAir: o.icon === 'air', isBt: o.icon === 'bt', isRad: o.icon === 'rad', letter, letterDisplay: letter && !img ? 'flex' : 'none',
     barsDisplay: net ? 'flex' : 'none', b1: bar(1), b2: bar(2), b3: bar(3), b4: bar(4),
     togDisplay: k === 'tog' ? 'block' : 'none', togBg: o.on ? 'var(--accent-lms)' : 'var(--ink-fill)', togBorder: o.on ? 'var(--accent-lms)' : 'var(--ink-fill-press)',
     knobLeft: o.on ? '31px' : '3px', knobBg: o.on ? 'var(--ink-on-accent)' : 'var(--c-ink-55)',
     chkDisplay: k === 'chk' || k === 'pick' ? 'flex' : 'none', boxBg: sel ? 'var(--accent-lms)' : 'transparent', chevDisplay: k === 'hub' || (k === 'pick' && o.fn) ? 'block' : 'none',
-    srcs: (o.srcs || []).map(x => ({ isLyr: x === 'lyr', isSpo: x === 'spo', isAir: x === 'air', isBt: x === 'bt', isPlex: x === 'plex', name: SRCN[x] })), srcDisplay: o.srcs ? 'flex' : 'none',
+    srcs: (o.srcs || []).map(x => ({ isLyr: x === 'lyr', isSpo: x === 'spo', isAir: x === 'air', isBt: x === 'bt', isPlex: x === 'plex', isRad: x === 'rad', name: SRCN[x] })), srcDisplay: o.srcs ? 'flex' : 'none',
     foot: o.foot || '', footMeta: o.footMeta || '', footDisplay: o.foot ? 'flex' : 'none', footDot: o.footDot || 'var(--accent-lms)'
   }, tagOf(o.tag));
 }
@@ -168,7 +172,7 @@ const uniq = a => a.filter((x, i) => a.indexOf(x) === i);
 function init(flow, startAt, wide) {
   return { flow, startAt, wide, screen: startAt === 'p2' ? 'listen' : 'p1welcome', ret: null,
     net: 'Studio 5G', pw: 'studio-5g-pass', start: 'new', uploaded: false, name: 'Living Room', fmt: 0, output: 'HiFiBerry DAC+ HD', scr: 'panel',
-    lyrState: 'idle', preset: null, presetTouched: false, mix: { lyr: true, plex: false, spo: true, air: true, bt: true },
+    lyrState: 'idle', preset: null, presetTouched: false, mix: { lyr: true, plex: false, spo: true, air: true, bt: true, rad: true },
     lyrWhere: 'here', lyrAddrOpen: false, lyrAddr: '', places: { folder: false, usb: false, share: false }, usbDrives: [], usbOpen: null, usbError: null, shares: [], shareStep: null, shareSrv: null, shareUser: '', sharePw: '', shareAddr: '', shareAU: '', shareAP: '',
     plexOn: false, plexPct: 0, claimOpened: false, claim: '', plexState: 'code', plexSkipped: false,
     browse: 'ext', spotify: true, airplay: true, bt: true, btPhase: null, btLeft: 180, reqLeft: 30, trusted: [], everPaired: false,
@@ -185,8 +189,10 @@ class Component extends DCLogic {
     const spo = s.preset !== 'custom' || s.mix.spo, bt = s.preset !== 'custom' || s.mix.bt, headless = s.scr === 'headless';
     // ADR-0167 decision 1: AirPlay in every preset, as Spotify and Bluetooth.
     const air = s.preset !== 'custom' || s.mix.air;
-    return { lyr, plex, spo, air, bt, headless, wait: !lyr || s.browse === 'off', here: lyr && s.lyrWhere === 'here',
-      marks: [lyr && 'lyr', plex && 'plex', spo && 'spo', air && 'air', bt && 'bt'].filter(Boolean) };
+    // ADR-0180 decision 7: Internet radio too, on by default.
+    const rad = s.preset !== 'custom' || s.mix.rad;
+    return { lyr, plex, spo, air, bt, rad, headless, wait: !lyr || s.browse === 'off', here: lyr && s.lyrWhere === 'here',
+      marks: [lyr && 'lyr', plex && 'plex', spo && 'spo', air && 'air', bt && 'bt', rad && 'rad'].filter(Boolean) };
   }
   p1Path(s) { if (s.setUp) return ['p1welcome', 'p1net', 'p1join']; return s.start === 'new' ? ['p1welcome', 'p1net', 'p1start', 'p1name', 'p1clock', 'p1output', 'p1screen', 'p1review', 'p1join'] : ['p1welcome', 'p1net', 'p1start', 'p1backup', 'p1output', 'p1screen', 'p1restore', 'p1restored']; }
   ivBlock(s) {
@@ -377,16 +383,17 @@ class Component extends DCLogic {
       case 'listen': { const st = s.lyrState, found = st === 'found', pk = p => () => set({ preset: p, presetTouched: true });
         const stat = null;
         const lfoot = { back: false, alt: 'Do it later', altFn: () => this.go('later'), nextOff: !s.preset };
-          const mine = R('My music + streaming', '', s.preset === 'mine', pk('mine'), Object.assign({ srcs: ['lyr', 'spo', 'air', 'bt'] }, found ? { foot: 'Lyrion found on ' + s.net, footMeta: s.lyrMeta } : st === 'none' ? { foot: 'No Lyrion found on ' + s.net, footMeta: 'Set it up on the next screen', footDot: 'var(--c-ink-40)' } : {}));
-          const rest = [R('Plex + streaming', '', s.preset === 'plex', pk('plex'), { srcs: ['plex', 'spo', 'air', 'bt'] }),
-            R('Streaming only', '', s.preset === 'stream', pk('stream'), { srcs: ['spo', 'air', 'bt'] })];
-          const own = R('My own mix', 'Choose from any of these on the next screen.', s.preset === 'custom', pk('custom'), { srcs: ['lyr', 'plex', 'spo', 'air', 'bt'] });
+          const mine = R('My music + streaming', '', s.preset === 'mine', pk('mine'), Object.assign({ srcs: ['lyr', 'spo', 'air', 'bt', 'rad'] }, found ? { foot: 'Lyrion found on ' + s.net, footMeta: s.lyrMeta } : st === 'none' ? { foot: 'No Lyrion found on ' + s.net, footMeta: 'Set it up on the next screen', footDot: 'var(--c-ink-40)' } : {}));
+          const rest = [R('Plex + streaming', '', s.preset === 'plex', pk('plex'), { srcs: ['plex', 'spo', 'air', 'bt', 'rad'] }),
+            R('Streaming only', '', s.preset === 'stream', pk('stream'), { srcs: ['spo', 'air', 'bt', 'rad'] })];
+          const own = R('My own mix', 'Choose from any of these on the next screen.', s.preset === 'custom', pk('custom'), { srcs: ['lyr', 'plex', 'spo', 'air', 'bt', 'rad'] });
           const lpv = s.wide ? { kind: 'flow', head: '' } : null;
           return { title: 'How will you listen?', sub: 'Pick the closest. Change anything after.', pv: lpv, foot: lfoot, blocks: [...(stat ? [stat] : []), list([mine, ...rest]), list([own], 'Or mix your own')] };
       }
       case 'mix': { const m = k => () => this.setState(st => ({ mix: Object.assign({}, st.mix, { [k]: !st.mix[k] }) }));
         return { title: 'My own mix', blocks: [list([T('Lyrion', 'Browse your files on the screen.', s.mix.lyr, m('lyr'), { icon: 'lyr' }), T('Plexamp', 'Your Plex library, from its app.', s.mix.plex, m('plex'), { icon: 'plex' }), { k: 'ghost', label: 'Library service', note: 'The next one lands here.', tag: 'Next phase' }], 'Your own music'),
-          list([T('Spotify', '', s.mix.spo, m('spo'), { icon: 'spo' }), T('AirPlay', '', s.mix.air, m('air'), { icon: 'air', tag: LIMITED }), T('Bluetooth', '', s.mix.bt, m('bt'), { icon: 'bt' })], 'Streaming')] }; }
+          list([T('Spotify', '', s.mix.spo, m('spo'), { icon: 'spo' }), T('AirPlay', '', s.mix.air, m('air'), { icon: 'air', tag: LIMITED }), T('Bluetooth', '', s.mix.bt, m('bt'), { icon: 'bt' })], 'Streaming'),
+          list([T('Internet radio', 'Stations from a public directory. Works without Lyrion.', s.mix.rad, m('rad'), { icon: 'rad', line: RADB })], 'Radio')] }; }
       case 'lyrion': { const here = s.lyrWhere === 'here';
         if (s.lyrState === 'found') {
           const pick = (w, a) => () => set({ lyrWhere: w, lyrServer: a === undefined ? s.lyrServer : a });
@@ -1188,6 +1195,8 @@ class Component extends DCLogic {
     const o = { spotify_enabled: d.spo && s.spotify, bt_enabled: d.bt && s.bt, lms_enabled: d.lyr };
     // ADR-0167: AirPlay downloads nothing, so it is written either way, as Spotify is.
     o['airplay.enabled'] = d.air && s.airplay;
+    // ADR-0180 decision 7: the radio has no step of its own; the preset or the mix says.
+    o.radio_enabled = d.rad;
     if (d.lyr) {
       if (s.lyrState === 'found' && s.lyrWhere === 'there' && s.lyrServer) o.lms_server = s.lyrServer;
       else if ((s.lyrWhere === 'addr' || s.lyrAddrOpen) && s.lyrAddr.trim()) o.lms_server = s.lyrAddr.trim();
@@ -1412,6 +1421,7 @@ class Component extends DCLogic {
                           {#if o.isSpo}<img src={spotifyIcon} alt="" style="display:block;width:22px;height:22px;">{/if}
                           {#if o.isAir}<img src={airplayIcon} alt="" style="display:block;width:22px;height:22px;">{/if}
                           {#if o.isBt}<BluetoothMark size={22} />{/if}
+                          {#if o.isRad}<RadioMark size={24} stroke={2.2} />{/if}
                           <span style="width:22px;height:22px;border-radius:50%;border:2px solid var(--c-ink-70);box-sizing:border-box;align-items:center;justify-content:center;font-size:11px;font-weight:800;display:{o.letterDisplay};">{o.letter}</span>
                         </span>
                         <span style="flex:1;min-width:0;">
@@ -1420,11 +1430,12 @@ class Component extends DCLogic {
                           <span style="font-family:var(--font-mono);font-size:13px;letter-spacing:0.04em;margin-top:3px;color:var(--ink-quiet);display:{o.metaDisplay};">{o.meta}</span>
                           <span style="flex-wrap:wrap;gap:6px;margin-top:9px;display:{o.srcDisplay};">
                             {#each o.srcs as sx}
-                              <span style="display:flex;align-items:center;gap:7px;height:30px;padding:0 11px 0 7px;border-radius:999px;background:var(--ink-fill);border:1px solid var(--c-ink-12);box-sizing:border-box;font-size:13px;font-weight:600;color:var(--c-ink-85);">
+                              <span style="display:flex;align-items:center;gap:7px;height:30px;padding:0 11px 0 7px;border-radius:999px;background:{sx.isRad ? 'rgba(var(--c-radio-rgb),0.14)' : 'var(--ink-fill)'};border:1px solid {sx.isRad ? RADB : 'var(--c-ink-12)'};box-sizing:border-box;font-size:13px;font-weight:600;color:{sx.isRad ? 'var(--ink)' : 'var(--c-ink-85)'};">
                                 {#if sx.isLyr}<img src={lyrionIcon} alt="" style="display:block;width:20px;height:15px;">{/if}
                                 {#if sx.isSpo}<img src={spotifyIcon} alt="" style="display:block;width:16px;height:16px;">{/if}
                                 {#if sx.isAir}<img src={airplayIcon} alt="" style="display:block;width:16px;height:16px;">{/if}
                                 {#if sx.isBt}<BluetoothMark size={16} />{/if}
+                                {#if sx.isRad}<RadioMark size={16} stroke={2.4} />{/if}
                                 {#if sx.isPlex}<span style="width:16px;height:16px;border-radius:50%;border:2px solid var(--c-ink-70);box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;">P</span>{/if}
                                 <span>{sx.name}</span>
                               </span>

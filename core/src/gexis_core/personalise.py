@@ -42,6 +42,8 @@ PENDING, DONE, LATER = "pending", "done", "later"
 KEYS = (
     "lms_enabled", "lms_server", "lms_extended_nav", "lms_library",
     "spotify_enabled", "bt_enabled",
+    # ADR-0180 decision 7: internet radio, offered in *How will you listen?*.
+    "radio_enabled",
     "phone_touchpad",
     "visualiser_skins", "viz_timeout", "skin_corpus", "skin_motion", "record_speed",
     "waiting_clock", "waiting_background", "waiting_wallpaper_styles",

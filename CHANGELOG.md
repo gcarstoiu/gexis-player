@@ -6,6 +6,26 @@
 Every release of Gexis Player and its notes, newest first. The player
 shows the last 10 under Settings → System → Change logs.
 
+## 1.17.0 — 16 November 2026
+
+### New
+
+- Internet radio, with or without a Lyrion server: stations from radio-browser.info, a public directory, found by popularity, genre, country, language or name, on the screen and the phone.
+- Favourite stations, up to 200 in any order, kept with the player's settings so a backup carries them; they play even when the directory cannot be reached.
+- Now Playing shows the station, and the song's title and artist when the station sends them; Previous and Next step through the favourites, like a radio's presets.
+- A station missing from the directory can be added by its address from the phone's Radio page.
+- With the Lyrion client off, the waiting screen has a Radio button; with it on, Lyrion's radio is inside Radio.
+
+### Fixed
+
+- The phone's touchpad outlines a round button over a picture whole, not only with the pointer near its middle.
+
+### Good to know
+
+- Internet radio is on unless switched off in Settings → Sources → Internet radio, where the country for Popular here is set too.
+- The directory sees the player's address and what is browsed and searched, and counts each play, which is how Popular here is ranked; there is no account.
+- A live station has Stop instead of Pause; a dropped stream is tried three times before it stops.
+
 ## 1.16.4 — 15 November 2026
 
 ### Fixed

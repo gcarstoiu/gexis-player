@@ -538,3 +538,37 @@ def test_the_carry_over_takes_carried_ids_out_of_the_plugins_page_record(tmp_pat
                  {"settings_store": store, "plugin_store": plugin_store})
     write({"visualiser-skins"})
     assert store.get(plugin_store.ADDED) == ["visualiser-skins"]
+
+
+def test_the_radio_s_unit_is_started_for_a_station_never_enabled_or_restarted():
+    """ADR-0180: `gexis-radio.service` is static. Treated as the other
+    sources' units, the switch would `enable --now` it - mpv idling from boot
+    - the start-up check would find it "disagreeing" at every boot, and a
+    change of output would `restart`, which starts a stopped unit."""
+    from gexis_core.__main__ import CORE_STARTED, RENDERER_ROWS, RENDERER_UNITS
+    from gexis_core.adapters.radio import RadioAdapter
+
+    assert "radio" in CORE_STARTED and RENDERER_ROWS["radio"] == "radio_enabled"
+    now = _closure("_apply_renderer_now")
+    assert now.index("if renderer_id in CORE_STARTED") < now.index("set_unit_enabled(adapter.unit_name, on)")
+    assert "await adapter.release()" in now
+    assert "renderer_id not in CORE_STARTED" in _closure("_reconcile_sources")
+    restart = _closure("_restart_renderers")
+    assert "rid not in CORE_STARTED" in restart and ".reopen()" in restart
+    # Stopped with the others before the chain is rewritten, so it reads the
+    # new one when it opens the device again.
+    assert RadioAdapter.unit_name in RENDERER_UNITS
+    for name in ("_switch_output", "_rewrite_output_conf", "_before_loopback_reload"):
+        assert "*RENDERER_UNITS" in _closure(name), name
+
+
+def test_every_built_in_renderer_s_unit_is_stopped_before_the_chain_is_rewritten():
+    """The list is written out once; a renderer added later must be in it."""
+    from gexis_core.__main__ import RENDERER_UNITS
+    from gexis_core.adapters.bluetooth import BluetoothAdapter
+    from gexis_core.adapters.lms import LmsAdapter
+    from gexis_core.adapters.radio import RadioAdapter
+    from gexis_core.adapters.spotify import SpotifyAdapter
+
+    for adapter in (LmsAdapter, SpotifyAdapter, BluetoothAdapter, RadioAdapter):
+        assert adapter.unit_name in RENDERER_UNITS, adapter.__name__

@@ -15,7 +15,8 @@ for unit in gexis-lyrion; do
 done
 # ADR-0162, ADR-0166: started and stopped by the core only - no [Install] section at all.
 # ADR-0167: NQPTP runs with the AirPlay receiver, never by itself.
-for unit in gexis-equaliser gexis-snapserver gexis-snapclient gexis-nqptp; do
+# ADR-0180: internet radio's mpv, started for a station.
+for unit in gexis-equaliser gexis-snapserver gexis-snapclient gexis-nqptp gexis-radio; do
 	[ "$(systemctl is-enabled "${unit}")" = static ] || { echo "ERROR: ${unit} should be static" >&2; exit 1; }
 done
 for unit in alsa-restore samba-ad-dc plymouth-quit plymouth-quit-wait snapserver snapclient; do
