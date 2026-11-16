@@ -193,10 +193,13 @@ Closed: 0-31 and 35 (13 with letters a-f); 22, 23, 27-31 and 35 on
 numbered consecutively without letters, each with a stable ID (George,
 2026-10-13). **In progress: 32**, the library answers for itself
 (`ph-library`, George 2026-11-16, after the integration's 0.7.0):
-[ADR-0184](docs/decisions/0184-the-core-signs-in-to-plex-itself.md)
-proposed for acceptance 1 (the core signs in to Plex with a code; the token
-outside the settings, backups and reports; local servers only), four
-decisions for George, U1-U4 measured before building; nothing built yet.
+[ADR-0184](docs/decisions/0184-plex-information-through-plexamps-claim.md)
+proposed for acceptance 1, George's answers in (2026-11-16): Plexamp's
+claim lent by the plugin through a new contract event, held in memory only;
+backups as Plexamp's claim; its local server; the row in Sources beside
+Plexamp. **Owed by George:** the consequence (Plex only where Plexamp is
+installed and claimed) and the row (*Information from Plex*, on). Then U1
+(where Plexamp keeps its server, from its code); nothing built yet.
 Then 33 (Lyrion's own menus: the look), 34 (room correction in time,
 research first), 36 (Glass, a finding first); MPD parked. `docs/DEVELOPMENT.md` holds each phase's
 acceptance criteria.
