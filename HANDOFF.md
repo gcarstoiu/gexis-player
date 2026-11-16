@@ -95,25 +95,18 @@ was left, and the to-do list carries it; their full notes are in the archive
   turned off while a page is up; acceptance 4 (192 kHz with room
   correction).
 
-**The Home Assistant integration's 0.7.0** (George 2026-11-16: released
-before Phase 32, with the card's group built now): `release-0.7.0`, pushed
-(`019fe0f`), is `radio` (the favourites as sources, the directory in the
-media browser, `gexis.radio_favourite`, the card's Radio view) with
-`multiroom` (join and unjoin) merged in, and the card's group as the
-phone's (ADR-0163 C8-C14: the media player's `group` attribute, Join,
-Remove, Leave group, Undo group asked first, another group joined whole,
-the grouped bar and the group volume sheet; `gexis.set_group_volume` and
-`gexis.mute_group`); version 0.7.0; 88 tests pass; checked from mocked
-entities (`~/projects/scratch/ha-0.7.0/card`, `run.sh`). The player's group
-API matches. Notes approved by George with the group added
-(`~/projects/scratch/ha-0.7.0/notes.md`; the group's lines added after his
-approval, shown to him). **Waiting on George:** his look in his Home Assistant from the
-pre-release **0.7.0b1** (published 2026-11-16 from `release-0.7.0` at
-019fe0f; 0.6.0 stays Latest; HACS's *Redownload* lists only releases,
-pre-releases included, never a branch): acceptance 8, join and unjoin, the
-card's group. Then `main` fast-forwarded, the tag and release 0.7.0, the
-pre-release 0.7.0b1 and its tag deleted, the branches `radio`, `multiroom`,
-`release-0.7.0` deleted. Harnesses:
+**The Home Assistant integration's 0.7.0 released 2026-11-16** (George:
+released before Phase 32, the card's group built now; then released at his
+word without his look from HACS): internet radio (the favourites as
+sources, the directory in the media browser, `gexis.radio_favourite`, the
+card's Radio view), join and unjoin, and the card's group as the phone's
+(ADR-0163 C8-C14; `gexis.set_group_volume`, `gexis.mute_group`). `main`
+fast-forwarded to `019fe0f`, tagged and released (*Latest*); the pre-release
+0.7.0b1 and the branches `radio`, `multiroom`, `release-0.7.0` deleted.
+**Not yet seen in a real Home Assistant:** acceptance 8 (favourites from the
+sources and the card; the media browser's browsing and search), join and
+unjoin, the card's group - checked from mocked entities only
+(`~/projects/scratch/ha-0.7.0/card`, `run.sh`). Harnesses:
 `~/projects/scratch/ph31/card`, `ph31/harness`, `ph30/harness` (`WT` names
 the worktree).
 
@@ -159,7 +152,7 @@ screen change may miss full-screen (the HMTECH 10.1"; to-do
   its checksum on 2026-11-13 (130).
 
 **The Home Assistant integration**: `gcarstoiu/gexis-player-homeassistant`
-0.6.0 (local `~/projects/gexis-player-homeassistant`, tests on
+0.7.0 (local `~/projects/gexis-player-homeassistant`, tests on
 `~/projects/ha-venv`). **HACS's default list**: hacs/default#12691 waits for
 HACS's maintainers - do not ask them for a review (their template).
 
