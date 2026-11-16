@@ -3399,6 +3399,11 @@ received 2026-10-26, `design/source/21`.
 
 **ID:** `ph-multiroom` · numbered 22 on 2026-10-27, moved before room correction with AirPlay 2 (George: room correction cannot be tried yet); added 2026-10-25 as 24, 25 from 2026-10-26.
 
+**Closed 2026-11-16** (George, with 1.17.0 on Stable: every phase then in progress closed), in 1.10.0. Left, on the to-do list: the measurement session (at
+192 kHz the bar lost sync over Wi-Fi), the Home Assistant integration's
+join and unjoin (its `multiroom` branch), Lyrion-app grouping back and
+forth with the player's.
+
 **Added 2026-10-25** (George, with AirPlay 2). Spotify, AirPlay and Bluetooth
 playing in sync on several players, as Lyrion's own playback already does.
 
@@ -3462,6 +3467,10 @@ by the session's safety check).
 ### Phase 23 — AirPlay 2
 
 **ID:** `ph-airplay` · numbered 23 on 2026-10-27, after multiroom and before room correction (George); added 2026-10-25 as 23; numbered 24 on 2026-10-26.
+
+**Closed 2026-11-16** (George, with 1.17.0 on Stable: every phase then in progress closed), in every release since 1.9.0, on Stable from 1.10.0, still marked
+*Limited testing*. Left: the test with an Apple device (to-do `ph23-test`),
+then T1-T9 and the mark removed.
 
 **Added 2026-10-25** (George moved the Must ideas, and internet radio
 without Lyrion, into phases of their own after room correction). Play from
@@ -3674,6 +3683,10 @@ player can show of what Roon plays.
 (George: building on the local machine has become troublesome); a *Should*
 idea since 2026-10-18.
 
+**Closed 2026-11-16** (George, with 1.17.0 on Stable: every phase then in progress closed), in 1.12.1, on Stable from 1.13.0. Left: a card flashed from
+1.12.1's image (criterion 4), then R2D2's pi-gen container and build
+images removed (decision 3).
+
 **Added 2026-11-02.** The packages, the UI, the image and the release's
 parts are built on GitHub's arm64 machines from the release tag, not on
 R2D2. Signing stays on R2D2 (ADR-0105 decision 1). The proposal is
@@ -3712,6 +3725,10 @@ packs) is read from GitHub.
 correction (George). **On Stable with 1.13.0** (2026-11-06, George; Testing
 from 2026-11-03); criterion 5 and first use on a fresh card still to be seen.
 
+**Closed 2026-11-16** (George, with 1.17.0 on Stable: every phase then in progress closed), on Stable from 1.13.0. Left: criterion 5 and first use on a
+fresh card, Plexamp played once on 0.5.1, George's look at the Plugins
+page; ADR-0174's setup fix (part 2's list) not built.
+
 **Added 2026-11-03** (George: Plexamp, and Beszel's agent and hub, out of the
 player, as standalone plugins). Today they are plugins shipped with the
 player: in the image, pinned by `gexis-player`, updated only by a player
@@ -3746,6 +3763,10 @@ how.
    technical guide and plugin manual updated.
 
 ### Phase 29 — Room correction for the bass, with a USB microphone
+
+**Closed 2026-11-16** (George, with 1.17.0 on Stable: every phase then in progress closed), on Stable from 1.16.1. Not measured: the cuts read from
+CamillaDSP while music plays, the level against a meter, two sweeps'
+agreement at 60 dB, the stage's cost, the A/B bit-exactness.
 
 **Started 2026-11-03** (George), on `ph-room-correction`;
 [ADR-0175](decisions/0175-room-correction-for-the-bass.md) accepted the same
@@ -3822,6 +3843,11 @@ Pi, and the microphones (miniDSP UMIK-1 first).
 ### Phase 30 — Room correction for the full range
 
 **ID:** `ph-room-correction-full` · numbered 30 on 2026-11-03, after Plexamp and Beszel to the catalogue (George); numbered 29 on 2026-11-02, after releases built on GitHub (George); numbered 28 on 2026-11-01, after the Roon plugin (George); numbered 27 on 2026-10-29, with Phase 26; numbered 25 on 2026-10-27, after multiroom and AirPlay 2 (George: no room correction can be tried yet); added 2026-10-20 as 19, split from `ph-room-correction`; numbered 20 on 2026-10-21, 21 on 2026-10-24, 22 on 2026-10-25, 23 on 2026-10-26.
+
+**Closed 2026-11-16** (George, with 1.17.0 on Stable: every phase then in progress closed), on Stable from 1.16.1, Full range still marked *Limited
+testing*. Left: George's run at the full range; the stage's cost at
+44.1/96/192 kHz; acceptance 2 as a finding from a run checked at Full
+range. Phase 34 next for room correction.
 
 **Added 2026-10-20** (George, splitting room correction in two). After the
 bass (Phase 29, `ph-room-correction`): correction above the Schroeder
@@ -3917,6 +3943,9 @@ Bass, Full range and Without, the times). Built the same day, and **on Testing w
 ### Phase 31 — Internet radio without Lyrion
 
 **ID:** `ph-radio` · numbered 31 on 2026-11-03, after Plexamp and Beszel to the catalogue (George); numbered 30 on 2026-11-02, after releases built on GitHub (George); numbered 29 on 2026-11-01, after the Roon plugin (George); numbered 28 on 2026-10-29 (the plugin catalogue and themes brought forward); added 2026-10-25 as 26; numbered 27 on 2026-10-26.
+
+**Closed 2026-11-16** (George, with 1.17.0 on Stable: every phase then in progress closed), in 1.17.0, on Stable the same day. Left: the Home Assistant
+integration's release from its `radio` branch (acceptance 8).
 
 **Added 2026-10-25** (George, with AirPlay 2; it was a Should idea). A radio
 directory for players that only stream, with no Lyrion server: today the
@@ -4115,6 +4144,11 @@ must settle:
 ### Phase 35 — A page from Home Assistant on the screen
 
 **ID:** `ph-ha-page` · added 2026-11-07 as 35 (George).
+
+**Closed 2026-11-16** (George, with 1.17.0 on Stable: every phase then in progress closed), on Stable from 1.16.1 with the integration's 0.6.0. Not yet on
+a player: the heat take-down, a USB keyboard's key, one page replacing
+another, the switch turned off while a page is up; acceptance 4 (192 kHz
+with room correction).
 
 **Added 2026-11-07** (George, asked from the Home Assistant side). Home
 Assistant puts a page of its own on a player's screen for a while - live
