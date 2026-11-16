@@ -1,8 +1,8 @@
 # ADR-0184 — Plex information through Plexamp's claim
 
-**Status:** **Proposed** 2026-11-16 (Phase 32's acceptance 1). George
-answered its four decisions the same day (below); accepted once he confirms
-the consequence and the settings row named at the end. **Builds on:**
+**Status:** **Accepted** 2026-11-16 (Phase 32's acceptance 1): George
+answered its four decisions and then confirmed the consequence and the
+settings row, the same day. **Builds on:**
 [ADR-0016](0016-plugins-as-separate-processes.md) (plugins are separate
 processes), [ADR-0040](0040-enrichment-providers.md) (the provider chain),
 [ADR-0119](0119-plexamp-is-claimed-from-settings.md) (Plexamp's claim),
@@ -61,7 +61,7 @@ a Plex token and a server, and today:
    local network only, as the plugin's artwork already is.
 4. **The row is in Sources, beside Plexamp.**
 
-**The consequence**, for George to confirm: Plex answers only on a player
+**The consequence**, confirmed by George: Plex answers only on a player
 where Plexamp is installed and claimed. Without Plexamp (ADR-0174 made it
 optional), and while it is claimed again or signed out by Plex, the internet
 providers answer as they do today.
@@ -86,12 +86,12 @@ providers answer as they do today.
    catalogue) sends the event from Plexamp's token and the server Plexamp
    plays from.
 
-## The row, for ADR-0022's inventory (George to confirm)
+## The row, in ADR-0022's inventory (confirmed by George)
 
 - **[N] Information from Plex** - Sources, beside Plexamp: a switch, **on**
   by default, its note *Artist and album information from your Plex server,
   ahead of the internet's*. Greyed with *Claim Plexamp first* while Plexamp
-  is not claimed. Appended to ADR-0022 once George confirms.
+  is not claimed. Appended to ADR-0022 the same day.
 
 ## Unmeasured, measured before building
 
