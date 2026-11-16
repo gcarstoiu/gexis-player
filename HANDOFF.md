@@ -198,7 +198,18 @@ George agreed (2026-11-16) to the measurements on his library (acceptance
 3-5): counts and timings only, no names, track listings or screenshots. U1 read from Plexamp 4.13.2's code
 (`~/projects/scratch/ph32/plexamp-4.13.2`): `server:identifier` and
 `@Plexamp:resources` (each server's connections and own token) in its
-settings store. Nothing built yet.
+settings store. **Built 2026-11-16, covers first, not yet on a player:**
+gexis-plexamp 0.6.0 on its branch `library` (lends the library from
+Plexamp's files; the *Information from Plex* row in its manifest; 122 tests)
+and the core on `ph-library` (worktree `~/projects/gexis-player-ph-library`):
+the contract's `library` event, added within version 1; `plex.py` (held in
+memory, one album index, the `plex-release` provider first, covers through
+`/plex/cover/<key>/<stamp>`); the row greyed until the plugin reports a
+claim; the visualiser asks the core for a cover named by its path (AirPlay's
+too). 3,549 core tests pass. ADR-0184 *As built*. **Next:** a preview on
+sofapi with the plugin copied in by hand (George's go-ahead first; the
+catalogue will list 0.6.0 for the release that carries it, by its `player`
+field); then the counts (acceptance 3-5).
 Then 33 (Lyrion's own menus: the look), 34 (room correction in time,
 research first), 36 (Glass, a finding first); MPD parked. `docs/DEVELOPMENT.md` holds each phase's
 acceptance criteria.
