@@ -854,7 +854,6 @@ async def main() -> None:
         _publish_radio()
     favourites = radio_favourites.Favourites(settings_store.get, settings_store.set,
                                              on_change=_favourites_changed)
-    state_store.is_favourite = lambda station_id: favourites.get(station_id) is not None
     radio = RadioAdapter(user_agent=radio_agent,
                          resolve=lambda station: radio_service.resolve(station),
                          step=favourites.step,
@@ -973,6 +972,8 @@ async def main() -> None:
         {rid: adapter.capabilities for rid, adapter in adapters.items()},
         sources=tuple(p.to_json() for p in installed_plugins),
     )
+    # A member's heart for the leader's station is its own favourites' (ADR-0180).
+    state_store.is_favourite = lambda station_id: favourites.get(station_id) is not None
 
     # Criterion 4: moOde-compatible metadata file, subscribed the same way
     # StateServer is - a plain callback on every published state change.
