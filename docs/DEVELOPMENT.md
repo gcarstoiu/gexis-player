@@ -4012,6 +4012,11 @@ Home Assistant integration's release (acceptance 8).
 
 **ID:** `ph-library` · numbered 32 on 2026-11-03, after Plexamp and Beszel to the catalogue (George); numbered 31 on 2026-11-02, after releases built on GitHub (George); numbered 30 on 2026-11-01, after the Roon plugin (George); numbered 29 on 2026-10-26 (28 from 2026-10-25, 24 earlier that day, 23 from 2026-10-21, 22 from 2026-10-20, 21 from 2026-10-19, 20 from 2026-10-15, 19 from 2026-10-14, 18 from 2026-10-13; was 11a).
 
+**Started 2026-11-16** (George, after 1.17.0 on Stable):
+[ADR-0184](decisions/0184-the-core-signs-in-to-plex-itself.md) proposed
+for acceptance 1 - the core signs in to Plex with a code of its own, the
+token kept outside the settings. Nothing built before it is accepted.
+
 **Added 2026-09-25 (George):** *"Let's introduce another phase … which should tackle the question of how we can we leverage the plexamp/Plex
 server metadata that is available. Anything that can reduce the dependency on
 internet providers is a good thing. They can be kept as fallbacks, not

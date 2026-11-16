@@ -95,14 +95,21 @@ was left, and the to-do list carries it; their full notes are in the archive
   turned off while a page is up; acceptance 4 (192 kHz with room
   correction).
 
-**The Home Assistant integration's next release**, after the player's (now
-out): its `radio` branch (pushed, not merged: the favourites as sources, the
-directory in the media browser, `gexis.radio_favourite`, the `gexis/radio`
-WebSocket command, the card's Radio view C01-C06; a stopped station shows as
-paused with Play; one column under the card's 440 px cap) and its
-`multiroom` branch (join and unjoin, `9744bb3`). Its version is bumped at the
-release. Harnesses: `~/projects/scratch/ph31/card`, `ph31/harness`,
-`ph30/harness` (`WT` names the worktree).
+**The Home Assistant integration's 0.7.0** (George 2026-11-16: released
+before Phase 32): `release-0.7.0`, pushed, is `radio` (the favourites as
+sources, the directory in the media browser, `gexis.radio_favourite`, the
+`gexis/radio` WebSocket command, the card's Radio view C01-C06) with
+`multiroom` (join and unjoin, `9744bb3`) merged in, its three conflicts
+resolved by keeping both sides; version 0.7.0 in the manifest and the card;
+the README's requirements (grouping 1.8.0, radio 1.17.0); 84 tests pass.
+The player's group API still matches (`/group/join`, `leave`, `undo`; the
+state's `group`). **Waiting on George:** his look in his Home Assistant
+(HACS, the branch) at acceptance 8 and at join and unjoin; and whether the
+card's group view (to-do `ph22-ha-card`: the player list with Join and
+Remove, the group volume, planned for this release, not built) waits for
+0.8.0. Then `main` fast-forwarded, the tag and release with notes he
+approves, the three branches deleted. Harnesses: `~/projects/scratch/ph31/card`,
+`ph31/harness`, `ph30/harness` (`WT` names the worktree).
 
 **Open, small:** a preview's download still holds the skin packs (1.1 of
 1.2 GB) though `release.yml` excludes them; `gen_personalise.py` out of step since Phase 23;
@@ -181,10 +188,14 @@ words) cut back; the start-of-session set is about 9,400 words.
 Closed: 0-31 and 35 (13 with letters a-f); 22, 23, 27-31 and 35 on
 2026-11-16 (George, with 1.17.0 on Stable), what each left above. Phases are
 numbered consecutively without letters, each with a stable ID (George,
-2026-10-13). **Between phases**: none in progress. In order: 32 (the library
-answers for itself), 33 (Lyrion's own menus: the look), 34 (room correction
-in time, research first), 36 (Glass, a finding first); MPD parked. The next
-to start is George's choice. `docs/DEVELOPMENT.md` holds each phase's
+2026-10-13). **In progress: 32**, the library answers for itself
+(`ph-library`, George 2026-11-16, after the integration's 0.7.0):
+[ADR-0184](docs/decisions/0184-the-core-signs-in-to-plex-itself.md)
+proposed for acceptance 1 (the core signs in to Plex with a code; the token
+outside the settings, backups and reports; local servers only), four
+decisions for George, U1-U4 measured before building; nothing built yet.
+Then 33 (Lyrion's own menus: the look), 34 (room correction in time,
+research first), 36 (Glass, a finding first); MPD parked. `docs/DEVELOPMENT.md` holds each phase's
 acceptance criteria.
 
 ## Machines
