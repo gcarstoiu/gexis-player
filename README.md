@@ -287,11 +287,11 @@ Rough, and subject to change:
   its build. Plexamp and Beszel as plugins from the catalogue, updated
   there. Room correction with a USB microphone, for the bass or the full
   range. A page from Home Assistant on the screen for a while, such as
-  cameras when the doorbell rings.
-- 🔜 **Next:** internet radio without a Lyrion server, being built now
-  (Phase 31).
-- 🎨 **Later:** with Plex switched on, your own Plex server fills in
-  the artist and album information other sources leave out.
+  cameras when the doorbell rings. Internet radio, with or without a Lyrion
+  server: a public directory and favourites, on the screen and the phone.
+- 🔜 **Next:** with Plex switched on, your own Plex server fills in the
+  artist and album information other sources leave out.
+- 🎨 **Later:** a fresh look for Lyrion's own menus.
 - 💭 **Maybe:** the DAC's own filter and polarity options.
 
 ## 📜 Legal
