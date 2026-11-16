@@ -76,13 +76,14 @@ RECLAIM_MIN_BYTES = 1024 ** 2
 #: where a wrong answer is unlikely rather than where matches are plentiful.
 CONFIDENCE_MIN = 90
 
-#: Warmed as soon as a track starts. The two LMS providers because they are
-#: on this network and cost nothing anyone else pays for - and LRCLIB
+#: Warmed as soon as a track starts. The two LMS providers and the lent Plex
+#: library (ADR-0184) because they are on this network and cost nothing
+#: anyone else pays for - and LRCLIB
 #: because the Track tab itself shows synced lyrics when a track has them
 #: (George, 2026-09-18), so they are not a tab nobody opened: they are what
 #: the main screen draws. LRCLIB publishes no rate limit and asks only for
 #: serial requests and a real User-Agent, both of which `Http` does.
-PREFETCH_PROVIDERS = ("lms", "lms-release", "lrclib")
+PREFETCH_PROVIDERS = ("plex-release", "lms", "lms-release", "lrclib")
 
 #: **What each provider's answer depends on** (`TrackKey.scoped`). Not in
 #: the list: the track itself (lyrics, a recording's cover).
@@ -90,13 +91,16 @@ SCOPES = {
     "lms": "artist", "popular": "artist", "fanart": "artist", "tadb-bg": "artist",
     "wikipedia": "artist", "listenbrainz": "artist", "fanart-bgs": "artist",
     "lms-release": "album", "mb-release": "album", "coverart": "album",
+    "plex-release": "album",
 }
 
 #: The providers that find a cover. **Asked only for a track whose renderer
 #: sent none, and asked first** (2026-10-06): each began with MusicBrainz
 #: behind the biography and release searches on one limiter, and for LMS
 #: tracks with their own artwork they spent that allowance on nothing.
-ARTWORK_PROVIDERS = ("coverart", "recording-art")
+#: **The lent Plex library's first** (ADR-0184): on this network, and it
+#: holds the cover of every album it has (Finding 086).
+ARTWORK_PROVIDERS = ("plex-release", "coverart", "recording-art")
 
 #: How long a track must have been playing before its enrichment is warmed.
 #: Skipping through an album would otherwise cost one lookup per track.

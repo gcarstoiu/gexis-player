@@ -3966,6 +3966,100 @@
         ]
       }
     },
+    "/plex/cover/{key}/{stamp}": {
+      "get": {
+        "operationId": "plex_cover",
+        "tags": [
+          "Library"
+        ],
+        "summary": "Get an album's cover from the lent Plex library",
+        "description": "An album's cover from the Plex server whose library the Plexamp plugin lends (ADR-0184), named by the cover provider's answer as `album_art`. The core asks Plex for it with the lent token, which never leaves the player. Only an album's picture, by its two numbers on that server. Not found while no library is lent.",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "description": "The album's number on the Plex server.",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{1,12}$"
+            }
+          },
+          {
+            "name": "stamp",
+            "in": "path",
+            "required": true,
+            "description": "The picture's number on the Plex server.",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{1,12}$"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "description": "The cover's width and height in pixels, 100-1200; 600 if absent or outside that.",
+            "schema": {
+              "type": "integer",
+              "minimum": 100,
+              "maximum": 1200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The cover.",
+            "content": {
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "contentMediaType": "image/jpeg"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "contentMediaType": "image/png"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "`public, max-age=86400`.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No Plex library is lent (`no Plex library`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The Plex server did not answer, or not with a picture (`the Plex server did not answer`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-gexis-stability": "internal",
+        "x-gexis-adr": [
+          "ADR-0184"
+        ]
+      }
+    },
     "/plugins/{id}/uninstall": {
       "post": {
         "operationId": "plugin_uninstall",

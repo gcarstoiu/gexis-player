@@ -78,6 +78,7 @@ from gexis_core.settings_registry import (
     UnknownSetting,
 )
 from gexis_core.state import StateStore
+from gexis_core.plex import COVER_SIZE, COVER_SIZES
 
 #: The most artists one request may ask photos for. A screen of
 #: cards is about 40; this is a bound on what a caller can make the
@@ -202,6 +203,7 @@ class StateServer:
         lyrion_known: "discovery.Known | None" = None,
         multiroom=None,
         plugin_artwork=None,
+        plex=None,
         panel_token: str | None = None,
         store_view=None,
         store_add=None,
@@ -282,6 +284,8 @@ class StateServer:
         self._plugins = {p.id: p for p in plugins}
         #: ADR-0167 T9: the covers plugins handed over as bytes.
         self._plugin_artwork = plugin_artwork
+        #: ADR-0184: the Plex library the Plexamp plugin lends, for its covers.
+        self._plex = plex
         #: **ADR-0083.** Called after an archive has been written back, to
         #: reboot. Injected rather than imported so the route stays a route:
         #: the daemon owns what "restart the device" means, and a test can
@@ -1634,6 +1638,24 @@ class StateServer:
         kind, data = found
         return web.Response(body=data, content_type=kind,
                             headers={"Cache-Control": "public, max-age=31536000, immutable"})
+
+    async def _handle_plex_cover(self, request: web.Request) -> web.Response:
+        """**An album's cover from the lent Plex library** (ADR-0184). The
+        picture's address on the Plex server needs the token, which never
+        leaves the core: the screens and phones are given this path, and the
+        core asks Plex. Only an album's picture, by its two numbers."""
+        if self._plex is None or not self._plex.lent:
+            return web.json_response({"error": "no Plex library"}, status=404)
+        raw = request.query.get("size")
+        size = int(raw) if raw and raw.isdigit() and int(raw) in COVER_SIZES else COVER_SIZE
+        found = await self._plex.cover(request.match_info["key"], request.match_info["stamp"], size)
+        if found is None:
+            return web.json_response({"error": "the Plex server did not answer"}, status=502)
+        kind, data = found
+        if not kind.startswith("image/"):
+            return web.json_response({"error": "the Plex server did not answer"}, status=502)
+        return web.Response(body=data, content_type=kind.split(";")[0],
+                            headers={"Cache-Control": "public, max-age=86400"})
 
     async def _handle_surface(self, request: web.Request) -> web.Response:
         """ADR-0035 §6: the panel always arrives on loopback, a phone from the LAN."""
@@ -4064,6 +4086,7 @@ class StateServer:
         app.router.add_get("/skins/{name:.*}/preview", self._handle_skin_preview)
         app.router.add_get("/plugins/{id}/mark", self._handle_plugin_mark)
         app.router.add_get("/plugins/{id}/artwork/{key}", self._handle_plugin_artwork)
+        app.router.add_get(r"/plex/cover/{key:\d{1,12}}/{stamp:\d{1,12}}", self._handle_plex_cover)
         app.router.add_get("/menus", self._handle_menus)
         app.router.add_get("/menus/browse", self._handle_menus_browse)
         app.router.add_get("/menus/letters", self._handle_menus_letters)

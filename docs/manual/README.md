@@ -918,7 +918,11 @@ still mounted.
 | Internet radio: Popular here | The country whose stations *Popular here* lists; at first, the time zone's. The list shows the countries the directory has stations in, each with its number of stations, and marks the time zone's *From your time zone*; while the directory cannot be reached, it shows every country. |
 
 Plugins add their own rows here once switched on: **Plexamp** (claim the
-player into your Plex account).
+player into your Plex account), and with it **Information from Plex**: on,
+when a source sends no cover with a track (Bluetooth often does not), the
+player looks for it in your Plex library first, then on the internet. It uses the Plex server Plexamp plays from, through Plexamp's own
+sign-in, and only while that server is on your home network. It is greyed
+with *Claim Plexamp first* until Plexamp is claimed.
 
 ### Handoff — *Who gets the player*
 

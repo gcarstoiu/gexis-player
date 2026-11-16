@@ -53,7 +53,7 @@ MAX_LINE = 1 << 20
 #: rather than ignored: a plugin author cannot see this log.
 EVENTS = frozenset(
     {"acquire", "release", "available", "metadata", "queue", "volume", "row", "announce", "artwork",
-     "software"}
+     "software", "library"}
 )
 
 #: How long a command waits for its `ok` before the caller is told it failed.

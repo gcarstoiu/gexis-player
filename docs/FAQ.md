@@ -1014,6 +1014,9 @@ the cover up when the source sends none. The match has to be at least as
 sure as *Confidence threshold* (recommended 90 %); below it the player shows
 nothing rather than a wrong cover. Since 0.9.2, covers are found more often,
 including for tracks by several artists.
+With Plexamp claimed and *Information from Plex* on (*Settings → Sources*,
+under Plexamp), the player looks in your Plex library first, then on the
+internet.
 
 **Where do lyrics come from, and why are some not synced?**
 From LRCLIB, switched on with *Settings → Enrichment → Lyrics*. Where LRCLIB

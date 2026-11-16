@@ -529,6 +529,15 @@ resolves an artist's MusicBrainz id once and shares it between providers.
 Provider order as wired in `__main__.py` (merged field by field, earlier
 wins):
 
+0. the lent Plex library's album cover (`plex.py`, ADR-0184): asked only
+   while the Plexamp plugin lends a library (the contract's `library` event:
+   the server, its local address and its token, held in memory only) and
+   `plexamp.plex_info` is on. One index of the library's albums, read a page
+   at a time and kept six hours, matched on `match_title` and the artist or
+   lead artist; the answer is a path on the player, `/plex/cover/<key>/<stamp>`,
+   which asks Plex for the picture with the token. A sleeping server costs one
+   connection wait (2 s), then the usual backoff. Another server than the one
+   the cache's answers came from drops them;
 1. fanart.tv artist image (page size), then fanart.tv background (idle screen
    only), then TheAudioDB artist image - pictures first;
 2. LMS artist info (the Music & Artist Information plugin, `artistinfo.py`),
@@ -540,7 +549,8 @@ wins):
 
 Providers with a key (fanart, TheAudioDB, ListenBrainz) are skipped until
 configured. Settings rows gate them: `enrichment` (all), `lyrics` (LRCLIB),
-`artwork_lookup` (cover providers).
+`artwork_lookup` (cover providers, Plex's included), `plexamp.plex_info`
+(Plex; greyed until the plugin reports Plexamp claimed).
 
 **When it runs.** A state subscriber pre-fetches 8 s into a playing track,
 local providers only (`lms`, `lms-release`, `lrclib`), so skipping costs

@@ -170,6 +170,7 @@ Taken from `Adapter` and `Capabilities` as they are. The prose for each is in
 {"t": "announce", "services": [{"type": "_radio-foo._tcp", "port": 8200, "txt": {"id": "abc"}}]}
 {"t": "artwork", "type": "image/jpeg", "data": "<base64>"}
 {"t": "software", "state": "downloading", "label": "Plexamp 4.13.2", "from": "Plex", "received": 4194304, "total": 14600000}
+{"t": "library", "kind": "plex", "server": "<the server's id>", "url": "http://<address>:32400", "token": "…"}
 ```
 
 - **`acquire`** — a deliberate acquisition (ADR-0010's table as amended by
@@ -247,6 +248,18 @@ Taken from `Adapter` and `Capabilities` as they are. The prose for each is in
   again after reconnecting. A cover that is not a JPEG or PNG within the
   size is refused and logged. A core older than this answers it with an
   error.
+- **`library`** — *added 2026-11-16, within version 1* ([ADR-0184](decisions/0184-plex-information-through-plexamps-claim.md)).
+  A library the core may ask about whatever plays, lent by the plugin that
+  already signs in to it. `kind` is `plex`: `server` is the Plex server's
+  `clientIdentifier`, `url` its address on the **local network** (`http` or
+  `https`, a scheme, a host and a port, nothing after them) and `token` a
+  token for that server. `server`, `url` and `token` are all `null` when
+  there is nothing to lend. Send it when the plugin starts and whenever any
+  of the three changes, and again after reconnecting. The core takes it only
+  from the plugin `plexamp`, refuses an address that is not on the local
+  network, keeps it **in memory only** - never stored, backed up or put in
+  a problem report, and never logged - and lets it go when the plugin
+  disconnects. A core older than this answers it with an error.
 
 ## Core → plugin
 
