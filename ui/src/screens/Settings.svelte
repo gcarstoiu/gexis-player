@@ -18,6 +18,8 @@
   import NoteText from '../lib/NoteText.svelte';
   import Equaliser from './eq/Equaliser.svelte';
   import RoomCorrection from './room/RoomCorrection.svelte';
+  import CountrySheet from './CountrySheet.svelte';
+  import { loadCountries } from '../lib/radio.js';
   import { screen } from '../lib/family.svelte.js';
   import { theme } from '../lib/theme.js';
   import { tone } from '../lib/themeRule.js';
@@ -65,6 +67,8 @@
   let eqPage = $state(false);
   //: ADR-0175: Audio -> Room correction opens its own page.
   let roomPage = $state(false);
+  //: ADR-0180 (design/source/31 S02, S04): Popular here's country, its own sheet.
+  let countryOpen = $state(false);
   let docPage = $state(null);
   let docError = $state(null);
   //: Which row the pane is showing. **Not the value**: tapping a row in the
@@ -159,6 +163,37 @@
     categories.find((g) => g.id === (wide ? (cat ?? categories[0]?.id) : drilled)) ?? null
   );
   const rows = $derived(current?.rows ?? []);
+
+  //: **Internet radio's *Ready*** (ADR-0180, design/source/31 S01, S03). The
+  //: core keeps no reading of its own for the radio, so its heading asks the
+  //: radio's routes: Ready is the radio on, and the directory's countries
+  //: back - asked now, or kept from the last day - with the directory's last
+  //: ask not failed (`reachable` false is the Radio screen's banner). With
+  //: the radio on and the directory not reached - nothing kept, or only the
+  //: last day's - *Directory unreachable*, in the warn tone (George,
+  //: 2026-11-14). With the radio off, nothing, as a switched-off service's.
+  //: The same list gives the country sheet its countries and counts.
+  const READY = { tone: 'ok', text: 'Ready' };
+  const UNREACHABLE = { tone: 'wait', text: 'Directory unreachable' };
+  let radioListing = $state(null);
+  const radioHere = $derived(rows.some((r) => r.type === 'group' && r.indicatorOf === 'radio_enabled'));
+  const radioOn = $derived(valueOf('radio_enabled') !== false);
+  const radioReady = $derived(radioOn && !!radioListing?.countries && radioListing.reachable !== false);
+  const radioIndicator = $derived(
+    radioReady ? READY : radioOn && radioListing?.reachable === false ? UNREACHABLE : null
+  );
+  async function readRadio() {
+    try {
+      const body = await loadCountries();
+      radioListing = { countries: body.countries ?? [], reachable: body.reachable };
+    } catch (error) {
+      // Only the core's own word (503, `reachable` false) is the directory's.
+      radioListing = { countries: null, reachable: error?.unreachable ? false : null };
+    }
+  }
+  $effect(() => {
+    if (radioHere && radioOn) untrack(readRadio);
+  });
   //: From the daemon, not derived here. The hostname is the system's own,
   //: so after a rename it still reads the old one until the restart - which
   //: is the truth, and the whole reason the sanitised host is shown beside
@@ -1103,10 +1138,11 @@
     if (row.type === 'toggle') return '';
     // ADR-0123: the cable at a glance, the line the core keeps for it.
     if (row.kind === 'cable') return row.note ?? '';
+    // A skin by the name its pack gives it (George's "Brand · Model"); a
+    // country by its name, though tagged (ADR-0180).
+    if (row.optionLabels && v != null && row.optionLabels[v]) return row.optionLabels[v];
     // A screen reads as its maker and model, not the picker's `Maker/Model`.
     if (row.optionTags && typeof v === 'string') return v.replace('/', ' ');
-    // A skin by the name its pack gives it (George's "Brand · Model").
-    if (row.optionLabels && v != null && row.optionLabels[v]) return row.optionLabels[v];
     // "Not set" is derived from an empty value, never stored as one, so it
     // can never be pre-filled into the field and saved as the real thing. A
     // secret that is set reports only that, never the value (ADR-0044).
@@ -1463,6 +1499,12 @@
   function openSheet(row) {
     // A multi-choice tap still waiting goes before another sheet takes the copy.
     if (pickedTimer) savePicked();
+    // ADR-0180: Popular here's country has a sheet of its own (S02, S04).
+    if (row.key === 'radio_country') {
+      countryOpen = true;
+      readRadio();
+      return;
+    }
     if (row.kind === 'hardware' && !onPanel() && hwPreloaded === null) {
       preloadHardware(row);
       return;
@@ -2220,16 +2262,18 @@
             {/if}
             {#each rows as r, i (r.key ?? `group-${i}`)}
               {#if r.type === 'group'}
+                <!-- Internet radio's reading is the screen's own (radioIndicator). -->
+                {@const indicator = r.indicator ?? (r.indicatorOf === 'radio_enabled' ? radioIndicator : null)}
                 <div class="subhead">
                   <span class="subhead__dot" style:background={tone(r.accent, $theme)}></span>
                   <span class="subhead__label" style:color={tone(r.accent, $theme)}>{r.label}</span>
                   <span class="subhead__rule"></span>
-                  {#if r.indicator}
+                  {#if indicator}
                     <!-- ADR-0129 as amended: what the service is doing, the
                          core's reading, above the rows its keys go in. -->
-                    <span class="ind ind--{r.indicator.tone}">
-                      <span class="ind__mark" aria-hidden="true">{r.indicator.tone === 'ok' ? '✓' : r.indicator.tone === 'bad' ? '✕' : ''}</span>
-                      {r.indicator.text}
+                    <span class="ind ind--{indicator.tone}">
+                      <span class="ind__mark" aria-hidden="true">{indicator.tone === 'ok' ? '✓' : indicator.tone === 'bad' ? '✕' : ''}</span>
+                      {indicator.text}
                     </span>
                   {/if}
                 </div>
@@ -2882,6 +2926,11 @@
         {/if}
       </div>
     </div>
+  {/if}
+
+  {#if countryOpen && rowOf('radio_country')}
+    <CountrySheet row={rowOf('radio_country')} listing={radioListing} phone={!wide}
+      onpick={(code) => write(rowOf('radio_country'), code)} onclose={() => (countryOpen = false)} />
   {/if}
 
   <div class="scrim" class:is-open={sheet} role="presentation" onclick={closeSheet}></div>
@@ -4177,17 +4226,20 @@
   .row__value--done {
     color: var(--accent-lms);
   }
+  /* A reading too long for a phone's heading (*Directory unreachable*)
+     wraps beside its mark rather than off the screen; one that fits stays
+     on one line (2026-11-14). */
   .ind {
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    flex-shrink: 0;
+    flex-shrink: 1;
     font-size: 15px;
     font-weight: 600;
-    white-space: nowrap;
     color: var(--ind);
   }
   .ind__mark {
+    flex-shrink: 0;
     display: inline-grid;
     place-items: center;
     width: 20px;

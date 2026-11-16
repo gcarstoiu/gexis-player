@@ -159,8 +159,9 @@ def test_the_built_ins_are_described_the_same_way():
     and plugins get a generic one, the generic one is drawn by code nothing
     exercises - and the first external plugin finds the hole."""
     found = {p.id: p for p in plugins.installed(SHIPPED)}
-    assert set(found) == {"lms", "spotify", "bluetooth"}
+    assert set(found) == {"lms", "spotify", "bluetooth", "radio"}
     assert all(p.kind == "renderer" for p in found.values())
+    assert set(found) == plugins.BUILT_IN
 
 
 def test_each_names_the_unit_that_actually_opens_the_device():
@@ -172,6 +173,7 @@ def test_each_names_the_unit_that_actually_opens_the_device():
         "lms": "squeezelite.service",
         "spotify": "go-librespot.service",
         "bluetooth": "bluealsa-aplay.service",
+        "radio": "gexis-radio.service",
     }
 
 
@@ -180,9 +182,11 @@ def test_the_units_are_the_ones_the_adapters_declare():
     cannot drift from the code that uses them."""
     from gexis_core.adapters.bluetooth import BluetoothAdapter
     from gexis_core.adapters.lms import LmsAdapter
+    from gexis_core.adapters.radio import RadioAdapter
     from gexis_core.adapters.spotify import SpotifyAdapter
 
     declared = {"lms": LmsAdapter.unit_name, "spotify": SpotifyAdapter.unit_name,
+                "radio": RadioAdapter.unit_name,
                 "bluetooth": BluetoothAdapter.unit_name}
     assert {p.id: p.unit for p in plugins.installed(SHIPPED)} == declared
 

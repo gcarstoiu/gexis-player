@@ -17,6 +17,9 @@
     and the marks stand beside it.
   - **Settings stays the button in the corner** (ADR-0079), and a screen
     with every source switched off says so.
+  - **Radio stands beside it** while internet radio is on (ADR-0180;
+    design/source/31, 5a / 9a), 14 apart: the player's own Radio screen, with
+    Lyrion off or its library navigation off.
 
 -->
 <script>
@@ -27,12 +30,14 @@
   import { sources } from '../lib/state.js';
   import { settingsDevice } from '../lib/settings.js';
   import { screen } from '../lib/family.svelte.js';
+  import RadioCornerButton from './radio/RadioCornerButton.svelte';
 
   // `reading`: the Lyrion server's stage while a new player's library is
   // still being read (George, 2026-10-18, option A: the waiting screen stays
   // until the first scan is done, and says so plainly enough to read from
   // across the room).
-  let { availability = {}, onsettings, settings = {}, reading = null } = $props();
+  //: `onradio`: the Radio button's tap, or null while internet radio is off.
+  let { availability = {}, onsettings, onradio = null, settings = {}, reading = null } = $props();
   const readingShare = $derived(reading?.share ?? null);
   //: ADR-0149 decision 43 as amended (George, 2026-10-19: Lyrion's steps
   //: "in the plate not the modal", on the bars too; then a smaller plate,
@@ -122,6 +127,9 @@
   >
     <span class="i-sliders"><i></i><b></b><i></i><b></b></span>
   </button>
+  {#if onradio}
+    <span class="corner-radio"><RadioCornerButton onopen={onradio} /></span>
+  {/if}
 
   {#if wantsClock}
     <div class="clock">
@@ -285,6 +293,14 @@
   .corner.is-pressed {
     transform: scale(0.94);
     background: var(--c-ink-16);
+  }
+  /* Left of Settings, 14 apart. */
+  .corner-radio {
+    position: absolute;
+    top: 26px;
+    right: calc(26px + 64px + 14px);
+    z-index: 2;
+    display: flex;
   }
   .i-sliders {
     position: relative;

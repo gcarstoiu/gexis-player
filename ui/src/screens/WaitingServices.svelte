@@ -43,9 +43,11 @@
   //: A source the design has no drawing values for - any plugin - gets the
   //: middle of the three rather than nothing.
   const GENERIC = { size: 38, lead: false, delays: [600, 1900] };
+  //: Internet radio is not waited for: it is started from the screen, by
+  //: the Radio card or the waiting screen's Radio button (ADR-0180).
   const shown = $derived(
     Object.values($sources)
-      .filter((s) => s.kind === 'renderer' && availability[s.id])
+      .filter((s) => s.kind === 'renderer' && s.id !== 'radio' && availability[s.id])
       .map((s) => ({ ...(DRAWN[s.id] ?? GENERIC), ...s })),
   );
   // The mark is an SVG sized by a prop, not by CSS, so it scales with the

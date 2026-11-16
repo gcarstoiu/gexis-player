@@ -203,6 +203,11 @@ def test_registry_keys_are_the_designs_keys_apart_from_recorded_deviations():
         # the design did not know the device has four playback outputs and
         # that two of them cannot be turned down.
         "output_device",
+        # ADR-0180 (George, 2026-11-13, appended to ADR-0022's inventory on
+        # his confirmation): internet radio's switch and *Popular here*'s
+        # country, as the other sources' rows; the design's Settings
+        # predates it.
+        "radio_enabled", "radio_country",
         "background_brightness", "background_interval", "idle_clock",
         "time_display", "updates", "volume_managed", "wallpaper_topics",
         # ADR-0133, 2026-10-10: the player's own wallpapers, which the design
@@ -703,8 +708,9 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # Home Assistant dashboard's four rows (ADR-0156, 2026-10-21). **130**: the
     # Equaliser, which opens its own page (ADR-0162, 2026-10-25). **131**: Room
     # correction, beside it (ADR-0175, 2026-11-05). **132**: Pages from Home
-    # Assistant, under the dashboard's rows (ADR-0176, 2026-11-07).
-    assert len(rows) == 132
+    # Assistant, under the dashboard's rows (ADR-0176, 2026-11-07). **134**:
+    # Internet radio's switch and country (ADR-0180, 2026-11-14).
+    assert len(rows) == 134
     # 59 since 2026-09-25: `backup` was surfaced and `restore` arrived with
     # it (ADR-0083), so the shown count gains two while the hidden one loses
     # one. **58 since 2026-09-26**, less the threshold row. **60 since
@@ -724,7 +730,7 @@ def test_the_shipped_registry_hides_the_inventoried_rows_and_shows_the_rest():
     # 82 with Report this hardware (ADR-0126).
     # **81**: Software volume merged into Volume (ADR-0127). **80**: Pexels
     # removed.
-    assert len(rows) - len(kept) == 115  # 115: Pages from Home Assistant (ADR-0176); 114: Room correction (ADR-0175); 113: the Theme (ADR-0171); 112: the Equaliser (ADR-0162); 111: Screen brightness (ADR-0158 D5); 110: the Home Assistant dashboard's four rows (ADR-0156); 106: Navigation shown, its two switches hidden; 107: API explorer (ADR-0152); 106: the waiting screen's hint removed (2026-10-18); 107: Library on the screen and Personalise (ADR-0149); 105: Text size (ADR-0148); 104: Needles follow the volume (ADR-0146 amended); 103: Gain (ADR-0146); 102: Screen port and its one-port tile (ADR-0141); 100: display standby (ADR-0135); 97: the idle switch and the home background (ADR-0133, 2026-10-11); 88: Weather icon motion (Finding 118); 87: Version hidden, it repeated Release; 88: the waiting screen's two rows (ADR-0133); 86: the own wallpapers (ADR-0133); 82: the factory reset (ADR-0132); 81: Cable (ADR-0123)
+    assert len(rows) - len(kept) == 117  # 117: Internet radio's two (ADR-0180); 115: Pages from Home Assistant (ADR-0176); 114: Room correction (ADR-0175); 113: the Theme (ADR-0171); 112: the Equaliser (ADR-0162); 111: Screen brightness (ADR-0158 D5); 110: the Home Assistant dashboard's four rows (ADR-0156); 106: Navigation shown, its two switches hidden; 107: API explorer (ADR-0152); 106: the waiting screen's hint removed (2026-10-18); 107: Library on the screen and Personalise (ADR-0149); 105: Text size (ADR-0148); 104: Needles follow the volume (ADR-0146 amended); 103: Gain (ADR-0146); 102: Screen port and its one-port tile (ADR-0141); 100: display standby (ADR-0135); 97: the idle switch and the home background (ADR-0133, 2026-10-11); 88: Weather icon motion (Finding 118); 87: Version hidden, it repeated Release; 88: the waiting screen's two rows (ADR-0133); 86: the own wallpapers (ADR-0133); 82: the factory reset (ADR-0132); 81: Cable (ADR-0123)
 
 
 def test_the_clock_can_be_turned_off_without_taking_the_screen_with_it():
@@ -1539,6 +1545,27 @@ def test_a_service_s_connection_is_indicated_on_its_heading_apart_from_reports(s
     assert "indicator" not in heading() and "status" in switch()
     with pytest.raises(InvalidValue):
         settings.indicate("beszel.enabled", "green")
+
+
+def test_popular_here_tags_the_time_zone_s_country_whatever_is_chosen(store, tmp_path):
+    """ADR-0180, design/source/31 S01-S04: the row's line is its summary and
+    the sheet's its note; *From your time zone* is beside the country the
+    row falls back to, chosen or not; the heading reports on the switch."""
+    settings = Settings(store, registry=load_registry(), seed_path=tmp_path / "absent.json",
+                        defaults={"radio_country": lambda: "DE"},
+                        options={"countries": lambda: ("AT", "DE")},
+                        labels={"countries": lambda: {"AT": "Austria", "DE": "Germany"}})
+    def row(key):
+        return next(r for g in settings.to_json() for r in g["rows"] if r.get("key") == key)
+    country = row("radio_country")
+    assert country["value"] == "DE" and country["optionTags"] == {"DE": "From your time zone"}
+    assert "defaultTag" not in country, "said as a tag, not as a field of its own"
+    assert country["summary"].startswith("The country whose") and country["note"] == "Whose stations Popular here lists."
+    store.set("radio_country", "AT")
+    assert row("radio_country")["optionTags"] == {"DE": "From your time zone"}
+    heading = next(r for g in settings.to_json() for r in g["rows"]
+                   if r.get("type") == "group" and r.get("label") == "Internet radio")
+    assert heading["indicatorOf"] == "radio_enabled" and "indicator" not in heading
 
 
 def test_headless_hides_every_setting_that_needs_a_screen(store):

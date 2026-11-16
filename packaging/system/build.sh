@@ -48,6 +48,10 @@ ln -s /dev/null "$STAGE/etc/systemd/system/snapclient.service"
 put 644 "$S/02-renderers/files/squeezelite.service" "$U/squeezelite.service"
 put 755 "$S/02-renderers/files/squeezelite-mixer-check.sh" /usr/lib/gexis/squeezelite-mixer-check.sh
 put 644 "$S/02-renderers/files/squeezelite-sysusers.conf" /usr/lib/sysusers.d/gexis-squeezelite.conf
+# ADR-0180: internet radio's mpv, started by the core for a station - never
+# enabled - under an account of its own, made by postinst.
+put 644 "$S/02-renderers/files/gexis-radio.service" "$U/gexis-radio.service"
+put 644 "$S/02-renderers/files/radio-sysusers.conf" /usr/lib/sysusers.d/gexis-radio.conf
 put 644 "$S/02-renderers/files/bluealsa-aplay-override.conf" "$U/bluealsa-aplay.service.d/override.conf"
 put 644 "$S/02-renderers/files/bluealsa-override.conf" "$U/bluealsa.service.d/override.conf"
 put 755 "$S/02-renderers/files/gexis-bluetooth-setup.sh" /usr/lib/gexis/bluetooth-setup.sh
@@ -133,7 +137,7 @@ DEF=/usr/share/gexis/defaults
 # them. Not `|| true`: without them the units cannot start, and a failed
 # install goes back.
 if command -v systemd-sysusers >/dev/null; then
-	systemd-sysusers gexis-squeezelite.conf gexis-snap.conf
+	systemd-sysusers gexis-squeezelite.conf gexis-snap.conf gexis-radio.conf
 fi
 
 # PeppyMeter's config comes with each version, but five of its keys are the
