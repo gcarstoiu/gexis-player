@@ -194,12 +194,12 @@ numbered consecutively without letters, each with a stable ID (George,
 2026-10-13). **In progress: 32**, the library answers for itself
 (`ph-library`, George 2026-11-16, after the integration's 0.7.0):
 [ADR-0184](docs/decisions/0184-plex-information-through-plexamps-claim.md)
-proposed for acceptance 1, George's answers in (2026-11-16): Plexamp's
-claim lent by the plugin through a new contract event, held in memory only;
-backups as Plexamp's claim; its local server; the row in Sources beside
-Plexamp. **Owed by George:** the consequence (Plex only where Plexamp is
-installed and claimed) and the row (*Information from Plex*, on). Then U1
-(where Plexamp keeps its server, from its code); nothing built yet.
+**accepted** for acceptance 1 (George, 2026-11-16): Plexamp's claim lent by
+the plugin through a new contract event, held in memory only; backups as
+Plexamp's claim; its local server; Plex only where Plexamp is installed and
+claimed; *Information from Plex* (on) beside Plexamp in Sources, in
+ADR-0022. Next: U1 (where Plexamp keeps its server) from Plexamp 4.13.2's
+code in `~/projects/scratch/ph32/plexamp-4.13.2`; nothing built yet.
 Then 33 (Lyrion's own menus: the look), 34 (room correction in time,
 research first), 36 (Glass, a finding first); MPD parked. `docs/DEVELOPMENT.md` holds each phase's
 acceptance criteria.

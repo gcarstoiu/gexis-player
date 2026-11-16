@@ -4017,9 +4017,9 @@ Home Assistant integration's release (acceptance 8).
 for acceptance 1; George answered its decisions the same day: no second
 sign-in - the Plexamp plugin lends Plexamp's claim (its token and the local
 server it plays from) to the core, which keeps it in memory only; the row in
-Sources beside Plexamp. Accepted once he confirms that Plex then answers
-only where Plexamp is installed and claimed, and the row. Nothing built
-before.
+Sources beside Plexamp. **Accepted** the same day, when he confirmed that
+Plex then answers only where Plexamp is installed and claimed, and the row
+(*Information from Plex*, on, in ADR-0022).
 
 **Added 2026-09-25 (George):** *"Let's introduce another phase … which should tackle the question of how we can we leverage the plexamp/Plex
 server metadata that is available. Anything that can reduce the dependency on
