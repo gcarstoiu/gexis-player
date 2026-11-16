@@ -198,8 +198,10 @@ numbered consecutively without letters, each with a stable ID (George,
 the plugin through a new contract event, held in memory only; backups as
 Plexamp's claim; its local server; Plex only where Plexamp is installed and
 claimed; *Information from Plex* (on) beside Plexamp in Sources, in
-ADR-0022. Next: U1 (where Plexamp keeps its server) from Plexamp 4.13.2's
-code in `~/projects/scratch/ph32/plexamp-4.13.2`; nothing built yet.
+ADR-0022. U1 read from Plexamp 4.13.2's code
+(`~/projects/scratch/ph32/plexamp-4.13.2`): `server:identifier` and
+`@Plexamp:resources` (each server's connections and own token) in its
+settings store. Nothing built yet.
 Then 33 (Lyrion's own menus: the look), 34 (room correction in time,
 research first), 36 (Glass, a finding first); MPD parked. `docs/DEVELOPMENT.md` holds each phase's
 acceptance criteria.

@@ -83,8 +83,9 @@ providers answer as they do today.
    reordered (acceptance 2); asked only while a library is lent and the row
    is on.
 4. **The plugin** (`gexis-plexamp`, a release of its own through the
-   catalogue) sends the event from Plexamp's token and the server Plexamp
-   plays from.
+   catalogue) sends the event from what Plexamp keeps (U1, below): the
+   server Plexamp is set to, its local connection that is not a relay, and
+   that server's own token.
 
 ## The row, in ADR-0022's inventory (confirmed by George)
 
@@ -93,11 +94,29 @@ providers answer as they do today.
   ahead of the internet's*. Greyed with *Claim Plexamp first* while Plexamp
   is not claimed. Appended to ADR-0022 the same day.
 
-## Unmeasured, measured before building
+## U1 - where Plexamp keeps its server (read 2026-11-16)
 
-- **U1.** Where Plexamp keeps the server it plays from, so the plugin can
-  name it while Plexamp is not playing (its timeline names it only while it
-  plays): read from Plexamp's own code, as ADR-0119 did, not from a player.
+Read from Plexamp 4.13.2's own code (`js/index.js` of the pinned headless
+download, its checksum matching the plugin's pin), not from a player.
+Plexamp's settings store - one file per key, as the plugin already reads
+the token from - holds:
+
+- **`server:identifier`**: the server Plexamp is set to, by its
+  `clientIdentifier`; set with `server:library` when a library is chosen,
+  cleared on sign-out.
+- **`@Plexamp:resources`**: the account's devices as JSON, each with
+  `clientIdentifier`, `owned`, `accessToken` (that server's own token),
+  `httpsRequired` and `connections`, each connection `uri`, `local`,
+  `relay` and `proxied`. Plexamp orders them loopback first, then local,
+  relays last; for plain http it rewrites a `plex.direct` name to its
+  address (`cloneAsHttp`).
+
+So the plugin can name the server and its local connection while Plexamp
+is not playing, and lend that server's own token rather than the
+account's. **Not yet seen on a player**: both files on a claimed player
+(read by the plugin's code in a preview, its result as yes or no, no
+names or addresses printed), and a server with `httpsRequired`, whose
+local address is a `plex.direct` name.
 
 ## Consequences
 
