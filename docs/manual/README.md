@@ -604,6 +604,15 @@ What Home Assistant gets:
   track); volume and mute, and with Fixed volume mute alone where the output
   has a volume control of its own; the source playing (each source is taken
   over from its own app, as on the player).
+- **Internet radio**, on a player with it switched on: the favourites are
+  the media player's sources, the station directory is in Home Assistant's
+  media browser with its search, and *Favourite station*
+  (`gexis.radio_favourite`) is the heart.
+- **Groups**: Home Assistant's own *Join* and *Unjoin* group players as the
+  phone does - the player that leads, unjoined, ends its group - and the
+  group's players are listed, the one that leads first; *Set the group's
+  volume* (`gexis.set_group_volume`) and *Mute the group*
+  (`gexis.mute_group`) are the group's *All* slider and mute.
 - **The equaliser**, on any player: a switch, *Equaliser*, and *Equaliser
   setting*, the setting in use - the presets, then your own.
 - **On a player with a screen, four switches**: *Screen* (off is display
@@ -631,7 +640,9 @@ What Home Assistant gets:
   each left out where the phone leaves it out; the volume, with mute and
   the equaliser's setting, beside the button that opens the equaliser. A
   player without a screen gets a large cover and a bar to move through the
-  track. In the player's own look, or Home Assistant's
+  track. Grouped, it shows the group as the phone does: in the list, with
+  Join, Remove, Leave group and Undo group, and the group's volume beside
+  each player's own; and a Radio view lists the favourites. In the player's own look, or Home Assistant's
   (*look: home-assistant*); full, or compact with the D-pad folded away. It goes on a dashboard edited by hand (Home
   Assistant's new *Overview* takes favourite entities, not cards): *Settings
   → Dashboards → Add dashboard → New dashboard from scratch* if there is
@@ -641,7 +652,8 @@ What Home Assistant gets:
 It needs Home Assistant 2026.3 or later and a player on 1.5.0 or later (the
 D-pad 1.6.0 or later; the equaliser, seeking and mute with Fixed volume
 1.7.0 or later, with the integration's 0.5.0; pages 1.15.0 or later, with
-the integration's 0.6.0); an older player is found and asked to update. With Home Assistant's own
+the integration's 0.6.0; groups 1.8.0 or later and internet radio 1.17.0 or
+later, with the integration's 0.7.0); an older player is found and asked to update. With Home Assistant's own
 *Lyrion Music Server* integration also set up, the player shows there too,
 as Lyrion's player.
 
