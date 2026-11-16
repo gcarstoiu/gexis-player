@@ -107,10 +107,13 @@ the grouped bar and the group volume sheet; `gexis.set_group_volume` and
 entities (`~/projects/scratch/ha-0.7.0/card`, `run.sh`). The player's group
 API matches. Notes approved by George with the group added
 (`~/projects/scratch/ha-0.7.0/notes.md`; the group's lines added after his
-approval, shown to him). **Waiting on George:** his look in his Home
-Assistant (HACS, *Redownload*, the branch): acceptance 8, join and unjoin,
-the card's group. Then `main` fast-forwarded, the tag and release, the
-branches `radio`, `multiroom`, `release-0.7.0` deleted. Harnesses:
+approval, shown to him). **Waiting on George:** his look in his Home Assistant from the
+pre-release **0.7.0b1** (published 2026-11-16 from `release-0.7.0` at
+019fe0f; 0.6.0 stays Latest; HACS's *Redownload* lists only releases,
+pre-releases included, never a branch): acceptance 8, join and unjoin, the
+card's group. Then `main` fast-forwarded, the tag and release 0.7.0, the
+pre-release 0.7.0b1 and its tag deleted, the branches `radio`, `multiroom`,
+`release-0.7.0` deleted. Harnesses:
 `~/projects/scratch/ph31/card`, `ph31/harness`, `ph30/harness` (`WT` names
 the worktree).
 
@@ -197,8 +200,9 @@ numbered consecutively without letters, each with a stable ID (George,
 **accepted** for acceptance 1 (George, 2026-11-16): Plexamp's claim lent by
 the plugin through a new contract event, held in memory only; backups as
 Plexamp's claim; its local server; Plex only where Plexamp is installed and
-claimed; *Information from Plex* (on) beside Plexamp in Sources, in
-ADR-0022. U1 read from Plexamp 4.13.2's code
+claimed; *Information from Plex* (on) beside Plexamp in Sources, in ADR-0022.
+George agreed (2026-11-16) to the measurements on his library (acceptance
+3-5): counts and timings only, no names, track listings or screenshots. U1 read from Plexamp 4.13.2's code
 (`~/projects/scratch/ph32/plexamp-4.13.2`): `server:identifier` and
 `@Plexamp:resources` (each server's connections and own token) in its
 settings store. Nothing built yet.
