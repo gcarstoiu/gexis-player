@@ -96,20 +96,23 @@ was left, and the to-do list carries it; their full notes are in the archive
   correction).
 
 **The Home Assistant integration's 0.7.0** (George 2026-11-16: released
-before Phase 32): `release-0.7.0`, pushed, is `radio` (the favourites as
-sources, the directory in the media browser, `gexis.radio_favourite`, the
-`gexis/radio` WebSocket command, the card's Radio view C01-C06) with
-`multiroom` (join and unjoin, `9744bb3`) merged in, its three conflicts
-resolved by keeping both sides; version 0.7.0 in the manifest and the card;
-the README's requirements (grouping 1.8.0, radio 1.17.0); 84 tests pass.
-The player's group API still matches (`/group/join`, `leave`, `undo`; the
-state's `group`). **Waiting on George:** his look in his Home Assistant
-(HACS, the branch) at acceptance 8 and at join and unjoin; and whether the
-card's group view (to-do `ph22-ha-card`: the player list with Join and
-Remove, the group volume, planned for this release, not built) waits for
-0.8.0. Then `main` fast-forwarded, the tag and release with notes he
-approves, the three branches deleted. Harnesses: `~/projects/scratch/ph31/card`,
-`ph31/harness`, `ph30/harness` (`WT` names the worktree).
+before Phase 32, with the card's group built now): `release-0.7.0`, pushed
+(`019fe0f`), is `radio` (the favourites as sources, the directory in the
+media browser, `gexis.radio_favourite`, the card's Radio view) with
+`multiroom` (join and unjoin) merged in, and the card's group as the
+phone's (ADR-0163 C8-C14: the media player's `group` attribute, Join,
+Remove, Leave group, Undo group asked first, another group joined whole,
+the grouped bar and the group volume sheet; `gexis.set_group_volume` and
+`gexis.mute_group`); version 0.7.0; 88 tests pass; checked from mocked
+entities (`~/projects/scratch/ha-0.7.0/card`, `run.sh`). The player's group
+API matches. Notes approved by George with the group added
+(`~/projects/scratch/ha-0.7.0/notes.md`; the group's lines added after his
+approval, shown to him). **Waiting on George:** his look in his Home
+Assistant (HACS, *Redownload*, the branch): acceptance 8, join and unjoin,
+the card's group. Then `main` fast-forwarded, the tag and release, the
+branches `radio`, `multiroom`, `release-0.7.0` deleted. Harnesses:
+`~/projects/scratch/ph31/card`, `ph31/harness`, `ph30/harness` (`WT` names
+the worktree).
 
 **Open, small:** a preview's download still holds the skin packs (1.1 of
 1.2 GB) though `release.yml` excludes them; `gen_personalise.py` out of step since Phase 23;

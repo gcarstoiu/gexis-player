@@ -152,6 +152,57 @@ new entities and, in its own frontend, the card defined 86 ms after the page
 (the registry polyfill at 52 ms), once in the picker. Not tried: the Home
 Assistant app, where the defect was seen.
 
+## Following the phone's group (2026-11-16, integration 0.7.0)
+
+George, 2026-11-16: the card's group, planned for the release that brings
+Home Assistant's join and unjoin ([ADR-0166](0166-multiroom-for-every-source.md)
+item 9), is built now, in 0.7.0, rather than after it. It follows the phone's
+group as built from design/source/22 (picks 1a and 2a; 3a's mark): the
+player list with the group as a block, Join and Remove on the rows, Leave
+group and Undo group (asked first), another group joined whole (decision
+11), and the group volume - the bar grouped, its sheet with *All* and each
+player's own row.
+
+Claude's choices, where the phone's design does not reach Home Assistant:
+
+- **C8 - What the card draws is the media player's `group` attribute**: the
+  player's own group view (who leads, each member's state, level, mute and
+  Fixed, the *All* level), with each member's entity where Home Assistant
+  knows the player. Kept out of the recorder: it changes with every
+  member's volume.
+- **C9 - Every change is Home Assistant's own where one exists**: Join is
+  `media_player.join` on the player shown; *Join this group* is the same on
+  that group's leader; Remove is `media_player.unjoin` on that player, Leave
+  group on the player shown, Undo group on the player that leads (B11). A
+  member's level and mute are that player's own `volume_set` and
+  `volume_mute`. Two actions are new, for what Home Assistant has no action
+  of its own for: `gexis.set_group_volume` (the *All* slider, `volume_level`
+  0-1) and `gexis.mute_group`.
+- **C10 - *All* is one change when the finger lifts**, as the card's own
+  volume is (a drag is one change, not fifty); while it moves, the members'
+  rows follow it by the player's own rule, so no `from` is needed.
+- **C11 - A member Home Assistant does not know** is shown with its state
+  and level, without Remove, and its row cannot be moved from the card;
+  Undo group is left out when the player that leads is such a player.
+- **C12 - The list keeps the card's order** (its own player first, then by
+  name), a group's block where its first player falls, its players
+  alphabetical inside it. The phone's alphabetical order (George,
+  2026-11-14) is for a list that moves with the player it is opened on; the
+  card's list does not move.
+- **C13 - The compact form** has the group in its switcher, which scrolls
+  inside the card when it is longer than the card, and keeps each player's
+  own volume: it has no room for the group's sheet.
+- **C14 - At 345 px or narrower** the grouped bar leaves out *GROUP* and the
+  count: beside the group's and EQ's buttons it has no room for them.
+
+**Built** 2026-11-16 on the integration's `release-0.7.0`; its tests 88
+passed. Checked from mocked entities (invented players, no player and no
+Home Assistant): leading, a member with a Fixed player, one Home Assistant
+does not know and one off, a group whose leader is off, another group to
+join, every member Fixed, five players; at 390 and 300 wide, the compact
+form, both looks; and each button's call. **Not yet seen** in a real Home
+Assistant against players: George's look, before 0.7.0 is released.
+
 ## Settings (ADR-0022)
 
 None: the card's options live in the dashboard, not on the player.
