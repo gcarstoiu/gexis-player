@@ -68,7 +68,8 @@ providers answer as they do today.
 
 ## How it is built
 
-1. **A new event in the plugin contract**, contract version raised,
+1. **A new event in the plugin contract**, contract version raised (not
+   so: *As built*, 1),
    documented in `docs/PLUGIN-CONTRACT.md` and `docs/WRITING-A-PLUGIN.md`:
    `{"t": "library", "kind": "plex", "url": "http://<address>:32400",
    "token": "…"}`, or `null` for both when Plexamp is not claimed or its
@@ -101,10 +102,13 @@ download, its checksum matching the plugin's pin), not from a player.
 Plexamp's settings store - one file per key, as the plugin already reads
 the token from - holds:
 
-- **`server:identifier`**: the server Plexamp is set to, by its
-  `clientIdentifier`; set with `server:library` when a library is chosen,
-  cleared on sign-out.
-- **`@Plexamp:resources`**: the account's devices as JSON, each with
+- **`server:identifier`** (the file `%40Plexamp%3Aserver%3Aidentifier`:
+  Plexamp's settings wrapper puts `@Plexamp:` before the key and a type
+  marker, `S`, before the value, as for the token): the server Plexamp is
+  set to, by its `clientIdentifier`; set with `server:library` when a
+  library is chosen, cleared on sign-out.
+- **`@Plexamp:resources`** (written raw, no marker): the account's devices
+  as JSON keyed by their ids, each with
   `clientIdentifier`, `owned`, `accessToken` (that server's own token),
   `httpsRequired` and `connections`, each connection `uri`, `local`,
   `relay` and `proxied`. Plexamp orders them loopback first, then local,
@@ -117,6 +121,43 @@ account's. **Not yet seen on a player**: both files on a claimed player
 (read by the plugin's code in a preview, its result as yes or no, no
 names or addresses printed), and a server with `httpsRequired`, whose
 local address is a `plex.direct` name.
+
+## As built (2026-11-16)
+
+Phase 32's first step, covers first. Where the build departed from *How it is
+built*, or settled what it left open:
+
+1. **The contract stays at version 1.** The event is *added within version
+   1*, as `output`, `software` and `artwork` were: the contract's own rule
+   (`docs/PLUGIN-CONTRACT.md`, *Versioning*) refuses a plugin whose version
+   the core does not serve, so raising it would have turned away every
+   plugin that speaks 1. A core older than the event answers it with an
+   error, which the plugin ignores.
+2. **The event names the server too**: `{"t": "library", "kind": "plex",
+   "server", "url", "token"}`, `server` being its `clientIdentifier`. The
+   core remembers that id (not the token) beside the enrichment cache, and
+   drops the cache's Plex answers when another server is lent: an album's
+   number on one server is another album on the next.
+3. **The core checks the address as well**: a host that is a global address,
+   or a name that is not a `plex.direct` one for a local address, is refused.
+   It logs only *a library is lent* or *no library is lent*; a problem report
+   therefore says which, and nothing more.
+4. **Covers are served through the core**, `/plex/cover/<key>/<stamp>`: a
+   Plex picture's address needs the token, and the enrichment cache keeps
+   what it finds on disk while the state goes to every phone. The route asks
+   Plex's scaler (600 px unless asked otherwise), the stored picture if the
+   scaler refuses, and serves only an album's picture by its two numbers.
+5. **Matching, for now**: one index of the library's albums (a page of 500
+   at a time, summaries left out), kept six hours or until the library is
+   lent again; an album matches on `match_title` and the artist or lead
+   artist, on either side. MusicBrainz ids (acceptance 3) come later, with
+   the hit rate measured.
+6. **A sleeping server costs one connection wait of 2 s**, then the
+   enrichment service's backoff (15 minutes) - what acceptance 4 measures.
+7. **The row is in the plugin's manifest** (`plexamp.plex_info`, gexis-plexamp
+   0.6.0), so it shows and hides with Plexamp's other rows, and a plugin too
+   old to lend has none. The core greys it with *Claim Plexamp first* until
+   the plugin's *Claim token* row reports a claim.
 
 ## Consequences
 

@@ -95,22 +95,18 @@ was left, and the to-do list carries it; their full notes are in the archive
   turned off while a page is up; acceptance 4 (192 kHz with room
   correction).
 
-**The Home Assistant integration's 0.7.0** (George 2026-11-16: released
-before Phase 32, with the card's group built now): `release-0.7.0`, pushed
-(`019fe0f`), is `radio` (the favourites as sources, the directory in the
-media browser, `gexis.radio_favourite`, the card's Radio view) with
-`multiroom` (join and unjoin) merged in, and the card's group as the
-phone's (ADR-0163 C8-C14: the media player's `group` attribute, Join,
-Remove, Leave group, Undo group asked first, another group joined whole,
-the grouped bar and the group volume sheet; `gexis.set_group_volume` and
-`gexis.mute_group`); version 0.7.0; 88 tests pass; checked from mocked
-entities (`~/projects/scratch/ha-0.7.0/card`, `run.sh`). The player's group
-API matches. Notes approved by George with the group added
-(`~/projects/scratch/ha-0.7.0/notes.md`; the group's lines added after his
-approval, shown to him). **Waiting on George:** his look in his Home
-Assistant (HACS, *Redownload*, the branch): acceptance 8, join and unjoin,
-the card's group. Then `main` fast-forwarded, the tag and release, the
-branches `radio`, `multiroom`, `release-0.7.0` deleted. Harnesses:
+**The Home Assistant integration's 0.7.0 released 2026-11-16** (George:
+released before Phase 32, the card's group built now; then released at his
+word without his look from HACS): internet radio (the favourites as
+sources, the directory in the media browser, `gexis.radio_favourite`, the
+card's Radio view), join and unjoin, and the card's group as the phone's
+(ADR-0163 C8-C14; `gexis.set_group_volume`, `gexis.mute_group`). `main`
+fast-forwarded to `019fe0f`, tagged and released (*Latest*); the pre-release
+0.7.0b1 and the branches `radio`, `multiroom`, `release-0.7.0` deleted.
+**Not yet seen in a real Home Assistant:** acceptance 8 (favourites from the
+sources and the card; the media browser's browsing and search), join and
+unjoin, the card's group - checked from mocked entities only
+(`~/projects/scratch/ha-0.7.0/card`, `run.sh`). Harnesses:
 `~/projects/scratch/ph31/card`, `ph31/harness`, `ph30/harness` (`WT` names
 the worktree).
 
@@ -156,7 +152,7 @@ screen change may miss full-screen (the HMTECH 10.1"; to-do
   its checksum on 2026-11-13 (130).
 
 **The Home Assistant integration**: `gcarstoiu/gexis-player-homeassistant`
-0.6.0 (local `~/projects/gexis-player-homeassistant`, tests on
+0.7.0 (local `~/projects/gexis-player-homeassistant`, tests on
 `~/projects/ha-venv`). **HACS's default list**: hacs/default#12691 waits for
 HACS's maintainers - do not ask them for a review (their template).
 
@@ -197,11 +193,23 @@ numbered consecutively without letters, each with a stable ID (George,
 **accepted** for acceptance 1 (George, 2026-11-16): Plexamp's claim lent by
 the plugin through a new contract event, held in memory only; backups as
 Plexamp's claim; its local server; Plex only where Plexamp is installed and
-claimed; *Information from Plex* (on) beside Plexamp in Sources, in
-ADR-0022. U1 read from Plexamp 4.13.2's code
+claimed; *Information from Plex* (on) beside Plexamp in Sources, in ADR-0022.
+George agreed (2026-11-16) to the measurements on his library (acceptance
+3-5): counts and timings only, no names, track listings or screenshots. U1 read from Plexamp 4.13.2's code
 (`~/projects/scratch/ph32/plexamp-4.13.2`): `server:identifier` and
 `@Plexamp:resources` (each server's connections and own token) in its
-settings store. Nothing built yet.
+settings store. **Built 2026-11-16, covers first, not yet on a player:**
+gexis-plexamp 0.6.0 on its branch `library` (lends the library from
+Plexamp's files; the *Information from Plex* row in its manifest; 122 tests)
+and the core on `ph-library` (worktree `~/projects/gexis-player-ph-library`):
+the contract's `library` event, added within version 1; `plex.py` (held in
+memory, one album index, the `plex-release` provider first, covers through
+`/plex/cover/<key>/<stamp>`); the row greyed until the plugin reports a
+claim; the visualiser asks the core for a cover named by its path (AirPlay's
+too). 3,549 core tests pass. ADR-0184 *As built*. **Next:** a preview on
+sofapi with the plugin copied in by hand (George's go-ahead first; the
+catalogue will list 0.6.0 for the release that carries it, by its `player`
+field); then the counts (acceptance 3-5).
 Then 33 (Lyrion's own menus: the look), 34 (room correction in time,
 research first), 36 (Glass, a finding first); MPD parked. `docs/DEVELOPMENT.md` holds each phase's
 acceptance criteria.
