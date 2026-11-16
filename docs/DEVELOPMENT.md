@@ -3953,8 +3953,9 @@ taken out of its group and put back): the stream's rate to the DAC, 22 kHz
 raised to 48 with room correction running (acceptance 4 met), a cut recovered
 and a station down stopped with the message (5 met), 4.8-7.0 % of a core
 through the real chain (7 for George to read against Finding 146's silent
-3-6 %), memory flat over an hour. **Next:** George's regression pass on
-sofapi (the preview stays installed); the Home Assistant integration.
+3-6 %), memory flat over an hour. **In 1.17.0, on Testing 2026-11-16**,
+after George's regression pass (its two findings fixed). **Next:** the
+Home Assistant integration's release (acceptance 8).
 
 **Acceptance:**
 

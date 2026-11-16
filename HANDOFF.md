@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-11-15 (on R2D2).
+Last updated: 2026-11-16 (on R2D2).
 
 ## Start here
 
@@ -20,8 +20,15 @@ and the ideas as Must / Should / Could. It follows `docs/DEVELOPMENT.md`'s
 phases; change it when a phase opens, closes or moves, and show George first. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Stable and Testing: 1.16.4** (2026-11-15; Stable serial 16, Testing serial
-72; George asked for it on Stable once released): 1.16.2 (the 55 fixes from
+**Testing: 1.17.0** (2026-11-16, serial 73): internet radio (Phase 31),
+after George's regression pass and his look at the touchpad fix on sofapi;
+release run 43842724641, `verify-image.sh` all checks passed, the channel read
+back with a good signature. **PR #104 into `main` for George.** After its
+merge: the post-merge steps, then `ph-radio` and `preview-radio-mdns`
+deleted (both merged).
+
+**Stable: 1.16.4** (2026-11-15; Stable serial 16; George asked for it on
+Stable once released): 1.16.2 (the 55 fixes from
 the review of 1.16.1, ADR-0178; a group's buffer of a second), 1.16.3 and
 1.16.4 reach Stable together from 1.16.1. **1.16.3** (PR #101): go-librespot
 from upstream's own build of `master` at `775ba5883` (ADR-0181), for the
@@ -40,15 +47,13 @@ parts' signed indexes; not the local `history.json`, `notes.md`, `notes.txt`).
 **go-librespot is upstream's build of `775ba5883`** (ADR-0181), kept in the
 `inputs` mirror with its source; `packaging/check-upstream.sh` reports it
 waiting until a release contains the commit, which then replaces it by the
-usual route. **ADR-0182 built** on `upstream-daily`, **PR #103 into
-`main`** for George: `.github/workflows/upstream.yml` runs
+usual route. **ADR-0182 in `main`** (PR #103, merged by George 2026-11-16): `.github/workflows/upstream.yml` runs
 `packaging/upstream-daily.sh` daily (a bump branch, its PR, tests and a
 preview; an issue for what is not pinned here), `packaging/upstream-bump.py`
 moves a pin, the steps and checklists in `docs/tech/updates-and-releases.md`.
 **Owed by George:** *Allow GitHub Actions to create and approve pull
 requests* is off, so its first PR would fail; the ADR's *Claude's choices*.
-After the merge: `main` into `next` and `docs`; the first run will open an
-issue for Beszel (0.21.1, 0.21.2 is out).
+Its first run will open an issue for Beszel (0.21.1, 0.21.2 is out).
 
 **Spotify on the lead through a group change** (George, 2026-11-15: it
 should keep playing): a group change stops go-librespot, which ends the
@@ -121,7 +126,10 @@ Assistant integration's join and unjoin (its `multiroom` branch, `9744bb3`),
 released after the player's; Lyrion-app grouping back and forth with the
 player's.
 
-**The players** (2026-11-15): all four on the preview branch
+**The players** (2026-11-16): **sofapi** on the preview of `next` at
+b8a76991 (run 43838072189: gexis-core and gexis-player 1.16.4+git33,
+gexis-ui and gexis-system 1.16.4+git31.9fdd26e), installed idle, core
+restarted and up; Testing offers it 1.17.0. The other three on the preview branch
 `preview-radio-mdns` at 8897a71e (1.16.4 and `ph-radio`; gexis-core and
 gexis-player 1.16.4+git31, go-librespot 775ba58-4; run 43725073814),
 installed idle, cores restarted; each reports 1.16.4, nothing offered. All
@@ -180,8 +188,8 @@ logos through the player; six limits in ADR-0022). **The screens built
 2026-11-14** on `ph-radio` (CI green at 439ac897): the panel, the bars, the
 phone, Settings and first use, each checked against its artboards with
 invented stations (`~/projects/scratch/ph31/harness`, `WT` names the
-worktree; the screenshots in its `out/`). **Next:** the public documents'
-Radio sections; the Home Assistant integration (favourites as sources, the
+worktree; the screenshots in its `out/`). **Next:** the Home Assistant
+integration's release (favourites as sources, the
 media browser, the card's Radio view, C01–C06), released after the
 player's; a preview on a player not in a group (sofapi's `output` feeds the
 group's loopback): the rate at the card, the stage, 32 kHz, CPU, an hour. **Done 2026-11-14**
@@ -213,16 +221,18 @@ meanwhile. Masked probes in
 **The Home Assistant integration's `radio` branch:** a stopped station shows
 as paused with Play (George); the card keeps one column under its 440 px cap.
 
-**George's regression pass of radio** (to-do `ph31-regression`), two
-findings fixed on `ph-radio` 2026-11-15: a follower's phone drew Pause for
-the group's station (the member now publishes the leader's radio state,
-its favourites its own; the panel and bar already drew Stop), and the panel
-pointer's outline round Playing's Minimise filled only near its middle (the
-covering check asked down the button's middle; measured in Chromium,
-`~/projects/scratch/ph31/ring`). Merged into `preview-radio-mdns`
-(065e2a63), preview run 43742027577; not yet on the players. Once the pass is done, `ph-radio` merges into `next` (one conflict with the
-merged lists of players in `docs/tech/ui.md`, resolved on the preview branch:
-both sentences kept), and `preview-radio-mdns` is deleted.
+**George's regression pass of radio** (to-do `ph31-regression`) done
+2026-11-16, its two findings fixed: a follower's phone drew Pause for the
+group's station (the member publishes the leader's radio state, its
+favourites its own), and the touchpad outline round Now Playing's Minimise
+showed only near its middle (the covering check asked down the button's
+middle; measured on the real Now Playing before and after,
+`~/projects/scratch/ph31/ring/real.sh`, then seen by George on sofapi).
+**The first preview of those fixes stopped sofapi's core at start**: the
+follower fix's line in `main()` set `state_store.is_favourite` above
+`state_store` (LESSONS 19: no test runs `main()`). sofapi was rolled back
+within two minutes, the line moved, and `core/tests/test_main_order.py`
+now reads `main()` for a name used before it is assigned.
 
 **Phase 35** (a page from Home Assistant, ADR-0176 as amended) **on Stable
 with 1.16.1**, with the integration's 0.6.0. **Not yet on a player:** the
@@ -249,8 +259,8 @@ On Stable with work open: 22 (multiroom), 23 (AirPlay 2, limited testing),
 27 (releases built on GitHub; a card still to flash) and 28 (Plexamp and
 Beszel to the catalogue), both with 1.13.0. 29 (room correction for the
 bass), 30 (the full range) and 35 (a page from Home Assistant) on Stable with
-1.16.1, work open. **31 started 2026-11-13** (internet radio, ADR-0180
-accepted); then 32-34 and 36 (Glass, added 2026-11-13); MPD parked. `docs/DEVELOPMENT.md`
+1.16.1, work open. **31** (internet radio, ADR-0180) on Testing with
+1.17.0, the Home Assistant integration's part to release; then 32-34 and 36 (Glass, added 2026-11-13); MPD parked. `docs/DEVELOPMENT.md`
 holds each phase's acceptance criteria.
 
 ## Machines

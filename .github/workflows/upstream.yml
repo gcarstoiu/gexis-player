@@ -1,0 +1,38 @@
+# ADR-0182: upstream releases checked daily. For each pin that is behind, a
+# part packaged here gets a pull request into main with the pin moved (its
+# tests and a preview build started), anything else an issue; once per part
+# and version. packaging/upstream-daily.sh does the work; it runs the same
+# by hand with --dry-run.
+name: Upstream releases
+
+on:
+  schedule:
+    - cron: "23 5 * * *"
+  workflow_dispatch:
+
+# What it writes, and nothing else (ADR-0182): the bump branch and its two
+# files in the `inputs` mirror, the pull request, an issue, and the two
+# workflows a push by this token does not start.
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: write
+
+concurrency:
+  group: upstream
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Upstream releases
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Check, and move what is behind
+        run: packaging/upstream-daily.sh

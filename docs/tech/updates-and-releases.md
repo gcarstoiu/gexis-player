@@ -371,6 +371,62 @@ refusal, to stay inside GitHub's secondary rate limits. It refuses a
 would rewrite (`~` becomes `.`; `build.sh` renames such packages before
 indexing).
 
+### A release of one part (ADR-0182)
+
+**Upstream is checked daily** by `.github/workflows/upstream.yml`, which runs
+`packaging/upstream-daily.sh` on `main` (by hand: `--dry-run` reads and
+writes nothing). For each pin `packaging/check-upstream.sh` finds behind:
+
+- **A part packaged here** (go-librespot, CamillaDSP:
+  `packaging/upstream-bump.py --parts`) gets a branch
+  `bump-<part>-<version>` from `main` with its pin moved: version, address
+  and sha256 in its `pins.sh`, the binary's and its source's lines in
+  `packaging/inputs.tsv`, and for CamillaDSP the binary's own checksum in
+  `image/verify-image.sh`. Both files go into the `inputs` mirror, a pull
+  request into `main` links upstream's release notes, and the tests and a
+  preview build are started on the branch (the workflow's own push starts
+  neither).
+- **Anything else** gets an issue, *Upstream: <name> <version>*: Plexamp
+  and Lyrion (fetched on the device, ADR-0100), Beszel (pinned in
+  `gcarstoiu/gexis-beszel`, which the workflow's token cannot write), and a
+  release that does not fit its pin (no such file, or no binary in it).
+
+Once per part and version: an existing pull request or issue, open or
+closed, stops it. A run fails when a maker's feed could not be read, after
+doing the rest. The workflow may write branches, release files, pull
+requests and issues, and start workflows; `main` still takes the change only
+through George's merge. GitHub has to allow Actions to create pull requests
+(Settings → Actions → General).
+
+**The release, from the bump branch**, independent of `next`:
+
+1. The preview (`gh run list -w release.yml -b bump-<part>-<version>`, then
+   `gh run download <run> --name packages`) installed on a test player:
+   sofapi, or where the fault was seen; checked not in use, the dry run on
+   its own, the core restarted.
+2. The part's checklist (below), with George.
+3. One line of notes, approved by George, in `release_notes.json` on the
+   branch, the changelog written, committed as *Release notes: X (approved by
+   George)*; X is the last release's patch number plus one.
+4. The tag `vX`, annotated, on that commit; the build, signing
+   (`publish.sh --sign rX --channel testing`) and the channel read back as
+   for any release.
+5. The workflow's pull request becomes the release's: its title and body
+   say the release, its notes and what was checked. George merges it; then
+   `main` into `next` and `docs`.
+
+Players fetch the changed part, the core (it carries the notes) and the
+release's own package.
+
+**Each part's checklist**, beside the fault the release is for:
+
+- **go-librespot**: a cast from the phone; volume from the phone and from
+  the panel; skip forward and back; another source taking over, then Spotify
+  picked again; a group with Spotify on its lead.
+- **CamillaDSP**: the equaliser on and off while music plays; room
+  correction on (sofapi); a change of rate (44.1 to 96 kHz, a track at
+  192 kHz); a pause and the next track; a group whose lead has the stage on.
+
 ---
 
 ## 5. The updater on the device
@@ -678,7 +734,8 @@ checksum, and writes progress to `/run/gexis/components/<name>.json`
 start with the same pin is a comparison, not a download. A new pin arrives in
 a release and is fetched on the next start.
 
-`packaging/check-upstream.sh` is run before each release: it reads each
+`packaging/check-upstream.sh` is run before each release and daily on
+GitHub (ADR-0182, *A release of one part* above): it reads each
 maker's own "latest" feed and reports which pins are behind (exit 1) or
 unreadable (exit 2). It changes nothing; a new version is tried on a device
 before its pin moves. A pin on upstream's own build of a commit, as
@@ -747,4 +804,5 @@ ADR-0105 amended 2026-10-12).
 | `.github/workflows/release.yml` | the release built on GitHub (ADR-0173), and previews |
 | `packaging/inputs.tsv`, `packaging/inputs.sh`, `packaging/fetch-source.sh` | the build's downloads, their mirror and pinned source archives |
 | `packaging/check-upstream.sh` | pin freshness |
+| `.github/workflows/upstream.yml`, `packaging/upstream-daily.sh`, `packaging/upstream-bump.py` | upstream checked daily; a part's pin moved on its own branch (ADR-0182) |
 | `Makefile`, `image/config`, `image/stage-gexis/`, `image/verify-image.sh`, `image/provision.sh` | image build, verification, dev provisioning |
