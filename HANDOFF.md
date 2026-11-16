@@ -20,29 +20,15 @@ and the ideas as Must / Should / Could. It follows `docs/DEVELOPMENT.md`'s
 phases; change it when a phase opens, closes or moves, and show George first. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Testing: 1.17.0** (2026-11-16, serial 73): internet radio (Phase 31),
-after George's regression pass and his look at the touchpad fix on sofapi;
-release run 43842724641, `verify-image.sh` all checks passed, the channel read
-back with a good signature. **PR #104 into `main` for George.** After its
-merge: the post-merge steps, then `ph-radio` and `preview-radio-mdns`
-deleted (both merged).
-
-**Stable: 1.16.4** (2026-11-15; Stable serial 16; George asked for it on
-Stable once released): 1.16.2 (the 55 fixes from
-the review of 1.16.1, ADR-0178; a group's buffer of a second), 1.16.3 and
-1.16.4 reach Stable together from 1.16.1. **1.16.3** (PR #101): go-librespot
-from upstream's own build of `master` at `775ba5883` (ADR-0181), for the
-Android app closing while it casts, released from `main` as ADR-0182's
-one-part patch release. **1.16.4** (PR #102, run 43725033111, `verify-image.sh`
-all checks passed): Lyrion after a player leaves a group (CamillaDSP asked
-every 2 s under a stream and started again; a play on a player already on
-takes a free device), `fix-mdns-block` (Finding 148) and `fix-players-order`
-(ADR-0136 as amended). Both channels read back with a good signature;
-`releases/latest` is r1.16.4, README names it, its checksum matches and its
-signature is there. Release output in `~/projects/gexis-release-out`: this
-session signed without the `out` link (BUILD-TRAPS), so r1.16.3's was lost
-with its worktree and rebuilt from GitHub (the published files and the three
-parts' signed indexes; not the local `history.json`, `notes.md`, `notes.txt`).
+**Testing and Stable: 1.17.0** (2026-11-16; Testing serial 73, Stable
+serial 17): internet radio (Phase 31), after George's regression pass and his
+look at the touchpad fix on sofapi; release run 43842724641, `verify-image.sh`
+all checks passed; PR #104 merged by George. Promoted the same day at his
+word: both channels read back with a good signature, `releases/latest` is
+r1.17.0 (its checksum matches, its signature is there, the image 1.15 GB).
+**PR #105 for George**: README's *Download and install* still names 1.16.4 on
+`main`. After its merge: `main` into `docs` and `next`, `readme-1.17.0`
+deleted.
 
 **go-librespot is upstream's build of `775ba5883`** (ADR-0181), kept in the
 `inputs` mirror with its source; `packaging/check-upstream.sh` reports it
@@ -81,59 +67,57 @@ Lyrion took it, the cause not established (0.2.1 logs the pause's answer
 and the loopback's states); not measured: bit-perfect, rates above 44.1 kHz,
 a group, the plugin off and on, Roon Bridge's own update.
 
-**Phase 27** (releases built on GitHub, ADR-0173) is in 1.12.1, on Stable
-with 1.13.0. **Left:** a
-card flashed from 1.12.1's image (criterion 4: the card below), then R2D2's
-pi-gen container (8.9 GB) and build images (2.9 GB) removed (decision 3).
+**Phases 22, 23, 27 to 31 and 35 closed 2026-11-16** (George, with 1.17.0
+on Stable). Each one's *Closed* paragraph in `docs/DEVELOPMENT.md` says what
+was left, and the to-do list carries it; their full notes are in the archive
+(2026-11-16).
+- **22, multiroom**: the measurement session (at 192 kHz the bar lost sync
+  over Wi-Fi); Lyrion-app grouping back and forth with the player's.
+- **23, AirPlay 2** (*Limited testing*): the test with an Apple device
+  (to-do `ph23-test`), then T1-T9 to George and the mark removed.
+- **27 and 28**: a card flashed from
+  `image/deploy/2026-11-03-gexis-player-v1.12.1.img.xz`, set up without
+  Plexamp or Beszel, updated, then reset for first use offering Plexamp; then
+  R2D2's pi-gen container (8.9 GB) and build images (2.9 GB) removed.
+  Plexamp played once on 0.5.1 and George's look at the Plugins page, on
+  sofapi. ADR-0174's setup fix (`plugin_store.ADDED`) not built.
+- **29, the bass**: not measured - the cuts read from CamillaDSP while music
+  plays, the level against a meter, two sweeps' agreement at 60 dB, the
+  stage's cost, the A/B bit-exactness.
+- **30, the full range** (*Limited testing*): George's run at Full range on
+  sofapi; the stage's cost at 44.1/96/192 kHz; acceptance 2 as a finding.
+  Phase 34 next for room correction, research first.
+- **31, internet radio**: the follower's Stop on a follower running 1.17.0
+  (to-do `ph31-regression-fixes`). `core/tests/test_main_order.py` reads
+  `main()` for a name used before it is assigned (LESSONS 19).
+- **35, a page from Home Assistant**: not yet on a player - the heat
+  take-down, a USB keyboard's key, one page replacing another, the switch
+  turned off while a page is up; acceptance 4 (192 kHz with room
+  correction).
 
-**Phase 28** (Plexamp and Beszel from the catalogue, ADR-0174) is on Stable
-with 1.13.0:
-`gcarstoiu/gexis-beszel` 0.21.1-1 and `gcarstoiu/gexis-plexamp` 0.5.1
-(gexis-plugins #13-#17, merged by George), catalogue serial 8; sofapi runs
-the branch's last preview (`~/preview-ph28d`) with both carried over.
-**Owed:** Plexamp played once on 0.5.1 (its engine's cache now
-through a link) and George's look at the Plugins page, on sofapi; a card
-from `image/deploy/2026-11-03-gexis-player-v1.12.1.img.xz` (also Phase 27's)
-set up without Plexamp or Beszel, then updated to 1.13.0 (nothing
-installed, *Add plugins* lists them), then reset to factory settings for
-first use offering Plexamp from the catalogue. **Not built:** ADR-0174's
-"found while reading" setup fix - part 2 switches ours on without adding
-them to the Plugins page's list (`plugin_store.ADDED`).
-
-**Phase 29** (room correction for the bass, ADR-0175) **on Stable with
-1.16.1**. **Not yet:** the cuts read from CamillaDSP while music plays, the
-level against a meter, two sweeps' agreement at 60 dB, the stage's cost,
-the A/B bit-exactness. The lines the design has no state for
-(`design/IMPLEMENTED-DIFFERENTLY.md`, Phases 29 and 30) confirmed by George
-2026-11-14.
+**The Home Assistant integration's next release**, after the player's (now
+out): its `radio` branch (pushed, not merged: the favourites as sources, the
+directory in the media browser, `gexis.radio_favourite`, the `gexis/radio`
+WebSocket command, the card's Radio view C01-C06; a stopped station shows as
+paused with Play; one column under the card's 440 px cap) and its
+`multiroom` branch (join and unjoin, `9744bb3`). Its version is bumped at the
+release. Harnesses: `~/projects/scratch/ph31/card`, `ph31/harness`,
+`ph30/harness` (`WT` names the worktree).
 
 **Open, small:** a preview's download still holds the skin packs (1.1 of
 1.2 GB) though `release.yml` excludes them; `gen_personalise.py` out of step since Phase 23;
 the mocked Settings → Display showed two *Screen port* rows
 (`screen_port`, `screen_port_info`), not yet looked at on a player.
 
-**Phase 23, AirPlay 2** (`ph-airplay`), in every release since 1.9.0 and on
-Stable with 1.10.0, marked *Limited testing* (no Apple device yet).
-[ADR-0167](docs/decisions/0167-airplay-2-as-a-plugin.md) accepted; the
-adapter is `gcarstoiu/gexis-airplay` (local copy `~/projects/gexis-airplay`).
-**Open:** the test with an Apple device (to-do `ph23-test`), then T1-T9 to
-George and the tag removed.
-
-**Phase 22, multiroom for every source**, on Stable with 1.10.0
-([ADR-0166](docs/decisions/0166-multiroom-for-every-source.md)). **Open:**
-the measurement session (at 192 kHz the bar lost sync over Wi-Fi); the Home
-Assistant integration's join and unjoin (its `multiroom` branch, `9744bb3`),
-released after the player's; Lyrion-app grouping back and forth with the
-player's.
-
 **The players** (2026-11-16): **sofapi** on the preview of `next` at
 b8a76991 (run 43838072189: gexis-core and gexis-player 1.16.4+git33,
 gexis-ui and gexis-system 1.16.4+git31.9fdd26e), installed idle, core
-restarted and up; Testing offers it 1.17.0. The other three on the preview branch
-`preview-radio-mdns` at 8897a71e (1.16.4 and `ph-radio`; gexis-core and
-gexis-player 1.16.4+git31, go-librespot 775ba58-4; run 43725073814),
-installed idle, cores restarted; each reports 1.16.4, nothing offered. All
-four on Testing; room correction on at sofapi; each has its own Lyrion
+restarted and up. The other three on the preview branch
+`preview-radio-mdns` (deleted 2026-11-16, merged) at 8897a71e (1.16.4 and
+`ph-radio`; gexis-core and gexis-player 1.16.4+git31, go-librespot
+775ba58-4; run 43725073814), installed idle, cores restarted. All four on
+Testing, which now offers 1.17.0 (not yet installed on any); room correction
+on at sofapi; each has its own Lyrion
 server. Lyrion stops on a player that leaves its sync (Lyrion's own); the
 screen now keeps Lyrion as the source.
 
@@ -166,45 +150,6 @@ screen change may miss full-screen (the HMTECH 10.1"; to-do
 `~/projects/ha-venv`). **HACS's default list**: hacs/default#12691 waits for
 HACS's maintainers - do not ask them for a review (their template).
 
-**Phase 30** (room correction for the full range, ADR-0177, Finding 144)
-**on Stable with 1.16.1**, Full range marked *Limited testing* (George).
-**Now:** George's run at the full range on sofapi. **Owed:** the stage's cost
-at 44.1/96/192 kHz; acceptance 2 as a finding from a run checked at Full
-range. Layouts are checked with made-up data in
-`~/projects/scratch/ph30/harness` (`WT` names the worktree). Phase 34 next
-for room correction, research first; whether more positions help is checked
-there (George).
-
-**Phase 31** (internet radio without Lyrion, `ph-radio`) **started
-2026-11-13**: ADR-0180 accepted; settings in ADR-0022. **mpv measured
-2026-11-13** (Finding 146): confirmed. **The core built 2026-11-14** on
-`ph-radio` (worktree `~/projects/gexis-player-radio`; what the build settled
-is in ADR-0180's *The core, built*): directory, favourites, mpv as
-`gexis-radio.service`, `/stations` routes, logos through the player,
-settings, packaging. **The design arrived 2026-11-14** (`design/source/31/`;
-its PNGs and per-artboard markup in `~/projects/scratch/ph31/design`);
-George's answers in ADR-0180 (as drawn; an added station keeps playing;
-logos through the player; six limits in ADR-0022). **The screens built
-2026-11-14** on `ph-radio` (CI green at 439ac897): the panel, the bars, the
-phone, Settings and first use, each checked against its artboards with
-invented stations (`~/projects/scratch/ph31/harness`, `WT` names the
-worktree; the screenshots in its `out/`). **Next:** the Home Assistant
-integration's release (favourites as sources, the
-media browser, the card's Radio view, C01–C06), released after the
-player's; a preview on a player not in a group (sofapi's `output` feeds the
-group's loopback): the rate at the card, the stage, 32 kHz, CPU, an hour. **Done 2026-11-14**
-([Finding 147](docs/findings/147-internet-radio-through-the-real-chain.md)):
-sofapi ungrouped, the preview of 439ac89 installed (mpv with it), measured,
-grouped again with the bar; the preview is now the one on all four players
-(below), for George's regression pass. Acceptance 7
-restated by George as 7 % or less through the real chain: met. **The Home
-Assistant integration built 2026-11-14** on its `radio` branch (pushed, not
-merged; released after the player's, as multiroom): the favourites as
-sources, the directory in the media browser and its search,
-`gexis.radio_favourite`, the `gexis/radio` WebSocket command, the card's
-Radio view (C01-C06; harness in `~/projects/scratch/ph31/card`). Its version
-is bumped at its release.
-
 **BedroomPi and GuestPi cannot reach each other** (2026-11-14, George asked
 why GuestPi was missing from BedroomPi's menu): the home network, not the
 player. Each is on a different access point of the mesh; nothing sent from
@@ -218,27 +163,6 @@ behind a background look, for the fresh answer; the kept list shows
 meanwhile. Masked probes in
 `~/projects/scratch/ph31/dbg/` (`reach.py`, `link.py`, `seen.py`).
 
-**The Home Assistant integration's `radio` branch:** a stopped station shows
-as paused with Play (George); the card keeps one column under its 440 px cap.
-
-**George's regression pass of radio** (to-do `ph31-regression`) done
-2026-11-16, its two findings fixed: a follower's phone drew Pause for the
-group's station (the member publishes the leader's radio state, its
-favourites its own), and the touchpad outline round Now Playing's Minimise
-showed only near its middle (the covering check asked down the button's
-middle; measured on the real Now Playing before and after,
-`~/projects/scratch/ph31/ring/real.sh`, then seen by George on sofapi).
-**The first preview of those fixes stopped sofapi's core at start**: the
-follower fix's line in `main()` set `state_store.is_favourite` above
-`state_store` (LESSONS 19: no test runs `main()`). sofapi was rolled back
-within two minutes, the line moved, and `core/tests/test_main_order.py`
-now reads `main()` for a name used before it is assigned.
-
-**Phase 35** (a page from Home Assistant, ADR-0176 as amended) **on Stable
-with 1.16.1**, with the integration's 0.6.0. **Not yet on a player:** the
-heat take-down, a USB keyboard's key, one page replacing another, the switch
-turned off while a page is up; acceptance 4 (192 kHz with room correction).
-
 Phases and their IDs: `docs/DEVELOPMENT.md`. MPD parked (ADR-0151). **Raspberry
 Pi Imager** (ADR-0159, a task): Imager's own list stays open as it is
 (George, 2026-10-24).
@@ -248,20 +172,20 @@ in Claude's memory, not here) holds the open items with their detail.
 
 **Routine clean-up** (`docs/ROUTINE-CLEANUP.md`, George 2026-10-12): after
 every merged release PR, otherwise weekly on Sunday evening. **Last run:
-2026-11-15, after 1.16.3 and 1.16.4.** Owed from it: `docs/LESSONS.md`
-(5,183 words) cut back; the start-of-session set was about 10,100 words.
+2026-11-16, after 1.17.0**: the closed phases' notes moved to the archive
+(HANDOFF 2,633 words to about 2,000). Still owed: `docs/LESSONS.md` (5,183
+words) cut back; the start-of-session set is about 9,400 words.
 
 ## Phases
 
-Closed: 0-21 and 24-26 (13 with letters a-f). Phases are numbered
-consecutively without letters, each with a stable ID (George, 2026-10-13).
-On Stable with work open: 22 (multiroom), 23 (AirPlay 2, limited testing),
-27 (releases built on GitHub; a card still to flash) and 28 (Plexamp and
-Beszel to the catalogue), both with 1.13.0. 29 (room correction for the
-bass), 30 (the full range) and 35 (a page from Home Assistant) on Stable with
-1.16.1, work open. **31** (internet radio, ADR-0180) on Testing with
-1.17.0, the Home Assistant integration's part to release; then 32-34 and 36 (Glass, added 2026-11-13); MPD parked. `docs/DEVELOPMENT.md`
-holds each phase's acceptance criteria.
+Closed: 0-31 and 35 (13 with letters a-f); 22, 23, 27-31 and 35 on
+2026-11-16 (George, with 1.17.0 on Stable), what each left above. Phases are
+numbered consecutively without letters, each with a stable ID (George,
+2026-10-13). **Between phases**: none in progress. In order: 32 (the library
+answers for itself), 33 (Lyrion's own menus: the look), 34 (room correction
+in time, research first), 36 (Glass, a finding first); MPD parked. The next
+to start is George's choice. `docs/DEVELOPMENT.md` holds each phase's
+acceptance criteria.
 
 ## Machines
 
