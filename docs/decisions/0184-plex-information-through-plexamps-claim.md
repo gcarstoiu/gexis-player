@@ -117,10 +117,9 @@ the token from - holds:
 
 So the plugin can name the server and its local connection while Plexamp
 is not playing, and lend that server's own token rather than the
-account's. **Not yet seen on a player**: both files on a claimed player
-(read by the plugin's code in a preview, its result as yes or no, no
-names or addresses printed), and a server with `httpsRequired`, whose
-local address is a `plex.direct` name.
+account's. **Seen on sofapi** (2026-11-17, Finding 149): both files on a claimed
+player, read by the plugin, the library lent over HTTP. **Not yet seen**: a
+server with `httpsRequired`, whose local address is a `plex.direct` name.
 
 ## As built (2026-11-16)
 
@@ -158,6 +157,12 @@ built*, or settled what it left open:
    0.6.0), so it shows and hides with Plexamp's other rows, and a plugin too
    old to lend has none. The core greys it with *Claim Plexamp first* until
    the plugin's *Claim token* row reports a claim.
+
+**Measured on sofapi, 2026-11-17** ([Finding 149](../findings/149-plex-covers-as-built.md)):
+the library lent over HTTP and taken; 3,539 of LMS's 4,823 albums matched by
+name; a cover through the core in 54-81 ms; 2 s for a host that does not
+answer; neither the token nor the server's address in the logs. The sweep
+(*Update album covers*) does not ask Plex yet: a decision still owed.
 
 ## Consequences
 
