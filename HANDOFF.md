@@ -213,11 +213,17 @@ installer, its origin left as the catalogue's (0.5.1 kept as the previous
 version); the library lent and taken, the row on and not greyed.
 [Finding 149](docs/findings/149-plex-covers-as-built.md), counts only: 3,539
 of LMS's 4,823 albums matched by name, a cover in 54-81 ms, 2 s for a host
-that does not answer, no token or address in the logs. **Owed:** George's
-answer on Plex in the *Update album covers* sweep (LMS has its own cover for
-all but 38 albums); a Plex cover seen during playback; then artist
-information, MusicBrainz-id matching, lyrics (acceptance 6) and 7's
-decisions. The catalogue lists 0.6.0 with the release that carries it, by
+that does not answer, no token or address in the logs. **Second step built 2026-11-17** (George: the
+cover sweep asks Plex first; go on with artist pictures and biographies; he
+expected popular tracks there too, and they are - sorted by `ratingCount`,
+as Plexamp's DJ asks): ADR-0184's second step, `ph-library` 60796813 -
+`plex-artist` (biography, picture, similar, popular) first in the chain and
+on the artist page, ahead of LMS's own plugin; both sweep buttons ask Plex
+first, stored apart (`plex-artist`, `plex-album` notes) so fanart's stay
+behind it. 3,565 core tests pass. Preview build run 44025601946; **its
+install on sofapi waits for George's go-ahead.** **Owed after it:** a Plex
+cover and an artist page seen live; the sweep's counts; then MusicBrainz-id
+matching, lyrics (acceptance 6) and 7's decisions. The catalogue lists 0.6.0 with the release that carries it, by
 its `player` field.
 Then 33 (Lyrion's own menus: the look), 34 (room correction in time,
 research first), 36 (Glass, a finding first); MPD parked. `docs/DEVELOPMENT.md` holds each phase's
