@@ -203,6 +203,14 @@ the median) and ten popular tracks for 80; 13-17 ms a call.
    providers' cached answers and both of the sweep's Plex stores, since an
    item's number on one server is another item on the next.
 
+**Measured on sofapi, 2026-11-17** ([Finding 150](../findings/150-plex-artists-and-sweep-as-built.md)):
+for 40 artists the server holds, its picture on every page and its
+biography on 39; *Popular* rows for 12 of 13 held by the same name, 3 of 27
+held by the lead artist only (1,177 of the 1,719 LMS artists matched). One
+sweep, 69 minutes: Plex's picture on 556 of 948 artists in the list and 169
+of 270 sampled covers; no token or address in the logs. Owed: whether a
+collaboration's page takes the lead artist's biography (George).
+
 ## Consequences
 
 - No second sign-in and no second Plex device in the account.
