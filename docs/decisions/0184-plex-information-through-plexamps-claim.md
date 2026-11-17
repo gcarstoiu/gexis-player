@@ -208,8 +208,16 @@ for 40 artists the server holds, its picture on every page and its
 biography on 39; *Popular* rows for 12 of 13 held by the same name, 3 of 27
 held by the lead artist only (1,177 of the 1,719 LMS artists matched). One
 sweep, 69 minutes: Plex's picture on 556 of 948 artists in the list and 169
-of 270 sampled covers; no token or address in the logs. Owed: whether a
-collaboration's page takes the lead artist's biography (George).
+of 270 sampled covers; no token or address in the logs.
+
+**Confirmed (George, 2026-11-17):** Plex ahead of LMS's own plugin on the
+artist page (3), and *Update artist portraits* asking Plex first as well (4).
+**Still owed: a collaboration's page.** Taking the biography and similar
+artists from Plex only for the whole name was agreed, then not built: the
+internet sources already answer for the lead artist, since MusicBrainz
+resolves a collaboration to it (ADR-0059's rule for the picture; Finding
+150), so the page would show the lead's biography from Wikipedia instead.
+Put back to George with what each choice would take.
 
 ## Consequences
 
