@@ -4097,6 +4097,10 @@ consumes. **Popular tracks do remain ListenBrainz's**, 404 on that server.
      no internet source, nothing here uses it, and Plexamp offers it for
      what it plays; a *Sounds like* row or a queue kept going by it were the
      choices not taken, either still possible later.
+   - **Moods and styles: noted and left** (George, 2026-11-17). They replace
+     no internet source, and the Artist tab already carries the library's
+     own genres; Plex's styles beside them, or browsing by mood or style,
+     were the choices not taken.
 
 **Out of scope, and named:** Plex's `UltraBlurColors`, its album reviews, and
 its own catalogue groupings (*Singles & EPs*, *Live Albums*, *Compilations*).
