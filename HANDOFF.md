@@ -244,9 +244,16 @@ lead artist only; after the sweep, Plex's picture on 556 of 948 artists and
 collaboration's page the lead artist's, as built (ADR-0184). **George is
 finishing 32 first** (2026-11-17): acceptance 7 decided the same day -
 sonic similarity, moods and styles, and ReplayGain all noted and left
-(`docs/DEVELOPMENT.md`). **Owed:** a Plex picture on now-playing seen live;
-MusicBrainz-id matching (3); lyrics (6), how Plexamp fetches them found
-first. The catalogue lists 0.6.0 with the release that carries it, by
+(`docs/DEVELOPMENT.md`). **Third step built** (`ph-library` 744ac0e9, 3,571
+core tests pass): LMS's CLI gives no MusicBrainz id, so after a miss by name
+the core's own artist id finds the artist, and the album by its title
+(Finding 152: +34 of 948 artists, +125 of 4,823 albums on sofapi); its
+preview building from `preview-library-room` c9059db2 (run 44182678762),
+**not installed** - waits for George's go-ahead. **Lyrics (6) found**
+([Finding 153](docs/findings/153-plex-lyrics-are-rationed.md)): Plexamp's
+request works, about five per ten minutes for the whole server, and LRCLIB
+has more of them synced; whether to use them put to George. **Owed:** a
+Plex picture on now-playing seen live. The catalogue lists 0.6.0 with the release that carries it, by
 its `player` field.
 Then 33 (Lyrion's own menus: the look), 34 (room correction in time,
 research first), 36 (Glass, a finding first); MPD parked. `docs/DEVELOPMENT.md` holds each phase's
