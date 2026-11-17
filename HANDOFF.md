@@ -89,9 +89,11 @@ was left, and the to-do list carries it; their full notes are in the archive
   80-190 Hz; cuts designed from the *Both* sweeps would not (predicted).
   George chose those (ADR-0175's amendment, with the research behind it),
   and a kept measurement redesigned at start. Built on `room-both`
-  (f471bc63); its preview, with Phase 32's, from `preview-library-room`.
-  Owed: George's go-ahead to install on sofapi, then his listening and the
-  bass rise judged by ear.
+  (f471bc63); its preview, with Phase 32's, from `preview-library-room`,
+  on sofapi since 2026-11-17 (core and player 1.17.0+git47.faf38e6, UI
+  git42.f471bc6): its measurement redesigned at start, six cuts the same
+  on both, *Not checked*. Owed: George's listening, the bass rise judged by
+  ear.
 - **A hum with the touch cable in** (sofapi, 2026-11-17): causes, tests and
   remedies in `docs/HARDWARE.md`; George's tests come first.
 - **30, the full range** (*Limited testing*): George's run at Full range on
