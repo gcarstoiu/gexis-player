@@ -44,6 +44,36 @@ From the packages built for 0.8.4. **Not yet measured:** how hard the
 visualiser works the Pi at 1920 x 1080 (ADR-0111 decision 12), which may raise
 the recommendation for the largest screens.
 
+### Hum from a touch screen's USB cable
+
+**Reported, 2026-11-17, cause not yet narrowed down:** on sofapi (a Pi 4
+playing through a USB DAC, an HDMI screen with its touch over USB) a low
+hum rose with the volume, and went when the touch cable was unplugged, the
+HDMI cable still in. A second cable between the screen and the Pi is a
+second ground path; what reaches the amplifier depends on which of these
+it is:
+
+| Possible cause | What it sounds like | The test |
+|---|---|---|
+| A ground loop: HDMI and the touch cable join the same two devices, and stray 50 Hz fields drive a current round the loop, into the ground the USB DAC shares | a steady low hum (50/100 Hz and harmonics) | unplug either cable; plug the amplifier, the Pi and the screen into one power strip |
+| The screen's own power adapter leaking a little mains current to its output (by design), which flows to earth through the Pi, the DAC and the amplifier | the same | with the touch cable in, unplug the screen's adapter |
+| The screen powered through its touch cable: the backlight's current returns through the Pi's USB ground | a buzz or whine that changes with brightness | does the screen go dark with the touch cable out? |
+| The touch controller's USB traffic | a faint tick or whine, louder while touching | touch the screen and listen |
+
+With playback paused and the amplifier up, a hum still there is electrical,
+not the music. Playing through a DAC HAT instead of the USB DAC for a
+minute shows whether the USB DAC's ground is where it gets in.
+
+**Remedies, in order:** a full-speed USB isolator (ADuM4160 type) on the
+touch cable - touch needs only full speed, and it breaks that cable's
+ground; the screen then needs its own supply, as an isolator passes little
+current. Not on a USB DAC's cable, which needs high speed. Then: the
+screen on its own supply through its power-only port; one power strip for
+everything, the cables run together; an RCA ground-loop isolator between
+the DAC and the amplifier (cheap ones dull the extremes); a DAC HAT instead
+of the USB DAC. Ferrite clamps help only against high-frequency noise.
+Never remove an earth connection: it is there for safety.
+
 ## Lyrion Server (optional)
 
 A plugin, off unless switched on (ADR-0115). It serves a music library from a

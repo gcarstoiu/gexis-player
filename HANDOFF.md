@@ -83,7 +83,13 @@ was left, and the to-do list carries it; their full notes are in the archive
   sofapi. ADR-0174's setup fix (`plugin_store.ADDED`) not built.
 - **29, the bass**: not measured - the cuts read from CamillaDSP while music
   plays, the level against a meter, two sweeps' agreement at 60 dB, the
-  stage's cost, the A/B bit-exactness.
+  stage's cost, the A/B bit-exactness. **George heard it thin (2026-11-17,
+  [Finding 151](docs/findings/151-room-correction-thins-the-voice-range.md)):**
+  each speaker cut alone took 5.5-10 dB from what is heard together at
+  80-190 Hz; cuts designed from the *Both* sweeps would not (predicted).
+  A decision is owed (George), then an ADR-0175 amendment before any code.
+- **A hum with the touch cable in** (sofapi, 2026-11-17): causes, tests and
+  remedies in `docs/HARDWARE.md`; George's tests come first.
 - **30, the full range** (*Limited testing*): George's run at Full range on
   sofapi; the stage's cost at 44.1/96/192 kHz; acceptance 2 as a finding.
   Phase 34 next for room correction, research first.
