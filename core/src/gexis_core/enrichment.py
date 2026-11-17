@@ -664,6 +664,14 @@ class Cache:
                                [(p,) for p in providers])
         self._conn.commit()
 
+    def forget_misses(self, *providers: str) -> int:
+        """Every "nothing" these providers answered: what a better match
+        than theirs may now find."""
+        gone = sum(self._conn.execute("DELETE FROM enrichment WHERE provider = ? AND outcome = ?",
+                                      (p, Outcome.MISSING.value)).rowcount for p in providers)
+        self._conn.commit()
+        return gone
+
     def forget(self, key: TrackKey, provider: str) -> None:
         self._conn.execute(
             "DELETE FROM enrichment WHERE key = ? AND provider = ?",

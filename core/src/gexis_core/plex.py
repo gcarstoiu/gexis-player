@@ -10,7 +10,8 @@ backup or a problem report, and gone when the plugin disconnects.
 artist's biography, picture, similar artists and popular tracks** (the
 second step, 2026-11-17). From one index of the library's albums and
 artists, fetched when first needed and again every few hours, matched on
-the same reduced titles and folded names the other providers use. Pictures
+the same reduced titles and folded names the other providers use - and,
+after a miss, by the artist's MusicBrainz id (the third step). Pictures
 are served by the core, `/plex/cover/<key>/<stamp>`: a Plex picture's
 address needs the token, and the enrichment cache keeps what it finds on
 disk and the state goes to every phone on the network.
@@ -62,12 +63,17 @@ _THUMB = re.compile(r"^/library/metadata/(\d+)/thumb/(\d+)$")
 _DIGITS = re.compile(r"^\d{1,12}$")
 #: What the sweep stores of a picture: `<ratingKey>/<stamp>`.
 _STORED = re.compile(r"^(\d{1,12})/(\d{1,12})$")
+#: An artist's MusicBrainz id among Plex's guids: `mbid://<uuid>`.
+_MBID = re.compile(r"^mbid://([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$")
 
 #: The providers' names, in the enrichment cache and ADR-0040's list.
 PROVIDER = "plex-release"
 ARTIST_PROVIDER = "plex-artist"
 #: Where the server whose answers the cache holds is remembered.
 NOTES = "plex"
+#: **Once: the misses answered before the artist's id was asked** (ADR-0184,
+#: third step). Believed for a week otherwise, and the id may find them.
+MISSES_FORGOTTEN = "misses-before-ids"
 #: **Where ADR-0059's sweep keeps what Plex answered** (ADR-0184, second
 #: step, 4): `<key>/<stamp>`, or None for "asked, it has none". Apart from
 #: fanart's, so that fanart's are still there when Plex is not.
@@ -149,12 +155,16 @@ def _local(host: str) -> bool:
 @dataclass
 class _Index:
     """The library's albums, by reduced title: `(artist, key, stamp)`; and
-    its artists, by folded name: `(key, stamp or None, section)`."""
+    its artists, by folded name: `(key, stamp or None, section)`. **Behind
+    the names** (ADR-0184, third step): its artists by MusicBrainz id, and
+    each artist's albums by reduced title, `(key, stamp)`."""
 
     lent: Lent
     made: float
     albums: dict[str, list[tuple[str, str, str]]]
     artists: dict[str, list[tuple[str, str | None, str]]] = field(default_factory=dict)
+    by_mbid: dict[str, tuple[str, str | None, str]] = field(default_factory=dict)
+    albums_of: dict[str, dict[str, tuple[str, str]]] = field(default_factory=dict)
 
 
 class PlexLibrary:
@@ -227,6 +237,7 @@ class PlexLibrary:
         except Exception as exc:  # noqa: BLE001 - a cache that cannot say is no reason to stop
             logger.info("plex: cannot read which server the cache is for (%s)", type(exc).__name__)
             return
+        self._forget_misses_once()
         if before == server:
             return
         try:
@@ -238,6 +249,22 @@ class PlexLibrary:
             self._store.remember(NOTES, "server", server)
         except Exception as exc:  # noqa: BLE001
             logger.info("plex: cannot note the server in the cache (%s)", type(exc).__name__)
+
+    def _forget_misses_once(self) -> None:
+        try:
+            self._store.recall(NOTES, MISSES_FORGOTTEN)
+            return
+        except KeyError:
+            pass
+        except Exception as exc:  # noqa: BLE001 - housekeeping
+            logger.info("plex: cannot read the misses marker (%s)", type(exc).__name__)
+            return
+        try:
+            gone = self._store.forget_misses(PROVIDER, ARTIST_PROVIDER)
+            self._store.remember(NOTES, MISSES_FORGOTTEN, True)
+            logger.info("plex: %d misses from before the MusicBrainz ids forgotten", gone)
+        except Exception as exc:  # noqa: BLE001
+            logger.info("plex: cannot forget the misses (%s)", type(exc).__name__)
 
     # --- asking it ----------------------------------------------------------
 
@@ -293,18 +320,20 @@ class PlexLibrary:
                 return None
             if self._lent != lent:
                 return None  # lent again meanwhile: this one is not it
-            albums, artists = read
-            self._index = _Index(lent, self._clock(), albums, artists)
+            albums, artists, by_mbid, albums_of = read
+            self._index = _Index(lent, self._clock(), albums, artists, by_mbid, albums_of)
             logger.info("plex: %d album titles and %d artist names indexed in %.1f s",
                         len(albums), len(artists), time.monotonic() - started)
             return self._index
 
-    async def _read_library(self, lent: Lent) -> tuple[dict, dict] | None:
+    async def _read_library(self, lent: Lent) -> tuple[dict, dict, dict, dict] | None:
         sections = await self._get(lent, "/library/sections", {}, total=INDEX_TIMEOUT_S)
         if sections is None:
             return None
         albums: dict[str, list[tuple[str, str, str]]] = {}
         artists: dict[str, list[tuple[str, str | None, str]]] = {}
+        by_mbid: dict[str, tuple[str, str | None, str]] = {}
+        albums_of: dict[str, dict[str, tuple[str, str]]] = {}
         directories = (sections.get("MediaContainer") or {}).get("Directory") or []
         for section in directories:
             if not isinstance(section, dict) or section.get("type") != "artist":
@@ -312,19 +341,21 @@ class PlexLibrary:
             key = str(section.get("key") or "")
             if not _DIGITS.match(key):
                 continue
-            # Albums (type 9), then artists (type 8): a page of 500 at a
-            # time, summaries left out - a biography is asked when wanted.
-            for kind, add in (("9", lambda item: _add(albums, item)),
-                              ("8", lambda item, key=key: _add_artist(artists, item, key))):
+            # Albums (type 9), then artists (type 8) with their guids: a page
+            # of 500 at a time, summaries left out - a biography is asked
+            # when wanted.
+            for kind, add in (("9", lambda item: _add(albums, item, albums_of)),
+                              ("8", lambda item, key=key: _add_artist(artists, item, key, by_mbid))):
                 if not await self._pages(lent, key, kind, add):
                     return None
-        return albums, artists
+        return albums, artists, by_mbid, albums_of
 
     async def _pages(self, lent: Lent, section: str, kind: str, add) -> bool:
         start = 0
         for _page in range(MAX_PAGES):
             page = await self._get(lent, f"/library/sections/{section}/all", {
                 "type": kind, "excludeFields": "summary",
+                **({"includeGuids": "1"} if kind == "8" else {}),
                 "X-Plex-Container-Start": str(start), "X-Plex-Container-Size": str(PAGE),
             }, total=INDEX_TIMEOUT_S)
             if page is None:
@@ -339,22 +370,30 @@ class PlexLibrary:
                 break
         return True
 
-    async def album(self, artist: str, title: str) -> tuple[Outcome, tuple[str, str] | None]:
+    async def album(self, artist: str, title: str,
+                    mbid: str | None = None) -> tuple[Outcome, tuple[str, str] | None]:
         """An album's cover, as `(key, stamp)`: FOUND, MISSING, or
-        UNAVAILABLE when the server could not be asked."""
+        UNAVAILABLE when the server could not be asked. By the title and the
+        artist's name; **else, given the artist's MusicBrainz id, by that
+        artist's album of the title** (ADR-0184, third step)."""
         index = await self._library()
         if index is None:
             return Outcome.UNAVAILABLE, None
+        title = match_title(title)
         wanted = {fold(artist), fold(lead_artist(artist))} - {""}
-        for theirs, key, stamp in index.albums.get(match_title(title), ()):
+        for theirs, key, stamp in index.albums.get(title, ()):
             if theirs in wanted:
                 return Outcome.FOUND, (key, stamp)
-        return Outcome.MISSING, None
+        theirs = index.by_mbid.get(mbid) if mbid else None
+        found = index.albums_of.get(theirs[0], {}).get(title) if theirs and title else None
+        return (Outcome.FOUND, found) if found else (Outcome.MISSING, None)
 
-    async def artist(self, name: str) -> tuple[Outcome, tuple[str, str | None, str] | None]:
+    async def artist(self, name: str,
+                     mbid: str | None = None) -> tuple[Outcome, tuple[str, str | None, str] | None]:
         """An artist in the library, as `(key, picture stamp or None,
         section)`: by the folded name, else by the lead artist's - *A feat.
-        B* is A's. FOUND, MISSING, or UNAVAILABLE."""
+        B* is A's - **else by the MusicBrainz id given** (ADR-0184, third
+        step). FOUND, MISSING, or UNAVAILABLE."""
         index = await self._library()
         if index is None:
             return Outcome.UNAVAILABLE, None
@@ -362,14 +401,15 @@ class PlexLibrary:
             found = index.artists.get(wanted) if wanted else None
             if found:
                 return Outcome.FOUND, found[0]
-        return Outcome.MISSING, None
+        found = index.by_mbid.get(mbid) if mbid else None
+        return (Outcome.FOUND, found) if found else (Outcome.MISSING, None)
 
-    async def about(self, name: str) -> tuple[Outcome, dict | None]:
+    async def about(self, name: str, mbid: str | None = None) -> tuple[Outcome, dict | None]:
         """**What the library knows of an artist**: `biography`, `picture`
         (`(key, stamp)` or None), `similar` and `popular` - the artist's
         tracks in the library the wider world plays most, as Plexamp's own
         DJ asks for them (`sort=ratingCount:desc`, one per recording)."""
-        outcome, found = await self.artist(name)
+        outcome, found = await self.artist(name, mbid)
         if outcome is not Outcome.FOUND:
             return outcome, None
         lent = self._lent
@@ -427,20 +467,25 @@ class PlexLibrary:
             await self._session.close()
 
 
-def _add(found: dict, album) -> None:
+def _add(found: dict, album, albums_of: dict | None = None) -> None:
     if not isinstance(album, dict):
         return
     match = _THUMB.match(str(album.get("thumb") or ""))
     title = match_title(str(album.get("title") or ""))
     artist = str(album.get("parentTitle") or "")
-    if not (match and title and artist):
+    if not (match and title):
         return
     key, stamp = match.groups()
+    parent = str(album.get("parentRatingKey") or "")
+    if albums_of is not None and _DIGITS.match(parent):
+        albums_of.setdefault(parent, {}).setdefault(title, (key, stamp))
+    if not artist:
+        return
     for name in {fold(artist), fold(lead_artist(artist))} - {""}:
         found.setdefault(title, []).append((name, key, stamp))
 
 
-def _add_artist(found: dict, artist, section: str) -> None:
+def _add_artist(found: dict, artist, section: str, by_mbid: dict | None = None) -> None:
     if not isinstance(artist, dict):
         return
     key = str(artist.get("ratingKey") or "")
@@ -450,6 +495,11 @@ def _add_artist(found: dict, artist, section: str) -> None:
     match = _THUMB.match(str(artist.get("thumb") or ""))
     stamp = match.group(2) if match and match.group(1) == key else None
     found.setdefault(name, []).append((key, stamp, section))
+    if by_mbid is not None:
+        for guid in artist.get("Guid") or ():
+            ids = _MBID.match(str(guid.get("id") or "").lower()) if isinstance(guid, dict) else None
+            if ids:
+                by_mbid.setdefault(ids.group(1), (key, stamp, section))
 
 
 def _tags(values) -> list[str]:
@@ -468,9 +518,10 @@ class PlexRelease:
 
     name = PROVIDER
 
-    def __init__(self, plex: PlexLibrary, allowed=lambda: True) -> None:
+    def __init__(self, plex: PlexLibrary, allowed=lambda: True, identity=None) -> None:
         self._plex = plex
         self._allowed = allowed
+        self._identity = identity
 
     def serves(self, renderer) -> bool:
         # The internet radio's album line is the station's name (ADR-0180).
@@ -482,12 +533,33 @@ class PlexRelease:
     async def fetch(self, key) -> Answer:
         if not (key.artist and key.album):
             return Answer(Outcome.MISSING)
-        outcome, found = await self._plex.album(key.raw_artist or key.artist,
-                                                key.raw_album or key.album)
+        artist, album = key.raw_artist or key.artist, key.raw_album or key.album
+        outcome, found = await self._plex.album(artist, album)
+        score = 100
+        if outcome is Outcome.MISSING:
+            outcome, found, score = await _by_id(self._identity, key,
+                                                 lambda mbid: self._plex.album(artist, album, mbid))
         if outcome is not Outcome.FOUND:
             return Answer(outcome)
         return Answer(Outcome.FOUND, Enrichment(album_art=picture_path(*found),
-                                                sources=("plex",)))
+                                                sources=("plex",)), confidence=score)
+
+
+async def _by_id(identity, key, ask):
+    """**The artist's MusicBrainz id, after a miss by name** (ADR-0184, third
+    step): the id the other providers use, from `ArtistIdentity`, and its
+    score as the answer's confidence - the service drops one below its
+    threshold, as it does theirs. `(outcome, found, score)`; a miss stays a
+    miss when MusicBrainz could not be asked, so the providers behind are
+    asked as before."""
+    if identity is None:
+        return Outcome.MISSING, None, 100
+    who = await identity.resolve(key.artist, raw=key.raw_artist or None)
+    if not who:
+        return Outcome.MISSING, None, 100
+    mbid, score = who
+    outcome, found = await ask(mbid)
+    return outcome, found, int(score)
 
 
 class PlexArtist:
@@ -497,9 +569,10 @@ class PlexArtist:
 
     name = ARTIST_PROVIDER
 
-    def __init__(self, plex: PlexLibrary, allowed=lambda: True) -> None:
+    def __init__(self, plex: PlexLibrary, allowed=lambda: True, identity=None) -> None:
         self._plex = plex
         self._allowed = allowed
+        self._identity = identity
 
     def serves(self, renderer) -> bool:
         return True
@@ -510,7 +583,12 @@ class PlexArtist:
     async def fetch(self, key) -> Answer:
         if not key.artist:
             return Answer(Outcome.MISSING)
-        outcome, about = await self._plex.about(key.raw_artist or key.artist)
+        name = key.raw_artist or key.artist
+        outcome, about = await self._plex.about(name)
+        score = 100
+        if outcome is Outcome.MISSING:
+            outcome, about, score = await _by_id(self._identity, key,
+                                                 lambda mbid: self._plex.about(name, mbid))
         if outcome is not Outcome.FOUND:
             return Answer(outcome)
         found = Enrichment(
@@ -521,4 +599,4 @@ class PlexArtist:
             popular=about["popular"],
             sources=("plex",),
         )
-        return Answer(Outcome.MISSING) if found.is_empty() else Answer(Outcome.FOUND, found)
+        return Answer(Outcome.MISSING) if found.is_empty() else Answer(Outcome.FOUND, found, confidence=score)

@@ -339,8 +339,14 @@ class ArtworkSweep:
         stored under its own names. Could not ask: what was stored stays, as
         everywhere in this walk."""
         portrait = False
+        # **The artist's MusicBrainz id, after a miss by name** (ADR-0184,
+        # third step): the one fanart.tv is asked with next, at the same
+        # threshold; resolved once, and only if a name misses.
+        mbid = _Lazy(lambda: self._plex_id(name, folded))
         if kind in ("portraits", "all"):
             outcome, found = await plex.artist(name)
+            if outcome is Outcome.MISSING and (theirs := await mbid.get()):
+                outcome, found = await plex.artist(name, theirs)
             if outcome is not Outcome.UNAVAILABLE:
                 stamp = found[1] if found else None
                 value = f"{found[0]}/{stamp}" if stamp else None
@@ -351,6 +357,8 @@ class ArtworkSweep:
         covered = set()
         for title in mine:
             outcome, found = await plex.album(name, title)
+            if outcome is Outcome.MISSING and (theirs := await mbid.get()):
+                outcome, found = await plex.album(name, title, theirs)
             if outcome is Outcome.UNAVAILABLE:
                 break
             value = "/".join(found) if found else None
@@ -359,6 +367,15 @@ class ArtworkSweep:
                 covered.add(fold(title))
         return Found(portrait=portrait, albums=len(mine), covers=len(covered),
                      titles=frozenset(covered))
+
+    async def _plex_id(self, name: str, folded: str) -> str | None:
+        """The artist's MusicBrainz id for the Plex library, or None: not
+        found, not asked, or below the threshold."""
+        resolved = await self._identity.resolve(folded, raw=name)
+        if not resolved:
+            return None
+        mbid, score = resolved
+        return mbid if score >= self._confidence() else None
 
     async def _elsewhere(self, kind: str, artist_id: int, name: str, folded: str,
                          mine=None) -> "Found":

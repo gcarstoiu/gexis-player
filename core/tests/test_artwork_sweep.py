@@ -18,6 +18,7 @@ from gexis_core.artwork_sweep import (
     match_title,
     remembered,
 )
+from gexis_core.enrichment import fold
 
 
 class FakeStore:
@@ -486,9 +487,11 @@ class TestOneTileForBoth:
 class FakePlexLibrary:
     """The lent Plex library, as the sweep asks it."""
 
-    def __init__(self, artists=None, albums=None, ready=True, unavailable=False):
+    def __init__(self, artists=None, albums=None, ready=True, unavailable=False, by_id=None):
         self.artists = artists or {}
         self.albums = albums or {}
+        #: By MusicBrainz id: an artist `mbid`, an album `(mbid, title)`.
+        self.by_id = by_id or {}
         self._ready = ready
         self.unavailable = unavailable
         self.asked = []
@@ -496,20 +499,20 @@ class FakePlexLibrary:
     def ready(self):
         return self._ready
 
-    async def artist(self, name):
+    async def artist(self, name, mbid=None):
         from gexis_core.enrichment import Outcome
-        self.asked.append(("artist", name))
+        self.asked.append(("artist", name) if mbid is None else ("artist by id", mbid))
         if self.unavailable:
             return Outcome.UNAVAILABLE, None
-        found = self.artists.get(name)
+        found = self.artists.get(name) if mbid is None else self.by_id.get(mbid)
         return (Outcome.FOUND, found) if found else (Outcome.MISSING, None)
 
-    async def album(self, artist, title):
+    async def album(self, artist, title, mbid=None):
         from gexis_core.enrichment import Outcome
-        self.asked.append(("album", artist, title))
+        self.asked.append(("album", artist, title) if mbid is None else ("album by id", mbid, title))
         if self.unavailable:
             return Outcome.UNAVAILABLE, None
-        found = self.albums.get((artist, title))
+        found = self.albums.get((artist, title)) if mbid is None else self.by_id.get((mbid, title))
         return (Outcome.FOUND, found) if found else (Outcome.MISSING, None)
 
 
@@ -579,3 +582,25 @@ class TestPlexFirst:
         assert store.rows[(SWEPT_ALBUMS, "isaac hayes\x1fhot buttered soul")] == "11/5"
         assert [a for a in plex.asked if a[0] == "album"] == [("album", "Isaac Hayes", "Hot Buttered Soul")], \
             "one try, then the rest left"
+
+    async def test_what_plex_misses_by_name_is_asked_by_the_artists_id(self):
+        """ADR-0184, third step: the id fanart.tv is asked with, after a miss
+        by name; a name that finds is never asked again by id."""
+        from gexis_core.plex import SWEPT_ALBUMS, SWEPT_ARTISTS
+        plex = FakePlexLibrary(albums={("Isaac Hayes", "Hot Buttered Soul"): ("11", "6")},
+                               by_id={"MB1": ("9", "5", "1"),
+                                      ("MB1", "Black Moses (Deluxe Edition)"): ("13", "8")})
+        sweep, store, _, _ = build(plex=plex)
+        await run(sweep, "all")
+        assert store.rows[(SWEPT_ARTISTS, "isaac hayes")] == "9/5"
+        assert store.rows[(SWEPT_ALBUMS, "isaac hayes\x1f" + fold("Black Moses (Deluxe Edition)"))] == "13/8"
+        assert store.rows[(SWEPT_ALBUMS, "isaac hayes\x1fhot buttered soul")] == "11/6"
+        assert ("album by id", "MB1", "Hot Buttered Soul") not in plex.asked, "found by name"
+        assert ("album by id", "MB1", "Nothing Fanart Has") in plex.asked
+
+    async def test_an_id_below_the_threshold_is_not_used_for_plex(self):
+        plex = FakePlexLibrary(by_id={"MB1": ("9", "5", "1")})
+        sweep, _, _, _ = build(plex=plex, identity=FakeIdentity({"isaac hayes": ("MB1", 80)}),
+                               confidence=lambda: 90)
+        await run(sweep, "portraits")
+        assert plex.asked == [("artist", "Isaac Hayes")]

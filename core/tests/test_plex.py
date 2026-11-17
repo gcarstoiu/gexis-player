@@ -19,15 +19,24 @@ from gexis_core.state import StateStore
 from gexis_core.wsserver import StateServer
 
 TOKEN = "server-token-xyz"
+MBID_ARTIST = "0a1b2c3d-0000-4000-8000-000000000201"
+MBID_KIN = "0a1b2c3d-0000-4000-8000-000000000204"
 ALBUMS = [
-    {"title": "Album One (Deluxe Edition)", "parentTitle": "The Artist",
+    {"title": "Album One (Deluxe Edition)", "parentTitle": "The Artist", "parentRatingKey": "201",
      "thumb": "/library/metadata/101/thumb/1700000000"},
+    {"title": "Kin Album", "parentTitle": "Les Kin", "parentRatingKey": "204",
+     "thumb": "/library/metadata/104/thumb/11"},
     {"title": "Second", "parentTitle": "Other & Friend", "thumb": "/library/metadata/102/thumb/5"},
     {"title": "No Picture", "parentTitle": "The Artist"},
     {"title": "Elsewhere", "parentTitle": "The Artist", "thumb": "http://example.org/a.jpg"},
 ]
 ARTISTS = [
-    {"ratingKey": "201", "title": "The Artist", "thumb": "/library/metadata/201/thumb/1700000001"},
+    {"ratingKey": "201", "title": "The Artist", "thumb": "/library/metadata/201/thumb/1700000001",
+     "Guid": [{"id": f"mbid://{MBID_ARTIST}"}]},
+    # Another name here than LMS's, and Plex's MusicBrainz id beside a guid of
+    # another kind.
+    {"ratingKey": "204", "title": "Les Kin", "thumb": "/library/metadata/204/thumb/9",
+     "Guid": [{"id": "plex://artist/5d07"}, {"id": f"mbid://{MBID_KIN.upper()}"}]},
     {"ratingKey": "202", "title": "Other", "thumb": "/library/metadata/202/thumb/7"},
     {"ratingKey": "203", "title": "No Face"},
 ]
@@ -37,6 +46,8 @@ RECORDS = {
             "Similar": [{"tag": "Kin One"}, {"tag": "Kin Two"}, {"tag": "Kin One"}]},
     "202": {"ratingKey": "202", "title": "Other", "summary": "", "thumb": "/library/metadata/202/thumb/7"},
     "203": {"ratingKey": "203", "title": "No Face", "summary": "Only words."},
+    "204": {"ratingKey": "204", "title": "Les Kin", "summary": "Kin's story.",
+            "thumb": "/library/metadata/204/thumb/9"},
 }
 #: The artist's tracks as the server sorts them, most played first; one
 #: recording twice, and one the wider world has no count for.
@@ -192,7 +203,7 @@ async def test_an_album_by_its_reduced_title_and_its_artist_or_lead_artist(serve
     assert await library.album("The Artist", "No Picture") == (Outcome.MISSING, None)
     assert await library.album("The Artist", "Elsewhere") == (Outcome.MISSING, None)
     pages = [q for path, q in fake.asked if path.endswith("/all") and q["type"] == "9"]
-    assert [q["X-Plex-Container-Start"] for q in pages] == ["0", "2"], "two pages, once"
+    assert [q["X-Plex-Container-Start"] for q in pages] == ["0", "2", "4"], "three pages, once"
     assert fake.tokens == {TOKEN}
     await library.close()
 
@@ -503,3 +514,90 @@ async def test_what_is_playing_shows_plexs_picture_over_the_sweeps_fanart(served
     assert body["enrichment"]["artist_image"] == "/plex/cover/201/1700000002"
     assert body["enrichment"]["biography_source"] == "Plex"
     await library.close()
+
+
+# --- the artist's MusicBrainz id behind the name (the third step) ------------
+
+
+class _Identity:
+    """`ArtistIdentity`, as the providers ask it: `(mbid, score)`, None for
+    nobody, False when MusicBrainz could not be asked."""
+
+    def __init__(self, answers):
+        self.answers = answers
+        self.asked = []
+
+    async def resolve(self, artist, raw=None):
+        self.asked.append((artist, raw))
+        return self.answers.get(artist)
+
+
+async def test_an_artist_by_its_musicbrainz_id_only_when_the_name_misses(served):
+    fake, url = served
+    library = PlexLibrary()
+    _lend(library, url)
+    assert await library.artist("Kin", MBID_KIN) == (Outcome.FOUND, ("204", "9", "3")), \
+        "any case of the id, beside a guid of another kind"
+    assert await library.artist("Kin") == (Outcome.MISSING, None)
+    assert await library.artist("The Artist", MBID_KIN) == (Outcome.FOUND, ("201", "1700000001", "3")), \
+        "the name first, as built"
+    assert await library.artist("Nobody", "0a1b2c3d-0000-4000-8000-000000000999") == (Outcome.MISSING, None)
+    pages = [(q["type"], q.get("includeGuids")) for path, q in fake.asked if path.endswith("/all")]
+    assert ("8", "1") in pages and ("9", None) in pages, "guids asked for the artists only"
+    await library.close()
+
+
+async def test_an_album_by_its_artists_id_and_its_title_when_the_name_misses(served):
+    _fake, url = served
+    library = PlexLibrary()
+    _lend(library, url)
+    assert await library.album("Kin", "Kin Album (Remastered)", MBID_KIN) == (Outcome.FOUND, ("104", "11"))
+    assert await library.album("Kin", "Kin Album") == (Outcome.MISSING, None)
+    assert await library.album("Kin", "Not Theirs", MBID_KIN) == (Outcome.MISSING, None)
+    assert await library.album("Kin", "Album One", MBID_KIN) == (Outcome.MISSING, None), \
+        "another artist's album of the title is not theirs"
+    assert await library.album("The Artist", "Album One", MBID_KIN) == (Outcome.FOUND, ("101", "1700000000")), \
+        "the name's answer stands"
+    await library.close()
+
+
+async def test_the_providers_ask_the_artists_id_after_a_miss_and_carry_its_score(served):
+    _fake, url = served
+    library = PlexLibrary()
+    _lend(library, url)
+    identity = _Identity({"kin": (MBID_KIN, 93), "busy": False, "nobody": None})
+    release = PlexRelease(library, identity=identity)
+    artist = PlexArtist(library, identity=identity)
+
+    album = await release.fetch(TrackKey(artist="kin", album="kin album", raw_artist="Kin", raw_album="Kin Album"))
+    assert album.outcome is Outcome.FOUND and album.enrichment.album_art == "/plex/cover/104/11"
+    assert album.confidence == 93, "the service holds it to its threshold, as the others' answers"
+    about = await artist.fetch(TrackKey(artist="kin", raw_artist="Kin"))
+    assert about.outcome is Outcome.FOUND and about.confidence == 93
+    assert about.enrichment.biography == "Kin's story." and about.enrichment.artist_image == "/plex/cover/204/9"
+    assert identity.asked == [("kin", "Kin"), ("kin", "Kin")]
+
+    named = await release.fetch(TrackKey(artist="the artist", album="album one"))
+    assert named.outcome is Outcome.FOUND and named.confidence == 100
+    assert len(identity.asked) == 2, "a name that finds asks for no id"
+    for who in ("busy", "nobody"):
+        assert (await artist.fetch(TrackKey(artist=who))).outcome is Outcome.MISSING
+    assert (await PlexArtist(library).fetch(TrackKey(artist="kin"))).outcome is Outcome.MISSING, \
+        "no identity, the name only"
+    await library.close()
+
+
+def test_the_misses_from_before_the_ids_are_forgotten_once(tmp_path):
+    cache = Cache(tmp_path / "enrichment.db")
+    missed = TrackKey(artist="kin", album="kin album").scoped("album")
+    found = TrackKey(artist="the artist", album="album one").scoped("album")
+    cache.put(missed, "plex-release", Answer(Outcome.MISSING))
+    cache.put(found, "plex-release", Answer(Outcome.FOUND, Enrichment(album_art="/plex/cover/101/1")))
+    cache.put(missed, "coverart", Answer(Outcome.MISSING))
+    _lend(PlexLibrary(store=cache), "http://10.0.0.5:32400", server="one")
+    assert cache.get(missed, "plex-release") is None, "the id may find it now"
+    assert cache.get(found, "plex-release") is not None and cache.get(missed, "coverart") is not None
+    cache.put(missed, "plex-release", Answer(Outcome.MISSING))
+    _lend(PlexLibrary(store=cache), "http://10.0.0.5:32400", server="one")
+    assert cache.get(missed, "plex-release") is not None, "once, not at every lend"
+    cache.close()

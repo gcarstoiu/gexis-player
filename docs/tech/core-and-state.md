@@ -538,7 +538,10 @@ wins):
    token, held in memory only) and `plexamp.plex_info` is on. One index of the
    library's albums and artists, read a page at a time and kept six hours;
    albums match on `match_title` and the artist or lead artist, artists on the
-   folded name or the lead artist's. Pictures are paths on the player,
+   folded name or the lead artist's; after a miss, on the artist's
+   MusicBrainz id (`ArtistIdentity`'s, its score as the answer's confidence)
+   among Plex's `mbid://` guids - an artist by that id, an album by that
+   artist's album of the title (Finding 152). Pictures are paths on the player,
    `/plex/cover/<key>/<stamp>`, which asks Plex's scaler for them with the
    token. A sleeping server costs one connection wait (2 s), then the usual
    backoff. Another server than the one the cache's answers came from drops

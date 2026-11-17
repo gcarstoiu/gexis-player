@@ -4309,8 +4309,8 @@ async def main() -> None:
             # acceptance 2): nothing else reordered, and it answers only what
             # it has - an album's cover; an artist's biography, picture,
             # similar artists and popular tracks (the second step).
-            PlexRelease(plex, allowed=_plex_allowed),
-            PlexArtist(plex, allowed=_plex_allowed),
+            PlexRelease(plex, allowed=_plex_allowed, identity=identity),
+            PlexArtist(plex, allowed=_plex_allowed, identity=identity),
             # **Pictures before LMS, text after it** (George, 2026-09-18,
             # once the speed was measured). Fanart has a portrait for
             # artists the plugin has nothing for, and this list merges
