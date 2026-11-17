@@ -245,6 +245,9 @@ find, and contradicts no artist the names found.
    after a miss by name, and their answer carries its score; the sweep uses
    the id it resolves for fanart.tv. An artist not yet resolved costs one
    MusicBrainz search, which the providers behind Plex would make anyway.
+4. **The Plex providers' misses kept from before are forgotten once**, at
+   the first lend after the update: a "nothing" is otherwise believed for a
+   week, and the id may now find it. Their finds stay.
 
 ## Consequences
 
