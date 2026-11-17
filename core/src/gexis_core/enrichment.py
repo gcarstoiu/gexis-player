@@ -83,7 +83,7 @@ CONFIDENCE_MIN = 90
 #: (George, 2026-09-18), so they are not a tab nobody opened: they are what
 #: the main screen draws. LRCLIB publishes no rate limit and asks only for
 #: serial requests and a real User-Agent, both of which `Http` does.
-PREFETCH_PROVIDERS = ("plex-release", "lms", "lms-release", "lrclib")
+PREFETCH_PROVIDERS = ("plex-release", "plex-artist", "lms", "lms-release", "lrclib")
 
 #: **What each provider's answer depends on** (`TrackKey.scoped`). Not in
 #: the list: the track itself (lyrics, a recording's cover).
@@ -91,7 +91,7 @@ SCOPES = {
     "lms": "artist", "popular": "artist", "fanart": "artist", "tadb-bg": "artist",
     "wikipedia": "artist", "listenbrainz": "artist", "fanart-bgs": "artist",
     "lms-release": "album", "mb-release": "album", "coverart": "album",
-    "plex-release": "album",
+    "plex-release": "album", "plex-artist": "artist",
 }
 
 #: The providers that find a cover. **Asked only for a track whose renderer

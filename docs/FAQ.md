@@ -1025,15 +1025,22 @@ The Lyrics button on Now Playing, or the Lyrics corner of the phone's
 remote, shows them.
 
 **Where do artist pictures and biographies come from?**
-Biographies from Wikipedia; album and artist details from MusicBrainz. Artist
-pictures from fanart.tv with a key of your own (*fanart.tv key*), then
-TheAudioDB; without a fanart.tv key, from the Lyrion server's Music & Artist
-Information plugin, or initials where it is not installed.
+With Plexamp claimed and *Information from Plex* on (*Settings → Sources*,
+under Plexamp), from your Plex library first: the biography, the picture,
+similar artists and the artist page's *Popular* tracks. Otherwise, and for
+artists your Plex library does not have: biographies from Wikipedia; album
+and artist details from MusicBrainz; artist pictures from fanart.tv with a
+key of your own (*fanart.tv key*), then TheAudioDB; without a fanart.tv key,
+from the Lyrion server's Music & Artist Information plugin, or initials
+where it is not installed; *Popular* tracks from ListenBrainz, with a token
+of your own.
 
 **How do I fill in portraits and covers for the whole library?**
 *Settings → Enrichment → Lyrion Client → Find portraits and covers* checks
-every album artist and album on fanart.tv and TheAudioDB, keeping Lyrion's
-picture where neither has one. It runs in the background without stopping
+every album artist and album in your Plex library first (with Plexamp claimed
+and *Information from Plex* on), then on fanart.tv and TheAudioDB, keeping
+Lyrion's picture where none has one. With *Information from Plex* off, the
+lists show what fanart.tv and TheAudioDB found, without another run. It runs in the background without stopping
 the music, and shows what its last run found. Without a TheAudioDB key of
 your own it uses a shared key and can take noticeably longer.
 

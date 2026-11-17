@@ -529,15 +529,23 @@ resolves an artist's MusicBrainz id once and shares it between providers.
 Provider order as wired in `__main__.py` (merged field by field, earlier
 wins):
 
-0. the lent Plex library's album cover (`plex.py`, ADR-0184): asked only
-   while the Plexamp plugin lends a library (the contract's `library` event:
-   the server, its local address and its token, held in memory only) and
-   `plexamp.plex_info` is on. One index of the library's albums, read a page
-   at a time and kept six hours, matched on `match_title` and the artist or
-   lead artist; the answer is a path on the player, `/plex/cover/<key>/<stamp>`,
-   which asks Plex for the picture with the token. A sleeping server costs one
-   connection wait (2 s), then the usual backoff. Another server than the one
-   the cache's answers came from drops them;
+0. the lent Plex library (`plex.py`, ADR-0184): `plex-release`, an album's
+   cover, and `plex-artist`, an artist's biography (credited *Plex*),
+   picture, similar artists (Plex's *Similar*, up to 30) and popular tracks
+   (the artist's tracks in the library, `sort=ratingCount:desc`,
+   `group=guid`, ten). Asked only while the Plexamp plugin lends a library
+   (the contract's `library` event: the server, its local address and its
+   token, held in memory only) and `plexamp.plex_info` is on. One index of the
+   library's albums and artists, read a page at a time and kept six hours;
+   albums match on `match_title` and the artist or lead artist, artists on the
+   folded name or the lead artist's. Pictures are paths on the player,
+   `/plex/cover/<key>/<stamp>`, which asks Plex's scaler for them with the
+   token. A sleeping server costs one connection wait (2 s), then the usual
+   backoff. Another server than the one the cache's answers came from drops
+   them, and the sweep's Plex pictures. The artist page (`/library/artist-info`)
+   asks `plex-artist` first for every field, then LMS's plugin and the rest in
+   their order; its *Popular* rows are Plex's titles matched to the library's
+   tracks, ListenBrainz's where none matches;
 1. fanart.tv artist image (page size), then fanart.tv background (idle screen
    only), then TheAudioDB artist image - pictures first;
 2. LMS artist info (the Music & Artist Information plugin, `artistinfo.py`),
@@ -553,7 +561,8 @@ configured. Settings rows gate them: `enrichment` (all), `lyrics` (LRCLIB),
 (Plex; greyed until the plugin reports Plexamp claimed).
 
 **When it runs.** A state subscriber pre-fetches 8 s into a playing track,
-local providers only (`lms`, `lms-release`, `lrclib`), so skipping costs
+local providers only (`plex-release`, `plex-artist`, `lms`, `lms-release`,
+`lrclib`), so skipping costs
 nothing. If the renderer sent no artwork (Bluetooth, a radio stream) it also
 looks for a cover and publishes it into the state (ADR-0081). Everything else
 is fetched when the panel or phone asks `GET /enrichment`.
@@ -614,8 +623,11 @@ use as they are read (`EnrichmentService(lms_base=...)`).
 Related modules:
 
 - `artwork_sweep.py` - Settings buttons that walk all album artists and fill
-  portraits and album covers from fanart.tv in one call per artist (ADR-0059,
-  ADR-0068, ADR-0075); bumps `pictures_revision` once at the end.
+  portraits and album covers: from the lent Plex library first, stored apart
+  (`plex-artist`, `plex-album` notes, `<key>/<stamp>`) and read first while
+  Plex is ready (ADR-0184); then from fanart.tv in one call per artist
+  (ADR-0059, ADR-0068, ADR-0075), still kept so the lists fall back to it.
+  Bumps `pictures_revision` once at the end.
 - `fanart.py` - the visualiser's fanart frame: up to 10 photos per artist
   from LMS's `artistphotos`, kept on disk in `/var/cache/gexis-core/fanart`
   (60 artists) and fetched ahead for the next track (ADR-0112). An artist

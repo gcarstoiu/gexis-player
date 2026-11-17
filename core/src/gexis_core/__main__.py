@@ -127,7 +127,7 @@ from gexis_core.systemd import set_enabled as _set_unit_enabled
 from gexis_core.systemd import restart_if_enabled as _restart_if_enabled
 from gexis_core.systemd import unit_state as _unit_state
 from gexis_core.artwork_sweep import ArtworkSweep
-from gexis_core.plex import LENDER as PLEX_LENDER, PlexLibrary, PlexRelease
+from gexis_core.plex import LENDER as PLEX_LENDER, PlexArtist, PlexLibrary, PlexRelease
 from gexis_core.bluealsa_volume import BluealsaVolume
 from gexis_core.remote_volume import RemoteVolume
 from gexis_core.volume import (
@@ -4225,8 +4225,11 @@ async def main() -> None:
 
     asyncio.ensure_future(_music_floor_loop())
     # ADR-0184: the Plex library the Plexamp plugin lends - held in memory,
-    # asked first, its covers served through the core.
-    plex = PlexLibrary(store=enrichment_cache)
+    # asked first, its pictures served through the core.
+    plex = PlexLibrary(store=enrichment_cache, allowed=lambda: _plex_allowed())
+    # The library's grid reads the sweep's Plex covers first (ADR-0184,
+    # second step, 4).
+    library.plex = plex
     #: The row is the plugin's (`plexamp.plex_info`, on by default); a
     #: plugin too old to have it lends nothing either.
     PLEX_ROW = f"{PLEX_LENDER}.plex_info"
@@ -4280,6 +4283,9 @@ async def main() -> None:
         # Once at the end: the panel's answer to this is to drop every
         # artist photo it holds and ask again.
         on_finish=state_store.bump_pictures_revision,
+        # ADR-0184, second step, 4: both buttons ask the lent Plex library
+        # first (George, 2026-11-17).
+        plex=plex,
     )
     #: ADR-0059: Enrichment's own rows, wired at last. Each is a reason not
     #: to *ask* somebody rather than a reason to throw their answer away.
@@ -4301,8 +4307,10 @@ async def main() -> None:
         [
             # **The lent Plex library first** (ADR-0184; Phase 32,
             # acceptance 2): nothing else reordered, and it answers only what
-            # it has - an album's cover, for now.
+            # it has - an album's cover; an artist's biography, picture,
+            # similar artists and popular tracks (the second step).
             PlexRelease(plex, allowed=_plex_allowed),
+            PlexArtist(plex, allowed=_plex_allowed),
             # **Pictures before LMS, text after it** (George, 2026-09-18,
             # once the speed was measured). Fanart has a portrait for
             # artists the plugin has nothing for, and this list merges

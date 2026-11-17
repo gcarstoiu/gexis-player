@@ -78,7 +78,7 @@ from gexis_core.settings_registry import (
     UnknownSetting,
 )
 from gexis_core.state import StateStore
-from gexis_core.plex import COVER_SIZE, COVER_SIZES
+from gexis_core.plex import ARTIST_PROVIDER, COVER_SIZE, COVER_SIZES, SWEPT_ARTISTS, swept
 
 #: The most artists one request may ask photos for. A screen of
 #: cards is about 40; this is a bound on what a caller can make the
@@ -1454,8 +1454,18 @@ class StateServer:
 
         It goes through LMS's image proxy, so the caller gets the size it
         asked for and LMS does the fetching and the caching.
+
+        **The Plex library's first** (ADR-0184, second step, 4), while it is
+        lent and *Information from Plex* is on: through the core, scaled by
+        Plex.
         """
-        if self._library is None or not name:
+        if not name:
+            return None
+        if self._plex is not None and self._plex.ready():
+            from_plex = swept(self._notes, SWEPT_ARTISTS, fold(name), size)
+            if from_plex:
+                return from_plex
+        if self._library is None:
             return None
         found = remembered(self._notes, ARTIST_NAMESPACE, fold(name))
         if not found or found is True:
@@ -1514,6 +1524,11 @@ class StateServer:
                 artist_image=photos.get(artist_id),
                 sources=("lms",) if (biography or photos.get(artist_id)) else (),
             )
+        # **The lent Plex library first, for every field** (ADR-0184, second
+        # step, 3): ahead of LMS's own plugin too, which shows what it
+        # fetched from the internet. The others keep their order below it.
+        plex = await self._enrichment.for_track(
+            TrackKey(artist=fold(name), raw_artist=name), only=(ARTIST_PROVIDER,))
         # **The sweep answers for fanart, so fanart is not asked** (ADR-0075).
         swept = self.swept_portrait_of(name, PHOTO_LARGE)
         rest = await self._enrichment.for_track(
@@ -1521,7 +1536,7 @@ class StateServer:
             only=("fanart", "wikipedia", "listenbrainz", "popular"),
             omit=("fanart",) if swept else (),
         )
-        found = found.merged_with(rest)
+        found = plex.merged_with(found.merged_with(rest))
         if rest.artist_image:
             # **Pictures come from fanart first** (George, 2026-09-18): it
             # has a portrait for artists LMS's plugin has nothing for. The
@@ -1532,12 +1547,19 @@ class StateServer:
         # picture, from the same place, already on this device.
         if swept:
             found = replace(found, artist_image=swept)
+        # **And Plex's before them all** (ADR-0184, second step, 3).
+        if plex.artist_image:
+            found = replace(found, artist_image=plex.artist_image)
+        # Only what this device can actually play, in the order the wider
+        # world plays them (the design's own note on Popular): Plex's list,
+        # and ListenBrainz's where none of Plex's is in this library.
+        popular = await self._playable(artist_id, plex.popular)
+        if not popular and rest.popular:
+            popular = await self._playable(artist_id, rest.popular)
         return web.json_response({
             "artist": name,
             "enrichment": found.to_json(),
-            # Only what this device can actually play, in the order the
-            # wider world plays them (the design's own note on Popular).
-            "popular": await self._playable(artist_id, found.popular),
+            "popular": popular,
         })
 
     async def _playable(self, artist_id: int | None, popular) -> list[dict]:
@@ -1596,7 +1618,9 @@ class StateServer:
         found = await self._enrichment.for_track(
             key, renderer=state.active, pending=pending, omit=omit,
         )
-        if swept:
+        # The sweep's picture over the chain's - **but not over the Plex
+        # library's**, which comes first (ADR-0184, second step, 3).
+        if swept and not (found.artist_image or "").startswith("/plex/"):
             found = replace(found, artist_image=swept)
         return web.json_response({
             # True when a provider had not finished: the panel asks again
@@ -1640,14 +1664,18 @@ class StateServer:
                             headers={"Cache-Control": "public, max-age=31536000, immutable"})
 
     async def _handle_plex_cover(self, request: web.Request) -> web.Response:
-        """**An album's cover from the lent Plex library** (ADR-0184). The
-        picture's address on the Plex server needs the token, which never
-        leaves the core: the screens and phones are given this path, and the
-        core asks Plex. Only an album's picture, by its two numbers."""
-        if self._plex is None or not self._plex.lent:
+        """**A picture from the lent Plex library** (ADR-0184): an album's
+        cover or an artist's picture. Its address on the Plex server needs
+        the token, which never leaves the core: the screens and phones are
+        given this path, and the core asks Plex. Only a picture, by its two
+        numbers; nothing while *Information from Plex* is off. A size
+        outside the range is brought into it."""
+        if self._plex is None or not self._plex.ready():
             return web.json_response({"error": "no Plex library"}, status=404)
         raw = request.query.get("size")
-        size = int(raw) if raw and raw.isdigit() and int(raw) in COVER_SIZES else COVER_SIZE
+        size = COVER_SIZE
+        if raw and raw.isdigit() and len(raw) <= 5:
+            size = min(max(int(raw), COVER_SIZES.start), COVER_SIZES.stop - 1)
         found = await self._plex.cover(request.match_info["key"], request.match_info["stamp"], size)
         if found is None:
             return web.json_response({"error": "the Plex server did not answer"}, status=502)

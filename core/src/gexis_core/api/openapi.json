@@ -3972,14 +3972,14 @@
         "tags": [
           "Library"
         ],
-        "summary": "Get an album's cover from the lent Plex library",
-        "description": "An album's cover from the Plex server whose library the Plexamp plugin lends (ADR-0184), named by the cover provider's answer as `album_art`. The core asks Plex for it with the lent token, which never leaves the player. Only an album's picture, by its two numbers on that server. Not found while no library is lent.",
+        "summary": "Get a picture from the lent Plex library",
+        "description": "An album's cover or an artist's picture from the Plex server whose library the Plexamp plugin lends (ADR-0184), named by the Plex providers' answers (`album_art`, `artist_image`) and by the library's swept pictures. The core asks Plex for it with the lent token, which never leaves the player. Only a picture, by its two numbers on that server. Not found while no library is lent or Information from Plex is off.",
         "parameters": [
           {
             "name": "key",
             "in": "path",
             "required": true,
-            "description": "The album's number on the Plex server.",
+            "description": "The album's or artist's number on the Plex server.",
             "schema": {
               "type": "string",
               "pattern": "^\\d{1,12}$"
@@ -3999,7 +3999,7 @@
             "name": "size",
             "in": "query",
             "required": false,
-            "description": "The cover's width and height in pixels, 100-1200; 600 if absent or outside that.",
+            "description": "The picture's width and height in pixels, 100-1200, brought into that range when outside it; 600 if absent.",
             "schema": {
               "type": "integer",
               "minimum": 100,
@@ -4034,7 +4034,7 @@
             }
           },
           "404": {
-            "description": "No Plex library is lent (`no Plex library`).",
+            "description": "No Plex library is lent, or Information from Plex is off (`no Plex library`).",
             "content": {
               "application/json": {
                 "schema": {
