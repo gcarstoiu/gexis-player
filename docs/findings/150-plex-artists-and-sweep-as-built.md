@@ -50,8 +50,13 @@ were printed or kept.
    collaborations (*A feat. B*, *A & B*) as artists of their own; the server
    answers for them with A's record, so their page shows A's picture and
    biography, and *Popular* stays mostly empty, since A's popular tracks are
-   seldom the collaboration's. Whether a collaboration's page takes the
-   lead artist's biography is a decision owed (George).
+   seldom the collaboration's. The internet sources did the same before
+   Plex: of the 1,166 collaborations (by folded name), 80 had a MusicBrainz
+   id stored, and where the lead's was stored too it was the lead's for 68
+   of 70; for the 51 among the album artists, all had one, the lead's for
+   41 of 41. Wikipedia and ListenBrainz answer by that id. Whether a
+   collaboration's page takes the lead artist's biography is a decision
+   owed (George).
 3. **The sweep reads Plex first, and both are kept.** Plex alone has 513
    portraits and 3,409 covers; fanart and TheAudioDB add 305 portraits and
    364 covers it has none for, and it adds 47 and 1,082 they have none for.
