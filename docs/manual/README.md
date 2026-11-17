@@ -1023,10 +1023,13 @@ nothing to press. On the player's screen, *Measure from your phone* (or
    head, and about 40 cm to either side - step back and tap **Measure
    here**; three seconds later the sweeps play. It never moves on without
    the tap. A sweep spoiled by a noise (a door, a voice) is measured again.
-5. The correction, for each speaker: the cuts in the bass and the broad
-   corrections above it, and a chart of before (the average of the three
-   positions), each position, the target and the expected after. A peak is
-   cut, and a broad correction made, unless most positions would end
+5. The correction: the cuts in the bass, worked out from both speakers
+   playing together - the bass of most music is the same in both, and what
+   you hear is the two adding up - and the same on both speakers; above the
+   bass, broad corrections for each speaker of its own. A chart shows
+   before (the average of the three positions), each position, the target
+   and the expected after, for each speaker and for both together. A peak
+   is cut, and a broad correction made, unless most positions would end
    further from the target; where the three positions disagree, less is
    corrected. **Check it** measures the three positions again with the
    correction on, a tap at each again; **Skip** keeps it as worked out,

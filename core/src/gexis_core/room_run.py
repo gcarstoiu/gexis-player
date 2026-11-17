@@ -510,20 +510,15 @@ class Run:
     # -- the correction ---------------------------------------------------------------
 
     def _design(self) -> None:
-        speakers = {}
+        """The bass's cuts from both speakers together, the same on both
+        (ADR-0175's amendment); above the bass each speaker's own."""
+        both = self._dsp.together(self._positions[rc.BOTH])
+        self._designs[rc.BOTH] = both
+        speakers = {rc.BOTH: _speaker(both)}
         for channel in rc.CHANNELS:
-            d = self._dsp.design(self._positions[channel])
+            d = self._dsp.design(self._positions[channel], cuts=both.cuts)
             self._designs[channel] = d
-            speakers[channel] = rc.Speaker(cuts=tuple((c.freq, c.gain, c.q) for c in d.cuts),
-                                           before=tuple(d.before), target=tuple(d.target),
-                                           after=tuple(d.after), positions=tuple(tuple(p) for p in d.positions),
-                                           above=tuple((b.freq, b.gain, b.q) for b in d.broad),
-                                           after_bass=tuple(d.after_bass), within=d.within,
-                                           room_within=d.room_within)
-        d = self._dsp.as_heard(self._positions[rc.BOTH])
-        self._designs[rc.BOTH] = d
-        speakers[rc.BOTH] = rc.Speaker(before=tuple(d.before), target=tuple(d.target),
-                                       positions=tuple(tuple(p) for p in d.positions))
+            speakers[channel] = _speaker(d)
         self.pending = rc.Measurement(self._today(), False, speakers, range=rc.FULL)
 
     def _cuts(self):
@@ -553,12 +548,55 @@ class Run:
             speakers[channel] = replace(self.pending.speakers[channel], after=tuple(after),
                                         after_bass=tuple(after_bass),
                                         within=self._dsp.within_db(after, d.target))
-            worse += self._dsp.worse_positions(d.positions, measured, d.target, list(d.cuts) + list(d.broad))
+            # Above the bass each speaker's own corrections are judged on it.
+            worse += self._dsp.worse_positions(d.positions, measured, d.target, list(d.broad))
+        # The bass's cuts on what they were designed from: both together.
         d = self._designs[rc.BOTH]
-        after = self._dsp.power_average([c - d.offset for c in self._checked[rc.BOTH]])
-        speakers[rc.BOTH] = replace(self.pending.speakers[rc.BOTH], after=tuple(after))
+        measured = [c - d.offset for c in self._checked[rc.BOTH]]
+        after = self._dsp.power_average(measured)
+        speakers[rc.BOTH] = replace(self.pending.speakers[rc.BOTH], after=tuple(after), after_bass=tuple(after))
+        worse += self._dsp.worse_positions(d.positions, measured, d.target, list(d.cuts))
         found = {}
         for n, db in worse:
             found[n] = max(db, found.get(n, 0))
         self.pending = replace(self.pending, checked=True, speakers=speakers,
                                worse=tuple(sorted(found.items())))
+
+
+def _speaker(d) -> rc.Speaker:
+    """What the store keeps of one design (`room_dsp.Design`)."""
+    return rc.Speaker(cuts=tuple((c.freq, c.gain, c.q) for c in d.cuts),
+                      before=tuple(d.before), target=tuple(d.target),
+                      after=tuple(d.after), positions=tuple(tuple(p) for p in d.positions),
+                      above=tuple((b.freq, b.gain, b.q) for b in d.broad),
+                      after_bass=tuple(d.after_bass), within=d.within, room_within=d.room_within)
+
+
+def redesign(m: rc.Measurement, dsp=None) -> rc.Measurement | None:
+    """**A measurement kept from before ADR-0175's amendment** (George,
+    2026-11-17: redesigned when the player starts): the bass's cuts designed
+    again from its *Both* sweeps, against the targets it keeps, the same on
+    both speakers; above the bass each speaker's corrections again with
+    them in place (a full-range one only). Its after is then the expected
+    one, *Not checked*, until the room is measured again. None when it
+    cannot be: no *Both* sweeps (one from before they were taken)."""
+    both = m.speakers.get(rc.BOTH)
+    if both is None or not both.positions or any(c not in m.speakers for c in rc.CHANNELS):
+        return None
+    import numpy as np
+    if dsp is None:
+        from gexis_core import room_dsp as dsp
+    grid = rc.grid(len(both.before))
+    shared = dsp.together(both.positions, grid, target=both.target)
+    speakers = {rc.BOTH: _speaker(shared)}
+    for channel in rc.CHANNELS:
+        s = m.speakers[channel]
+        if m.range == rc.FULL:
+            speakers[channel] = _speaker(dsp.design(s.positions, grid, cuts=shared.cuts, target=s.target))
+        else:
+            # Measured for the bass only (to 500 Hz before Phase 30): no
+            # corrections above it to design again.
+            after = tuple(dsp.power_average(np.asarray(s.positions) + dsp.cuts_db(shared.cuts, np.asarray(grid))))
+            speakers[channel] = replace(s, cuts=tuple((c.freq, c.gain, c.q) for c in shared.cuts),
+                                        after=after, after_bass=after)
+    return replace(m, checked=False, worse=(), speakers=speakers, bass_from=rc.BOTH)

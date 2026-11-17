@@ -568,22 +568,21 @@ def _broad(positions, bass, target, grid) -> tuple[list[Broad], float]:
 # ---- one channel -----------------------------------------------------------------
 
 
-def design(positions, grid=GRID) -> Design:
-    """**The correction for one channel** from its positions' curves:
+def _target(before, grid, target) -> tuple[np.ndarray, float]:
+    """The target and its level: from the curve's own slope (ADR-0177 items
+    2-3), or one kept with a measurement - already on its level (0)."""
+    if target is None:
+        return full_target(slope(before, grid), grid)
+    return np.asarray(target, dtype=float), 0.0
 
-    - the target: the speaker's own slope above the limit, the bass's rise
-      below it on the slope's level there (ADR-0177 items 2-3);
-    - in the bass, cuts only (ADR-0175 item 6): the highest peak above the
-      target gets a Peaking cut fitted to its height and width, again while
-      one stands more than 1 dB above, up to eight; then the cuts are fitted
-      together, aiming the peaks at the target and leaving the dips and
-      everything above the limit as they are; and a cut that would make most
-      positions worse is made smaller;
-    - above it, broad corrections up or down (`_broad`)."""
-    grid = np.asarray(grid, dtype=float)
-    positions = np.asarray(positions, dtype=float)
-    before = power_average(positions)
-    target, offset = full_target(slope(before, grid), grid)
+
+def _bass_cuts(positions, before, target, grid) -> list[Cut]:
+    """**The cuts in the bass** (ADR-0175 item 6): the highest peak above the
+    target gets a Peaking cut fitted to its height and width, again while
+    one stands more than 1 dB above, up to eight; then the cuts are fitted
+    together, aiming the peaks at the target and leaving the dips and
+    everything above the limit as they are; and a cut that would make most
+    positions worse is made smaller."""
     inside = _fit_range(grid)
     # Peaks are brought to the target; dips and everything outside are
     # what they were, so a cut that digs into either costs.
@@ -602,6 +601,24 @@ def design(positions, grid=GRID) -> Design:
     cuts = [c for c in cuts if c.gain <= -CUT_MIN_DB]
     cuts = _no_position_worse(cuts, positions, target, grid)
     cuts.sort(key=lambda c: c.freq)
+    return cuts
+
+
+def design(positions, grid=GRID, cuts=None, target=None) -> Design:
+    """**The correction for one speaker** from its positions' curves:
+
+    - the target: the speaker's own slope above the limit, the bass's rise
+      below it on the slope's level there (ADR-0177 items 2-3), or `target`;
+    - in the bass, cuts only: `cuts`, those designed from both speakers
+      together (`together`, ADR-0175's amendment of 2026-11-17), or else
+      the speaker's own (`_bass_cuts`);
+    - above it, broad corrections up or down (`_broad`), with the bass's
+      cuts in place."""
+    grid = np.asarray(grid, dtype=float)
+    positions = np.asarray(positions, dtype=float)
+    before = power_average(positions)
+    target, offset = _target(before, grid, target)
+    cuts = _bass_cuts(positions, before, target, grid) if cuts is None else list(cuts)
     bass = cuts_db(cuts, grid)
     broad, room_within = _broad(positions, bass, target, grid)
     after = power_average(positions + bass + cuts_db(broad, grid))
@@ -610,15 +627,21 @@ def design(positions, grid=GRID) -> Design:
                   tuple(broad), after_bass - offset, room_within, within_db(after, target, grid))
 
 
-def as_heard(positions, grid=GRID) -> Design:
-    """**Both speakers together**, as the positions heard them: their
-    average and the target on its level, as `design` gives them, with no
-    correction of their own - the after is measured in the check, or none."""
+def together(positions, grid=GRID, target=None) -> Design:
+    """**Both speakers together**, as the positions heard them, and the
+    bass's cuts designed from them (ADR-0175's amendment, 2026-11-17: the
+    bass is mostly the same in both channels, and each speaker cut alone
+    left the two together under the target - Finding 151). The same cuts
+    go on both speakers, so the after here is exact; nothing above the bass,
+    which stays each speaker's."""
     grid = np.asarray(grid, dtype=float)
     positions = np.asarray(positions, dtype=float)
     before = power_average(positions)
-    target, offset = full_target(slope(before, grid), grid)
-    return Design((), offset, before - offset, target - offset, np.array([]), positions - offset)
+    target, offset = _target(before, grid, target)
+    cuts = _bass_cuts(positions, before, target, grid)
+    after = power_average(positions + cuts_db(cuts, grid))
+    return Design(tuple(cuts), offset, before - offset, target - offset, after - offset, positions - offset,
+                  (), after - offset)
 
 
 def peaks_down_db(before, after, grid=GRID) -> float:
