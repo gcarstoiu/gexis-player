@@ -117,10 +117,9 @@ the token from - holds:
 
 So the plugin can name the server and its local connection while Plexamp
 is not playing, and lend that server's own token rather than the
-account's. **Not yet seen on a player**: both files on a claimed player
-(read by the plugin's code in a preview, its result as yes or no, no
-names or addresses printed), and a server with `httpsRequired`, whose
-local address is a `plex.direct` name.
+account's. **Seen on sofapi** (2026-11-17, Finding 149): both files on a claimed
+player, read by the plugin, the library lent over HTTP. **Not yet seen**: a
+server with `httpsRequired`, whose local address is a `plex.direct` name.
 
 ## As built (2026-11-16)
 
@@ -158,6 +157,51 @@ built*, or settled what it left open:
    0.6.0), so it shows and hides with Plexamp's other rows, and a plugin too
    old to lend has none. The core greys it with *Claim Plexamp first* until
    the plugin's *Claim token* row reports a claim.
+
+**Measured on sofapi, 2026-11-17** ([Finding 149](../findings/149-plex-covers-as-built.md)):
+the library lent over HTTP and taken; 3,539 of LMS's 4,823 albums matched by
+name; a cover through the core in 54-81 ms; 2 s for a host that does not
+answer; neither the token nor the server's address in the logs. The sweep
+(*Update album covers*) did not ask Plex: George's answer is below.
+
+## Second step: the artist, popular tracks and the sweep (2026-11-17)
+
+**Decided (George, 2026-11-17):** the *Update album covers* sweep asks Plex
+first, ahead of fanart.tv; the work goes on with artist pictures and
+biographies; and he expected the server to hold an artist's popular tracks
+as well. It does: Finding 086's 404 was `popularLeaves`, while Plexamp's own
+DJ asks the library's tracks of the artist sorted by `ratingCount`. Measured
+on sofapi the same night, counts only: 509 artists, 507 with a picture and
+494 with a biography; of a sample of 80, similar artists for 80 (30 each,
+the median) and ten popular tracks for 80; 13-17 ms a call.
+
+**How it is built:**
+
+1. **A second provider, `plex-artist`**, first in the chain beside
+   `plex-release`, answering by artist: the biography (credited *Plex*), the
+   picture, similar artists (Plex's *Similar*, up to 30) and popular tracks
+   (the artist's tracks in the library, `sort=ratingCount:desc`,
+   `group=guid`, ten). Warmed when a track starts, as the other local
+   providers are. The artist is found in an index of the library's artists
+   made beside the album index (one call), by folded name or lead artist.
+2. **Pictures through the same route.** `/plex/cover/<key>/<stamp>` serves a
+   picture of the server's by its two numbers, an artist's as well as an
+   album's; a size outside 100-1200 is brought into it rather than replaced.
+3. **The artist page asks Plex first for every field**, then LMS's own
+   plugin and the others in the order they had (LMS's text still ahead of
+   Wikipedia's, fanart's picture still ahead of LMS's). LMS's plugin, too,
+   shows what it fetched from the internet; the server that holds the files
+   comes first. *Popular* takes Plex's titles, matched to the library's own
+   tracks as ListenBrainz's are, and ListenBrainz's where Plex has none.
+4. **Both sweep buttons ask Plex first** (*Update album covers* by George's
+   answer; *Update artist portraits* the same way). What Plex has is stored
+   under its own names (`plex-artist`, `plex-album`) and read first while a
+   library is lent and *Information from Plex* is on; fanart.tv and
+   TheAudioDB are still asked and kept, so with Plex off, or Plexamp gone,
+   the lists fall back to them without another run. *Found* counts either.
+5. **Another server, and everything Plex said is forgotten**: both
+   providers' cached answers and both of the sweep's Plex stores, since an
+   item's number on one server is another item on the next.
 
 ## Consequences
 

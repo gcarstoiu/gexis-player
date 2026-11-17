@@ -206,10 +206,19 @@ the contract's `library` event, added within version 1; `plex.py` (held in
 memory, one album index, the `plex-release` provider first, covers through
 `/plex/cover/<key>/<stamp>`); the row greyed until the plugin reports a
 claim; the visualiser asks the core for a cover named by its path (AirPlay's
-too). 3,549 core tests pass. ADR-0184 *As built*. **Next:** a preview on
-sofapi with the plugin copied in by hand (George's go-ahead first; the
-catalogue will list 0.6.0 for the release that carries it, by its `player`
-field); then the counts (acceptance 3-5).
+too). 3,549 core tests pass. ADR-0184 *As built*. **On sofapi since 2026-11-17** (George's
+go-ahead): the core, system and player packages of `ph-library`
+(`1.17.0+git22.f0bee53`), and plugin 0.6.0 put in by the core's own
+installer, its origin left as the catalogue's (0.5.1 kept as the previous
+version); the library lent and taken, the row on and not greyed.
+[Finding 149](docs/findings/149-plex-covers-as-built.md), counts only: 3,539
+of LMS's 4,823 albums matched by name, a cover in 54-81 ms, 2 s for a host
+that does not answer, no token or address in the logs. **Owed:** George's
+answer on Plex in the *Update album covers* sweep (LMS has its own cover for
+all but 38 albums); a Plex cover seen during playback; then artist
+information, MusicBrainz-id matching, lyrics (acceptance 6) and 7's
+decisions. The catalogue lists 0.6.0 with the release that carries it, by
+its `player` field.
 Then 33 (Lyrion's own menus: the look), 34 (room correction in time,
 research first), 36 (Glass, a finding first); MPD parked. `docs/DEVELOPMENT.md` holds each phase's
 acceptance criteria.
