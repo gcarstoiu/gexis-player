@@ -87,7 +87,9 @@ was left, and the to-do list carries it; their full notes are in the archive
   [Finding 151](docs/findings/151-room-correction-thins-the-voice-range.md)):**
   each speaker cut alone took 5.5-10 dB from what is heard together at
   80-190 Hz; cuts designed from the *Both* sweeps would not (predicted).
-  A decision is owed (George), then an ADR-0175 amendment before any code.
+  George chose those (ADR-0175's amendment, with the research behind it):
+  owed his word on measurements stored before, then the build, a preview
+  on sofapi (his go-ahead to install) and the bass rise judged by ear.
 - **A hum with the touch cable in** (sofapi, 2026-11-17): causes, tests and
   remedies in `docs/HARDWARE.md`; George's tests come first.
 - **30, the full range** (*Limited testing*): George's run at Full range on
