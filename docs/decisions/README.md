@@ -204,7 +204,7 @@ been written properly. **0098 has no record either.**
 | [0181](0181-go-librespot-from-upstreams-own-build-until-its-release.md) | go-librespot from upstream's own build until a release carries its fix | **Accepted** 2026-11-15 (George, B): upstream's build of `775ba5883` (the Android app's crash fixed), kept in the mirror; 1.16.3 from `main` |
 | [0182](0182-upstream-releases-checked-daily-and-a-part-only-patch-release.md) | Upstream releases checked daily, and a patch release for one part | **Accepted** 2026-11-15 (George: 1 and 2): a daily check opens a bump PR into `main` with a preview; a one-part patch release from `main` |
 | [0183](0183-spotify-keeps-playing-on-the-lead-through-a-group-change.md) | Spotify keeps playing on the lead through a group change | Proposed 2026-11-15 (George: keep it going on the lead): pause, rewrite the chain, resume; reopen as the fallback |
-| [0184](0184-plex-information-through-plexamps-claim.md) | Plex information through Plexamp's claim | **Accepted** 2026-11-16 (Phase 32, acceptance 1; George: 1-4, the consequence and the row): the plugin lends Plexamp's token and local server to the core, held in memory only; the row in Sources beside Plexamp |
+| [0184](0184-plex-information-through-plexamps-claim.md) | Plex information through Plexamp's claim | **Accepted** 2026-11-16 (Phase 32, acceptance 1; George: 1-4, the consequence and the row): the plugin lends Plexamp's token and local server to the core, held in memory only; the row in Sources beside Plexamp; 2026-11-17: the artist, popular tracks and both sweeps ask Plex first (George) |
 
 ## Cross-cutting rules
 
