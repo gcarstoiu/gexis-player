@@ -5,6 +5,9 @@ scrolling but **a button**: *"there should be a trigger in settings
 enrichment for a user to trigger an automatic update of album artists
 portraits, with a progress bar and completion status."* Phase 9 subphase
 **9k**.
+**Amended 2026-11-17** by [ADR-0184](0184-plex-information-through-plexamps-claim.md):
+both buttons ask the lent Plex library first (George), fanart.tv and
+TheAudioDB kept behind it.
 **Date:** 2026-09-23
 **Raised by:** George: *"the artist navigation holds currently the LMS
 artist portraits. Those are though of questionable quality so I would like
