@@ -6,7 +6,12 @@
 **Builds on:** [ADR-0162](0162-a-simple-equaliser.md) (the equaliser's filter
 stage) and [Finding 124](../findings/124-room-correction-what-open-source-offers.md)
 (what open source offers, the microphones). **Followed by:** Phase 30
-(`ph-room-correction-full`).
+(`ph-room-correction-full`). **Seen 2026-11-17**
+([Finding 151](../findings/151-room-correction-thins-the-voice-range.md)):
+designed for each speaker alone, sofapi's cuts took 5.5-10 dB from what is
+heard together at 80-190 Hz - the left's peak cut, the right's dip left -
+and George heard the sound thin. Owed: a decision on designing the bass
+cuts from both speakers together.
 
 ## Context
 

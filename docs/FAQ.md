@@ -21,6 +21,17 @@ move the screen's cable and power supply away from the Pi, try another cable,
 or connect the Pi to the router with a network cable, which avoids the
 problem entirely.
 
+**There is a hum that goes away when the screen's touch cable is unplugged.
+What is it?**
+Most likely a ground problem, not the player's software: the touch cable is
+a second connection between the screen and the Pi, beside HDMI, and a small
+current finds its way into the ground the DAC and amplifier share. A
+full-speed USB isolator on the touch cable usually cures it while touch
+keeps working; the screen then needs its own power supply. The causes, how
+to tell them apart and the other remedies are in the
+[hardware guide](HARDWARE.md#hum-from-a-touch-screens-usb-cable). Never
+remove an earth connection to cure a hum.
+
 **Will a library scan by the Lyrion server interrupt the music?**
 It should not. The Lyrion server runs at the lowest priority, and 40 minutes
 of playback during a full scan of a large library had no gaps. The Pi
