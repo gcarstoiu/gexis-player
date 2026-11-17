@@ -221,6 +221,31 @@ biography from Wikipedia instead. Put back to him with the other choices
 (the whole name for every source; a heading naming the lead), he kept it as
 built: the lead's picture, biography and similar artists, Plex first.
 
+## Third step: the artist's MusicBrainz id behind the name (2026-11-17)
+
+Phase 32's acceptance 3 asked for MusicBrainz ids where both sides carry
+them. [Finding 152](../findings/152-plex-matching-by-musicbrainz-ids.md):
+**LMS's CLI gives none**, while Plex has an `mbid://` guid on nearly every
+artist and album. The id the core already resolves for an artist by name
+(`ArtistIdentity`, kept between restarts) stands in for LMS's: on sofapi it
+adds 34 of 948 album artists and 125 of 4,823 albums to what the names
+find, and contradicts no artist the names found.
+
+**How it is built:**
+
+1. **The index keeps Plex's artist ids and each artist's albums**: artists
+   read with `includeGuids=1`, by `mbid://` id; albums also by their
+   artist's key and reduced title.
+2. **The name first, as built; the id only when the name finds nothing.**
+   An artist by its id; an album by its artist's id and its title. Where
+   the two disagree (5 albums of 3,477 on sofapi) the name's answer stands,
+   so nothing found today changes.
+3. **The id is the one the other providers use**, at the same confidence
+   threshold (ADR-0059): `PlexRelease` and `PlexArtist` ask `ArtistIdentity`
+   after a miss by name, and their answer carries its score; the sweep uses
+   the id it resolves for fanart.tv. An artist not yet resolved costs one
+   MusicBrainz search, which the providers behind Plex would make anyway.
+
 ## Consequences
 
 - No second sign-in and no second Plex device in the account.
