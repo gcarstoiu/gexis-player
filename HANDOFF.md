@@ -242,10 +242,11 @@ lead artist only; after the sweep, Plex's picture on 556 of 948 artists and
 169 of 270 sampled covers. George confirmed both calls of the second step
 (Plex ahead of LMS's plugin; the portraits sweep too) and kept a
 collaboration's page the lead artist's, as built (ADR-0184). **George is
-finishing 32 first** (2026-11-17), its decisions one at a time: acceptance
-7's three (sonic similarity, moods and styles, ReplayGain) next. **Owed:** a Plex
-picture on now-playing seen live; MusicBrainz-id matching; lyrics
-(acceptance 6). The catalogue lists 0.6.0 with the release that carries it, by
+finishing 32 first** (2026-11-17): acceptance 7 decided the same day -
+sonic similarity, moods and styles, and ReplayGain all noted and left
+(`docs/DEVELOPMENT.md`). **Owed:** a Plex picture on now-playing seen live;
+MusicBrainz-id matching (3); lyrics (6), how Plexamp fetches them found
+first. The catalogue lists 0.6.0 with the release that carries it, by
 its `player` field.
 Then 33 (Lyrion's own menus: the look), 34 (room correction in time,
 research first), 36 (Glass, a finding first); MPD parked. `docs/DEVELOPMENT.md` holds each phase's

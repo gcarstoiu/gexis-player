@@ -4101,6 +4101,11 @@ consumes. **Popular tracks do remain ListenBrainz's**, 404 on that server.
      no internet source, and the Artist tab already carries the library's
      own genres; Plex's styles beside them, or browsing by mood or style,
      were the choices not taken.
+   - **ReplayGain: noted and left** (George, 2026-11-17). Levelling mostly
+     turns loud albums down, so LMS would play quieter at the same setting -
+     what ADR-0052 took out of Spotify at his word; the music stays as
+     recorded. Album levelling as an option, off by default, and track
+     levelling with it were the choices not taken. **Acceptance 7 decided.**
 
 **Out of scope, and named:** Plex's `UltraBlurColors`, its album reviews, and
 its own catalogue groupings (*Singles & EPs*, *Live Albums*, *Compilations*).
