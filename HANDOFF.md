@@ -220,10 +220,18 @@ as Plexamp's DJ asks): ADR-0184's second step, `ph-library` 60796813 -
 `plex-artist` (biography, picture, similar, popular) first in the chain and
 on the artist page, ahead of LMS's own plugin; both sweep buttons ask Plex
 first, stored apart (`plex-artist`, `plex-album` notes) so fanart's stay
-behind it. 3,565 core tests pass. Preview build run 44025601946; **its
-install on sofapi waits for George's go-ahead.** **Owed after it:** a Plex
-cover and an artist page seen live; the sweep's counts; then MusicBrainz-id
-matching, lyrics (acceptance 6) and 7's decisions. The catalogue lists 0.6.0 with the release that carries it, by
+behind it. 3,565 core tests pass. **On sofapi since 2026-11-17** (George's
+go-ahead): core and player `1.17.0+git31.6079681` (preview run
+44025601946), the sweep run once.
+[Finding 150](docs/findings/150-plex-artists-and-sweep-as-built.md), counts
+only: Plex's picture and biography on the page of every artist it holds by
+name, *Popular* rows for 12 of 13 of them; 1,177 of 1,719 matches by the
+lead artist only; after the sweep, Plex's picture on 556 of 948 artists and
+169 of 270 sampled covers. **Owed:** George's answer on a collaboration's
+page (the lead artist's biography or not) and on the two calls of the
+second step (Plex ahead of LMS's plugin; the portraits sweep too); a Plex
+picture on now-playing seen live; then MusicBrainz-id matching, lyrics
+(acceptance 6) and 7's decisions. The catalogue lists 0.6.0 with the release that carries it, by
 its `player` field.
 Then 33 (Lyrion's own menus: the look), 34 (room correction in time,
 research first), 36 (Glass, a finding first); MPD parked. `docs/DEVELOPMENT.md` holds each phase's
