@@ -212,12 +212,14 @@ of 270 sampled covers; no token or address in the logs.
 
 **Confirmed (George, 2026-11-17):** Plex ahead of LMS's own plugin on the
 artist page (3), and *Update artist portraits* asking Plex first as well (4).
-**Still owed: a collaboration's page.** Taking the biography and similar
-artists from Plex only for the whole name was agreed, then not built: the
-internet sources already answer for the lead artist, since MusicBrainz
-resolves a collaboration to it (ADR-0059's rule for the picture; Finding
-150), so the page would show the lead's biography from Wikipedia instead.
-Put back to George with what each choice would take.
+**A collaboration's page stays the lead artist's (George, 2026-11-17).**
+Taking the biography and similar artists from Plex only for the whole name
+was agreed, then not built: the internet sources already answer for the
+lead artist, since MusicBrainz resolves a collaboration to it (ADR-0059's
+rule for the picture; Finding 150), so the page would show the lead's
+biography from Wikipedia instead. Put back to him with the other choices
+(the whole name for every source; a heading naming the lead), he kept it as
+built: the lead's picture, biography and similar artists, Plex first.
 
 ## Consequences
 
