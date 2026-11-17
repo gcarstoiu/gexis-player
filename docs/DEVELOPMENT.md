@@ -4093,6 +4093,10 @@ consumes. **Popular tracks do remain ListenBrainz's**, 404 on that server.
    styles**, and **ReplayGain** — are worth model changes, or are noted and left.
    They are not enrichment as ADR-0040 defines it, and one of them (ReplayGain)
    is an audio decision rather than a metadata one.
+   - **Sonic similarity: noted and left** (George, 2026-11-17). It replaces
+     no internet source, nothing here uses it, and Plexamp offers it for
+     what it plays; a *Sounds like* row or a queue kept going by it were the
+     choices not taken, either still possible later.
 
 **Out of scope, and named:** Plex's `UltraBlurColors`, its album reviews, and
 its own catalogue groupings (*Singles & EPs*, *Live Albums*, *Compilations*).
