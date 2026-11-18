@@ -1848,3 +1848,18 @@ next preview. **Rule:** a fix that puts something back is checked by reading
 it back from the device, and again after the next ordinary use of the same
 path - here the next run's own saved level - not by the line that logs the
 write.
+
+**97. A stop not read before the unmute** (2026-11-18, Finding 154,
+sofapi and shelvespi). To test the fix for a group's gaps without George by
+the speakers, the group was muted (`POST /group/mute {muted: true}`, both
+players read back at 0 % and muted) and a popular directory station played
+on the leader for 16 minutes. The restore was one SSH command: `POST
+/transport/stop`, three seconds, `POST /group/mute {muted: false}`. The
+transport route takes `play`, `pause`, `next`, `previous`, `shuffle`,
+`repeat` and `seek`; a live station stops on `pause` (ADR-0180). `stop`
+answered 404, the unmute 200, and the state read afterwards showed the
+radio still playing at 50 % and 60 %. Muted again 10-15 s later, then
+stopped with `pause`, both cards read idle, and only then unmuted. **Rule:**
+a step that silences is read back from the device - no card running, the
+source stopped - before the step that makes sound possible again; never in
+the same command.
