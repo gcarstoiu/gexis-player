@@ -30,8 +30,11 @@ r1.17.0 (its checksum matches, its signature is there, the image 1.15 GB).
 George's report 2026-11-18): the core's Wi-Fi-name read let nmcli rescan
 every ~43 s; a member's link stalled ~3 s and its Snapcast client dropped.
 Fix on `fix-wifi-no-rescan` (52e7c30e, from `next`; 3,540 core tests
-pass), merged into `preview-library-room`; previews building. Installing on
-sofapi and shelvespi waits for George.
+pass), merged into `preview-library-room`. **On both since 2026-11-18**
+(George's go-ahead): shelvespi 19:37 (run 44365618347, core and player
+git65 over 1.17.0), sofapi 19:45 (run 44365636530, git76 with Phase 32;
+UI git51); no scan in 95 s on either, the group kept. Owed: George's
+listen in a group, then the logs read again (XRUNs, reconnects).
 
 **PR #105 for George**: README's *Download and install* still names 1.16.4 on
 `main`. After its merge: `main` into `docs` and `next`, `readme-1.17.0`
