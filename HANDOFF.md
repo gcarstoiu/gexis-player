@@ -26,6 +26,13 @@ look at the touchpad fix on sofapi; release run 43842724641, `verify-image.sh`
 all checks passed; PR #104 merged by George. Promoted the same day at his
 word: both channels read back with a good signature, `releases/latest` is
 r1.17.0 (its checksum matches, its signature is there, the image 1.15 GB).
+**A group's gaps** ([Finding 154](docs/findings/154-group-gaps-from-wifi-scans.md),
+George's report 2026-11-18): the core's Wi-Fi-name read let nmcli rescan
+every ~43 s; a member's link stalled ~3 s and its Snapcast client dropped.
+Fix on `fix-wifi-no-rescan` (52e7c30e, from `next`; 3,540 core tests
+pass), merged into `preview-library-room`; previews building. Installing on
+sofapi and shelvespi waits for George.
+
 **PR #105 for George**: README's *Download and install* still names 1.16.4 on
 `main`. After its merge: `main` into `docs` and `next`, `readme-1.17.0`
 deleted.
@@ -257,9 +264,11 @@ has more of them synced. **George chose Plex behind LRCLIB** (2026-11-18):
 ADR-0184's fourth step, built (`ph-library` 62894680, 3,581 core tests
 pass; gexis-plexamp's row note on its `library` branch, 8900c15) - asked
 only when LRCLIB has no timed words, only while the panel shows lyrics,
-not in a track's first 5 s; a refusal backs off `plex-lyrics` alone. Its
-preview building from `preview-library-room` 9f1a12e7; installing waits
-for George. **Now playing checked on the core** (2026-11-18, sources only): the
+not in a track's first 5 s; a refusal backs off `plex-lyrics` alone. **On
+sofapi since 2026-11-18 19:05** (George's go-ahead, once idle; run
+44291081262, core, player and UI git51): the core clean since, the group
+kept; Plex's lyrics on screen not yet seen. The sweep's second run: 864
+portraits of 948 artists, 3,820 covers of 5,114 albums. **Now playing checked on the core** (2026-11-18, sources only): the
 playing artist's picture and biography from Plex; the cover Lyrion's own,
 as built (Plex only where a source sends none). The catalogue lists 0.6.0 with the release that carries it, by
 its `player` field.
