@@ -13,8 +13,8 @@ from aiohttp.test_utils import TestClient, TestServer
 
 from gexis_core import plex as plex_mod
 from gexis_core.enrichment import Answer, Cache, Enrichment, Outcome, TrackKey
-from gexis_core.plex import (SWEPT_ALBUMS, SWEPT_ARTISTS, PlexArtist, PlexLibrary, PlexRelease,
-                              swept)
+from gexis_core.plex import (SWEPT_ALBUMS, SWEPT_ARTISTS, PlexArtist, PlexLibrary, PlexLyrics,
+                              PlexRelease, swept)
 from gexis_core.state import StateStore
 from gexis_core.wsserver import StateServer
 
@@ -22,13 +22,14 @@ TOKEN = "server-token-xyz"
 MBID_ARTIST = "0a1b2c3d-0000-4000-8000-000000000201"
 MBID_KIN = "0a1b2c3d-0000-4000-8000-000000000204"
 ALBUMS = [
-    {"title": "Album One (Deluxe Edition)", "parentTitle": "The Artist", "parentRatingKey": "201",
-     "thumb": "/library/metadata/101/thumb/1700000000"},
-    {"title": "Kin Album", "parentTitle": "Les Kin", "parentRatingKey": "204",
+    {"ratingKey": "101", "title": "Album One (Deluxe Edition)", "parentTitle": "The Artist",
+     "parentRatingKey": "201", "thumb": "/library/metadata/101/thumb/1700000000"},
+    {"ratingKey": "104", "title": "Kin Album", "parentTitle": "Les Kin", "parentRatingKey": "204",
      "thumb": "/library/metadata/104/thumb/11"},
-    {"title": "Second", "parentTitle": "Other & Friend", "thumb": "/library/metadata/102/thumb/5"},
-    {"title": "No Picture", "parentTitle": "The Artist"},
-    {"title": "Elsewhere", "parentTitle": "The Artist", "thumb": "http://example.org/a.jpg"},
+    {"ratingKey": "102", "title": "Second", "parentTitle": "Other & Friend",
+     "thumb": "/library/metadata/102/thumb/5"},
+    {"ratingKey": "105", "title": "No Picture", "parentTitle": "The Artist", "parentRatingKey": "201"},
+    {"ratingKey": "106", "title": "Elsewhere", "parentTitle": "The Artist", "thumb": "http://example.org/a.jpg"},
 ]
 ARTISTS = [
     {"ratingKey": "201", "title": "The Artist", "thumb": "/library/metadata/201/thumb/1700000001",
@@ -54,6 +55,49 @@ RECORDS = {
 TRACKS = {"201": [{"title": "Big Hit", "ratingCount": 900000}, {"title": "Second Hit", "ratingCount": 5000},
                   {"title": "Big Hit", "ratingCount": 800}, {"title": "Unheard"}]}
 
+# --- lyrics (the fourth step): an album's tracks, their records, their streams
+LYRICFIND = "com.plexapp.agents.lyricfind"
+CHILDREN = {
+    "105": [{"ratingKey": "301", "title": "Words", "duration": 200000},
+            {"ratingKey": "306", "title": "Words", "duration": 400000},
+            {"ratingKey": "302", "title": "Timed Words", "duration": 180000},
+            {"ratingKey": "303", "title": "Silent"}, {"ratingKey": "304", "title": "Refused"}],
+    "104": [{"ratingKey": "305", "title": "Kin Song"}],
+}
+
+
+def _lyric(key, provider=LYRICFIND, timed=False):
+    return {"streamType": 4, "key": f"/library/streams/{key}", "provider": provider,
+            "codec": "lrc" if timed else "txt", **({"timed": "1"} if timed else {})}
+
+
+def _track(key, *lyrics):
+    return {"ratingKey": key, "Media": [{"Part": [{"Stream": [{"streamType": 2, "codec": "flac"}, *lyrics]}]}]}
+
+
+RECORDS.update({
+    "301": _track("301", _lyric(901), _lyric(902, provider="com.plexapp.agents.localmedia")),
+    "306": _track("306", _lyric(907)),
+    "302": _track("302", _lyric(904), _lyric(903, timed=True)),
+    "303": _track("303"),
+    "304": _track("304", _lyric(905)),
+    "305": _track("305", _lyric(906, timed=True)),
+})
+TIMED = ('<MediaContainer size="1"><Lyrics provider="com.plexapp.agents.lyricfind" timed="1" author="a" by=""'
+         ' minLines="3"><Line startOffset="23060" endOffset="25000"><Span startOffset="23060" endOffset="25000"'
+         ' text="Sung one"/></Line><Line startOffset="65500"><Span text=" "/></Line>'
+         '<Line startOffset="125990"><Span text="Sung two"/></Line><Line><Span text="Writers: Somebody"/></Line>'
+         '</Lyrics></MediaContainer>')
+
+
+def _plain(first, provider=LYRICFIND):
+    return (f'<MediaContainer size="1"><Lyrics provider="{provider}" timed="0"><Line><Span text="{first}"/></Line>'
+            '<Line/><Line><Span text="Second verse"/></Line></Lyrics></MediaContainer>')
+
+
+STREAMS = {"901": _plain("Licensed words"), "902": _plain("Own file", "com.plexapp.agents.localmedia"),
+           "903": TIMED, "904": _plain("Untimed"), "906": TIMED, "907": _plain("The longer take")}
+
 
 class FakePlex:
     """A Plex Media Server: one music section, one of films, albums by page."""
@@ -63,6 +107,7 @@ class FakePlex:
         self.asked = []
         self.tokens = set()
         self.refuse_popular = False
+        self.lyrics_asked = []
 
     def app(self) -> web.Application:
         app = web.Application()
@@ -71,6 +116,8 @@ class FakePlex:
         app.router.add_get("/photo/:/transcode", self.transcode)
         app.router.add_get("/library/metadata/{key}/thumb/{stamp}", self.thumb)
         app.router.add_get("/library/metadata/{key}", self.record)
+        app.router.add_get("/library/metadata/{key}/children", self.children)
+        app.router.add_get("/library/streams/{key}", self.stream)
         return app
 
     def _seen(self, request):
@@ -109,6 +156,20 @@ class FakePlex:
         if found is None:
             raise web.HTTPNotFound()
         return web.json_response({"MediaContainer": {"size": 1, "Metadata": [found]}})
+
+    async def children(self, request):
+        self._seen(request)
+        tracks = CHILDREN.get(request.match_info["key"], [])
+        return web.json_response({"MediaContainer": {"size": len(tracks), "Metadata": tracks}})
+
+    async def stream(self, request):
+        """A lyric, and the 404 that ends the server's allowance (Finding 153)."""
+        self._seen(request)
+        self.lyrics_asked.append((request.match_info["key"], dict(request.query)))
+        found = STREAMS.get(request.match_info["key"])
+        if found is None:
+            raise web.HTTPNotFound()
+        return web.Response(text=found, content_type="text/xml")
 
     async def transcode(self, request):
         self._seen(request)
@@ -601,3 +662,142 @@ def test_the_misses_from_before_the_ids_are_forgotten_once(tmp_path):
     _lend(PlexLibrary(store=cache), "http://10.0.0.5:32400", server="one")
     assert cache.get(missed, "plex-release") is not None, "once, not at every lend"
     cache.close()
+
+
+# --- a track's lyrics, behind LRCLIB's (the fourth step) -------------------
+
+
+def _words(title="timed words", duration=None, album="No Picture", artist="The Artist"):
+    from gexis_core.enrichment import fold
+    return TrackKey(artist=fold(artist), album=fold(album), title=fold(title), duration=duration,
+                    raw_artist=artist, raw_album=album, raw_title=title)
+
+
+async def test_a_tracks_lyrics_as_plexamp_asks_them_through_an_album_without_a_cover(served):
+    fake, url = served
+    library = PlexLibrary()
+    _lend(library, url)
+    answer = await PlexLyrics(library).fetch(_words())
+    assert answer.outcome is Outcome.FOUND and answer.confidence == 100
+    found = answer.enrichment
+    assert found.lyrics_synced == "[00:23.06]Sung one\n[01:05.50]\n[02:05.99]Sung two"
+    assert found.lyrics == "Sung one\n\nSung two\nWriters: Somebody", "the credit, untimed, in the words only"
+    assert found.lyrics_source == "Plex · LyricFind"
+    assert fake.lyrics_asked == [("903", {"format": "xml", "includeInlineAttribution": "1"})], \
+        "the timed one of two, asked as Plexamp asks it"
+    await library.close()
+
+
+async def test_the_librarys_own_file_first_and_of_two_takes_the_nearer_length(served):
+    fake, url = served
+    library = PlexLibrary()
+    _lend(library, url)
+    own = (await PlexLyrics(library).fetch(_words("Words", duration=205))).enrichment
+    assert (own.lyrics, own.lyrics_synced, own.lyrics_source) == ("Own file\n\nSecond verse", None, "Plex")
+    longer = (await PlexLyrics(library).fetch(_words("Words", duration=390))).enrichment
+    assert longer.lyrics.startswith("The longer take") and longer.lyrics_source == "Plex · LyricFind"
+    assert [key for key, _ in fake.lyrics_asked] == ["902", "907"]
+    await library.close()
+
+
+async def test_no_lyric_stream_is_a_miss_and_a_refused_one_could_not_be_asked(served):
+    fake, url = served
+    library = PlexLibrary()
+    _lend(library, url)
+    lyrics = PlexLyrics(library)
+    assert (await lyrics.fetch(_words("Silent"))).outcome is Outcome.MISSING
+    assert (await lyrics.fetch(_words("Nobody Sings"))).outcome is Outcome.MISSING, "no such track"
+    assert (await lyrics.fetch(_words(album="Not Here"))).outcome is Outcome.MISSING, "no such album"
+    assert (await lyrics.fetch(_words("Refused"))).outcome is Outcome.UNAVAILABLE, \
+        "Finding 153: a listed lyric refused is the allowance spent, not 'none'"
+    assert [key for key, _ in fake.lyrics_asked] == ["905"], "the streams' records first, a lyric only when listed"
+    assert (await PlexLyrics(PlexLibrary()).fetch(_words())).outcome is Outcome.UNAVAILABLE, "nothing lent"
+    await library.close()
+
+
+async def test_lyrics_by_the_artists_id_when_the_name_misses(served):
+    _fake, url = served
+    library = PlexLibrary()
+    _lend(library, url)
+    identity = _Identity({"kin": (MBID_KIN, 93)})
+    answer = await PlexLyrics(library, identity=identity).fetch(_words("Kin Song", album="Kin Album", artist="Kin"))
+    assert answer.outcome is Outcome.FOUND and answer.confidence == 93
+    assert answer.enrichment.lyrics_synced.startswith("[00:23.06]")
+    await library.close()
+
+
+def test_only_plexs_own_lyric_answer_is_read():
+    from gexis_core.plex import _lyric_set
+    assert _lyric_set(b"not xml") is None
+    assert _lyric_set(b"<html><Lyrics/></html>") is None
+    assert _lyric_set(b'<MediaContainer size="0"/>') == {"timed": False, "provider": "", "lines": []}
+    assert _lyric_set(b"<MediaContainer>" + b" " * 600_000 + b"</MediaContainer>") is None
+    assert PlexLyrics.wanted(Enrichment(lyrics="plain"))
+    assert not PlexLyrics.wanted(Enrichment(lyrics_synced="[00:01.00]a"))
+    assert not PlexLyrics.wanted(Enrichment(instrumental=True))
+
+
+class _Lrclib:
+    name = "lrclib"
+
+    def __init__(self, answer):
+        self.answer = answer
+
+    def serves(self, renderer):
+        return True
+
+    async def fetch(self, key):
+        return self.answer
+
+
+async def test_the_route_asks_plex_for_lyrics_only_while_they_are_on_screen_and_not_for_a_track_just_begun(
+        served, monkeypatch):
+    from gexis_core import wsserver
+    from gexis_core.enrichment import EnrichmentService
+    from gexis_core.model import TrackMetadata
+
+    fake, url = served
+    library = PlexLibrary()
+    _lend(library, url)
+    plain = Answer(Outcome.FOUND, Enrichment(lyrics="Plain", lyrics_source="LRCLIB", sources=("lrclib",)))
+    store = StateStore({"spotify": True})
+    store.set_active("spotify")
+    store.set_metadata("spotify", TrackMetadata(artist="The Artist", album="No Picture", title="Timed Words"))
+    service = EnrichmentService([_Lrclib(plain), PlexLyrics(library)], Cache(Path(":memory:")))
+    server = StateServer(store, enrichment=service, library=_Library([]), plex=library)
+    async with TestClient(TestServer(server.make_app())) as client:
+        async def ask():
+            return await (await client.get("/enrichment")).json()
+
+        body = await ask()
+        assert (body["enrichment"]["lyrics_source"], body["pending"]) == ("LRCLIB", False), "lyrics not on screen"
+        store.set_panel(lyrics=True)
+        body = await ask()
+        assert (body["enrichment"]["lyrics_source"], body["pending"]) == ("LRCLIB", True), \
+            "a track just begun: not yet, and the panel looks back"
+        assert fake.lyrics_asked == []
+        monkeypatch.setattr(wsserver, "LYRICS_SETTLE_S", 0.0)
+        body = await ask()
+        assert body["enrichment"]["lyrics_source"] == "Plex · LyricFind" and not body["pending"]
+        assert body["enrichment"]["lyrics_synced"].startswith("[00:23.06]Sung one")
+    assert [key for key, _ in fake.lyrics_asked] == ["903"]
+    await library.close()
+
+
+async def test_a_track_just_begun_is_not_held_back_where_plex_would_not_be_asked(served):
+    from gexis_core.enrichment import EnrichmentService
+    from gexis_core.model import TrackMetadata
+
+    _fake, _url = served
+    store = StateStore({"spotify": True})
+    store.set_active("spotify")
+    store.set_metadata("spotify", TrackMetadata(artist="The Artist", album="No Picture", title="Timed Words"))
+    store.set_panel(lyrics=True)
+    plain = Answer(Outcome.FOUND, Enrichment(lyrics="Plain", lyrics_source="LRCLIB", sources=("lrclib",)))
+    library = PlexLibrary()  # nothing lent
+    service = EnrichmentService([_Lrclib(plain), PlexLyrics(library)], Cache(Path(":memory:")))
+    server = StateServer(store, enrichment=service, library=_Library([]), plex=library)
+    async with TestClient(TestServer(server.make_app())) as client:
+        body = await (await client.get("/enrichment")).json()
+    assert body["pending"] is False
+    await library.close()

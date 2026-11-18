@@ -127,7 +127,8 @@ from gexis_core.systemd import set_enabled as _set_unit_enabled
 from gexis_core.systemd import restart_if_enabled as _restart_if_enabled
 from gexis_core.systemd import unit_state as _unit_state
 from gexis_core.artwork_sweep import ArtworkSweep
-from gexis_core.plex import LENDER as PLEX_LENDER, PlexArtist, PlexLibrary, PlexRelease
+from gexis_core.plex import (LENDER as PLEX_LENDER, LYRICS_PROVIDER as PLEX_LYRICS, PlexArtist,
+                              PlexLibrary, PlexLyrics, PlexRelease)
 from gexis_core.bluealsa_volume import BluealsaVolume
 from gexis_core.remote_volume import RemoteVolume
 from gexis_core.volume import (
@@ -4292,7 +4293,7 @@ async def main() -> None:
     #: `artwork_lookup` is the automatic half of the album-cover button
     #: (George, 2026-09-24: *"automatic way for sure"*) - new albums get a
     #: cover as they arrive, and the button does the library on demand.
-    LYRIC_PROVIDERS = ("lrclib",)
+    LYRIC_PROVIDERS = ("lrclib", PLEX_LYRICS)
 
     def _may_ask(name: str) -> bool:
         if settings.value("enrichment") is False:
@@ -4343,6 +4344,12 @@ async def main() -> None:
             # and wins the merge where it has anything.
             MusicBrainzRelease(http),
             LrclibLyrics(http),
+            # **The lent Plex library's lyrics, behind LRCLIB's** (ADR-0184,
+            # fourth step; George, 2026-11-18): started once LRCLIB has
+            # answered, only when it has no timed words, and only while the
+            # lyrics are on screen (`/enrichment`). About five every ten minutes, Plexamp's
+            # included (Finding 153).
+            PlexLyrics(plex, allowed=_plex_allowed, identity=identity),
             CoverArtProvider(http),
             # Last: the radio case, where there is no album to match on
             # (Phase 8 criterion 7).

@@ -851,7 +851,7 @@
           "Library"
         ],
         "summary": "Enrichment for the track playing now",
-        "description": "What is known about what is playing beyond what the renderer said: biography, pictures, lyrics, release facts (ADR-0012, ADR-0040). A route rather than part of /state because it is wanted only while a tab is open and takes seconds. When pending is true a provider had not finished and the client asks again; it compares track with what is playing before drawing. The sweep's portrait is used when there is one (ADR-0075), and a cover is looked for only when the renderer sent none.",
+        "description": "What is known about what is playing beyond what the renderer said: biography, pictures, lyrics, release facts (ADR-0012, ADR-0040). A route rather than part of /state because it is wanted only while a tab is open and takes seconds. When pending is true a provider had not finished and the client asks again; it compares track with what is playing before drawing. The sweep's portrait is used when there is one (ADR-0075), and a cover is looked for only when the renderer sent none. The lent Plex library's lyrics are asked for only behind LRCLIB's, while the panel shows lyrics, and pending is true for a track asked about in its first seconds (ADR-0184).",
         "responses": {
           "200": {
             "description": "The enrichment, or track null and empty enrichment when nothing is playing.",
@@ -878,7 +878,8 @@
         "x-gexis-adr": [
           "ADR-0012",
           "ADR-0040",
-          "ADR-0075"
+          "ADR-0075",
+          "ADR-0184"
         ]
       }
     },

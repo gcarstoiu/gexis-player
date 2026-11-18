@@ -1020,7 +1020,12 @@ internet.
 
 **Where do lyrics come from, and why are some not synced?**
 From LRCLIB, switched on with *Settings → Enrichment → Lyrics*. Where LRCLIB
-has only plain lyrics, they are shown without timing. Some tracks have none.
+has none, or only plain ones, and Plexamp is claimed with *Information from
+Plex* on, the player shows your Plex library's, timed when it has them; the
+credit under the lyrics says whose they are. Your Plex server hands out only
+about five lyrics every ten minutes, so the player asks it only while the lyrics are on
+screen, and a track skipped within its first seconds is not asked about.
+Plain lyrics are shown without timing. Some tracks have none.
 The Lyrics button on Now Playing, or the Lyrics corner of the phone's
 remote, shows them.
 

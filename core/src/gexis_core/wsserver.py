@@ -78,7 +78,8 @@ from gexis_core.settings_registry import (
     UnknownSetting,
 )
 from gexis_core.state import StateStore
-from gexis_core.plex import ARTIST_PROVIDER, COVER_SIZE, COVER_SIZES, SWEPT_ARTISTS, swept
+from gexis_core.plex import (ARTIST_PROVIDER, COVER_SIZE, COVER_SIZES, LYRICS_PROVIDER, SWEPT_ARTISTS,
+                              swept)
 
 #: The most artists one request may ask photos for. A screen of
 #: cards is about 40; this is a bound on what a caller can make the
@@ -87,6 +88,13 @@ PHOTO_BATCH = 80
 
 #: How many Popular rows the artist page draws (the design's five).
 POPULAR_ROWS = 5
+
+#: **A track asked for this recently is not given Plex's lyrics yet**
+#: (ADR-0184, fourth step): skipping through an album with the lyrics open
+#: would spend the server's allowance, about five every ten minutes
+#: (Finding 153). Under the panel's look-back (6 s), so its next ask is the
+#: one that gets them.
+LYRICS_SETTLE_S = 5.0
 
 logger = logging.getLogger("gexis_core.wsserver")
 
@@ -271,6 +279,9 @@ class StateServer:
         self._library = library
         self._artistinfo = artistinfo
         self._enrichment = enrichment
+        #: ADR-0184, fourth step: the track `/enrichment` was last asked for,
+        #: and when it was first asked for it (`_plex_lyrics_now`).
+        self._asked_track: tuple[TrackKey, float] | None = None
         self._radio = radio
         #: ADR-0180: the player's own internet radio (`radio_service`).
         self._stations = stations
@@ -1615,6 +1626,8 @@ class StateServer:
         # on a cover nobody would draw.
         if state.metadata.artwork:
             omit += ARTWORK_PROVIDERS
+        if not self._plex_lyrics_now(key, state, pending):
+            omit += (LYRICS_PROVIDER,)
         found = await self._enrichment.for_track(
             key, renderer=state.active, pending=pending, omit=omit,
         )
@@ -1631,6 +1644,24 @@ class StateServer:
             "track": {"artist": key.artist, "title": key.title},
             "enrichment": found.to_json(),
         })
+
+    def _plex_lyrics_now(self, key: TrackKey, state, pending: list) -> bool:
+        """**Whether the Plex library's lyrics may be asked for now**
+        (ADR-0184, fourth step): the server serves about five every ten
+        minutes, to Plexamp too (Finding 153), so as Plexamp asks - **only
+        while lyrics are on the panel's screen**, and not for a track
+        skipped past: one asked for under `LYRICS_SETTLE_S` ago is answered
+        as not final, and the panel's look-back asks again."""
+        now = time.monotonic()
+        if self._asked_track is None or self._asked_track[0] != key:
+            self._asked_track = (key, now)
+        if not (state.panel or {}).get("lyrics"):
+            return False
+        if now - self._asked_track[1] >= LYRICS_SETTLE_S:
+            return True
+        if self._enrichment.asks(LYRICS_PROVIDER, state.active):
+            pending.append(LYRICS_PROVIDER)
+        return False
 
     async def _handle_plugin_mark(self, request: web.Request) -> web.Response:
         """A source's glyph, by id (ADR-0086).

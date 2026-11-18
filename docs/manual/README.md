@@ -922,7 +922,9 @@ player into your Plex account), and with it **Information from Plex**: on,
 the player looks in your Plex library first, then on the internet, for an
 artist's biography, picture, similar artists and *Popular* tracks, and for
 an album's cover when a source sends none with a track (Bluetooth often does
-not); *Find portraits and covers* takes your Plex library's first too. It
+not); *Find portraits and covers* takes your Plex library's first too. For
+lyrics it comes after LRCLIB: the player shows your Plex library's where
+LRCLIB has none, or none timed, while the lyrics are on screen. It
 uses the Plex server Plexamp plays from, through Plexamp's own sign-in, and
 only while that server is on your home network. It is greyed with *Claim
 Plexamp first* until Plexamp is claimed.

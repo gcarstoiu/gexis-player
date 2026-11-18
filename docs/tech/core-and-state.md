@@ -555,11 +555,21 @@ wins):
    LMS release info;
 3. Wikipedia biography, ListenBrainz similar artists, ListenBrainz popular
    tracks (needs a token);
-4. MusicBrainz release, LRCLIB lyrics, Cover Art Archive, recording art (for
-   radio, where there is no album).
+4. MusicBrainz release, LRCLIB lyrics, then `plex-lyrics` (ADR-0184, fourth
+   step), Cover Art Archive, recording art (for radio, where there is no
+   album). `plex-lyrics` stands **behind** `lrclib` (the provider's `behind`
+   and `wanted`): started once LRCLIB has answered, and only when it has no
+   timed words; the service merges the lyrics as one set, so the credit is
+   the source of the words shown. The route asks it only while the panel
+   shows lyrics (`panel.lyrics`), and answers `pending` for a track asked
+   about in its first 5 s, so skipping does not spend the server's few
+   lyrics an hour (Finding 153); a 404 on a listed lyric stream is
+   UNAVAILABLE and backs off `plex-lyrics` alone. The panel asks again when
+   its lyrics come on screen.
 
 Providers with a key (fanart, TheAudioDB, ListenBrainz) are skipped until
-configured. Settings rows gate them: `enrichment` (all), `lyrics` (LRCLIB),
+configured. Settings rows gate them: `enrichment` (all), `lyrics` (LRCLIB
+and Plex's),
 `artwork_lookup` (cover providers, Plex's included), `plexamp.plex_info`
 (Plex; greyed until the plugin reports Plexamp claimed).
 

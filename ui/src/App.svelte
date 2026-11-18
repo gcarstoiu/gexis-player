@@ -43,6 +43,7 @@
   import { reportTouch, showPeppy, reportPainted, reportShown, requestDashboard, hidePage } from './lib/state.js';
   import { components } from './lib/state.js';
   import { lyricsAsk, lyricsShown } from './lib/panelView.js';
+  import { lyricsOnScreen } from './lib/enrichment.js';
   import { startDpad } from './lib/dpad.js';
   import { startWheelSlides } from './lib/scrollSlide.js';
 
@@ -465,7 +466,11 @@
     // The state this reads arrives every second; the core hears a change.
     if (surface !== 'panel' || showing === reportedLyrics) return;
     reportedLyrics = showing;
-    reportShown({ lyrics: showing }).catch(() => (reportedLyrics = null));
+    reportShown({ lyrics: showing })
+      // ADR-0184, fourth step: the Plex library's lyrics are asked for only
+      // while they are on screen - once the core has heard, ask again.
+      .then(() => showing && lyricsOnScreen())
+      .catch(() => (reportedLyrics = null));
   });
 
   // The library is a layer over now playing (source/Now Playing.dc.html). It
