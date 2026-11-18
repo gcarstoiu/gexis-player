@@ -172,7 +172,7 @@ Notes per renderer:
   the device by killing its unit rather than waiting (ADR-0091); a new play
   queue counts as an acquisition (ADR-0092). It is claimed from Settings
   (ADR-0119).
-- **AirPlay** (ADR-0167): Shairport Sync 5.6.2 and NQPTP 1.2.9, built by
+- **AirPlay** (ADR-0167): Shairport Sync 5.6.3 and NQPTP 1.2.9, built by
   us for AirPlay 2 (`packaging/shairport-sync`, `packaging/nqptp`; Debian
   trixie's is classic AirPlay only), run as `gexis-airplay` with its plugin, with
   `output_device = "output"` and `ignore_volume_control`: the sender's
