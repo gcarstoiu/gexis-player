@@ -42,9 +42,22 @@ restore's `stop` (no such command; a station stops on `pause`) failed and
 the unmute let the station play aloud 10-15 s. Owed: George's ear in a
 group.
 
-**PR #105 for George**: README's *Download and install* still names 1.16.4 on
-`main`. After its merge: `main` into `docs` and `next`, `readme-1.17.0`
-deleted.
+**1.18.0 being prepared for Testing** (George, 2026-11-18: everything):
+`fix-wifi-no-rescan`, `room-both` and `ph-library` merged into `next`
+(clean); `next`'s code is the preview sofapi runs (git76, UI git51) but for
+one comment; 3,591 core tests pass, the UI builds, plugin 122 pass. Notes
+drafted in `~/projects/scratch/release-1.18.0/notes-draft.txt`, **not yet
+approved**. Then the usual steps (`docs/tech/updates-and-releases.md` §4),
+gexis-plexamp 0.6.0 (`library` into `main`, tag, GitHub release; archive
+built, 53,669 bytes) and its catalogue entry with `player` 1.18.0, the
+Roadmap's Phase 32 cell (*On Testing (1.18.0)*, shown to George first).
+**Decisions owed by George:** go-librespot 0.10.7 (bot branches
+`bump-go-librespot-0.10.6` and `-0.10.7`, no pull requests since Actions
+may not open them; 0.10.6 contains ADR-0181's commit; its checklist needs
+his phone); Beszel 0.21.2 (security fixes for the hub; issue #106; its own
+plugin repo); Shairport Sync 5.6.3 (bug fixes; neither the daily job nor
+`check-upstream.sh` watches it or NQPTP). PR #105 merged by George
+2026-11-16; `main` merged into `docs` and `next`, `readme-1.17.0` gone.
 
 **go-librespot is upstream's build of `775ba5883`** (ADR-0181), kept in the
 `inputs` mirror with its source; `packaging/check-upstream.sh` reports it
