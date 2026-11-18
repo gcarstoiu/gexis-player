@@ -250,11 +250,18 @@ the core's own artist id finds the artist, and the album by its title
 (Finding 152: +34 of 948 artists, +125 of 4,823 albums on sofapi). **On
 sofapi since 2026-11-18** (George's go-ahead; run 44182678762): as built,
 the same 34 artists and 127 album titles gained, 39 old misses forgotten
-once; the sweep not run since. **Lyrics (6) found**
+once; the sweep run again 2026-11-18 (George's go-ahead). **Lyrics (6)**
 ([Finding 153](docs/findings/153-plex-lyrics-are-rationed.md)): Plexamp's
 request works, about five per ten minutes for the whole server, and LRCLIB
-has more of them synced; whether to use them put to George. **Owed:** a
-Plex picture on now-playing seen live. The catalogue lists 0.6.0 with the release that carries it, by
+has more of them synced. **George chose Plex behind LRCLIB** (2026-11-18):
+ADR-0184's fourth step, built (`ph-library` 62894680, 3,581 core tests
+pass; gexis-plexamp's row note on its `library` branch, 8900c15) - asked
+only when LRCLIB has no timed words, only while the panel shows lyrics,
+not in a track's first 5 s; a refusal backs off `plex-lyrics` alone. Its
+preview building from `preview-library-room` 9f1a12e7; installing waits
+for George. **Now playing checked on the core** (2026-11-18, sources only): the
+playing artist's picture and biography from Plex; the cover Lyrion's own,
+as built (Plex only where a source sends none). The catalogue lists 0.6.0 with the release that carries it, by
 its `player` field.
 Then 33 (Lyrion's own menus: the look), 34 (room correction in time,
 research first), 36 (Glass, a finding first); MPD parked. `docs/DEVELOPMENT.md` holds each phase's
