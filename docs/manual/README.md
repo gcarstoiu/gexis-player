@@ -918,7 +918,16 @@ still mounted.
 | Internet radio: Popular here | The country whose stations *Popular here* lists; at first, the time zone's. The list shows the countries the directory has stations in, each with its number of stations, and marks the time zone's *From your time zone*; while the directory cannot be reached, it shows every country. |
 
 Plugins add their own rows here once switched on: **Plexamp** (claim the
-player into your Plex account).
+player into your Plex account), and with it **Information from Plex**: on,
+the player looks in your Plex library first, then on the internet, for an
+artist's biography, picture, similar artists and *Popular* tracks, and for
+an album's cover when a source sends none with a track (Bluetooth often does
+not); *Find portraits and covers* takes your Plex library's first too. For
+lyrics it comes after LRCLIB: the player shows your Plex library's where
+LRCLIB has none, or none timed, while the lyrics are on screen. It
+uses the Plex server Plexamp plays from, through Plexamp's own sign-in, and
+only while that server is on your home network. It is greyed with *Claim
+Plexamp first* until Plexamp is claimed.
 
 ### Handoff — *Who gets the player*
 
@@ -1023,10 +1032,13 @@ nothing to press. On the player's screen, *Measure from your phone* (or
    head, and about 40 cm to either side - step back and tap **Measure
    here**; three seconds later the sweeps play. It never moves on without
    the tap. A sweep spoiled by a noise (a door, a voice) is measured again.
-5. The correction, for each speaker: the cuts in the bass and the broad
-   corrections above it, and a chart of before (the average of the three
-   positions), each position, the target and the expected after. A peak is
-   cut, and a broad correction made, unless most positions would end
+5. The correction: the cuts in the bass, worked out from both speakers
+   playing together - the bass of most music is the same in both, and what
+   you hear is the two adding up - and the same on both speakers; above the
+   bass, broad corrections for each speaker of its own. A chart shows
+   before (the average of the three positions), each position, the target
+   and the expected after, for each speaker and for both together. A peak
+   is cut, and a broad correction made, unless most positions would end
    further from the target; where the three positions disagree, less is
    corrected. **Check it** measures the three positions again with the
    correction on, a tap at each again; **Skip** keeps it as worked out,
@@ -1117,10 +1129,10 @@ On its page:
 | Enrichment | Looks up what a source does not send: lyrics, biographies, covers, artist pictures. |
 | Lyrics | Fetches lyrics, synchronised where available. |
 | Look up missing artwork | Finds a cover for sources that send none (Bluetooth, radio). |
-| ListenBrainz token | For the artist page's *Popular* list; a free token. |
+| ListenBrainz token | For the artist page's *Popular* list where your Plex library has none; a free token. |
 | fanart.tv key, TheAudioDB key | Optional keys for artist pictures and album covers. |
 | Confidence threshold | How sure the match must be (recommended 90 %). Below it, nothing is shown rather than something wrong. |
-| Lyrion Client: Find portraits and covers | Looks up every album artist's portrait and every album's cover, keeps Lyrion's where none is found, and shows what the last run found. |
+| Lyrion Client: Find portraits and covers | Looks up every album artist's portrait and every album's cover - in your Plex library first while *Information from Plex* is on, then on fanart.tv and TheAudioDB - keeps Lyrion's where none is found, and shows what the last run found. |
 
 ### Plugins — *What is installed beyond the player itself*
 

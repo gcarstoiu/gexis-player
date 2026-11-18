@@ -176,8 +176,14 @@ export function worseLine(worse) {
  *  cuts; above it, broad, up or down - each empty one saying why. */
 export function correctionGroups(k, speaker, { range = 'full', reach = 'full' } = {}) {
   if (k === BOTH) {
-    return [{ name: 'Both together', kind: '', rows: [],
-      empty: "Each speaker's corrections are on its own tab. Both shows the two as you hear them." }];
+    // ADR-0175's amendment (George, 2026-11-17): the bass is designed from
+    // the two together and cut the same on both; above it, each speaker's.
+    const shared = cutRows(speaker?.cuts);
+    return [
+      { name: 'In the bass', kind: shared.length ? 'the same cuts on both speakers' : '', rows: shared,
+        empty: 'Nothing to cut: the two together are near the target already.' },
+      { name: 'Above the bass', kind: '', rows: [], empty: "Each speaker's own: on its tab." },
+    ];
   }
   const bass = cutRows(speaker?.cuts);
   const above = range === 'full' && reach === 'full' ? cutRows(speaker?.above) : [];

@@ -823,3 +823,58 @@ def test_a_read_while_the_file_is_compacted_is_a_miss_not_a_wait():
     cache.put(KEY, "lms", _found(biography="b"))
     cache._compacting.clear()
     assert cache.get(KEY, "lms") is None and cache.get(KEY, "lrclib") is not None
+
+
+# --- a provider behind another; the lyrics as one set (ADR-0184, fourth step)
+
+
+class FakeBehind(FakeProvider):
+    """Plex's lyrics, as the service sees them: behind LRCLIB, wanted only
+    where it has no timed words."""
+
+    behind = "lrclib"
+
+    @staticmethod
+    def wanted(before):
+        return not (before.lyrics_synced or before.instrumental)
+
+
+TIMED = _found(lyrics="a", lyrics_synced="[00:01.00]a", lyrics_source="LRCLIB", sources=("lrclib",))
+PLAIN = _found(lyrics="a", lyrics_source="LRCLIB", sources=("lrclib",))
+THEIRS = _found(lyrics="b", lyrics_synced="[00:02.00]b", lyrics_source="Plex", sources=("plex",))
+
+
+async def test_a_provider_behind_another_is_asked_only_when_that_answer_leaves_it_something():
+    for ahead, asked, source in ((TIMED, 0, "LRCLIB"), (_found(instrumental=True, lyrics_source="LRCLIB"), 0, "LRCLIB"),
+                                 (PLAIN, 1, "Plex"), (Answer(Outcome.MISSING), 1, "Plex"),
+                                 (Answer(Outcome.UNAVAILABLE), 1, "Plex"),
+                                 (Answer(Outcome.FOUND, TIMED.enrichment, confidence=50), 1, "Plex")):
+        lrclib, plex = FakeProvider("lrclib", [ahead]), FakeBehind("plex-lyrics", [THEIRS])
+        cache = _cache()
+        found = await EnrichmentService([lrclib, plex], cache).for_track(KEY)
+        assert (plex.calls, found.lyrics_source) == (asked, source), ahead
+        if not asked:
+            assert cache.get(KEY, "plex-lyrics") is None, "not asked is no answer, so nothing is stored"
+
+
+async def test_a_provider_behind_another_is_asked_only_with_it():
+    lrclib, plex = FakeProvider("lrclib", [PLAIN]), FakeBehind("plex-lyrics", [THEIRS])
+    service = EnrichmentService([lrclib, plex], _cache())
+    assert (await service.for_track(KEY, only=("plex-lyrics",))).lyrics is None
+    assert (await service.for_track(KEY, omit=("lrclib",))).lyrics is None
+    assert plex.calls == 0
+    assert service.asks("plex-lyrics") and not service.asks("nobody")
+
+
+def test_the_lyrics_are_one_set_and_timed_words_win_over_plain_ones():
+    plain, theirs, timed = PLAIN.enrichment, THEIRS.enrichment, TIMED.enrichment
+    merged = plain.merged_with(theirs)
+    assert (merged.lyrics, merged.lyrics_synced, merged.lyrics_source) == ("b", "[00:02.00]b", "Plex"), \
+        "the credit is the source of the words shown"
+    assert timed.merged_with(theirs).lyrics_source == "LRCLIB", "timed and timed: the first keeps them"
+    assert plain.merged_with(_found(lyrics="c", lyrics_source="Other").enrichment).lyrics == "a"
+    instrumental = Enrichment(instrumental=True, lyrics_source="LRCLIB")
+    kept = instrumental.merged_with(theirs)
+    assert kept.instrumental and kept.lyrics_synced is None and kept.lyrics_source == "LRCLIB"
+    assert Enrichment(biography="x").merged_with(plain).lyrics == "a"
+    assert plain.merged_with(Enrichment(biography="x")).biography == "x", "the other fields as before"

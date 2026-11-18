@@ -294,3 +294,65 @@ def test_the_cut_dict_is_rounded_for_the_store():
 def test_band_level_of_nothing():
     assert rd.band_level_db([]) == -200
     assert math.isfinite(rd.band_level_db(np.zeros(100)))
+
+
+# ---- both speakers together (ADR-0175's amendment, 2026-11-17) --------------------
+
+
+def _room(peaks, k):
+    """A room in dB on the grid: a level, the given Peaking shapes - a
+    little different at each position `k` - and a gentle fall above."""
+    c = 80.0 - 0.5 * np.log2(rd.GRID / 1000.0)
+    for f, g, q in peaks:
+        c = c + rd.peaking_db(f * (1 + 0.02 * (k - 1)), g * (1 + 0.05 * (k - 1)), q, rd.GRID)
+    return c
+
+
+#: Finding 151's shape: the left peaks and the right dips at 80-190 Hz; heard
+#: together they nearly make up for each other; the 46 Hz mode in all three.
+LEFT = ((46, 12.0, 5.0), (115, 10.0, 1.5))
+RIGHT = ((46, 12.0, 5.0), (100, -11.0, 2.0))
+BOTH = ((46, 12.0, 5.0), (120, 3.5, 2.0))
+VOICE = (rd.GRID >= 80) & (rd.GRID <= 190)
+
+
+def _positions(peaks):
+    return [_room(peaks, k) for k in range(1, 4)]
+
+
+def test_cut_alone_the_left_loses_the_peak_that_made_up_for_the_right():
+    """What Finding 151 measured: the left's own design takes its 80-190 Hz
+    peak down by far more than the two together stand above the target."""
+    left = rd.design(_positions(LEFT))
+    together = rd.together(_positions(BOTH))
+    taken_alone = -np.mean(rd.cuts_db(left.cuts, rd.GRID)[VOICE])
+    above_together = np.mean((together.before - together.target)[VOICE])
+    assert taken_alone > above_together + 4
+
+
+def test_designed_from_both_together_the_bass_comes_to_the_target_and_no_lower():
+    t = rd.together(_positions(BOTH))
+    assert any(abs(c.freq / 46 - 1) < 0.1 for c in t.cuts), "the 46 Hz mode is still cut"
+    gap = (t.after - t.target)[(rd.GRID >= 30) & (rd.GRID <= 250)]
+    assert np.max(gap) < 1.5 and np.min(gap[VOICE[(rd.GRID >= 30) & (rd.GRID <= 250)]]) > -2.0
+    assert t.broad == () and np.array_equal(t.after, t.after_bass), "nothing above the bass"
+    exact = rd.power_average(np.asarray(_positions(BOTH)) + rd.cuts_db(t.cuts, rd.GRID)) - t.offset
+    assert np.allclose(t.after, exact), "the same cuts on both: the after is exact"
+
+
+def test_each_speaker_takes_the_cuts_given_and_keeps_its_own_above():
+    t = rd.together(_positions(BOTH))
+    for peaks in (LEFT, RIGHT):
+        d = rd.design([c + rd.peaking_db(1800, 4.0, 1.2, rd.GRID) for c in _positions(peaks)], cuts=t.cuts)
+        assert d.cuts == t.cuts
+        assert d.broad and all(b.freq >= rd.LIMIT for b in d.broad), "above the bass, its own"
+
+
+def test_a_kept_target_designs_the_same_cuts():
+    """A measurement kept with its curves on the target's level (0) and its
+    target: the cuts come out as from the sweeps themselves."""
+    t = rd.together(_positions(BOTH))
+    again = rd.together(t.positions, target=t.target)
+    assert again.offset == 0
+    assert [round(c.freq) for c in again.cuts] == [round(c.freq) for c in t.cuts]
+    assert np.allclose([c.gain for c in again.cuts], [c.gain for c in t.cuts], atol=0.05)

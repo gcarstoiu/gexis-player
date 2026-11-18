@@ -41,3 +41,21 @@ async def test_the_connected_network_comes_with_its_details(monkeypatch):
     assert found["name"] == "Home" and found["speed"] == "390 Mb/s"
     assert lines["Speed"] == "390 Mb/s" and lines["Band"] == "5 GHz · channel 116"
     assert lines["Address"] == "192.168.1.20" and lines["Signal"].endswith("65 %")
+
+
+# --- Finding 154: reading the connected network never scans -----------------
+
+@pytest.mark.asyncio
+async def test_the_connected_network_is_read_without_a_scan(monkeypatch):
+    asked = []
+
+    async def fake_run(*args, timeout=None):
+        asked.append(args)
+        return 0, "no:Other\nyes:Home\n", ""
+
+    monkeypatch.setattr(wifi, "_connected", None)
+    monkeypatch.setattr(wifi, "available", lambda: True)
+    monkeypatch.setattr(wifi, "_run", fake_run)
+    assert await wifi.refresh_connected() == "Home"
+    assert wifi.connected_ssid() == "Home"
+    assert len(asked) == 1 and asked[0][-2:] == ("--rescan", "no")

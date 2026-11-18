@@ -744,3 +744,18 @@ def test_a_background_of_another_size_is_placed_as_the_engine_places_it(screen, 
     layer.set_skin({**SKIN, "screen.bgr": "short.png"})
     assert layer.background.get_at((w // 2, h - 11))[:3] == (200, 10, 10)
     assert layer.background.get_at((w // 2, h - 1))[:3] == (0, 0, 0), "the band the engine leaves is black"
+
+
+def test_a_cover_the_player_serves_is_asked_of_the_core_on_this_device(monkeypatch):
+    """A plugin's cover and the lent Plex library's are named by their path
+    on the player (ADR-0167, ADR-0184); the renderer asks the core for them."""
+    import gexis_peppy_render as render
+    asked = []
+
+    def urlopen(url, timeout):
+        asked.append(url)
+        raise OSError("not here")
+    monkeypatch.setattr(render.urllib.request, "urlopen", urlopen)
+    assert MetadataLayer._fetch("/plex/cover/101/5") is None
+    assert MetadataLayer._fetch("http://lms.example:9000/music/1/cover.jpg") is None
+    assert asked == [render.CORE + "/plex/cover/101/5", "http://lms.example:9000/music/1/cover.jpg"]

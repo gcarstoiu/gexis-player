@@ -851,7 +851,7 @@
           "Library"
         ],
         "summary": "Enrichment for the track playing now",
-        "description": "What is known about what is playing beyond what the renderer said: biography, pictures, lyrics, release facts (ADR-0012, ADR-0040). A route rather than part of /state because it is wanted only while a tab is open and takes seconds. When pending is true a provider had not finished and the client asks again; it compares track with what is playing before drawing. The sweep's portrait is used when there is one (ADR-0075), and a cover is looked for only when the renderer sent none.",
+        "description": "What is known about what is playing beyond what the renderer said: biography, pictures, lyrics, release facts (ADR-0012, ADR-0040). A route rather than part of /state because it is wanted only while a tab is open and takes seconds. When pending is true a provider had not finished and the client asks again; it compares track with what is playing before drawing. The sweep's portrait is used when there is one (ADR-0075), and a cover is looked for only when the renderer sent none. The lent Plex library's lyrics are asked for only behind LRCLIB's, while the panel shows lyrics, and pending is true for a track asked about in its first seconds (ADR-0184).",
         "responses": {
           "200": {
             "description": "The enrichment, or track null and empty enrichment when nothing is playing.",
@@ -878,7 +878,8 @@
         "x-gexis-adr": [
           "ADR-0012",
           "ADR-0040",
-          "ADR-0075"
+          "ADR-0075",
+          "ADR-0184"
         ]
       }
     },
@@ -3963,6 +3964,100 @@
         "x-gexis-stability": "internal",
         "x-gexis-adr": [
           "ADR-0167"
+        ]
+      }
+    },
+    "/plex/cover/{key}/{stamp}": {
+      "get": {
+        "operationId": "plex_cover",
+        "tags": [
+          "Library"
+        ],
+        "summary": "Get a picture from the lent Plex library",
+        "description": "An album's cover or an artist's picture from the Plex server whose library the Plexamp plugin lends (ADR-0184), named by the Plex providers' answers (`album_art`, `artist_image`) and by the library's swept pictures. The core asks Plex for it with the lent token, which never leaves the player. Only a picture, by its two numbers on that server. Not found while no library is lent or Information from Plex is off.",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "description": "The album's or artist's number on the Plex server.",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{1,12}$"
+            }
+          },
+          {
+            "name": "stamp",
+            "in": "path",
+            "required": true,
+            "description": "The picture's number on the Plex server.",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{1,12}$"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "description": "The picture's width and height in pixels, 100-1200, brought into that range when outside it; 600 if absent.",
+            "schema": {
+              "type": "integer",
+              "minimum": 100,
+              "maximum": 1200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The cover.",
+            "content": {
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "contentMediaType": "image/jpeg"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "contentMediaType": "image/png"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "description": "`public, max-age=86400`.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No Plex library is lent, or Information from Plex is off (`no Plex library`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The Plex server did not answer, or not with a picture (`the Plex server did not answer`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-gexis-stability": "internal",
+        "x-gexis-adr": [
+          "ADR-0184"
         ]
       }
     },

@@ -34,8 +34,8 @@ class Store:
 
 
 class Rig:
-    def __init__(self, mic="found"):
-        self.store = Store()
+    def __init__(self, mic="found", store=None):
+        self.store = store or Store()
         self.calls = []
         self.eq = False
         self.grouped = False
@@ -463,3 +463,71 @@ async def test_a_second_try_again_is_not_kept_for_the_next_too_quiet():
     assert rig.control.run.waiting and len(rig.audio.plays) == 2 * once, "one more try, not two"
     await rig.control.tap("cancel")
     await rig.control.run.wait()
+
+
+# ---- kept from before ADR-0175's amendment (George, 2026-11-17) -----------------
+
+
+def _as_before(m, both=True, phase29=False):
+    """A stored measurement made to look kept from before the amendment:
+    each speaker's own cuts, checked, a position found worse."""
+    m.pop("bass_from", None)
+    m["checked"], m["worse"] = True, [[3, 2.3]]
+    m["speakers"]["L"]["cuts"] = [{"freq": 121.0, "gain": -11.1, "q": 2.1}]
+    m["speakers"]["R"]["cuts"] = [{"freq": 63.0, "gain": -5.0, "q": 4.0}]
+    if not both:
+        del m["speakers"][rc.BOTH]
+    if phase29:
+        # Phase 29's: to 500 Hz, for the bass only.
+        n = len(rc.grid(122))
+        del m["range"]
+        for sp in m["speakers"].values():
+            sp.pop("above", None)
+            sp.pop("after_bass", None)
+            for k in ("before", "target", "after"):
+                sp[k] = sp[k][:n]
+            sp["positions"] = [p[:n] for p in sp["positions"]]
+    return m
+
+
+@pytest.mark.parametrize("phase29", [False, True])
+async def test_a_measurement_kept_from_before_is_redesigned_from_both_when_the_player_starts(phase29):
+    rig = Rig()
+    await rig.measure()
+    out = rig.store.rows[rc.KEY]["outputs"][DAC.card]
+    _as_before(out["measured"], phase29=phase29)
+    again = Rig(store=rig.store)
+    m = again.control.state().output(DAC.card).measured
+    assert m.bass_from == rc.BOTH and not m.checked and m.worse == ()
+    assert m.cuts("L") == m.cuts("R") == m.speakers[rc.BOTH].cuts and m.cuts("L")
+    assert all(len(m.speakers[k].after) == len(m.speakers[k].before) for k in rc.SWEPT)
+    assert rig.store.rows[rc.KEY]["outputs"][DAC.card]["measured"]["bass_from"] == rc.BOTH, "stored"
+    assert again.control.state().output(DAC.card).on, "still on"
+    s = again.control.snapshot()
+    assert s["chart"]["after_kind"] == "expected"
+    if phase29:
+        assert m.range == rc.BASS and m.above("L") == () and len(m.speakers["L"].before) == 122
+
+
+async def test_one_without_both_sweeps_is_kept_as_it_is():
+    rig = Rig()
+    await rig.measure()
+    out = rig.store.rows[rc.KEY]["outputs"][DAC.card]
+    _as_before(out["measured"], both=False)
+    kept = rc.Measurement.from_dict(out["measured"])
+    again = Rig(store=rig.store)
+    m = again.control.state().output(DAC.card).measured
+    assert m == kept and m.bass_from == rc.EACH
+
+
+async def test_a_redesign_that_fails_never_stops_the_start(monkeypatch):
+    from gexis_core import room_run
+
+    def broken(m, dsp=None):
+        raise ValueError("made up")
+    rig = Rig()
+    await rig.measure()
+    _as_before(rig.store.rows[rc.KEY]["outputs"][DAC.card]["measured"])
+    monkeypatch.setattr(room_run, "redesign", broken)
+    again = Rig(store=rig.store)
+    assert again.control.state().output(DAC.card).measured.bass_from == rc.EACH

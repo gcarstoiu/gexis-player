@@ -142,6 +142,16 @@ def test_stored_and_read_back():
     assert again.output("DAC").measured.cuts("R") == ((42.0, -4.0, 8.6), (86.0, -8.0, 5.7))
     assert again.microphones["7071234"].sens_db == -1.378
     assert again.calibration().serial == "7071234" and again.calibration().gain_db == 18
+    assert again.output("DAC").measured.bass_from == rc.BOTH
+
+
+def test_one_stored_before_the_amendment_says_its_bass_is_each_speakers():
+    """ADR-0175's amendment (George, 2026-11-17): a measurement kept from
+    before it carries no `bass_from`, and is the kind redesigned at start."""
+    stored = Room().keep("DAC", measurement()).to_settings()
+    assert stored["outputs"]["DAC"]["measured"]["bass_from"] == rc.BOTH
+    del stored["outputs"]["DAC"]["measured"]["bass_from"]
+    assert Room.from_settings(stored).output("DAC").measured.bass_from == rc.EACH
 
 
 @pytest.mark.parametrize("bad", [None, "x", [], {"outputs": "x"}, {"outputs": {"DAC": {"on": True}}},
