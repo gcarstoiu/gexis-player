@@ -18,6 +18,7 @@ from gexis_core.artwork_sweep import (
     match_title,
     remembered,
 )
+from gexis_core.enrichment import fold
 
 
 class FakeStore:
@@ -481,3 +482,125 @@ class TestOneTileForBoth:
         await run(sweep, "all")
         assert (sweep.progress.processed, sweep.progress.covers) == (1, 2)
 
+
+
+class FakePlexLibrary:
+    """The lent Plex library, as the sweep asks it."""
+
+    def __init__(self, artists=None, albums=None, ready=True, unavailable=False, by_id=None):
+        self.artists = artists or {}
+        self.albums = albums or {}
+        #: By MusicBrainz id: an artist `mbid`, an album `(mbid, title)`.
+        self.by_id = by_id or {}
+        self._ready = ready
+        self.unavailable = unavailable
+        self.asked = []
+
+    def ready(self):
+        return self._ready
+
+    async def artist(self, name, mbid=None):
+        from gexis_core.enrichment import Outcome
+        self.asked.append(("artist", name) if mbid is None else ("artist by id", mbid))
+        if self.unavailable:
+            return Outcome.UNAVAILABLE, None
+        found = self.artists.get(name) if mbid is None else self.by_id.get(mbid)
+        return (Outcome.FOUND, found) if found else (Outcome.MISSING, None)
+
+    async def album(self, artist, title, mbid=None):
+        from gexis_core.enrichment import Outcome
+        self.asked.append(("album", artist, title) if mbid is None else ("album by id", mbid, title))
+        if self.unavailable:
+            return Outcome.UNAVAILABLE, None
+        found = self.albums.get((artist, title)) if mbid is None else self.by_id.get((mbid, title))
+        return (Outcome.FOUND, found) if found else (Outcome.MISSING, None)
+
+
+class TestPlexFirst:
+    """ADR-0184, second step, 4 (George, 2026-11-17): both buttons ask the
+    lent Plex library first; fanart is still asked and kept apart, so the
+    lists fall back to it when Plex is off or gone."""
+
+    def plex(self, **kw):
+        return FakePlexLibrary(
+            artists={"Isaac Hayes": ("9", "5", "1")},
+            albums={("Isaac Hayes", "Hot Buttered Soul"): ("11", "6"),
+                    ("Isaac Hayes", "Nothing Fanart Has"): ("12", "7")},
+            **kw)
+
+    async def test_plex_is_stored_apart_and_fanart_is_still_kept(self):
+        from gexis_core.plex import SWEPT_ALBUMS, SWEPT_ARTISTS
+        sweep, store, _, http = build(http=FakeHttp(TestOneTileForBoth.BODIES), plex=self.plex())
+        await run(sweep, "all")
+        assert store.rows[(SWEPT_ARTISTS, "isaac hayes")] == "9/5"
+        assert store.rows[(SWEPT_ALBUMS, "isaac hayes\x1fhot buttered soul")] == "11/6"
+        assert store.rows[(SWEPT_ALBUMS, "isaac hayes\x1fnothing fanart has")] == "12/7"
+        plex_albums = {k: v for k, v in store.rows.items() if k[0] == SWEPT_ALBUMS}
+        assert len(plex_albums) == 3 and sum(v is None for v in plex_albums.values()) == 1
+        # fanart's, as before.
+        assert store.rows[(ARTIST_NAMESPACE, "isaac hayes")] == "https://fan/isaac.jpg"
+        assert store.rows[(ALBUM_NAMESPACE, "isaac hayes\x1fhot buttered soul")] == "https://fan/one.jpg"
+        assert sum("fanart" in c for c in http.calls) == 1
+        p = sweep.progress
+        # Three albums with a cover: two from Plex, two from fanart, one of them both.
+        assert (p.found, p.albums, p.covers) == (1, 3, 3)
+
+    async def test_plex_needs_no_musicbrainz_id(self):
+        from gexis_core.plex import SWEPT_ALBUMS, SWEPT_ARTISTS
+        sweep, store, _, _ = build(identity=FakeIdentity({}), plex=self.plex())
+        await run(sweep, "all")
+        assert store.rows[(SWEPT_ARTISTS, "isaac hayes")] == "9/5"
+        assert store.rows[(SWEPT_ALBUMS, "isaac hayes\x1fhot buttered soul")] == "11/6"
+        assert (sweep.progress.found, sweep.progress.covers) == (1, 2)
+
+    async def test_portraits_ask_plex_for_the_artist_only(self):
+        from gexis_core.plex import SWEPT_ARTISTS
+        plex = self.plex()
+        sweep, store, _, _ = build(plex=plex)
+        await run(sweep, "portraits")
+        assert plex.asked == [("artist", "Isaac Hayes")]
+        assert store.rows[(SWEPT_ARTISTS, "isaac hayes")] == "9/5"
+        assert sweep.progress.found == 1
+
+    async def test_plex_off_is_not_asked(self):
+        from gexis_core.plex import SWEPT_ALBUMS, SWEPT_ARTISTS
+        plex = self.plex(ready=False)
+        sweep, store, _, _ = build(plex=plex)
+        await run(sweep, "all")
+        assert plex.asked == []
+        assert not [k for k in store.rows if k[0] in (SWEPT_ALBUMS, SWEPT_ARTISTS)]
+
+    async def test_a_plex_that_cannot_be_asked_leaves_what_was_stored(self):
+        from gexis_core.plex import SWEPT_ALBUMS, SWEPT_ARTISTS
+        store = FakeStore()
+        store.remember(SWEPT_ARTISTS, "isaac hayes", "9/4")
+        store.remember(SWEPT_ALBUMS, "isaac hayes\x1fhot buttered soul", "11/5")
+        plex = self.plex(unavailable=True)
+        sweep, store, _, _ = build(store=store, plex=plex)
+        await run(sweep, "all")
+        assert store.rows[(SWEPT_ARTISTS, "isaac hayes")] == "9/4"
+        assert store.rows[(SWEPT_ALBUMS, "isaac hayes\x1fhot buttered soul")] == "11/5"
+        assert [a for a in plex.asked if a[0] == "album"] == [("album", "Isaac Hayes", "Hot Buttered Soul")], \
+            "one try, then the rest left"
+
+    async def test_what_plex_misses_by_name_is_asked_by_the_artists_id(self):
+        """ADR-0184, third step: the id fanart.tv is asked with, after a miss
+        by name; a name that finds is never asked again by id."""
+        from gexis_core.plex import SWEPT_ALBUMS, SWEPT_ARTISTS
+        plex = FakePlexLibrary(albums={("Isaac Hayes", "Hot Buttered Soul"): ("11", "6")},
+                               by_id={"MB1": ("9", "5", "1"),
+                                      ("MB1", "Black Moses (Deluxe Edition)"): ("13", "8")})
+        sweep, store, _, _ = build(plex=plex)
+        await run(sweep, "all")
+        assert store.rows[(SWEPT_ARTISTS, "isaac hayes")] == "9/5"
+        assert store.rows[(SWEPT_ALBUMS, "isaac hayes\x1f" + fold("Black Moses (Deluxe Edition)"))] == "13/8"
+        assert store.rows[(SWEPT_ALBUMS, "isaac hayes\x1fhot buttered soul")] == "11/6"
+        assert ("album by id", "MB1", "Hot Buttered Soul") not in plex.asked, "found by name"
+        assert ("album by id", "MB1", "Nothing Fanart Has") in plex.asked
+
+    async def test_an_id_below_the_threshold_is_not_used_for_plex(self):
+        plex = FakePlexLibrary(by_id={"MB1": ("9", "5", "1")})
+        sweep, _, _, _ = build(plex=plex, identity=FakeIdentity({"isaac hayes": ("MB1", 80)}),
+                               confidence=lambda: 90)
+        await run(sweep, "portraits")
+        assert plex.asked == [("artist", "Isaac Hayes")]

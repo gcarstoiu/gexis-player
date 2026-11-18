@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Fill the library's artist portraits and album covers from fanart.tv.
+"""Fill the library's artist portraits and album covers: from the lent Plex
+library first, then fanart.tv.
 
 **A button, not a background job** ([ADR-0059](../../../docs/decisions/0059-artist-portraits-in-the-list.md)).
 George, 2026-09-24: *"there should be a trigger in settings enrichment for a
@@ -17,6 +18,12 @@ so an album sweep needs no per-album request (Finding 054 §9). The pieces:
    search, for the ids of everything that artist released;
 4. one fanart call, which answers the portrait and every cover at once.
 
+**The lent Plex library first** ([ADR-0184](../../../docs/decisions/0184-plex-information-through-plexamps-claim.md),
+second step, 4; George, 2026-11-17): it needs no MusicBrainz id and holds a
+picture of nearly every artist and album it has. What it answers is kept
+apart from fanart's, and fanart is still asked, so with Plex off the lists
+fall back to fanart's without another run.
+
 **Nothing here is on a screen's path.** The panel reads what this leaves
 behind; a cold library simply looks the way it looks today.
 """
@@ -28,7 +35,8 @@ import logging
 import time
 from dataclasses import dataclass, replace
 
-from gexis_core.enrichment import fold, match_title
+from gexis_core.enrichment import Outcome, fold, match_title
+from gexis_core.plex import SWEPT_ALBUMS, SWEPT_ARTISTS
 from gexis_core.providers import THEAUDIODB_BASE, theaudiodb_key
 
 logger = logging.getLogger("gexis_core.artwork_sweep")
@@ -157,8 +165,11 @@ class ArtworkSweep:
     def __init__(self, library, identity, http, store, *, fanart_key=None,
                  theaudiodb_key=None, confidence=None, on_change=None, on_finish=None,
                  gap_s: float = FANART_GAP_S, publish_every_s: float = PUBLISH_EVERY_S,
-                 clock=time.monotonic) -> None:
+                 clock=time.monotonic, plex=None) -> None:
         self._library = library
+        #: The lent Plex library (`plex.PlexLibrary`), asked first while it
+        #: is lent and *Information from Plex* is on.
+        self._plex = plex
         self._identity = identity
         self._http = http
         self._store = store
@@ -313,6 +324,62 @@ class ArtworkSweep:
         folded = fold(name)
         if not folded:
             return Found()
+        plex = self._plex if self._plex is not None and self._plex.ready() else None
+        if plex is None:
+            return await self._elsewhere(kind, artist_id, name, folded)
+        mine = [] if kind == "portraits" else await self._library.album_titles(artist_id)
+        first = await self._from_plex(plex, kind, name, folded, mine or [])
+        rest = await self._elsewhere(kind, artist_id, name, folded, mine)
+        titles = first.titles | rest.titles
+        return Found(portrait=first.portrait or rest.portrait,
+                     albums=max(first.albums, rest.albums), covers=len(titles), titles=titles)
+
+    async def _from_plex(self, plex, kind: str, name: str, folded: str, mine) -> "Found":
+        """**The lent Plex library's pictures** (ADR-0184, second step, 4),
+        stored under its own names. Could not ask: what was stored stays, as
+        everywhere in this walk."""
+        portrait = False
+        # **The artist's MusicBrainz id, after a miss by name** (ADR-0184,
+        # third step): the one fanart.tv is asked with next, at the same
+        # threshold; resolved once, and only if a name misses.
+        mbid = _Lazy(lambda: self._plex_id(name, folded))
+        if kind in ("portraits", "all"):
+            outcome, found = await plex.artist(name)
+            if outcome is Outcome.MISSING and (theirs := await mbid.get()):
+                outcome, found = await plex.artist(name, theirs)
+            if outcome is not Outcome.UNAVAILABLE:
+                stamp = found[1] if found else None
+                value = f"{found[0]}/{stamp}" if stamp else None
+                self._remember(SWEPT_ARTISTS, folded, value)
+                portrait = value is not None
+            if kind == "portraits":
+                return Found(portrait=portrait)
+        covered = set()
+        for title in mine:
+            outcome, found = await plex.album(name, title)
+            if outcome is Outcome.MISSING and (theirs := await mbid.get()):
+                outcome, found = await plex.album(name, title, theirs)
+            if outcome is Outcome.UNAVAILABLE:
+                break
+            value = "/".join(found) if found else None
+            self._remember(SWEPT_ALBUMS, f"{folded}\x1f{fold(title)}", value)
+            if value:
+                covered.add(fold(title))
+        return Found(portrait=portrait, albums=len(mine), covers=len(covered),
+                     titles=frozenset(covered))
+
+    async def _plex_id(self, name: str, folded: str) -> str | None:
+        """The artist's MusicBrainz id for the Plex library, or None: not
+        found, not asked, or below the threshold."""
+        resolved = await self._identity.resolve(folded, raw=name)
+        if not resolved:
+            return None
+        mbid, score = resolved
+        return mbid if score >= self._confidence() else None
+
+    async def _elsewhere(self, kind: str, artist_id: int, name: str, folded: str,
+                         mine=None) -> "Found":
+        """fanart.tv, then TheAudioDB, by the artist's MusicBrainz id."""
         # **The raw name is what MusicBrainz is asked**; the folded one is
         # only the cache key (`providers.search_names`).
         resolved = await self._identity.resolve(folded, raw=name)
@@ -348,7 +415,8 @@ class ArtworkSweep:
             if kind == "portraits":
                 return Found(portrait=portrait)
 
-        mine = await self._library.album_titles(artist_id)
+        if mine is None:
+            mine = await self._library.album_titles(artist_id)
         if not mine:
             return Found(portrait=portrait)
         groups = await self._release_groups(mbid)
@@ -367,6 +435,7 @@ class ArtworkSweep:
                 by_title.setdefault(key, group_id)
 
         stored = 0
+        covered = set()
         for title in mine:
             group_id = by_title.get(match_title(title))
             url = self._pick(albums.get(group_id) or {}, ALBUM_KINDS) if group_id else None
@@ -391,7 +460,10 @@ class ArtworkSweep:
             # stored too: "asked, neither had one" is an answer.
             self._remember(ALBUM_NAMESPACE, f"{folded}\x1f{fold(title)}", url)
             stored += 1 if url else 0
-        return Found(portrait=portrait, albums=len(mine), covers=stored)
+            if url:
+                covered.add(fold(title))
+        return Found(portrait=portrait, albums=len(mine), covers=stored,
+                     titles=frozenset(covered))
 
     async def _tadb_artist(self, mbid: str) -> dict | None:
         """TheAudioDB's record of an artist: `{}` when it has none, None
@@ -499,6 +571,9 @@ class Found:
     portrait: bool = False
     albums: int = 0
     covers: int = 0
+    #: The albums with a cover, by folded title: one found by both Plex and
+    #: fanart counts once.
+    titles: frozenset = frozenset()
 
 
 #: TheAudioDB's portrait first, then its fanart (ADR-0120 §4).

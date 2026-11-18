@@ -78,6 +78,8 @@ from gexis_core.settings_registry import (
     UnknownSetting,
 )
 from gexis_core.state import StateStore
+from gexis_core.plex import (ARTIST_PROVIDER, COVER_SIZE, COVER_SIZES, LYRICS_PROVIDER, SWEPT_ARTISTS,
+                              swept)
 
 #: The most artists one request may ask photos for. A screen of
 #: cards is about 40; this is a bound on what a caller can make the
@@ -86,6 +88,13 @@ PHOTO_BATCH = 80
 
 #: How many Popular rows the artist page draws (the design's five).
 POPULAR_ROWS = 5
+
+#: **A track asked for this recently is not given Plex's lyrics yet**
+#: (ADR-0184, fourth step): skipping through an album with the lyrics open
+#: would spend the server's allowance, about five every ten minutes
+#: (Finding 153). Under the panel's look-back (6 s), so its next ask is the
+#: one that gets them.
+LYRICS_SETTLE_S = 5.0
 
 logger = logging.getLogger("gexis_core.wsserver")
 
@@ -202,6 +211,7 @@ class StateServer:
         lyrion_known: "discovery.Known | None" = None,
         multiroom=None,
         plugin_artwork=None,
+        plex=None,
         panel_token: str | None = None,
         store_view=None,
         store_add=None,
@@ -269,6 +279,9 @@ class StateServer:
         self._library = library
         self._artistinfo = artistinfo
         self._enrichment = enrichment
+        #: ADR-0184, fourth step: the track `/enrichment` was last asked for,
+        #: and when it was first asked for it (`_plex_lyrics_now`).
+        self._asked_track: tuple[TrackKey, float] | None = None
         self._radio = radio
         #: ADR-0180: the player's own internet radio (`radio_service`).
         self._stations = stations
@@ -282,6 +295,8 @@ class StateServer:
         self._plugins = {p.id: p for p in plugins}
         #: ADR-0167 T9: the covers plugins handed over as bytes.
         self._plugin_artwork = plugin_artwork
+        #: ADR-0184: the Plex library the Plexamp plugin lends, for its covers.
+        self._plex = plex
         #: **ADR-0083.** Called after an archive has been written back, to
         #: reboot. Injected rather than imported so the route stays a route:
         #: the daemon owns what "restart the device" means, and a test can
@@ -1450,8 +1465,18 @@ class StateServer:
 
         It goes through LMS's image proxy, so the caller gets the size it
         asked for and LMS does the fetching and the caching.
+
+        **The Plex library's first** (ADR-0184, second step, 4), while it is
+        lent and *Information from Plex* is on: through the core, scaled by
+        Plex.
         """
-        if self._library is None or not name:
+        if not name:
+            return None
+        if self._plex is not None and self._plex.ready():
+            from_plex = swept(self._notes, SWEPT_ARTISTS, fold(name), size)
+            if from_plex:
+                return from_plex
+        if self._library is None:
             return None
         found = remembered(self._notes, ARTIST_NAMESPACE, fold(name))
         if not found or found is True:
@@ -1510,6 +1535,11 @@ class StateServer:
                 artist_image=photos.get(artist_id),
                 sources=("lms",) if (biography or photos.get(artist_id)) else (),
             )
+        # **The lent Plex library first, for every field** (ADR-0184, second
+        # step, 3): ahead of LMS's own plugin too, which shows what it
+        # fetched from the internet. The others keep their order below it.
+        plex = await self._enrichment.for_track(
+            TrackKey(artist=fold(name), raw_artist=name), only=(ARTIST_PROVIDER,))
         # **The sweep answers for fanart, so fanart is not asked** (ADR-0075).
         swept = self.swept_portrait_of(name, PHOTO_LARGE)
         rest = await self._enrichment.for_track(
@@ -1517,7 +1547,7 @@ class StateServer:
             only=("fanart", "wikipedia", "listenbrainz", "popular"),
             omit=("fanart",) if swept else (),
         )
-        found = found.merged_with(rest)
+        found = plex.merged_with(found.merged_with(rest))
         if rest.artist_image:
             # **Pictures come from fanart first** (George, 2026-09-18): it
             # has a portrait for artists LMS's plugin has nothing for. The
@@ -1528,12 +1558,19 @@ class StateServer:
         # picture, from the same place, already on this device.
         if swept:
             found = replace(found, artist_image=swept)
+        # **And Plex's before them all** (ADR-0184, second step, 3).
+        if plex.artist_image:
+            found = replace(found, artist_image=plex.artist_image)
+        # Only what this device can actually play, in the order the wider
+        # world plays them (the design's own note on Popular): Plex's list,
+        # and ListenBrainz's where none of Plex's is in this library.
+        popular = await self._playable(artist_id, plex.popular)
+        if not popular and rest.popular:
+            popular = await self._playable(artist_id, rest.popular)
         return web.json_response({
             "artist": name,
             "enrichment": found.to_json(),
-            # Only what this device can actually play, in the order the
-            # wider world plays them (the design's own note on Popular).
-            "popular": await self._playable(artist_id, found.popular),
+            "popular": popular,
         })
 
     async def _playable(self, artist_id: int | None, popular) -> list[dict]:
@@ -1589,10 +1626,14 @@ class StateServer:
         # on a cover nobody would draw.
         if state.metadata.artwork:
             omit += ARTWORK_PROVIDERS
+        if not self._plex_lyrics_now(key, state, pending):
+            omit += (LYRICS_PROVIDER,)
         found = await self._enrichment.for_track(
             key, renderer=state.active, pending=pending, omit=omit,
         )
-        if swept:
+        # The sweep's picture over the chain's - **but not over the Plex
+        # library's**, which comes first (ADR-0184, second step, 3).
+        if swept and not (found.artist_image or "").startswith("/plex/"):
             found = replace(found, artist_image=swept)
         return web.json_response({
             # True when a provider had not finished: the panel asks again
@@ -1603,6 +1644,24 @@ class StateServer:
             "track": {"artist": key.artist, "title": key.title},
             "enrichment": found.to_json(),
         })
+
+    def _plex_lyrics_now(self, key: TrackKey, state, pending: list) -> bool:
+        """**Whether the Plex library's lyrics may be asked for now**
+        (ADR-0184, fourth step): the server serves about five every ten
+        minutes, to Plexamp too (Finding 153), so as Plexamp asks - **only
+        while lyrics are on the panel's screen**, and not for a track
+        skipped past: one asked for under `LYRICS_SETTLE_S` ago is answered
+        as not final, and the panel's look-back asks again."""
+        now = time.monotonic()
+        if self._asked_track is None or self._asked_track[0] != key:
+            self._asked_track = (key, now)
+        if not (state.panel or {}).get("lyrics"):
+            return False
+        if now - self._asked_track[1] >= LYRICS_SETTLE_S:
+            return True
+        if self._enrichment.asks(LYRICS_PROVIDER, state.active):
+            pending.append(LYRICS_PROVIDER)
+        return False
 
     async def _handle_plugin_mark(self, request: web.Request) -> web.Response:
         """A source's glyph, by id (ADR-0086).
@@ -1634,6 +1693,28 @@ class StateServer:
         kind, data = found
         return web.Response(body=data, content_type=kind,
                             headers={"Cache-Control": "public, max-age=31536000, immutable"})
+
+    async def _handle_plex_cover(self, request: web.Request) -> web.Response:
+        """**A picture from the lent Plex library** (ADR-0184): an album's
+        cover or an artist's picture. Its address on the Plex server needs
+        the token, which never leaves the core: the screens and phones are
+        given this path, and the core asks Plex. Only a picture, by its two
+        numbers; nothing while *Information from Plex* is off. A size
+        outside the range is brought into it."""
+        if self._plex is None or not self._plex.ready():
+            return web.json_response({"error": "no Plex library"}, status=404)
+        raw = request.query.get("size")
+        size = COVER_SIZE
+        if raw and raw.isdigit() and len(raw) <= 5:
+            size = min(max(int(raw), COVER_SIZES.start), COVER_SIZES.stop - 1)
+        found = await self._plex.cover(request.match_info["key"], request.match_info["stamp"], size)
+        if found is None:
+            return web.json_response({"error": "the Plex server did not answer"}, status=502)
+        kind, data = found
+        if not kind.startswith("image/"):
+            return web.json_response({"error": "the Plex server did not answer"}, status=502)
+        return web.Response(body=data, content_type=kind.split(";")[0],
+                            headers={"Cache-Control": "public, max-age=86400"})
 
     async def _handle_surface(self, request: web.Request) -> web.Response:
         """ADR-0035 §6: the panel always arrives on loopback, a phone from the LAN."""
@@ -4064,6 +4145,7 @@ class StateServer:
         app.router.add_get("/skins/{name:.*}/preview", self._handle_skin_preview)
         app.router.add_get("/plugins/{id}/mark", self._handle_plugin_mark)
         app.router.add_get("/plugins/{id}/artwork/{key}", self._handle_plugin_artwork)
+        app.router.add_get(r"/plex/cover/{key:\d{1,12}}/{stamp:\d{1,12}}", self._handle_plex_cover)
         app.router.add_get("/menus", self._handle_menus)
         app.router.add_get("/menus/browse", self._handle_menus_browse)
         app.router.add_get("/menus/letters", self._handle_menus_letters)

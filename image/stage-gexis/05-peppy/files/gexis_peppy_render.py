@@ -105,6 +105,11 @@ def load_badge_slots(path: Path = BADGE_SLOTS) -> dict[str, tuple[int, int, int,
         logger.warning("render: no badge slots from %s: %s", path, exc)
         return {}
 ARTWORK_TIMEOUT_S = 5
+#: **A cover the player serves itself is named by its path** - a plugin's
+#: (`/plugins/<id>/artwork/<key>`, ADR-0167) or the lent Plex library's
+#: (`/plex/cover/...`, ADR-0184) - and this process is on the same device
+#: as the core's state server.
+CORE = "http://127.0.0.1:8090"
 
 
 def read_metadata(path: Path = METADATA_PATH) -> dict:
@@ -838,6 +843,8 @@ class MetadataLayer:
         """Artwork comes from the renderer's own server (LMS, Spotify's CDN),
         so this is a network read on a screen that must not stall: one short
         timeout, and failure means no artwork rather than no screen."""
+        if url.startswith("/"):
+            url = CORE + url
         try:
             with urllib.request.urlopen(url, timeout=ARTWORK_TIMEOUT_S) as response:
                 data = response.read()

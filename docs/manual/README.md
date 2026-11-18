@@ -918,7 +918,16 @@ still mounted.
 | Internet radio: Popular here | The country whose stations *Popular here* lists; at first, the time zone's. The list shows the countries the directory has stations in, each with its number of stations, and marks the time zone's *From your time zone*; while the directory cannot be reached, it shows every country. |
 
 Plugins add their own rows here once switched on: **Plexamp** (claim the
-player into your Plex account).
+player into your Plex account), and with it **Information from Plex**: on,
+the player looks in your Plex library first, then on the internet, for an
+artist's biography, picture, similar artists and *Popular* tracks, and for
+an album's cover when a source sends none with a track (Bluetooth often does
+not); *Find portraits and covers* takes your Plex library's first too. For
+lyrics it comes after LRCLIB: the player shows your Plex library's where
+LRCLIB has none, or none timed, while the lyrics are on screen. It
+uses the Plex server Plexamp plays from, through Plexamp's own sign-in, and
+only while that server is on your home network. It is greyed with *Claim
+Plexamp first* until Plexamp is claimed.
 
 ### Handoff — *Who gets the player*
 
@@ -1120,10 +1129,10 @@ On its page:
 | Enrichment | Looks up what a source does not send: lyrics, biographies, covers, artist pictures. |
 | Lyrics | Fetches lyrics, synchronised where available. |
 | Look up missing artwork | Finds a cover for sources that send none (Bluetooth, radio). |
-| ListenBrainz token | For the artist page's *Popular* list; a free token. |
+| ListenBrainz token | For the artist page's *Popular* list where your Plex library has none; a free token. |
 | fanart.tv key, TheAudioDB key | Optional keys for artist pictures and album covers. |
 | Confidence threshold | How sure the match must be (recommended 90 %). Below it, nothing is shown rather than something wrong. |
-| Lyrion Client: Find portraits and covers | Looks up every album artist's portrait and every album's cover, keeps Lyrion's where none is found, and shows what the last run found. |
+| Lyrion Client: Find portraits and covers | Looks up every album artist's portrait and every album's cover - in your Plex library first while *Information from Plex* is on, then on fanart.tv and TheAudioDB - keeps Lyrion's where none is found, and shows what the last run found. |
 
 ### Plugins — *What is installed beyond the player itself*
 
