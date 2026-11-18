@@ -217,7 +217,7 @@
   }[screenName] ?? '');
   const tail = $derived.by(() => {
     if (screenName === 'place') return { text: `Music stops now, on every source.${full?.screen ? " The player's screen shows that it is measuring." : ''}`, ink: 'quiet' };
-    if (screenName === 'correction' && ch === BOTH) return { text: 'The two together, as you hear them. Check it measures them with the correction on.', ink: 'quiet' };
+    if (screenName === 'correction' && ch === BOTH) return { text: 'The two together, as you hear them: the bass is corrected from these, the same on both speakers. Check it measures them with the correction on.', ink: 'quiet' };
     if (screenName === 'correction') return { text: correctionTail(dips(speaker, freqs), speaker), ink: 'quiet' };
     if (screenName === 'nothing') return { text: 'Your room is already near the target, in the bass and above it, so there is nothing worth correcting. Room correction stays off.', ink: 'body' };
     if (screenName === 'result' && !run?.expected) return worse ? null : { text: 'No position is worse than before.', ink: 'ink' };
