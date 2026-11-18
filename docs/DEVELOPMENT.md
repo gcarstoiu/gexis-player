@@ -4088,6 +4088,11 @@ consumes. **Popular tracks do remain ListenBrainz's**, 404 on that server.
    Plexamp displays them, so there is a way. **Find it before building a
    provider**; a lyrics source that works once an evening is worse than none,
    because it would win the merge and then fail.
+   - **Found, and rationed** ([Finding 153](findings/153-plex-lyrics-are-rationed.md)):
+     Plexamp's request, about five lyrics per ten minutes for the whole
+     server. **Plex behind LRCLIB** (George, 2026-11-18): asked only where
+     LRCLIB has no lyrics or none timed, and only while lyrics are on screen
+     (ADR-0184, fourth step).
 7. **Decided in this phase, not before:** whether the three things Plex has and
    this project does not — **sonic similarity with distances**, **moods and
    styles**, and **ReplayGain** — are worth model changes, or are noted and left.
