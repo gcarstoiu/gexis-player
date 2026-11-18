@@ -4021,6 +4021,13 @@ Sources beside Plexamp. **Accepted** the same day, when he confirmed that
 Plex then answers only where Plexamp is installed and claimed, and the row
 (*Information from Plex*, on, in ADR-0022).
 
+**In 1.18.0** (George, 2026-11-18: to Testing with everything, the notes
+approved): its four steps (covers; the artist; the artist's MusicBrainz id;
+lyrics behind LRCLIB's) with gexis-plexamp 0.6.0 in the catalogue (serial
+9, lowest release 1.18.0); Findings 149, 150, 152 and 153. Left: George
+seeing Plex's lyrics on a track LRCLIB has none timed for; the phase closes
+at his word.
+
 **Added 2026-09-25 (George):** *"Let's introduce another phase … which should tackle the question of how we can we leverage the plexamp/Plex
 server metadata that is available. Anything that can reduce the dependency on
 internet providers is a good thing. They can be kept as fallbacks, not

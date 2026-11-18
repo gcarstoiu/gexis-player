@@ -42,9 +42,31 @@ restore's `stop` (no such command; a station stops on `pause`) failed and
 the unmute let the station play aloud 10-15 s. Owed: George's ear in a
 group.
 
-**PR #105 for George**: README's *Download and install* still names 1.16.4 on
-`main`. After its merge: `main` into `docs` and `next`, `readme-1.17.0`
-deleted.
+**1.18.0 being prepared for Testing** (George, 2026-11-18: everything):
+`fix-wifi-no-rescan`, `room-both` and `ph-library` merged into `next`
+(clean); `next`'s code is the preview sofapi runs (git76, UI git51) but for
+one comment; 3,591 core tests pass, the UI builds, plugin 122 pass. Notes
+drafted in `~/projects/scratch/release-1.18.0/notes-draft.txt`,
+**approved by George 2026-11-18** (a line for Shairport Sync still to
+approve). Then the usual steps (`docs/tech/updates-and-releases.md` §4),
+gexis-plexamp 0.6.0 (`library` into `main`, tag, GitHub release; archive
+built, 53,669 bytes) and its catalogue entry with `player` 1.18.0, the
+Roadmap's Phase 32 cell (*On Testing (1.18.0)*, shown to George first).
+**George's decisions (2026-11-18):** go-librespot 0.10.7 after 1.18.0, as
+1.18.1 from its bot branch (`bump-go-librespot-0.10.7`; 0.10.6 contains
+ADR-0181's commit; its checklist needs his phone). Beszel 0.21.2: tried on sofapi (the agent
+reached its hub at once), released as gexis-beszel `v0.21.2-1`; Plexamp
+0.6.0 released (`v0.6.0`, lowest release 1.18.0); both in the catalogue,
+PR #18 merged at George's word, **serial 9** published and read back;
+issue #106 closed. Shairport Sync 5.6.3, in 1.18.0: branch
+`bump-shairport-sync-5.6.3` (267b0cef; its archive in the `inputs`
+mirror), preview run 44391293146 on sofapi and on **guestpi** (George's
+go-ahead; AirPlay on there): 5.6.3 runs, owns `org.gnome.ShairportSync`,
+announces itself, the adapter reads its pipe; no warnings. sofapi and
+guestpi on that build (core git87, player git90, UI git86; guestpi's
+system git22). Neither the daily job nor `check-upstream.sh` watches
+Shairport Sync or NQPTP. PR #105 merged by George
+2026-11-16; `main` merged into `docs` and `next`, `readme-1.17.0` gone.
 
 **go-librespot is upstream's build of `775ba5883`** (ADR-0181), kept in the
 `inputs` mirror with its source; `packaging/check-upstream.sh` reports it
