@@ -40,8 +40,9 @@ paused, the chain rewritten under it, resumed; `spotify-group-change`
 3759f835, `rechain.keep_spotify_playing`, 3,605 core tests pass), with
 `upstream-shairport-nqptp` (Shairport Sync and NQPTP watched). All three on
 `preview-1.18.1` (from `next`; the inputs list's conflict resolved to
-Shairport 5.6.3 and go-librespot 0.10.7), preview run 44408717854, for
-sofapi. Then George with his phone: go-librespot's checklist
+Shairport 5.6.3 and go-librespot 0.10.7), preview run 44408717854, **on
+sofapi since 2026-11-18 23:16** (George's go-ahead; core 1.18.0+git6, player
+git13, go-librespot 0.10.7-4; idle, core clean, the group kept). Then George with his phone: go-librespot's checklist
 (`docs/tech/updates-and-releases.md`) and ADR-0183's (a join and a leave
 under Spotify on the lead: the music back, the phone keeps the player and
 the position, the gap timed; the phone's Pause and Next still reach the
