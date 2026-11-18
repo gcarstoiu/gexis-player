@@ -5,7 +5,8 @@
 # version** of the software the player fetches from its maker. Run before
 # every release, and daily on GitHub (ADR-0182, packaging/upstream-daily.sh):
 # it reads each maker's own "latest" feed - for what the player fetches and
-# for what we package (Beszel, go-librespot, CamillaDSP) - and says which
+# for what we package (Beszel, go-librespot, CamillaDSP, Shairport Sync,
+# NQPTP) - and says which
 # pins are behind. Nothing is changed here - a newer version is tried on the
 # player as a preview before its pin is moved.
 #
@@ -95,5 +96,13 @@ esac
 camilla_latest=$(gh_latest HEnquist/camilladsp)
 report camilladsp CamillaDSP "$(pin packaging/camilladsp/pins.sh CAMILLADSP_VERSION)" "$camilla_latest" \
 	"$(gh_page HEnquist/camilladsp "$camilla_latest")"
+# AirPlay's two (ADR-0167), built here from a tag's commit, pinned in their
+# build scripts (George, 2026-11-18: Shairport Sync 5.6.3 was out a week
+# before anyone saw it). Their tags have no `v`.
+for part in shairport-sync:"Shairport Sync" nqptp:NQPTP; do
+	id=${part%%:*}
+	latest=$(gh_latest "mikebrady/$id")
+	report "$id" "${part#*:}" "$(pin "packaging/$id/build.sh" TAG)" "$latest" "$(gh_page "mikebrady/$id" "$latest")"
+done
 
 exit $status

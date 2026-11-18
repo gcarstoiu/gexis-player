@@ -37,6 +37,7 @@ why() {
 	plexamp) echo "Fetched on the device from its maker (ADR-0100); the pin is in gcarstoiu/gexis-plexamp (\`plexamp.pin\`)." ;;
 	lyrion) echo "Fetched on the device from the Lyrion community (ADR-0115 decision 11); the pin is \`image/stage-gexis/10-lyrion/files/lyrion.env\`." ;;
 	beszel) echo "A catalogue plugin (ADR-0174); the pin is in gcarstoiu/gexis-beszel (\`pins.sh\`), which this workflow cannot write." ;;
+	shairport-sync|nqptp) echo "Built here from the tag's commit (ADR-0167), moved by hand: \`TAG\`, \`COMMIT\`, \`COMMIT_DATE\` and the archive's and source tree's sha256 in \`packaging/$1/build.sh\` (as \`fetch-source.sh\` checks them), the archive's line in \`packaging/inputs.tsv\` and the \`inputs\` mirror, the revision back to 1 in it and \`packaging/revisions.json\`; a preview with AirPlay on." ;;
 	*) echo "Not a pin this workflow moves." ;;
 	esac
 }
