@@ -71,3 +71,23 @@ counts only: no names were printed or kept.
 - **The fallback costs an internet lookup only for an artist the core has
   not resolved before**; most are resolved already (912 of 948 here), and
   the internet providers behind Plex ask for the same id anyway.
+
+## As built (2026-11-18)
+
+The installed preview (`1.17.0+git49.c9059db`) on sofapi, walked as the
+artwork sweep walks: LMS's album artists, then each one's album titles; the
+core's own `PlexLibrary` and `ArtistIdentity`, the stored ids read without
+writing, MusicBrainz not asked, at the player's confidence threshold (90).
+After the install the core forgot 39 earlier Plex misses, once.
+
+| | By name | By the id after a miss | Neither |
+|---|---|---|---|
+| 948 album artists | 558 | **34** | 356 (329 with an id Plex has not, 27 nobody) |
+| 5,114 album titles (per album artist) | 3,612 | **127** | 1,375 |
+
+- **The artists are as measured above**: 592, the same 34 gained. No
+  artist missed by name had an id below the threshold.
+- **The albums are counted per album artist**, as the sweep counts them
+  (5,114, not LMS's 4,823 albums), so the totals differ from the table
+  above; the gain is 127 against 125. By name, then the id: 3,739 of 5,114
+  (73.1 %).
