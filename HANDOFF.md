@@ -54,13 +54,17 @@ built, 53,669 bytes) and its catalogue entry with `player` 1.18.0, the
 Roadmap's Phase 32 cell (*On Testing (1.18.0)*, shown to George first).
 **George's decisions (2026-11-18):** go-librespot 0.10.7 after 1.18.0, as
 1.18.1 from its bot branch (`bump-go-librespot-0.10.7`; 0.10.6 contains
-ADR-0181's commit; its checklist needs his phone). Beszel 0.21.2 now:
-`gexis-beszel` branch `beszel-0.21.2` (25cb8f3; checksums as upstream's
-list; archives 0.21.2-1 built), to try on sofapi, release and list
-(issue #106). Shairport Sync 5.6.3 now, in 1.18.0: branch
-`bump-shairport-sync-5.6.3` (267b0cef, from `next`; one instance keeps
-`org.gnome.ShairportSync`; its archive in the `inputs` mirror), preview
-run 44391293146. Neither the daily job nor `check-upstream.sh` watches
+ADR-0181's commit; its checklist needs his phone). Beszel 0.21.2: tried on sofapi (the agent
+reached its hub at once), released as gexis-beszel `v0.21.2-1`; Plexamp
+0.6.0 released (`v0.6.0`, lowest release 1.18.0); both in the catalogue,
+PR #18 merged at George's word, **serial 9** published and read back;
+issue #106 closed. Shairport Sync 5.6.3, in 1.18.0: branch
+`bump-shairport-sync-5.6.3` (267b0cef; its archive in the `inputs`
+mirror), preview run 44391293146 on sofapi and on **guestpi** (George's
+go-ahead; AirPlay on there): 5.6.3 runs, owns `org.gnome.ShairportSync`,
+announces itself, the adapter reads its pipe; no warnings. sofapi and
+guestpi on that build (core git87, player git90, UI git86; guestpi's
+system git22). Neither the daily job nor `check-upstream.sh` watches
 Shairport Sync or NQPTP. PR #105 merged by George
 2026-11-16; `main` merged into `docs` and `next`, `readme-1.17.0` gone.
 
