@@ -394,3 +394,30 @@ async def test_a_session_with_nothing_to_pause_is_still_stopped():
         await server.close()
     assert [path for path, _ in calls] == ["/player/pause", "/player/stop"]
     assert calls[1][1] - calls[0][1] < 0.2
+
+
+# --- ADR-0183: whether a session plays, for a group change ------------------
+
+
+class FakeSession(FakeStatus):
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *exc):
+        return False
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("body, status, expected", [
+    (PLAYING, 200, True),
+    ({**PLAYING, "paused": True}, 200, False),
+    ({**PLAYING, "stopped": True}, 200, False),
+    ({"paused": False, "stopped": False}, 200, False),  # no track
+    (None, 204, False),                                 # no session at all
+    (None, 503, None),                                  # cannot be read
+])
+async def test_playing_now_reads_the_session_from_status(monkeypatch, body, status, expected):
+    from gexis_core.adapters import spotify as spotify_module
+
+    monkeypatch.setattr(spotify_module.aiohttp, "ClientSession", lambda *a, **k: FakeSession(body, status))
+    assert await SpotifyAdapter("127.0.0.1", 3678).playing_now() is expected
