@@ -64,8 +64,9 @@ mirror), preview run 44391293146 on sofapi and on **guestpi** (George's
 go-ahead; AirPlay on there): 5.6.3 runs, owns `org.gnome.ShairportSync`,
 announces itself, the adapter reads its pipe; no warnings. sofapi and
 guestpi on that build (core git87, player git90, UI git86; guestpi's
-system git22). Neither the daily job nor `check-upstream.sh` watches
-Shairport Sync or NQPTP. PR #105 merged by George
+system git22). Shairport Sync and NQPTP now watched too (branch
+`upstream-shairport-nqptp`, bd9aa254, George 2026-11-18): an issue when
+one is behind; on `main` with the next release. PR #105 merged by George
 2026-11-16; `main` merged into `docs` and `next`, `readme-1.17.0` gone.
 
 **go-librespot is upstream's build of `775ba5883`** (ADR-0181), kept in the
