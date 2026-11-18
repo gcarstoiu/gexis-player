@@ -4347,8 +4347,8 @@ async def main() -> None:
             # **The lent Plex library's lyrics, behind LRCLIB's** (ADR-0184,
             # fourth step; George, 2026-11-18): started once LRCLIB has
             # answered, only when it has no timed words, and only while the
-            # lyrics are on screen (`/enrichment`). About five every ten minutes, Plexamp's
-            # included (Finding 153).
+            # lyrics are on screen (`/enrichment`). About five every ten minutes
+            # for the whole server (Finding 153).
             PlexLyrics(plex, allowed=_plex_allowed, identity=identity),
             CoverArtProvider(http),
             # Last: the radio case, where there is no album to match on
