@@ -388,8 +388,10 @@ writes nothing). For each pin `packaging/check-upstream.sh` finds behind:
   neither).
 - **Anything else** gets an issue, *Upstream: <name> <version>*: Plexamp
   and Lyrion (fetched on the device, ADR-0100), Beszel (pinned in
-  `gcarstoiu/gexis-beszel`, which the workflow's token cannot write), and a
-  release that does not fit its pin (no such file, or no binary in it).
+  `gcarstoiu/gexis-beszel`, which the workflow's token cannot write),
+  Shairport Sync and NQPTP (built here from a tag's commit, ADR-0167; the
+  issue lists what to move by hand), and a release that does not fit its pin
+  (no such file, or no binary in it).
 
 Once per part and version: an existing pull request or issue, open or
 closed, stops it. A run fails when a maker's feed could not be read, after
