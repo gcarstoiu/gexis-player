@@ -71,7 +71,10 @@ async def refresh_connected() -> str | None:
     global _connected
     if not available():
         return None
-    rc, out, _ = await _run("-t", "-f", "ACTIVE,SSID", "device", "wifi")
+    # `--rescan no`: nmcli's default rescans when the last scan is over 30 s
+    # old, so every other read took the radio off its channel for ~3 s - a
+    # gap in a group's audio each time (Finding 154).
+    rc, out, _ = await _run("-t", "-f", "ACTIVE,SSID", "device", "wifi", "list", "--rescan", "no")
     if rc != 0:
         return _connected
     for line in out.splitlines():
