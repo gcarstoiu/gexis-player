@@ -46,17 +46,22 @@ group.
 `fix-wifi-no-rescan`, `room-both` and `ph-library` merged into `next`
 (clean); `next`'s code is the preview sofapi runs (git76, UI git51) but for
 one comment; 3,591 core tests pass, the UI builds, plugin 122 pass. Notes
-drafted in `~/projects/scratch/release-1.18.0/notes-draft.txt`, **not yet
-approved**. Then the usual steps (`docs/tech/updates-and-releases.md` §4),
+drafted in `~/projects/scratch/release-1.18.0/notes-draft.txt`,
+**approved by George 2026-11-18** (a line for Shairport Sync still to
+approve). Then the usual steps (`docs/tech/updates-and-releases.md` §4),
 gexis-plexamp 0.6.0 (`library` into `main`, tag, GitHub release; archive
 built, 53,669 bytes) and its catalogue entry with `player` 1.18.0, the
 Roadmap's Phase 32 cell (*On Testing (1.18.0)*, shown to George first).
-**Decisions owed by George:** go-librespot 0.10.7 (bot branches
-`bump-go-librespot-0.10.6` and `-0.10.7`, no pull requests since Actions
-may not open them; 0.10.6 contains ADR-0181's commit; its checklist needs
-his phone); Beszel 0.21.2 (security fixes for the hub; issue #106; its own
-plugin repo); Shairport Sync 5.6.3 (bug fixes; neither the daily job nor
-`check-upstream.sh` watches it or NQPTP). PR #105 merged by George
+**George's decisions (2026-11-18):** go-librespot 0.10.7 after 1.18.0, as
+1.18.1 from its bot branch (`bump-go-librespot-0.10.7`; 0.10.6 contains
+ADR-0181's commit; its checklist needs his phone). Beszel 0.21.2 now:
+`gexis-beszel` branch `beszel-0.21.2` (25cb8f3; checksums as upstream's
+list; archives 0.21.2-1 built), to try on sofapi, release and list
+(issue #106). Shairport Sync 5.6.3 now, in 1.18.0: branch
+`bump-shairport-sync-5.6.3` (267b0cef, from `next`; one instance keeps
+`org.gnome.ShairportSync`; its archive in the `inputs` mirror), preview
+run 44391293146. Neither the daily job nor `check-upstream.sh` watches
+Shairport Sync or NQPTP. PR #105 merged by George
 2026-11-16; `main` merged into `docs` and `next`, `readme-1.17.0` gone.
 
 **go-librespot is upstream's build of `775ba5883`** (ADR-0181), kept in the
