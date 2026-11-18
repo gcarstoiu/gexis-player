@@ -253,7 +253,9 @@ find, and contradicts no artist the names found.
 
 Phase 32's acceptance 6. [Finding 153](../findings/153-plex-lyrics-are-rationed.md):
 Plexamp's own request works, but the server serves **about five lyrics per
-ten minutes, to whoever asks with its token**, Plexamp included; and LRCLIB
+ten minutes, to whoever asks with its token** (a client identifier of our
+own got none of its own; whether Plexamp's own lyrics draw on it was not
+tested); and LRCLIB
 already has more of them timed on this library. Offered LRCLIB alone, Plex
 behind it, or Plex first, George chose (2026-11-18) **Plex behind LRCLIB:
 asked only where LRCLIB has no lyrics, or none timed**.

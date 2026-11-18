@@ -60,7 +60,9 @@ AirPlay), which Plex could not answer for anyway.
 
 - **There is a way, and it is rationed**: enough for one track at a time as
   music plays (about three tracks per ten minutes), not for skipping through
-  an album or a sweep, and shared with Plexamp.
+  an album or a sweep, and most likely shared with Plexamp: a client
+  identifier of our own got no allowance of its own, but Plexamp itself was
+  not tested (corrected 2026-11-18; it said *shared* outright).
 - **LRCLIB is the better source on this library**: synced for 66 of the 92,
   Plex timed for 33. Behind LRCLIB, Plex would add lyrics to 5 of them and
   timing to 1. Ahead of it, the merge would take Plex's plain lyrics over
