@@ -449,7 +449,9 @@ sync does.
 **Remove, Leave, Undo.** **Remove** takes another player out of the group;
 **Leave group** takes this one out; **Undo group** ends the group, asking
 first, and the music stays on the player that leads. The player that leads
-cannot be removed or leave: *Undo group* ends its group.
+cannot be removed or leave: *Undo group* ends its group. **Spotify on the
+player that leads keeps playing** when a player joins or leaves: it pauses
+for the moment the group takes to change, and the phone keeps the player.
 
 **A moment late.** In a group every player plays the music about a second
 after it arrives, so that all play it together; a pause or a skip is heard

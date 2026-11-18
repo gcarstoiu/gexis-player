@@ -1061,6 +1061,12 @@ phone only.
   the chain and would restart whoever holds it - a paused source, or one
   taking over meanwhile. Lyrion on the leader's own chain (one Lyrion
   server) is not restarted by it, so that leader goes alone at once.
+  **Spotify on the leader** (ADR-0183, `rechain.keep_spotify_playing`) is
+  paused through its API, which closes its device; the others stop, the
+  chain is written, they restart, and Spotify resumes, reading the new
+  chain as it reopens - go-librespot's unit never stops, so the phone keeps
+  the player. Where that cannot be (its state unread, the pause refused,
+  the device not let go in 2 s) the rewrite is as before.
 - **A source playing on a member leads** (D4, amended 2026-10-28): the
   supervisor's `on_active_change` reaches `Multiroom.on_local_active`, which
   notes the source; `_lead_if_playing`, run on every state change, claims

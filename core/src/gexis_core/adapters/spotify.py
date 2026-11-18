@@ -311,6 +311,26 @@ class SpotifyAdapter(Adapter):
         on_acquire()
         self._handle_metadata_event(body["track"])
 
+    async def playing_now(self) -> bool | None:
+        """ADR-0183: whether a session is playing at this moment - not
+        paused, not stopped, with a track - from `/status`; None when it
+        cannot be read."""
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    f"{self._base}/status", timeout=aiohttp.ClientTimeout(total=2)
+                ) as resp:
+                    if resp.status == 204:
+                        return False
+                    if resp.status != 200:
+                        return None
+                    body = await resp.json(content_type=None)
+        except (aiohttp.ClientError, asyncio.TimeoutError, ValueError) as exc:
+            logger.debug("spotify: /status for the rechain failed: %s", exc)
+            return None
+        body = body or {}
+        return not body.get("stopped") and not body.get("paused") and bool(body.get("track"))
+
     async def _current_position_ms(self, session: aiohttp.ClientSession) -> int | None:
         """Where the track is now, from `/status`. Transport events carry no
         position, and without this the published position stayed at the
