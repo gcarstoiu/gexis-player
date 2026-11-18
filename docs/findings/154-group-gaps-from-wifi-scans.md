@@ -45,6 +45,26 @@ name, address or MAC was printed or kept.
   signal is above -65 dBm, every 30 s below it. sofapi read -58 dBm and
   shelvespi -61 dBm; no such scan was seen in the 100 s watched.
 
+## After the fix (2026-11-18, muted)
+
+George asked for a test without him by the speakers. Both players on the
+fix (shelvespi core git65, sofapi git76), the group muted, a popular
+directory station (128 kbps MP3) on sofapi from 20:42 for 16 minutes:
+
+- **No scan on either player** except the one asked for at 8 minutes;
+  before, one every ~43 s on each.
+- **No Snapcast line at all on either player**: no XRUN, sync timeout,
+  reconnect or dropped chunk; every 30 s both cards were playing.
+- **The positive control did not fail**: the scan asked for on shelvespi,
+  and four more after the test (two with the core's old command), took
+  2.8 s each while its pings to sofapi stayed under 130 ms, nothing lost,
+  nothing in Snapcast's log. At 19:15 the access point had steered
+  shelvespi (*WNM: Preferred List Available*) to another one, on 5220 MHz;
+  the stalls had been on 5580 MHz. **So this test shows the cause gone, not
+  the gaps gone on the link that had them**: on shelvespi's link today a
+  scan costs no audio. Whether it returns to that access point is the
+  network's choice.
+
 ## What this means
 
 - Reading the connected network no longer scans (branch
