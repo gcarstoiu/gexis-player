@@ -249,6 +249,49 @@ find, and contradicts no artist the names found.
    the first lend after the update: a "nothing" is otherwise believed for a
    week, and the id may now find it. Their finds stay.
 
+## Fourth step: lyrics, behind LRCLIB's (2026-11-18)
+
+Phase 32's acceptance 6. [Finding 153](../findings/153-plex-lyrics-are-rationed.md):
+Plexamp's own request works, but the server serves **about five lyrics per
+ten minutes, to whoever asks with its token**, Plexamp included; and LRCLIB
+already has more of them timed on this library. Offered LRCLIB alone, Plex
+behind it, or Plex first, George chose (2026-11-18) **Plex behind LRCLIB:
+asked only where LRCLIB has no lyrics, or none timed**.
+
+**How it is built:**
+
+1. **A provider of its own, `plex-lyrics`, after LRCLIB.** The track by its
+   album - the name, then the artist's id, as the covers are found - and its
+   title; its lyric streams from the track's own record (an album's track
+   list does not carry them); the stream Plexamp would choose (the library's
+   own file first, else a timed one, else the first), asked as Plexamp asks
+   it (`?format=xml&includeInlineAttribution=1`). A timed answer becomes LRC
+   lines; lines without a time (the licensor's credit, at the end) stay in
+   the plain text only.
+2. **Asked only after LRCLIB has answered, and only when that answer leaves
+   something to add**: nothing found, plain words only, or LRCLIB could not
+   be asked. Timed or instrumental from LRCLIB, and Plex is not asked. The
+   enrichment service gains this as a rule of its own: a provider may stand
+   behind another, and is started once that one has finished.
+3. **The lyrics move as one set**: a later provider's replace an earlier
+   one's only when theirs are timed and the earlier are not, so the credit
+   under them is the source of the words shown (*From Plex · LyricFind* for
+   a licensed lyric, *From Plex* for the library's own file).
+4. **Asked only while the panel shows lyrics, and not for a track skipped
+   past**, as Plexamp fetches them only while its lyrics are shown. The
+   panel already tells the core whether its lyrics are on screen
+   (ADR-0101). For a track playing under five seconds the answer is marked
+   not final, and the panel's look-back asks again; when the lyrics come on
+   screen, the panel asks again for the track playing. A player with no
+   panel never asks.
+5. **A refusal is "could not ask", for this provider alone.** A 404 on a
+   stream the track lists is the allowance spent, not "no lyrics": it is not
+   stored, and it backs off `plex-lyrics` (15 minutes), not the covers or
+   the artist. A track that lists no lyric stream is a miss, believed for a
+   week as the others' are.
+6. **The switches that exist**: *Lyrics* (Enrichment) and *Information from
+   Plex* (Sources) both stop it. No new row.
+
 ## Consequences
 
 - No second sign-in and no second Plex device in the account.
