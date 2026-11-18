@@ -127,10 +127,10 @@ the worktree).
 the mocked Settings → Display showed two *Screen port* rows
 (`screen_port`, `screen_port_info`), not yet looked at on a player.
 
-**The players** (2026-11-16): **sofapi** on the preview of `next` at
-b8a76991 (run 43838072189: gexis-core and gexis-player 1.16.4+git33,
-gexis-ui and gexis-system 1.16.4+git31.9fdd26e), installed idle, core
-restarted and up. The other three on the preview branch
+**The players** (2026-11-16): **sofapi** (2026-11-18) on the preview of
+`preview-library-room` at c9059db2 (run 44182678762: gexis-core and
+gexis-player 1.17.0+git49.c9059db, gexis-ui 1.17.0+git42.f471bc6,
+gexis-system 1.17.0+git22.f0bee53), installed idle, core restarted and up. The other three on the preview branch
 `preview-radio-mdns` (deleted 2026-11-16, merged) at 8897a71e (1.16.4 and
 `ph-radio`; gexis-core and gexis-player 1.16.4+git31, go-librespot
 775ba58-4; run 43725073814), installed idle, cores restarted. All four on
@@ -247,9 +247,10 @@ sonic similarity, moods and styles, and ReplayGain all noted and left
 (`docs/DEVELOPMENT.md`). **Third step built** (`ph-library` 744ac0e9, 3,571
 core tests pass): LMS's CLI gives no MusicBrainz id, so after a miss by name
 the core's own artist id finds the artist, and the album by its title
-(Finding 152: +34 of 948 artists, +125 of 4,823 albums on sofapi); its
-preview building from `preview-library-room` c9059db2 (run 44182678762),
-**not installed** - waits for George's go-ahead. **Lyrics (6) found**
+(Finding 152: +34 of 948 artists, +125 of 4,823 albums on sofapi). **On
+sofapi since 2026-11-18** (George's go-ahead; run 44182678762): as built,
+the same 34 artists and 127 album titles gained, 39 old misses forgotten
+once; the sweep not run since. **Lyrics (6) found**
 ([Finding 153](docs/findings/153-plex-lyrics-are-rationed.md)): Plexamp's
 request works, about five per ten minutes for the whole server, and LRCLIB
 has more of them synced; whether to use them put to George. **Owed:** a
