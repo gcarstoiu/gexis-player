@@ -42,17 +42,17 @@ restore's `stop` (no such command; a station stops on `pause`) failed and
 the unmute let the station play aloud 10-15 s. Owed: George's ear in a
 group.
 
-**1.18.0 being prepared for Testing** (George, 2026-11-18: everything):
-`fix-wifi-no-rescan`, `room-both` and `ph-library` merged into `next`
-(clean); `next`'s code is the preview sofapi runs (git76, UI git51) but for
-one comment; 3,591 core tests pass, the UI builds, plugin 122 pass. Notes
-drafted in `~/projects/scratch/release-1.18.0/notes-draft.txt`,
-**approved by George 2026-11-18** (a line for Shairport Sync still to
-approve). Then the usual steps (`docs/tech/updates-and-releases.md` §4),
-gexis-plexamp 0.6.0 (`library` into `main`, tag, GitHub release; archive
-built, 53,669 bytes) and its catalogue entry with `player` 1.18.0, the
-Roadmap's Phase 32 cell (*On Testing (1.18.0)*, shown to George first).
-**George's decisions (2026-11-18):** go-librespot 0.10.7 after 1.18.0, as
+**1.18.0 on Testing** (2026-11-18, George: everything; notes approved,
+the Shairport line too): `v1.18.0` on the notes commit fae4fc9b of `next`;
+release run 44396222512 (`verify-image.sh` all checks passed), signed here,
+**Testing serial 74** read back with a good signature; Stable stays on
+1.17.0. **PR #107 for George** (`release-1.18.0` into `main`); after its
+merge: `main` into `docs` and `next`, the branch deleted, the routine
+clean-up, and `fix-wifi-no-rescan`, `room-both`, `ph-library`,
+`bump-shairport-sync-5.6.3`, `preview-library-room` deleted. Roadmap: Phase
+32 *On Testing (1.18.0)*. Still owed for Phase 32: George seeing Plex's
+lyrics on screen; for room-both: his listening; for Shairport Sync 5.6.3: a
+play from an Apple device. **George's decisions (2026-11-18):** go-librespot 0.10.7 after 1.18.0, as
 1.18.1 from its bot branch (`bump-go-librespot-0.10.7`; 0.10.6 contains
 ADR-0181's commit; its checklist needs his phone). Beszel 0.21.2: tried on sofapi (the agent
 reached its hub at once), released as gexis-beszel `v0.21.2-1`; Plexamp
