@@ -22,9 +22,13 @@ KEY = "_room_correction"
 #: The speakers, as the screens and the store name them.
 CHANNELS = ("L", "R")
 #: **Both speakers together** (George, 2026-11-05): swept at each position
-#: in the run and in the check, as heard; shown, never corrected - the cuts
-#: are each speaker's.
+#: in the run and in the check, as heard. The bass's cuts are designed from
+#: them and go on both speakers (ADR-0175's amendment, George 2026-11-17);
+#: above the bass the corrections are each speaker's.
 BOTH = "both"
+#: A measurement's bass designed for each speaker alone, as before the
+#: amendment: redesigned from its *Both* sweeps when the player starts.
+EACH = "each"
 SWEPT = CHANNELS + (BOTH,)
 #: Where a run measures (George, 2026-11-05: three, over the five first
 #: drawn - the head and 40 cm to either side). A measurement keeps its own
@@ -145,7 +149,9 @@ class Measurement:
     """The last measurement of an output (item 10): when, at how many
     positions, whether its check was done (*Not checked* when skipped), how
     far it was made (`range`: one kept before Phase 30 says nothing, and is
-    the bass's), and each speaker's part."""
+    the bass's), what its bass was designed from (`bass_from`: one kept
+    before ADR-0175's amendment says nothing, and is each speaker's), and
+    each speaker's part."""
     date: str
     checked: bool
     speakers: dict = field(default_factory=dict)     # "L"/"R"/"both" -> Speaker
@@ -153,10 +159,11 @@ class Measurement:
     #: Positions the check found further from the target, as (n, dB).
     worse: tuple[tuple[int, float], ...] = ()
     range: str = FULL
+    bass_from: str = BOTH
 
     def as_dict(self) -> dict:
         return {"date": self.date, "checked": self.checked, "positions": self.positions, "range": self.range,
-                "worse": [list(w) for w in self.worse],
+                "bass_from": self.bass_from, "worse": [list(w) for w in self.worse],
                 "speakers": {k: v.as_dict() for k, v in self.speakers.items()}}
 
     @classmethod
@@ -170,7 +177,8 @@ class Measurement:
         worse = tuple((int(n), float(db)) for n, db in value.get("worse") or [])
         made = value.get("range", BASS)
         return cls(date, bool(value.get("checked", False)), speakers,
-                   int(value.get("positions", POSITIONS)), worse, made if made in REACHES else BASS)
+                   int(value.get("positions", POSITIONS)), worse, made if made in REACHES else BASS,
+                   BOTH if value.get("bass_from") == BOTH else EACH)
 
     def cuts(self, channel: str) -> tuple[tuple[float, float, float], ...]:
         s = self.speakers.get(channel)

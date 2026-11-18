@@ -957,6 +957,11 @@ class Settings:
         self._status[key] = status
         return True
 
+    def reported(self, key: str) -> dict | None:
+        """What a plugin last said its row is (`report`), or None."""
+        found = self._status.get(key)
+        return dict(found) if found else None
+
     def indicate(self, key: str, tone: str | None, text: str | None = None) -> bool:
         """**What a switched-on service is doing, on the heading above its
         rows** (ADR-0129 as amended), keyed by its switch: `ok`, `wait` or `bad` with a word or two - *Connected*.

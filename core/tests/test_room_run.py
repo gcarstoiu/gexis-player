@@ -206,14 +206,20 @@ async def test_each_speaker_alone_then_both_two_sweeps_each():
     await rig.run.wait()
 
 
-async def test_both_together_is_shown_and_never_corrected():
+async def test_the_bass_is_designed_from_both_together_the_same_on_both():
     """George, 2026-11-05: both speakers, as heard - before in the run and
-    after in the check; the cuts stay each speaker's."""
+    after in the check. ADR-0175's amendment (George, 2026-11-17): the bass's
+    cuts are designed from them and go on both speakers; above the bass the
+    corrections stay each speaker's."""
     rig = Rig()
     await rig.measure_all()
-    both = rig.run.pending.speakers[rc.BOTH]
-    assert both.cuts == () and both.above == () and both.after == () and len(both.positions) == rc.POSITIONS
-    assert rig.run._cuts().cuts == (rig.run.pending.cuts("L"), rig.run.pending.cuts("R"))
+    m = rig.run.pending
+    both = m.speakers[rc.BOTH]
+    assert both.cuts and both.above == () and len(both.after) == len(both.before)
+    assert len(both.positions) == rc.POSITIONS and m.bass_from == rc.BOTH
+    assert m.cuts("L") == m.cuts("R") == both.cuts
+    assert rig.run._cuts().cuts == (both.cuts, both.cuts)
+    assert m.speakers["L"].before != m.speakers["R"].before, "each speaker's own curves are kept"
     rig.run.tap("check")
     for n in range(1, rc.POSITIONS + 1):
         await rig.until("move", n, checking=True)

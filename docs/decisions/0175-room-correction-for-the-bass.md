@@ -6,7 +6,13 @@
 **Builds on:** [ADR-0162](0162-a-simple-equaliser.md) (the equaliser's filter
 stage) and [Finding 124](../findings/124-room-correction-what-open-source-offers.md)
 (what open source offers, the microphones). **Followed by:** Phase 30
-(`ph-room-correction-full`).
+(`ph-room-correction-full`). **Seen 2026-11-17**
+([Finding 151](../findings/151-room-correction-thins-the-voice-range.md)):
+designed for each speaker alone, sofapi's cuts took 5.5-10 dB from what is
+heard together at 80-190 Hz - the left's peak cut, the right's dip left -
+and George heard the sound thin. **Amended 2026-11-17** (George): the
+bass cuts designed from both speakers together, the same on both (below);
+to build.
 
 ## Context
 
@@ -331,6 +337,83 @@ On `ph-room-correction`, 2026-11-05; what differs from the proposal above:
 - The clocks' drift, read from a recording (4).
 - The level step never above the maximum level, on Hardware, Software and
   Fixed.
+
+## Amendment, 2026-11-17: the bass designed from both speakers together
+
+**Why** ([Finding 151](../findings/151-room-correction-thins-the-voice-range.md)):
+on sofapi the left speaker peaks and the right dips at 80-190 Hz, up to
+21 dB apart. Each cut alone, the left's peak went and the right's dip
+stayed, so what is heard together ended about 5 dB under the target there,
+5.5-10 dB less than before; George heard it thin.
+
+**What the practice is** (desk research, 2026-11-17):
+- **Welti and Devantier** (Harman; JAES 54(5), 2006, pp. 347-364;
+  introduction, section 3 and conclusion read):
+  - The methods for the bass "assume a single audio channel as a source" for
+    every source, and correct what they make together ("global
+    equalization").
+  - Each channel corrected on its own "might work for decorrelated
+    signals", but correlated bass, "much more prevalent", then leaves
+    "cancellation dips".
+  - The listening tests they review: below 80 Hz, a single bass channel
+    against two is "subtle at best" with music, and not heard at all in
+    most popular music, whose bass is mostly mono.
+- **REW's help** (*Making Measurements*): some resonances strong with one
+  speaker alone do not appear with the pair playing together and "can
+  often be left uncorrected"; it advises comparing the two.
+- **Dirac's Bass Control** (its filter-design help): the low frequencies
+  are "highly correlated between speakers". The target is split into a low
+  part common to the system and a higher part for each group of speakers.
+- **Per speaker elsewhere:** the home-cinema systems (Audyssey, Dirac,
+  Anthem) design per channel, as Phase 29 did, but usually with a
+  subwoofer playing the bass below about 80 Hz from one signal. The
+  open-source designer *roomeq* (autoeq 0.4.44's documentation) also
+  designs left and right alone, and jointly only for subwoofers.
+
+**Decided** (George, 2026-11-17): (a), over (b) per-speaker cuts kept from
+taking the sum below the target (it needs timing the store does not keep)
+and (c) a 150 Hz limit (it leaves 80-150 Hz).
+
+**How (Claude):**
+1. **The design** (item 6) runs once, on the power average of the *Both*
+   sweeps (item 4), with the same target, limit, cuts and positions'
+   criterion. Its level comes from the *Both* curve's own line at 250 Hz,
+   as a speaker's comes from its own (ADR-0177).
+2. **The same cuts on both speakers**, in each speaker's `Filter` step as
+   built. With the same filters on both, what is heard together changes
+   exactly as designed.
+3. **Above the bass** (*Full range*, ADR-0177), each speaker keeps its own
+   broad corrections: the bass common, the rest each speaker's.
+4. **The check** measures as before: each speaker alone and both. A
+   position is named worse on what the bass's cuts were designed from -
+   both together - and on its own speaker for the broad corrections. The
+   *Both* tab lists the shared cuts, and each speaker's tab shows its own
+   before and after under them.
+5. **Words:** the manual's room-correction steps (the correction is no
+   longer each speaker's in the bass) and the technical guide's audio path
+   (*Both* is designed from).
+6. **A measurement kept from before** (George, 2026-11-17, (a) over keeping
+   its cuts until measured again): designed again from its own *Both*
+   curves and the targets it keeps, once, when the core starts, its after
+   then expected and marked *Not checked*; above the bass each speaker's
+   broad corrections again with the shared cuts in place (a full-range one
+   only). Stored with `bass_from: both`; one without *Both* curves (from
+   before they were swept) is kept as it is. On sofapi's measurement of
+   2026-11-10 (offline, its stored copy): six cuts, both together within
+   about 1 dB of its target in every band from 30 to 250 Hz.
+
+**Owed:** the size of the bass rise (decision 1), judged by ear on the
+preview: the target sits within 0.8 dB of Harman's in-room
+baseline below 250 Hz, which falls about 1 dB per octave
+([Olive, Acoustics Today 2022](https://acousticstoday.org/issues/2022AT/Spring2022/files/basic-html/page60.html)).
+Listeners' own choice of bass varies widely, and the equaliser is there
+for taste.
+
+Sources:
+- [Welti and Devantier, 2006](https://audioroundtable.com/misc/Welti_Multisub.pdf)
+- [REW, Making Measurements](https://www.roomeqwizard.com/help/help_en-GB/html/makingmeasurements.html)
+- [Dirac Bass Control, filter design](https://helpdesk.dirac.com/en/dirac-bass-control/Filter-Design-c592)
+- [autoeq 0.4.44, roomeq explained](https://docs.rs/crate/autoeq/0.4.44/source/docs/roomeq_explained.md)
 
 ## Not in this phase
 

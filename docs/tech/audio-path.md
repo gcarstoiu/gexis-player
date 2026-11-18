@@ -172,7 +172,7 @@ Notes per renderer:
   the device by killing its unit rather than waiting (ADR-0091); a new play
   queue counts as an acquisition (ADR-0092). It is claimed from Settings
   (ADR-0119).
-- **AirPlay** (ADR-0167): Shairport Sync 5.6.2 and NQPTP 1.2.9, built by
+- **AirPlay** (ADR-0167): Shairport Sync 5.6.3 and NQPTP 1.2.9, built by
   us for AirPlay 2 (`packaging/shairport-sync`, `packaging/nqptp`; Debian
   trixie's is classic AirPlay only), run as `gexis-airplay` with its plugin, with
   `output_device = "output"` and `ignore_volume_control`: the sender's
@@ -816,23 +816,28 @@ hw:Loopback,1,0 → CamillaDSP (headroom fader, ten bands, then fourteen filters
   from 15 Hz to 20 kHz (`room_dsp.py`, numpy). Two sweeps per speaker and position that differ by
   more than 1.5 dB below 250 Hz are repeated, up to six. After each speaker
   alone, **both together** (George, 2026-11-05), 6 dB lower each so the two
-  adding in the bass are no louder than one: shown as heard (`both` in the
-  chart, `room_dsp.as_heard`), before in the run and after in the check,
-  never designed from - the corrections are each speaker's.
+  adding in the bass are no louder than one: before in the run and after
+  in the check (`both` in the chart). **The bass is designed from them**
+  (ADR-0175's amendment, George, 2026-11-17; Finding 151): the cuts go on
+  both speakers alike; above the bass the corrections stay each speaker's.
 - **The target** (ADR-0177 items 2-3): above 250 Hz the speaker's own
   slope, a straight line on a log axis fitted to the three positions' power
   average at 1/3 octave from 300 Hz to 10 kHz; below it +3 dB below about
   80 Hz on the line's level at 250 Hz, so the two meet. A measurement made
   before Phase 30 keeps the level it took from its own average an octave
   above 250 Hz.
-- **The bass's cuts** (`room_dsp.design`): the three positions' power
-  average (the head and 40 cm to either side; a measurement keeps its own
-  number); a cut fitted to each peak above the target in turn (up to eight,
+- **The bass's cuts** (`room_dsp.together`, given to each speaker's
+  `room_dsp.design`): the power average of the three positions with both
+  speakers playing (the head and 40 cm to either side; a measurement keeps
+  its own number); a cut fitted to each peak above the target in turn (up to eight,
   12 dB at most, Q 1 to 15, 20-250 Hz), then all fitted together by damped
   least squares with dips and everything above 250 Hz left as they are; a
   cut that leaves more than half the positions more than 1 dB further from
   the target is made smaller (George, 2026-11-05: one position in a dip of
-  its own held sofapi's main peak to a 1 dB cut).
+  its own held sofapi's main peak to a 1 dB cut). A measurement kept from
+  before the amendment (no `bass_from` in the store) is designed again from
+  its own *Both* curves and targets when the core starts, its after then
+  expected (*Not checked*); one without *Both* curves is kept as it is.
 - **The broad corrections above the bass** (`room_dsp._broad`, ADR-0177
   item 4): none when the average at 1/3 octave is within 1.5 dB of the line
   from 300 Hz to 14 kHz; else up to six, from 250 Hz to 14 kHz, each and all
@@ -849,12 +854,13 @@ hw:Loopback,1,0 → CamillaDSP (headroom fader, ten bands, then fourteen filters
   taken while a run measures (the response is the recording over what was
   played, so its level is the room's). What *Bass* gives is the measured
   after with the broad corrections' response taken out (`after_bass`). A
-  position more than 1 dB further from the target at any cut's or broad
-  correction's frequency (above the bass read at 1/3 octave) is named.
+  position more than 1 dB further from the target at any cut's frequency
+  with both speakers playing, or at a broad correction's with its own
+  speaker (read at 1/3 octave), is named.
 
 The state is kept in the settings database (`_room_correction`): for each
 output `on`, `without`, `reach` (`bass` or `full`) and the last measurement
-(its `range`, its cuts and broad corrections, its curves to a hundredth of a
+(its `range`, `bass_from` - `both` - its cuts and broad corrections, its curves to a hundredth of a
 decibel); and each microphone's calibration by its serial, the last given in
 use - the whole file; one kept to 2 kHz before Phase 30 is asked for again
 (`calibration.again`). A measurement from before Phase 30 has no `range`: it
