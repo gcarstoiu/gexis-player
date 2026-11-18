@@ -1,7 +1,9 @@
 # ADR-0183 — Spotify keeps playing on the lead through a group change
 
-**Status:** **Proposed** 2026-11-15. George, the same day: Spotify should
-normally keep playing on the lead when the group changes.
+**Status:** **Accepted** 2026-11-18 (George: keep Spotify playing), as
+recommended: **A**, pause, rewrite, resume. Proposed 2026-11-15; George, the
+same day: Spotify should normally keep playing on the lead when the group
+changes.
 **Amends:** [ADR-0166](0166-multiroom-for-every-source.md) B2 for
 go-librespot. **Relates to:** Finding 014 (`/player/resume` without
 Spotify's handshake), LESSONS 21, 81 and 84.
