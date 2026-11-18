@@ -717,7 +717,10 @@ Settings' Wi-Fi row is a `list` row (ADR-0044) backed by `wifi.py`, through
 - `POST /settings/wifi/items` with `join` (optional password) or `forget`.
   A refused password is a 200 with the reason, so the sheet can offer a retry.
 - The connected SSID is refreshed in the background every 20 s; it was once
-  read on the request path and blocked the daemon for seconds.
+  read on the request path and blocked the daemon for seconds. It is read
+  with `--rescan no`: only the Wi-Fi sheet scans. nmcli's default rescanned
+  every other read, and each scan took the radio off its channel for ~3 s,
+  a gap in a group's audio (Finding 154).
 - Nothing changes the connection the daemon is reached over without an explicit
   per-item action. A device that loses its network opens the setup network
   after two minutes and goes back to its saved one when it returns (§3,
