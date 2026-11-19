@@ -1,7 +1,8 @@
 # ADR-0186 — Room correction's chart: *Both* in the bass only, the shading the corrections'
 
-**Status:** **Proposed** 2026-11-19: George decided D1-D2 after looking at
-his full-range check on sofapi; C1-C2 are Claude's, for approval.
+**Status:** **Accepted** 2026-11-19 (George approved C1-C2); proposed the
+same day: George decided D1-D2 after looking at his full-range check on
+sofapi; C1-C2 are Claude's. Built on `room-chart`.
 **Amends:** [ADR-0177](0177-room-correction-for-the-full-range.md) (the
 chart, the design's §2) and
 [ADR-0175](0175-room-correction-for-the-bass.md)'s amendment of 2026-11-17,
@@ -47,7 +48,7 @@ own figures nor *Both*):
   so *Cut* and *Raised* always mean what the player changes. Over: as it
   was.
 
-## Claude's choices (for approval)
+## Claude's choices (approved 2026-11-19)
 
 - **C1 — The corrected curve from the core.** The chart in
   `GET /room-correction` gives each speaker `corrected`, before with every
