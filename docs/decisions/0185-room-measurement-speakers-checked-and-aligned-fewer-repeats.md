@@ -110,3 +110,26 @@ before the corrections are kept.
 - Not covered: the actual distance to each speaker (it would need a timing
   reference the player does not have, or the user typing it in), and a
   difference in level between the speakers.
+
+## As built (2026-11-19, `room-checks`)
+
+Settled while building, in the made-up room of the tests (`room_sim`) -
+not yet on a player:
+- **A timing reading counts only when it repeats** (C1): two within 1 cm
+  and on the same polarity, up to six readings; else nothing is said and
+  nothing delayed. A reading also needs each arrival 20 dB over the rest of
+  its slot and the left heard twice to match (0.8): in a room as loud as
+  the sweeps, readings that were noise had stopped the run for a polarity.
+  The short sweeps stand much noise - read at -10 dB, given up at 0.
+- **The noise a sweep is judged by** (C3) is the quiet room's, put through
+  the sweep's own deconvolution, window and smoothing
+  (`room_dsp.noise_curve`). Read on the raw recording instead, it came out
+  about 10 dB too low - the window keeps a second of a longer recording -
+  and would have left real peaks uncorrected. Judged per sweep from the
+  answer's own tail instead, a disturbance could lower its own judgement.
+- **A delay is a correction**: a measurement with only a speaker to delay
+  is not *Nothing to correct*. At most 15 ms (what the timing can find).
+- In the made-up room, at a noise where comparing everywhere took 11
+  sweeps at position 1 for its 6, none is repeated, and the noisiest points
+  are left uncorrected.
+
