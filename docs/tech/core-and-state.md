@@ -1061,6 +1061,9 @@ phone only.
   the chain and would restart whoever holds it - a paused source, or one
   taking over meanwhile. Lyrion on the leader's own chain (one Lyrion
   server) is not restarted by it, so that leader goes alone at once.
+  That chain is not a group: a room measurement is refused only in one
+  (`Multiroom.grouped`), and once it has stopped the source it takes the
+  player's own chain at once (`alone_now`).
   **Spotify on the leader** (ADR-0183, `rechain.keep_spotify_playing`) is
   paused through its API, which closes its device; the others stop, the
   chain is written, they restart, and Spotify resumes, reading the new
