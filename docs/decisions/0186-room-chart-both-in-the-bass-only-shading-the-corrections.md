@@ -2,7 +2,8 @@
 
 **Status:** **Accepted** 2026-11-19 (George approved C1-C2); proposed the
 same day: George decided D1-D2 after looking at his full-range check on
-sofapi; C1-C2 are Claude's. Built on `room-chart`.
+sofapi; C1-C2 are Claude's. Built on `room-chart`. **Amended** the same
+day: D1 replaced by D3, *Both* in full (George); C3-C4 for approval.
 **Amends:** [ADR-0177](0177-room-correction-for-the-full-range.md) (the
 chart, the design's §2) and
 [ADR-0175](0175-room-correction-for-the-bass.md)'s amendment of 2026-11-17,
@@ -39,7 +40,8 @@ own figures nor *Both*):
 
 ## Decisions (George, 2026-11-19)
 
-- **D1 — *Both* in the bass only.** Above 250 Hz its pane is hatched, as
+- **D1 — *Both* in the bass only** *(replaced by D3, below, the same
+  day)*. Above 250 Hz its pane is hatched, as
   with *Bass* chosen, with a line saying each speaker is corrected on its
   own there, on their tabs. Over: *Both*'s before alone above the bass; as
   it was, with a note.
@@ -68,3 +70,37 @@ own figures nor *Both*):
   pages.
 - Not covered: keeping each check position's own curve, which would show
   where the microphone stood differently.
+
+## Amended 2026-11-19 (George): *Both* in full
+
+George, the same day, after D1 was built: the two speakers together are
+what is heard, so *Both* shows its measurement and correction over the whole
+range. D1 is replaced:
+
+- **D3 — *Both* in full; each speaker still corrected on its own above the
+  bass.** *Both*'s tab draws the whole range again: before, the shading of
+  what the two speakers' corrections do together, the after. The corrections
+  above the bass stay each speaker's (ADR-0175's amendment, item 3). Over:
+  designing them from *Both*, the same on both speakers - above about 1 kHz
+  the two together change with a centimetre of the microphone's place (in
+  George's run 2.7-3.2 dB at 5-5.6 kHz between the measurement and the
+  check, each speaker alone 1.2 dB at most), so a correction fitted to them
+  would follow the microphone rather than the listener.
+
+Claude's choices (for approval):
+
+- **C3 — *Both* with the corrections, above the bass, is an estimate.**
+  Before together with the bass's cuts, and the two speakers' broad
+  corrections combined as power, each weighted by that speaker's own before
+  (each on its own target's level - near enough the same for two speakers
+  on one amplifier). How the two add at a point depends on their phase,
+  which the kept curves do not hold; over the positions' average it comes
+  close to adding their power. Exact where the two corrections are the same,
+  as the bass's cuts are; `corrected_bass` stays exact. On George's run the
+  check lay 1.3 dB from it, root mean square, from 300 Hz to 14 kHz (3.2 dB
+  at most, at 5.6 kHz), and 0.4 dB in the bass.
+- **C4 — No mark of its own.** *Both*'s shading and expected after are drawn
+  as the speakers' are; with the check skipped its expected after is this
+  curve (C2) instead of before with the cuts alone. The manual says that
+  above the bass it is an estimate, and why the check can stray from it
+  there.
