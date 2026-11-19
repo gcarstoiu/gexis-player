@@ -4,14 +4,19 @@
   one log axis from 15 Hz to 20 kHz, broken at 250 Hz into two panes, each as
   wide as its share of the axis. The bass on ±15 dB about the target's level,
   or wider in 5 dB steps when a curve goes past it (`span`, `chartSpan`);
-  above it ±5 dB. Drawn in this order: what the cuts take away and what is
-  raised, each position, the target (dotted, the bass's rise joined to the
-  speaker's own slope), before (the positions' average) and after - measured
-  solid, expected dashed. The lines differ by weight and dash as well as
-  colour, so it reads without colour.
+  above it ±5 dB. Drawn in this order: what the corrections cut and raise,
+  each position, the target (dotted, the bass's rise joined to the speaker's
+  own slope), before (the positions' average) and after - measured solid,
+  expected dashed. The lines differ by weight and dash as well as colour, so
+  it reads without colour. **The shading is the corrections'** (George,
+  2026-11-19, ADR-0186 D2): before against before with them, whatever the
+  check measured - the after is a line of its own.
 
   With *Bass* chosen the upper pane is hatched and after stops at 250 Hz; a
-  measurement from before Phase 30 has no curves above it.
+  measurement from before Phase 30 has no curves above it, and nor has
+  **`both`, the two speakers together** (ADR-0186 D1): above the bass each
+  is corrected on its own, and the two meeting at the microphone move with
+  its place.
 
   `surface`: the phone's card (the legend under it), the panel's (fills), the
   bar's (fills, no legend). **On the phone the panes are one under the other,
@@ -25,7 +30,7 @@
   //: only); `span`: the bass pane's reach, ± dB, the same for both speakers;
   //: `reach`: 'bass' or 'full'; `range`: how far the measurement was made.
   let { surface = 'phone', freqs = [], speaker = null, kind = 'measured', span = 15, reach = 'full',
-    range = 'full', legend = surface !== 'bar' } = $props();
+    range = 'full', both = false, legend = surface !== 'bar' } = $props();
 
   const big = $derived(surface !== 'phone');
   const stacked = $derived(surface === 'phone');
@@ -40,15 +45,22 @@
   let heights = $state([160, 160]);
 
   const bassOnly = $derived(range !== 'full');
-  const shut = $derived(bassOnly || reach === 'bass');
+  const shut = $derived(bassOnly || reach === 'bass' || both);
   //: Both speakers have no after until the check measures them.
   const afterCurve = $derived(!kind || !speaker ? null
     : reach === 'bass' || bassOnly ? (speaker.after_bass?.length ? speaker.after_bass : speaker.after) : speaker.after);
   const after = $derived(afterCurve?.length ? afterCurve : null);
   const shown = $derived(after ? kind : '');
-  //: How far each curve goes: a bass-only measurement to 250 Hz, after under
-  //: *Bass* too (just past it, so the line meets the pane's edge).
-  const curvesTo = $derived(bassOnly ? LIMIT * 1.008 : Infinity);
+  //: Before with the corrections - the cuts alone under *Bass* - for the
+  //: shading, wherever a correction is shown (a core from before ADR-0186:
+  //: the after, as it was).
+  const correctedCurve = $derived(!kind || !speaker ? null
+    : (reach === 'bass' || bassOnly ? speaker.corrected_bass : speaker.corrected) ?? afterCurve);
+  const corrected = $derived(correctedCurve?.length ? correctedCurve : null);
+  //: How far each curve goes: a bass-only measurement to 250 Hz, and both
+  //: speakers together; after under *Bass* too (just past it, so the line
+  //: meets the pane's edge).
+  const curvesTo = $derived(bassOnly || both ? LIMIT * 1.008 : Infinity);
   const afterTo = $derived(shut ? LIMIT * 1.05 : Infinity);
 
   const panes = $derived.by(() => {
@@ -84,8 +96,8 @@
     const h = heights[i] || 1;
     const line = (c, upto = curvesTo) => (c?.length ? path(freqs, c, p, w, h, upto) : '');
     return {
-      cut: after ? fill(freqs, speaker.before, after, p, w, h, Math.min(curvesTo, afterTo)) : '',
-      raise: after ? fill(freqs, after, speaker.before, p, w, h, Math.min(curvesTo, afterTo)) : '',
+      cut: corrected ? fill(freqs, speaker.before, corrected, p, w, h, Math.min(curvesTo, afterTo)) : '',
+      raise: corrected ? fill(freqs, corrected, speaker.before, p, w, h, Math.min(curvesTo, afterTo)) : '',
       pos: (speaker.positions ?? []).map((c) => line(c)).join(''),
       target: line(speaker.target),
       before: line(speaker.before),
@@ -93,8 +105,9 @@
     };
   }
   const d = $derived(panes.map((p, i) => drawn(p, i)));
-  //: *Raised* in the legend only while something is.
-  const raised = $derived(!!d[1]?.raise);
+  //: *Cut* and *Raised* in the legend only while something is.
+  const cutShown = $derived(!!(d[0]?.cut || d[1]?.cut));
+  const raised = $derived(!!(d[0]?.raise || d[1]?.raise));
   const count = $derived(countWord(speaker?.positions?.length ?? 0));
 </script>
 
@@ -141,7 +154,8 @@
             </svg>
           {/if}
           {#if p.key === 'above' && shut && p.w > 96}
-            <div class="note"><span>{bassOnly ? 'Measured to 250 Hz only' : 'Left alone: Bass is chosen'}</span></div>
+            <div class="note"><span>{bassOnly ? 'Measured to 250 Hz only' : reach === 'bass' ? 'Left alone: Bass is chosen'
+              : 'Each speaker on its own: see Left and Right'}</span></div>
           {/if}
         </div>
         <div class="xrow" style="height:{Z.lab}px">
@@ -160,8 +174,8 @@
       <span class="key">{@render sample('target')}Target</span>
       {#if shown === 'measured'}<span class="key">{@render sample('after')}After, measured</span>{/if}
       {#if shown === 'expected'}<span class="key">{@render sample('after')}After, expected</span>{/if}
-      {#if shown}<span class="key">{@render sample('cut')}Cut</span>{/if}
-      {#if shown && raised}<span class="key">{@render sample('raise')}Raised</span>{/if}
+      {#if cutShown}<span class="key">{@render sample('cut')}Cut</span>{/if}
+      {#if raised}<span class="key">{@render sample('raise')}Raised</span>{/if}
     </div>
   {/if}
 </div>

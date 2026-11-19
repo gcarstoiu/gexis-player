@@ -460,7 +460,7 @@
               <div class="chartcard__line">{resultPair[1]}</div>
             </div>
           {/if}
-          <RoomChart surface="phone" {freqs} {speaker} {span}
+          <RoomChart surface="phone" {freqs} {speaker} {span} both={ch === BOTH}
                      kind={screenName === 'nothing' ? '' : screenName === 'result' && !run?.expected ? 'measured' : 'expected'} />
         </div>
       {/if}

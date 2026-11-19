@@ -1098,11 +1098,14 @@ On its page:
   and above it on a closer scale (±5 dB) - side by side on the panel and the
   bars, one under the other on the phone. Before, each position, the target
   (dotted: the bass rise joined to the speaker's own slope) and after -
-  measured, or dashed and *expected* when the check was skipped; what is cut
-  and what is raised are shaded. With *Bass* chosen, above 250 Hz is left
-  alone. **Both** shows the two speakers together, as you hear them: never
-  corrected themselves, and their after only once the check has measured
-  it.
+  measured, or dashed and *expected* when the check was skipped. The shading
+  is what the correction cuts and raises; where the measured after strays
+  from it, that is the room and the microphone's place, not the correction.
+  With *Bass* chosen, above 250 Hz is left alone. **Both** shows the two
+  speakers together in the bass, as you hear them - their cuts are worked
+  out from the two together - and their after once the check has measured
+  it. Above the bass each speaker is corrected on its own, on its own tab:
+  there the two together change with the microphone's exact place.
 - **The corrections**, on the panel's page: in the bass, narrow cuts; above
   it, broad, up or down.
 - **Measure again** replaces the measurement once the new one is kept.
