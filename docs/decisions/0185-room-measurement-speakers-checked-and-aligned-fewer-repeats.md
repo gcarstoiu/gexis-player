@@ -1,7 +1,8 @@
 # ADR-0185 — Room measurement: the speakers checked and aligned, fewer repeats
 
-**Status:** **Proposed** 2026-11-19. George decided D1-D3 the same day, after
-his full-range run on sofapi; C1-C4 are Claude's, for his approval.
+**Status:** **Accepted** 2026-11-19 (George approved C1-C4). Proposed the
+same day; George decided D1-D3 after his full-range run on sofapi; C1-C4 are
+Claude's. D4 built on `fix-room-screens`, for 1.18.1 (George, 2026-11-19).
 **Amends:** [ADR-0175](0175-room-correction-for-the-bass.md) (the run) and
 [ADR-0177](0177-room-correction-for-the-full-range.md) (its check and
 chart). **Relates to:** ADR-0166 D7 (the delay after a member's client).
@@ -62,7 +63,7 @@ before the corrections are kept.
   when one is repeated; on the phone the two charts one under the other, each
   the full width. The panel and the bar keep the row.
 
-## Claude's choices (for approval)
+## Claude's choices (approved 2026-11-19)
 
 - **C1 — How the distance is measured.** One recording, so one playback and
   one capture and no start-up jitter between them (`Audio.play` starts
