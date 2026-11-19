@@ -244,6 +244,20 @@ export function correctionTail(list, speaker) {
 /** *3 November 2026 · three positions · full range* (the design's 1a). */
 export const rangeWord = (range) => (range === 'full' ? 'full range' : 'bass only');
 
+/** **The speakers' timing** (ADR-0185 D2), in a sentence: `distance` is how
+ *  much further the right speaker is than the left (cm; null: not timed),
+ *  `delay` each speaker's (ms, or none yet). Null when there is nothing to
+ *  say. */
+export function alignedLine(distance, delay) {
+  if (distance == null) return null;
+  const cm = Math.round(Math.abs(distance));
+  if (cm < 1) return 'Both speakers are the same distance from your seat.';
+  const [further, nearer] = distance > 0 ? ['right', 'left'] : ['left', 'right'];
+  //: The delay as kept, or (while measuring) as the distance makes it.
+  const ms = delay ? Math.max(...delay) : Math.abs(distance) / 34.3;
+  return `The ${further} speaker is ${cm} cm further away, so the ${nearer} one plays ${ms.toFixed(ms < 1 ? 2 : 1)} ms later and both reach your seat together.`;
+}
+
 // ---- the chart (the design's §2: one axis split at 250 Hz) ---------------------------
 
 export const FMIN = 15;

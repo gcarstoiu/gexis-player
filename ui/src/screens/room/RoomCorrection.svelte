@@ -13,7 +13,7 @@
 <script>
   import { encode } from 'uqr';
   import { onDestroy } from 'svelte';
-  import { BOTH, capitalised, chartSpan, correctionGroups, correctionsWho, countWord, cutFreq, cutGain, cutRows,
+  import { alignedLine, BOTH, capitalised, chartSpan, correctionGroups, correctionsWho, countWord, cutFreq, cutGain, cutRows,
     outputPhrase, outputShort, rangeWord, resultWords, room, RoomReader, setRoom, sideName, sides } from '../../lib/room.svelte.js';
   import { screen } from '../../lib/family.svelte.js';
   import RoomChart from './RoomChart.svelte';
@@ -116,6 +116,8 @@
   const resultLine = $derived(words[1]);
   const span = $derived(chartSpan(chart));
   const positionsWord = $derived(countWord(measured?.positions ?? 0));
+  //: ADR-0185: the speakers' timing, when the measurement has it.
+  const alignedText = $derived(alignedLine(measured?.distance_cm, measured?.delay_ms));
   const abSub = $derived(!on ? 'Only while room correction is on.'
     : ab ? 'Now without: no correction at all. Switch back to hear it.'
       : 'Compare: no correction at all, heard at once. Stays where you put it.');
@@ -266,6 +268,7 @@
             <div class="power__text">
               <div class="power__title">Measured</div>
               <div class="power__note">{measured?.year} · {positionsWord} positions · {rangeWord(range)}</div>
+              {#if alignedText}<div class="power__note">{alignedText}</div>{/if}
             </div>
             {#if notChecked}<span class="flag">Not checked</span>{/if}
           </div>

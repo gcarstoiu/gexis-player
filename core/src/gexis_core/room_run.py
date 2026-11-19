@@ -9,11 +9,17 @@ it is (the design's R18), and the panel shows that it is running. The steps:
    waiting for *Start*;
 2. *level* - the quiet room listened to, then soft noise, louder in steps
    until the seat hears about 60 dB, never above the output's maximum level;
-3. *measure* - each speaker alone, then both together (George,
+3. *timing* - short sweeps from each speaker in one recording: how much
+   nearer one is, and whether one has + and - swapped (ADR-0185 D2, C1),
+   which stops the run; the nearer is delayed from here on, so both arrive
+   together; more than `FAR_S` apart, *far* waits for *Measure anyway*;
+   then *measure* - each speaker alone, then both together (George,
    2026-11-05: as heard, shown and never corrected), two sweeps that agree
    each, at position 1;
    then *move* (waiting for *Measure here*), a 3-second *countdown*, and
-   *measure* again, to the last position;
+   *measure* again, to the last position - at position 2 *timing* again
+   first: 40 cm to the left the left speaker must be nearer than at 1, or
+   the speakers are swapped and the run stops (ADR-0185 D1);
 4. *correction* (or *nothing* to cut) - waiting for *Check it*;
 5. the check: *move*, *countdown* and *checking* at each position with the
    correction on - *Skip* on every one;
@@ -32,6 +38,7 @@ from __future__ import annotations
 import asyncio
 import datetime
 import logging
+import math
 from dataclasses import dataclass, replace
 from typing import Awaitable, Callable
 
@@ -52,8 +59,9 @@ AIM_DB = 60.0
 AIM_WITHIN = 1.5
 TAKE_MIN = 45.0
 TAKE_ABOVE_NOISE = 15.0
-#: How long the quiet room is listened to first.
-NOISE_S = 1.5
+#: How long the quiet room is listened to first: 3 s (ADR-0185 C3, from
+#: 1.5), its noise kept to judge every sweep by.
+NOISE_S = 3.0
 #: The level step: from this, in these steps - the signal's part; the volume
 #: is at the output's maximum (`host.loud`). The noise goes no higher than
 #: its cap, where its peaks come near full scale; the sweeps further, set
@@ -83,6 +91,17 @@ LEVEL_UNHEARD_STEPS = 4
 #: two that agree best are taken.
 SWEEPS = 2
 MAX_SWEEPS = 6
+#: **ADR-0185**: the two timings taken agree within this (1 cm, C1); more
+#: than `FAR_S` (1 ms, 34 cm) apart the screen says a speaker or the seat
+#: looks out of place (C2); at position 2 the left must be heard at least
+#: `SIDES_S` (10 cm) nearer than at 1, or - that much the other way - the
+#: speakers are swapped (D1). 40 cm to the side moves the difference by
+#: about 2 x 40 cm x sin(half the angle between the speakers): 40 cm at
+#: ±30°, 21 cm at ±15°, so 10 cm is under half the least.
+TIMING_AGREE_S = 0.01 / 343.0
+FAR_S = 0.001
+SIDES_S = 0.10 / 343.0
+TIMING_TAIL_S = 0.3
 
 
 class Cancelled(Exception):
@@ -96,7 +115,7 @@ class _Skipped(Exception):
 @dataclass(frozen=True)
 class RunState:
     """What every screen shows of a run (the design's *State*)."""
-    step: str                       # place level measure move countdown correction nothing checking result
+    step: str                       # place level timing far measure move countdown correction nothing checking result
     position: int = 1               # 1 to rc.POSITIONS
     speaker: str | None = None      # "L" / "R" / "both" while one plays
     sweep: int = 0                  # 1-2 while one plays
@@ -110,6 +129,9 @@ class RunState:
     expected: bool = False          # the result is expected, the check skipped
     too_quiet: bool = False         # the level step could not reach the aim
     resumed_from: str | None = None
+    #: ADR-0185: how much further the right speaker is than the left (cm,
+    #: negative: the left is further), once timed at position 1.
+    distance_cm: float | None = None
 
     def as_dict(self) -> dict:
         return {"step": self.step, "position": self.position, "speaker": self.speaker, "sweep": self.sweep,
@@ -117,7 +139,9 @@ class RunState:
                 "aim_db": None if self.aim_db is None else round(self.aim_db),
                 "count": self.count, "checking": self.checking, "progress": round(self.progress, 3),
                 "done": list(self.done), "expected": self.expected, "too_quiet": self.too_quiet,
-                "positions": rc.POSITIONS}
+                "positions": rc.POSITIONS,
+                "distance_cm": None if self.distance_cm is None else round(self.distance_cm, 1),
+                "far_cm": round(FAR_S * 343.0 * 100)}
 
 
 def _screen(state: RunState) -> tuple:
@@ -202,6 +226,15 @@ class Run:
         #: highest point (ADR-0177 item 7) - the stage takes no headroom for
         #: them while a run measures, so the run's level stays the run's.
         self._check_db = 0.0
+        #: ADR-0185 C3: the quiet room's noise per grid point (`band_power`),
+        #: and each position's averaged signal over it, by speaker.
+        self._noise = None
+        self._noise_curves: dict = {}     # by (recording's length, sweep's amplitude)
+        self._snrs: dict[str, list] = {c: [] for c in rc.SWEPT}
+        #: ADR-0185 C1-C2: position 1's timing, and the delay on each channel
+        #: (ms) that brings both speakers' sound to the seat together.
+        self._timing = None
+        self._delay = (0.0, 0.0)
         self._waiting = False
         self._prep: asyncio.Future | None = None
         self._finishing = False
@@ -265,6 +298,8 @@ class Run:
     def _set(self, state: RunState) -> None:
         if state.aim_db is None and self._aim is not None:
             state = replace(state, aim_db=self._aim)
+        if state.distance_cm is None and self._timing is not None:
+            state = replace(state, distance_cm=self._timing.cm)
         if _screen(state) != _screen(self.state):
             self._shown += 1
         self.state = state
@@ -311,9 +346,12 @@ class Run:
         while not await self._level():
             self._set(replace(self.state, step="level", too_quiet=True))
             await self._wait("again")
+        await self._align()
         for n in range(1, rc.POSITIONS + 1):
             if n > 1:
                 await self._move(n, checking=False)
+            if n == 2:
+                await self._sides()
             await self._measure(n, checking=False)
         self._design()
         all_done = tuple(range(1, rc.POSITIONS + 1))
@@ -390,6 +428,7 @@ class Run:
         quiet = await self._audio.play(np.zeros(int(NOISE_S * dsp.FS)), channel=None, tail_s=LEVEL_TAIL_S)
         lo, hi = (int(t * dsp.FS) for t in LEVEL_WINDOW_S)
         room_noise = self._spl(quiet[lo:])
+        self._noise = dsp.band_power(quiet[lo:])
         aim = AIM_DB
         self._aim = aim
         take = max(TAKE_MIN, room_noise + TAKE_ABOVE_NOISE)
@@ -439,22 +478,121 @@ class Run:
         logger.info("room: %.0f dB at the seat at %.0f dBFS", self.state.level_db, level)
         return True
 
+    # -- the speakers' timing (ADR-0185) -------------------------------------------
+
+    async def _time(self, n: int):
+        """**The right's arrival against the left's** at position `n` (C1):
+        one recording of short sweeps, left, right, left, taken until two
+        agree within `TIMING_AGREE_S` and on the polarity, up to
+        `MAX_SWEEPS`. The stage's own delay is taken back out, so it is the
+        room's. None when no two agree: nothing is said and nothing is
+        delayed - a reading that does not repeat is not one."""
+        dsp = self._dsp
+        self._set(RunState("timing", position=n, done=tuple(range(1, n)), level_db=self.state.level_db,
+                           progress=_progress("timing", n)))
+        signal = dsp.timing_signal(min(1.0, self._sweep_scale()))
+        found = []
+        pair = None
+        for _ in range(MAX_SWEEPS):
+            recording = await self._audio.play(signal, channel=None, tail_s=TIMING_TAIL_S)
+            got = dsp.timing(recording)
+            if got is None:
+                continue
+            for other in found:
+                if (other.same_polarity == got.same_polarity
+                        and abs(other.late_s - got.late_s) <= TIMING_AGREE_S):
+                    pair = (other, got)
+                    break
+            found.append(got)
+            if pair is not None:
+                break
+        if pair is None:
+            logger.info("room: position %d: the speakers' timing could not be read - %d of %d readings, "
+                        "none two agreeing", n, len(found), MAX_SWEEPS)
+            return None
+        # The stage delays the left by `_delay[0]` and the right by `[1]`.
+        late = (pair[0].late_s + pair[1].late_s) / 2 + (self._delay[0] - self._delay[1]) / 1000
+        timing = dsp.Timing(late, pair[0].same_polarity, min(pair[0].alike, pair[1].alike))
+        logger.info("room: position %d: the right %+.1f cm against the left (%.1f cm between the two taken, "
+                    "%d readings), %s polarity, %.2f alike", n, timing.cm, abs(pair[0].cm - pair[1].cm),
+                    len(found), "the same" if timing.same_polarity else "opposite", timing.alike)
+        return timing
+
+    async def _align(self) -> None:
+        """**Position 1, before the sweeps** (D2): the speakers timed; one
+        with + and - swapped stops the run; the nearer is delayed so both
+        arrive together, on the stage from here on - the sweeps measure
+        what will play; more than `FAR_S` apart, *far* waits for *Measure
+        anyway*."""
+        timing = await self._time(1)
+        if timing is None:
+            return
+        if not timing.same_polarity:
+            raise Cancelled("polarity")
+        self._timing = timing
+        ms = abs(timing.late_s) * 1000
+        self._delay = (ms, 0.0) if timing.late_s > 0 else (0.0, ms)
+        await self._host.stage(self._play())
+        if abs(timing.late_s) > FAR_S:
+            self._set(RunState("far", position=1, level_db=self.state.level_db, progress=_progress("timing", 1)))
+            await self._wait("next")
+
+    async def _sides(self) -> None:
+        """**Position 2, 40 cm to the left** (D1): the left must be nearer
+        than at position 1. The other way by `SIDES_S` or more, the speakers
+        are swapped - or the microphone went to the right - and the run
+        stops; less either way, nothing is said."""
+        if self._timing is None:
+            return
+        timing = await self._time(2)
+        if timing is None:
+            return
+        moved = timing.late_s - self._timing.late_s
+        if moved <= -SIDES_S:
+            logger.info("room: position 2: the left %.0f cm further than at position 1 - swapped", -moved * 34300)
+            raise Cancelled("swapped")
+        if moved < SIDES_S:
+            logger.info("room: position 2: the left only %.0f cm nearer than at position 1 - left and right "
+                        "not told apart", moved * 34300)
+
+    def _play(self, cuts=((), ()), above=((), ())):
+        """What the stage plays during the run: `cuts` and `above` (none
+        until the check), with the speakers' delay."""
+        from gexis_core import equaliser as eq
+        return eq.RoomPlay(cuts, above, None, self._delay)
+
     # -- the sweeps ------------------------------------------------------------------
 
-    async def _curve(self, channel: str) -> object:
+    def _sweep_scale(self) -> float:
+        """The sweeps' amplitude: their level in the band matched to the
+        noise's (`_level`)."""
+        dsp = self._dsp
+        sweep = dsp.log_sweep(seconds=self._sweep_s)
+        return 10 ** (self._level_dbfs / 20) / 10 ** (dsp.band_level_db(sweep) / 20)
+
+    async def _curve(self, channel: str) -> tuple:
+        """One sweep: its curve, and how far it stood over the room's noise
+        at each point (ADR-0185 C3; None before the level step heard it)."""
+        import numpy as np
         dsp = self._dsp
         sweep = dsp.log_sweep(seconds=self._sweep_s)
         # The sweep's level in the band, matched to the noise's; both
         # speakers 6 dB lower each, so the two adding in the bass are no
         # louder than one; in the check lower by what the corrections raise.
-        scale = 10 ** (self._level_dbfs / 20) / 10 ** (dsp.band_level_db(sweep) / 20)
+        scale = self._sweep_scale()
         if self.state.checking:
             scale *= 10 ** (-self._check_db / 20)
         both = channel == rc.BOTH
         played = sweep * scale * (0.5 if both else 1.0)
         recording = await self._audio.play(played, channel=(0, 1) if both else rc.CHANNELS.index(channel))
         curve = dsp.response_db(dsp.transfer(recording, played))
-        return curve - self._calibration_curve()
+        snr = None
+        if self._noise is not None:
+            key = (len(recording), round(float(np.max(np.abs(played))), 9))
+            if key not in self._noise_curves:
+                self._noise_curves[key] = dsp.noise_curve(self._noise, played, len(recording))
+            snr = dsp.snr_db(curve, self._noise_curves[key])
+        return curve - self._calibration_curve(), snr
 
     def _calibration_curve(self):
         if not hasattr(self, "_cal_curve"):
@@ -462,32 +600,103 @@ class Run:
             self._cal_curve = np.array([self._cal.db_at(float(f)) for f in self._dsp.GRID])
         return self._cal_curve
 
+    def _sweeps_wanted(self, checking: bool) -> int:
+        """Two; **the check more, for its lower level** (ADR-0185 C3): as
+        many more as make up the power it plays below the run, within
+        `MAX_SWEEPS` less one, so a disturbed one can still be repeated."""
+        if not checking or self._check_db <= 0:
+            return SWEEPS
+        return min(MAX_SWEEPS - 1, math.ceil(SWEEPS * 10 ** (self._check_db / 10) - 1e-9))
+
+    def _undisturbed(self, curves, snrs):
+        """**The sweeps no noise disturbed** (ADR-0185 C3): the two that
+        agree best, compared only where both stand `JUDGE_SNR_DB` over the
+        room's noise, and every other that agrees with both of them there.
+        With them, for the log, the two's gap, where it was and how far over
+        the noise they stood there; the sweeps are None when the two do not
+        agree."""
+        import numpy as np
+        dsp = self._dsp
+
+        def judged(i, j):
+            if snrs[i] is None or snrs[j] is None:
+                return None
+            return (np.asarray(snrs[i]) >= dsp.JUDGE_SNR_DB) & (np.asarray(snrs[j]) >= dsp.JUDGE_SNR_DB)
+
+        best = None
+        for i in range(len(curves)):
+            for j in range(i + 1, len(curves)):
+                gap, where = dsp.gap_at(curves[i], curves[j], judged=judged(i, j))
+                if best is None or gap < best[0]:
+                    best = (gap, where, i, j)
+        gap, where, i, j = best
+        there = None
+        if where is not None and snrs[i] is not None:
+            k = int(np.argmin(np.abs(np.asarray(dsp.GRID) - where)))
+            there = float(min(snrs[i][k], snrs[j][k]))
+        if gap > dsp.AGREE_DB:
+            return None, (gap, where, there, (i, j))
+        kept = [k for k in range(len(curves))
+                if k in (i, j) or all(dsp.agree_db(curves[k], curves[m], judged=judged(k, m)) <= dsp.AGREE_DB
+                                      for m in (i, j))]
+        return kept, (gap, where, there, (i, j))
+
     async def _measure(self, n: int, checking: bool) -> None:
         """Each speaker alone at position `n` (item 4), then both: sweeps
-        until two agree, up to `MAX_SWEEPS`, then the two closest."""
+        until those no noise disturbed agree (`_undisturbed`), up to
+        `MAX_SWEEPS`, then the two closest; all of those averaged."""
         dsp = self._dsp
         step = "checking" if checking else "measure"
         done = tuple(range(1, n))
+        wanted = self._sweeps_wanted(checking)
         for channel in rc.SWEPT:
-            curves = []
+            curves, snrs = [], []
             noise = False
             while True:
                 k = len(curves) + 1
-                self._set(RunState(step, position=n, speaker=channel, sweep=min(k, SWEEPS), noise=noise,
+                self._set(RunState(step, position=n, speaker=channel, sweep=min(k, wanted), noise=noise,
                                    checking=checking, done=done, level_db=self.state.level_db,
                                    progress=_progress(step, n, channel, min(k, SWEEPS), checking)))
-                curves.append(await self._curve(channel))
+                curve, snr = await self._curve(channel)
+                curves.append(curve)
+                snrs.append(snr)
                 if checking and self._skip_sent():
                     raise _Skipped()
-                if len(curves) < SWEEPS:
+                if len(curves) < wanted:
                     continue
-                pair = self._closest(curves)
-                if dsp.agree_db(*pair) <= dsp.AGREE_DB or len(curves) >= MAX_SWEEPS:
+                kept, (gap, where, there, pair) = self._undisturbed(curves, snrs)
+                self._log_sweeps(n, channel, checking, curves, snrs, gap, where, there, kept)
+                if kept is not None:
+                    break
+                if len(curves) >= MAX_SWEEPS:
+                    kept = list(pair)
                     break
                 noise = True
-                logger.info("room: position %d, %s: two sweeps disagree by %.1f dB, again",
-                            n, channel, dsp.agree_db(curves[-2], curves[-1]))
-            (self._checked if checking else self._positions)[channel].append(dsp.power_average(list(pair)))
+            chosen = [curves[k] for k in kept]
+            (self._checked if checking else self._positions)[channel].append(dsp.power_average(chosen))
+            if not checking:
+                got = [snrs[k] for k in kept if snrs[k] is not None]
+                self._snrs[channel].append(dsp.averaged_snr(got) if got else None)
+
+    def _log_sweeps(self, n, channel, checking, curves, snrs, gap, where, there, kept) -> None:
+        """**ADR-0185 C4: every comparison, as numbers**, so `AGREE_DB` and
+        `JUDGE_SNR_DB` are settled from runs: the closest two's gap, where,
+        and how far over the noise they stood there; how much of 20-250 Hz
+        was judged, and the least a sweep stood over the noise there."""
+        import numpy as np
+        dsp = self._dsp
+        grid = np.asarray(dsp.GRID)
+        bass = (grid >= dsp.FIT_LO) & (grid <= dsp.LIMIT)
+        got = [np.asarray(x)[bass] for x in snrs if x is not None]
+        judged = int(np.sum(np.all([x >= dsp.JUDGE_SNR_DB for x in got], axis=0))) if got else 0
+        least = float(min(np.min(x) for x in got)) if got else float("nan")
+        logger.info("room: %s %d, %s: %d sweeps, the closest two %.1f dB apart at %s Hz (%s dB over the noise "
+                    "there); %d of %d points judged, the least %.0f dB over the noise; %s",
+                    "check" if checking else "position", n, channel, len(curves), gap,
+                    "-" if where is None else f"{where:.0f}", "-" if there is None else f"{there:.0f}",
+                    judged, int(np.sum(bass)), least,
+                    "again" if kept is None and len(curves) < MAX_SWEEPS
+                    else f"{len(kept or ())} averaged" if kept else "the closest two taken")
 
     def _skip_sent(self) -> bool:
         """Whether *Skip* came while the check swept (the design: Skip on
@@ -512,14 +721,31 @@ class Run:
     def _design(self) -> None:
         """The bass's cuts from both speakers together, the same on both
         (ADR-0175's amendment); above the bass each speaker's own."""
-        both = self._dsp.together(self._positions[rc.BOTH])
+        both = self._dsp.together(self._positions[rc.BOTH], trust=self._trust(rc.BOTH))
         self._designs[rc.BOTH] = both
         speakers = {rc.BOTH: _speaker(both)}
         for channel in rc.CHANNELS:
-            d = self._dsp.design(self._positions[channel], cuts=both.cuts)
+            d = self._dsp.design(self._positions[channel], cuts=both.cuts, trust=self._trust(channel))
             self._designs[channel] = d
             speakers[channel] = _speaker(d)
-        self.pending = rc.Measurement(self._today(), False, speakers, range=rc.FULL)
+        self.pending = rc.Measurement(self._today(), False, speakers, range=rc.FULL, delay=self._delay,
+                                      distance_cm=None if self._timing is None else round(self._timing.cm, 1))
+
+    def _trust(self, channel: str):
+        """Where every position's averaged sweeps stand `TRUST_SNR_DB` over
+        the room's noise (ADR-0185 C3); None (everywhere) when not read."""
+        import numpy as np
+        got = self._snrs[channel]
+        if not got or any(x is None for x in got):
+            return None
+        trust = np.min(np.asarray(got), axis=0) >= self._dsp.TRUST_SNR_DB
+        grid = np.asarray(self._dsp.GRID)
+        bass = (grid >= self._dsp.FIT_LO) & (grid <= self._dsp.LIMIT)
+        if not trust[bass].all():
+            low = grid[bass & ~trust]
+            logger.info("room: %s: %d points left uncorrected, under %.0f dB over the noise (%.0f-%.0f Hz)",
+                        channel, int(np.sum(~trust)), self._dsp.TRUST_SNR_DB, low.min(), low.max())
+        return trust
 
     def _cuts(self):
         """**What the check plays** (ADR-0177 item 8): the full range, the
@@ -529,7 +755,7 @@ class Run:
         cuts = tuple(self.pending.cuts(c) for c in rc.CHANNELS)
         above = tuple(self.pending.above(c) for c in rc.CHANNELS)
         self._check_db = eq.headroom_db(eq.FLAT, tuple(c + a for c, a in zip(cuts, above)))
-        return eq.RoomPlay(cuts, above, None)
+        return self._play(cuts, above)
 
     def _result(self, skipped: bool) -> None:
         """The after, measured at every position (decision 5), or the

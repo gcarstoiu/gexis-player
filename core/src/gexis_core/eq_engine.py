@@ -226,10 +226,11 @@ class EqEngine:
         self._card: str | None = None
         self._gains: tuple[int, ...] = eq.FLAT
         self._room = eq.room_stage(None)
+        self._delays = eq.room_delays(None)   # each speaker's, ms (ADR-0185 D2)
         self._lift = None   # room correction's filters as measured, for the headroom
         self._watch: asyncio.Task | None = None
         self._stream: Stream | None = None
-        self._applied: tuple | None = None   # (gains, headroom, room): what CamillaDSP has now
+        self._applied: tuple | None = None   # (gains, headroom, room, delays): what CamillaDSP has now
         self._push: asyncio.Task | None = None
         self._forward: asyncio.subprocess.Process | None = None
         self._status: dict = {}
@@ -241,6 +242,7 @@ class EqEngine:
         CamillaDSP, which reads ALSA's configuration only when it starts."""
         gains = eq.gains_from(gains)
         self._room = eq.room_stage(room)
+        self._delays = eq.room_delays(room)
         self._lift = eq.room_lift(room)
         if card is None:
             if self._card is not None or self._watch is not None:
@@ -400,8 +402,8 @@ class EqEngine:
     async def _start_stream(self, stream: Stream) -> None:
         gains = self._gains
         headroom = eq.headroom_db(gains, self._lift)
-        room = self._room
-        config = eq.camilla_config(stream.rate, stream.fmt, stream.channels, gains, outputs.EQ_OUT, room)
+        room, delays = self._room, self._delays
+        config = eq.camilla_config(stream.rate, stream.fmt, stream.channels, gains, outputs.EQ_OUT, room, delays)
         to = playing_rate(self._card, stream.rate, self._takes_rate)
         if to != stream.rate:
             config["devices"].update(samplerate=to, capture_samplerate=stream.rate,
@@ -414,7 +416,7 @@ class EqEngine:
         try:
             await self._camilla.cmd("SetFaderVolume", [eq.HEADROOM_FADER, -headroom])
             await self._camilla.cmd("SetConfigJson", json.dumps(config))
-            self._applied = (gains, headroom, room)
+            self._applied = (gains, headroom, room, delays)
             logger.info("equaliser: %d Hz %s, %d channels, lowered %.1f dB",
                         stream.rate, stream.fmt, stream.channels, headroom)
         except (ConnectionError, RuntimeError) as exc:
@@ -457,8 +459,9 @@ class EqEngine:
     async def _pushing(self) -> None:
         while self._applied is not None and self._stream is not None and not self._stream.dsd:
             gains, headroom, room = self._gains, eq.headroom_db(self._gains, self._lift), self._room
-            old_gains, old_headroom, old_room = self._applied
-            if (gains, headroom, room) == (old_gains, old_headroom, old_room):
+            delays = self._delays
+            old_gains, old_headroom, old_room, old_delays = self._applied
+            if (gains, headroom, room, delays) == (old_gains, old_headroom, old_room, old_delays):
                 return
             try:
                 if headroom > old_headroom:
@@ -474,13 +477,15 @@ class EqEngine:
                             freq, gain, q = now
                             changed[eq.room_filter_name(channel, slot)] = {
                                 "parameters": {"freq": freq, "gain": gain, "q": q}}
+                    if delays[channel] != old_delays[channel]:
+                        changed[eq.room_delay_name(channel)] = {"parameters": {"delay": delays[channel]}}
                 if changed:
                     await self._camilla.cmd("PatchConfig", {"filters": changed})
                 if headroom < old_headroom:
                     await self._camilla.cmd("SetFaderVolume", [eq.HEADROOM_FADER, -headroom])
                 else:
                     await self._give(headroom)
-                self._applied = (gains, headroom, room)
+                self._applied = (gains, headroom, room, delays)
             except (ConnectionError, RuntimeError) as exc:
                 logger.warning("equaliser: a change did not reach CamillaDSP (%s)", exc)
                 return

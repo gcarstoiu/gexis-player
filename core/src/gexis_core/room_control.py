@@ -204,7 +204,7 @@ class RoomControl:
             "reach": here.reach,
             "measured": None if measured is None else {
                 "date": measured.date, "day": day(measured.date), "checked": measured.checked,
-                "range": measured.range},
+                "range": measured.range, **self._aligned(measured)},
             "row": self._row(here),
             "dsd": bool(here.on and self._dsd()),
             "run": run.state.as_dict() if self.running() else None,
@@ -253,7 +253,13 @@ class RoomControl:
         own, the positions worse than before, and how far it was made."""
         return {"peaks_down": round(m.peaks_down()), "within": m.within(), "room_within": m.within(room=True),
                 "nothing_to_cut": m.nothing_to_cut, "nothing_above": m.nothing_above, "range": m.range,
-                "worse": [list(w) for w in m.worse]}
+                "worse": [list(w) for w in m.worse], **RoomControl._aligned(m)}
+
+    @staticmethod
+    def _aligned(m: rc.Measurement) -> dict:
+        """**The speakers' timing** (ADR-0185 D2): how much further the right
+        is than the left (cm; None: not timed) and the delay on each (ms)."""
+        return {"distance_cm": m.distance_cm, "delay_ms": [round(d, 2) for d in m.delay]}
 
     def _held(self) -> bool:
         """A run, or putting the player back after one."""

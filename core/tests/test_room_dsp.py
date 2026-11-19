@@ -356,3 +356,95 @@ def test_a_kept_target_designs_the_same_cuts():
     assert again.offset == 0
     assert [round(c.freq) for c in again.cuts] == [round(c.freq) for c in t.cuts]
     assert np.allclose([c.gain for c in again.cuts], [c.gain for c in t.cuts], atol=0.05)
+
+
+# ---- ADR-0185: the speakers' timing, and the sweeps judged by the room's noise -----
+
+
+def _timing_recording(delays=(0.008, 0.008), polarity=(1.0, 1.0), noise_db=-110.0, lead_s=0.3, drift=0.0):
+    """What the microphone hears of `timing_signal`, each speaker at its
+    delay and polarity; `drift`: the microphone's clock that much fast
+    against the DAC's (50e-6 is 50 ppm)."""
+    frames = rd.timing_signal(0.3)
+    length = len(frames) + int((lead_s + 0.3) * rd.FS)
+    out = np.zeros(length)
+    for c in (0, 1):
+        out += sim.record(frames[:, c], seed=c * 100 + 1, gain=polarity[c], delay_s=delays[c], lead_s=lead_s,
+                          length=length, noise_db=noise_db if c == 0 else -300.0, noise_seed=11)
+    if drift:
+        t = np.arange(length)
+        out = np.interp(t * (1 + drift), t, out)
+    return out
+
+
+@pytest.mark.parametrize("left, right", [(0.008, 0.008), (0.008, 0.0083), (0.0083, 0.008), (0.0070, 0.0095)])
+@pytest.mark.parametrize("lead", [0.3, 0.341])
+def test_the_right_against_the_left_to_a_centimetre_wherever_the_recording_starts(left, right, lead):
+    """C1: one recording, so its start - which differs each time - does not
+    count; to within 1 cm."""
+    t = rd.timing(_timing_recording((left, right), lead_s=lead))
+    assert t is not None and t.same_polarity
+    assert t.cm == pytest.approx((right - left) * rd.SPEED_OF_SOUND * 100, abs=1.0)
+
+
+def test_the_clocks_drifting_apart_is_taken_off():
+    """C1: the left twice, either side of the right - the drift between the
+    DAC's and the microphone's clocks over a slot is half the lefts' lag."""
+    drift = 100e-6
+    t = rd.timing(_timing_recording((0.008, 0.0083), drift=drift))
+    assert t.cm == pytest.approx(10.3, abs=1.0)
+    uncorrected = drift * rd.TIMING_SLOT_S * rd.SPEED_OF_SOUND * 100
+    assert uncorrected > 3, "it would have been off by this much"
+
+
+def test_a_speaker_with_plus_and_minus_swapped_reads_opposite():
+    t = rd.timing(_timing_recording((0.008, 0.0081), polarity=(1.0, -1.0)))
+    assert t is not None and not t.same_polarity and t.cm == pytest.approx(3.4, abs=1.0)
+
+
+def test_noise_instead_of_arrivals_says_nothing():
+    """The left heard twice must match: noise does not (a noisy room's
+    readings once stopped the run for a polarity that was noise)."""
+    assert rd.timing(_timing_recording(noise_db=-10)) is not None, "the short sweeps stand much noise"
+    assert rd.timing(_timing_recording(noise_db=0)) is None
+    assert rd.timing(np.random.default_rng(3).standard_normal(4 * rd.FS) * 0.01) is None
+
+
+def test_the_noise_curve_holds_the_noise_as_a_sweeps_curve_does():
+    """C3: the room's noise through the sweep's own deconvolution and
+    window - recorded alone, a sweep's curve sits on it."""
+    played = rd.log_sweep(seconds=1.0) * 0.1
+    length = len(played) + int(1.8 * rd.FS)
+    quiet = np.random.default_rng(5).standard_normal(3 * rd.FS) * 1e-3
+    noise = rd.band_power(quiet)
+    expected = rd.noise_curve(noise, played, length)
+    silent = np.random.default_rng(6).standard_normal(length) * 1e-3
+    # Where a measurement's window starts: the arrival, after the lead.
+    heard = rd.response_db(rd._window(rd.deconvolve(silent, played), int(0.3 * rd.FS)))
+    inside = (rd.GRID >= 30) & (rd.GRID <= 10000)
+    assert np.median(np.abs(heard - expected)[inside]) < 1.0
+
+
+def test_sweeps_are_compared_only_where_both_stand_over_the_noise():
+    a = np.zeros(len(rd.GRID))
+    b = np.where(rd.GRID < 30, 4.0, 0.2)
+    assert rd.agree_db(a, b) == pytest.approx(4.0)
+    judged = rd.GRID >= 30
+    assert rd.agree_db(a, b, judged=judged) == pytest.approx(0.2)
+    assert rd.gap_at(a, b, judged=np.zeros(len(rd.GRID), dtype=bool)) == (0.0, None)
+
+
+def test_averaging_sweeps_raises_what_they_stand_over_the_noise():
+    snr = np.full(5, 10.0)
+    assert rd.averaged_snr([snr, snr]) == pytest.approx(np.full(5, 13.01), abs=0.01)
+    assert rd.averaged_snr([snr]) == pytest.approx(snr)
+
+
+def test_no_peak_is_cut_where_the_curves_are_not_trusted():
+    """C3: a point under the noise is left uncorrected."""
+    positions = [sim.curve(s) for s in sim.positions()]
+    cut = rd.design(positions).cuts
+    assert any(abs(c.freq / 87 - 1) < 0.08 for c in cut)
+    trust = ~((rd.GRID > 70) & (rd.GRID < 110))
+    kept = rd.design(positions, trust=trust).cuts
+    assert not any(70 < c.freq < 110 for c in kept)

@@ -217,11 +217,26 @@ def test_room_cuts_follow_the_bands_one_step_for_each_speaker():
     c = eq.camilla_config(48000, "S32_LE", 2, eq.FLAT, "eq_out", room=([(42, -4, 8.6)], [(87, -8, 5.7)]))
     steps = c["pipeline"]
     assert steps[0]["names"][0] == "headroom" and "channels" not in steps[0]
-    assert steps[1] == {"type": "Filter", "channels": [0], "names": [f"room_l_{i}" for i in range(1, 15)]}
-    assert steps[2] == {"type": "Filter", "channels": [1], "names": [f"room_r_{i}" for i in range(1, 15)]}
+    assert steps[1] == {"type": "Filter", "channels": [0],
+                        "names": ["room_l_delay"] + [f"room_l_{i}" for i in range(1, 15)]}
+    assert steps[2] == {"type": "Filter", "channels": [1],
+                        "names": ["room_r_delay"] + [f"room_r_{i}" for i in range(1, 15)]}
     assert c["filters"]["room_l_1"]["parameters"] == {"type": "Peaking", "freq": 42.0, "gain": -4.0, "q": 8.6}
     assert c["filters"]["room_r_1"]["parameters"]["freq"] == 87.0
     assert c["filters"]["room_r_2"]["parameters"]["gain"] == 0.0
+
+
+def test_each_speakers_delay_leads_its_step_at_0_ms_unless_measured():
+    """ADR-0185 D2: the nearer speaker delayed so both arrive together; in
+    the pipeline always, so a new measurement changes a value, not the
+    shape."""
+    flat = eq.camilla_config(48000, "S32_LE", 2, eq.FLAT, "x")
+    assert [flat["filters"][f"room_{s}_delay"] for s in "lr"] == [
+        {"type": "Delay", "parameters": {"delay": 0.0, "unit": "ms"}}] * 2
+    c = eq.camilla_config(48000, "S32_LE", 2, eq.FLAT, "x", room=eq.RoomPlay(delay=(0.35, 0.0)))
+    assert c["filters"]["room_l_delay"]["parameters"]["delay"] == 0.35
+    assert c["filters"]["room_r_delay"]["parameters"]["delay"] == 0.0
+    assert [s["names"][0] for s in c["pipeline"][1:]] == ["room_l_delay", "room_r_delay"]
 
 
 def test_room_slots_are_there_with_nothing_measured():
