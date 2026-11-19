@@ -1043,9 +1043,10 @@ nothing to press. On the player's screen, *Measure from your phone* (or
    is cut, and a broad correction made, unless most positions would end
    further from the target; where the three positions disagree, less is
    corrected. **Check it** measures the three positions again with the
-   correction on, a tap at each again; **Skip** keeps it as worked out,
-   marked *Not checked*. If a position ends further from the target than
-   before, the result says which.
+   correction on, a tap at each again, showing each speaker as measuring
+   does - a sweep a noise spoiled is said and made again; **Skip** keeps it
+   as worked out, marked *Not checked*. If a position ends further from the
+   target than before, the result says which.
 6. **Keep it** switches room correction on, at the full range; **Discard**
    leaves the output as it was. **Cancel**, at any step, leaves it as it was
    too, and so does ten minutes without a tap. A room already near the
@@ -1072,7 +1073,8 @@ On its page:
   *Fixed* volume, where the music plays up to 3 dB quieter with room
   correction on, *Bass* and *Without* alike.
 - **The chart**, for the left and the right speaker, in two parts: the bass,
-  and above it on a closer scale (±5 dB). Before, each position, the target
+  and above it on a closer scale (±5 dB) - side by side on the panel and the
+  bars, one under the other on the phone. Before, each position, the target
   (dotted: the bass rise joined to the speaker's own slope) and after -
   measured, or dashed and *expected* when the check was skipped; what is cut
   and what is raised are shaded. With *Bass* chosen, above 250 Hz is left
