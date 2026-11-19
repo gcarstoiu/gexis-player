@@ -206,6 +206,7 @@ been written properly. **0098 has no record either.**
 | [0183](0183-spotify-keeps-playing-on-the-lead-through-a-group-change.md) | Spotify keeps playing on the lead through a group change | **Accepted** 2026-11-18 (George: keep Spotify playing), A: pause, rewrite the chain, resume; built on `spotify-group-change`, for 1.18.1 |
 | [0184](0184-plex-information-through-plexamps-claim.md) | Plex information through Plexamp's claim | **Built**, in 1.18.0 (2026-11-18); accepted 2026-11-16 (Phase 32, acceptance 1; George: 1-4, the consequence and the row): the plugin lends Plexamp's token and local server to the core, held in memory only; the row in Sources beside Plexamp; the artist, popular tracks and both sweeps ask Plex first; MusicBrainz ids; lyrics behind LRCLIB's |
 | [0185](0185-room-measurement-speakers-checked-and-aligned-fewer-repeats.md) | Room measurement: the speakers checked and aligned, fewer repeats | **Accepted** 2026-11-19 (George: D1-D3, C1-C4 approved; D4 built, for 1.18.1): left/right checked at position 2; the distance difference corrected by a delay; player's level only; repeats judged by signal over noise |
+| [0186](0186-room-chart-both-in-the-bass-only-shading-the-corrections.md) | Room correction's chart: *Both* in the bass only, the shading the corrections' | **Proposed** 2026-11-19 (George: D1-D2; C1-C2 for approval): *Both* hatched above the bass; *Cut*/*Raised* shade the corrections, not the check |
 
 ## Cross-cutting rules
 
