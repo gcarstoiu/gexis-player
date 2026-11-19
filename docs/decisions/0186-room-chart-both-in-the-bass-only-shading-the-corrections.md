@@ -3,7 +3,8 @@
 **Status:** **Accepted** 2026-11-19 (George approved C1-C2); proposed the
 same day: George decided D1-D2 after looking at his full-range check on
 sofapi; C1-C2 are Claude's. Built on `room-chart`. **Amended** the same
-day: D1 replaced by D3, *Both* in full (George); C3-C4 for approval.
+day: D1 replaced by D3, *Both* in full (George); then D3 replaced by D4, no
+*Both* tab (George), and C3-C4 withdrawn.
 **Amends:** [ADR-0177](0177-room-correction-for-the-full-range.md) (the
 chart, the design's §2) and
 [ADR-0175](0175-room-correction-for-the-bass.md)'s amendment of 2026-11-17,
@@ -78,7 +79,7 @@ what is heard, so *Both* shows its measurement and correction over the whole
 range. D1 is replaced:
 
 - **D3 — *Both* in full; each speaker still corrected on its own above the
-  bass.** *Both*'s tab draws the whole range again: before, the shading of
+  bass** *(replaced by D4, below, the same day)*. *Both*'s tab draws the whole range again: before, the shading of
   what the two speakers' corrections do together, the after. The corrections
   above the bass stay each speaker's (ADR-0175's amendment, item 3). Over:
   designing them from *Both*, the same on both speakers - above about 1 kHz
@@ -87,7 +88,7 @@ range. D1 is replaced:
   check, each speaker alone 1.2 dB at most), so a correction fitted to them
   would follow the microphone rather than the listener.
 
-Claude's choices (for approval):
+Claude's choices (withdrawn with D3, never approved):
 
 - **C3 — *Both* with the corrections, above the bass, is an estimate.**
   Before together with the bass's cuts, and the two speakers' broad
@@ -104,3 +105,32 @@ Claude's choices (for approval):
   curve (C2) instead of before with the cuts alone. The manual says that
   above the bass it is an estimate, and why the check can stray from it
   there.
+
+## Amended again 2026-11-19 (George): no *Both* tab
+
+George, the same day, on hearing how established room correction shows its
+results - each speaker's own curves; the speakers corrected jointly in the
+bass only: each speaker is measured, corrected and drawn on its own, with no
+joint graph.
+
+- **D4 — *Left* and *Right* only** (replaces D3, and D1 before it). The
+  chart's tabs are the two speakers'; *Both* goes from the phone's page, the
+  panel's and the bar's, and the run's result. Unchanged, George confirming:
+  the run still plays both speakers together at each position, measuring
+  and checking; the bass's cuts are designed from that and are the same on
+  both (ADR-0175's amendment), each speaker's tab showing them; above the
+  bass each speaker is corrected on its own. ADR-0175's amendment, item 4
+  (the *Both* tab), is withdrawn.
+- C3-C4 are withdrawn: nothing needs *Both* with the corrections above the
+  bass. `GET /room-correction` still gives *Both*'s curves and cuts (C1).
+- **Whether the joint sweep could go**, George asked, if the industry does
+  without it. Tools that correct the bass jointly measure each speaker on
+  its own with a timing reference and add the speakers up in software,
+  phase included; a sweep of all together is at most a check (REW with
+  Multi-Sub Optimizer, as its users describe it). This player keeps
+  magnitudes only, and its separate recordings start with jitter between
+  playback and capture (ADR-0185 C1), so it cannot add two speakers up yet:
+  the joint sweep stays.
+- Not covered: each speaker's sweeps recorded with a timing reference and
+  their phase kept, which would let the joint sweep go - a third of the
+  run's sweep sets.
