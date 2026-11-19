@@ -459,6 +459,29 @@ async def test_a_source_taking_over_after_an_undo_is_not_restarted(tmp_path):
     assert not living.snap.serving and living.room.chain is None
 
 
+async def test_a_measurement_after_an_undo_takes_the_players_own_chain(tmp_path):
+    """sofapi, 2026-11-19: the group undone with the leader's radio paused;
+    the chain stayed the group's (B3), and the room, which read the chain,
+    asked to leave a group that was gone."""
+    net = Net(tmp_path)
+    living, kitchen = net.add("living", "Living Room"), net.add("kitchen", "Kitchen")
+    await living.room.join("kitchen")
+    living.play("spotify")
+    living.snap.rate = 44100
+    await net.settle()
+    assert living.room.grouped()
+    assert await living.room.alone_now() is False, "a group is not given up for a measurement"
+    await kitchen.room.undo()
+    living.store.set_metadata("spotify", TrackMetadata(transport="paused", source_type="spotify"))
+    await net.settle()
+    assert not living.room.grouped() and living.room.chain is not None, "paused, the chain is kept"
+    rechains = living.rechains
+    assert await living.room.alone_now() is True
+    assert living.room.chain is None and mr.read_chain(tmp_path / "living-chain.json") is None
+    assert not living.snap.serving and living.rechains == rechains + 1
+    assert await living.room.alone_now() is False, "once"
+
+
 async def test_a_player_that_left_keeps_its_own_music_when_the_old_leader_returns(tmp_path):
     """The review of 1.16.1 (C2): the leader off, Kitchen left the silent
     group and played Spotify; the leader came back with the group it kept,

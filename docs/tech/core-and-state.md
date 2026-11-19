@@ -1061,6 +1061,9 @@ phone only.
   the chain and would restart whoever holds it - a paused source, or one
   taking over meanwhile. Lyrion on the leader's own chain (one Lyrion
   server) is not restarted by it, so that leader goes alone at once.
+  That chain is not a group: a room measurement is refused only in one
+  (`Multiroom.grouped`), and once it has stopped the source it takes the
+  player's own chain at once (`alone_now`).
 - **A source playing on a member leads** (D4, amended 2026-10-28): the
   supervisor's `on_active_change` reaches `Multiroom.on_local_active`, which
   notes the source; `_lead_if_playing`, run on every state change, claims
