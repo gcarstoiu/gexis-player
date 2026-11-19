@@ -1078,10 +1078,12 @@ On its page:
   is what the correction cuts and raises; where the measured after strays
   from it, that is the room and the microphone's place, not the correction.
   With *Bass* chosen, above 250 Hz is left alone. **Both** shows the two
-  speakers together in the bass, as you hear them - their cuts are worked
-  out from the two together - and their after once the check has measured
-  it. Above the bass each speaker is corrected on its own, on its own tab:
-  there the two together change with the microphone's exact place.
+  speakers together, as you hear them. The cuts in the bass are worked out
+  from the two together; above it each speaker is corrected on its own, and
+  *Both*'s shading there is an estimate of what the two corrections do
+  together. Above about 1 kHz the two together change with the microphone's
+  exact place, so there the measured after can stray from the shading by a
+  few dB.
 - **The corrections**, on the panel's page: in the bass, narrow cuts; above
   it, broad, up or down.
 - **Measure again** replaces the measurement once the new one is kept.
