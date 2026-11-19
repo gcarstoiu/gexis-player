@@ -10,8 +10,8 @@
   2026-11-05): the 90° file from miniDSP's page, chosen here.
 -->
 <script>
-  import { BOTH, chartSpan, correctionGroups, correctionsHeading, correctionsWho, correctionTail, cutFreq, cutGain,
-    dips, giveCalibration, MOVES, outputShort, POSITIONS, resultWords, runRoom, sideName, sides,
+  import { alignedLine, BOTH, chartSpan, correctionGroups, correctionsHeading, correctionsWho, correctionTail, cutFreq,
+    cutGain, dips, giveCalibration, MOVES, outputShort, POSITIONS, resultWords, runRoom, sideName, sides,
     worseLine } from '../../lib/room.svelte.js';
   import RoomChart from './RoomChart.svelte';
   import RoomSeat from './RoomSeat.svelte';
@@ -191,6 +191,19 @@
   const counts = $derived(ch === BOTH ? correctionGroups('L', pending?.chart?.speakers?.L) : groups);
   const resultPair = $derived(resultWords({ speaker, both: ch === BOTH, expectedMark: screenName === 'result' && !!run?.expected }));
   const worse = $derived(screenName === 'result' && !run?.expected && pending?.worse?.length ? worseLine(pending.worse) : '');
+  //: ADR-0185 C2: more than 1 ms apart (`far_cm`).
+  const farHead = $derived.by(() => {
+    const d = run?.distance_cm ?? 0;
+    return [`The ${d > 0 ? 'right' : 'left'} speaker is ${Math.round(Math.abs(d))} cm further away`,
+      `The correction delays the ${d > 0 ? 'left' : 'right'} one so both reach your seat together. But more than ${run?.far_cm ?? 34} cm usually means a speaker or the seat is out of place: move it and measure again, or measure anyway.`];
+  });
+  //: ADR-0185 D1-D2: why a run stopped by itself.
+  const stopped = {
+    polarity: ['One speaker is wired the other way round',
+      'Its + and − are swapped. Switch the amplifier off, swap the red and black wires at one speaker, then measure again. Nothing changed: the output is as it was.'],
+    swapped: ['Left and right look swapped',
+      'At position 2, to the left of your head, the left speaker sounded further away than at position 1. Either the left channel plays from the right speaker - switch the amplifier off and swap the two speaker cables - or the microphone went to the right of your head. Then measure again. Nothing changed: the output is as it was.'],
+  };
   const head = $derived.by(() => {
     switch (screenName) {
       case 'before': return ['Correct what your room adds to the sound', "The player plays sweeps through your speakers and listens with a measurement microphone at your seat. It cuts the peaks your room adds to the bass, and above the bass evens out the room's broad bumps and dips by 3 dB at most, so your speakers keep their own balance."];
@@ -199,19 +212,22 @@
         ? [`Only ${run.level_db ?? '—'} dB at the seat`, "At the player's maximum level. Turn the amplifier up a little and try again."]
         : ['Finding the level', run.aim_db == null ? 'Listening to the room first.'
           : `Soft noise, getting louder until the microphone hears about ${run.aim_db} dB.`];
+      case 'timing': return [`Position ${n} of ${count}`, ''];
+      case 'far': return farHead;
       case 'measure': return [`Position ${n} of ${count}`, ''];
       case 'move': return [checking && n === 1 ? 'Move it back to position 1' : `Move it to position ${n}`, ''];
       case 'correction': return [correctionsHeading(counts[0].rows.length, counts[1].rows.length), ''];
       case 'nothing': return ['Nothing to correct', ''];
       case 'checking': return [`Checking at position ${n}`, ''];
       case 'result': return resultPair;
-      case 'cancelled': return ['Measuring cancelled', 'Nothing changed: the output is as it was. Music can play again.'];
+      case 'cancelled': return stopped[ended?.why] ?? ['Measuring cancelled', 'Nothing changed: the output is as it was. Music can play again.'];
       default: return ['', ''];
     }
   });
   const crumb = $derived({
     before: `Settings · Audio · ${outputShort(full?.output)}`, cancelled: `Settings · Audio · ${outputShort(full?.output)}`,
-    place: 'Step 1 of 4', level: 'Step 2 of 4', measure: checking ? 'Checking' : 'Step 3 of 4',
+    place: 'Step 1 of 4', level: 'Step 2 of 4', timing: 'Step 3 of 4', far: 'Step 3 of 4',
+    measure: checking ? 'Checking' : 'Step 3 of 4',
     move: checking ? 'Checking' : 'Step 3 of 4', correction: 'Step 4 of 4', nothing: 'Step 4 of 4',
     checking: 'Checking', result: 'Step 4 of 4',
   }[screenName] ?? '');
@@ -226,8 +242,13 @@
   });
   const track = $derived(Array.from({ length: count }, (_, k) => k + 1)
     .map((i) => ({ n: i, state: i < n ? 'done' : i === n ? 'now' : 'next' })));
-  const showTracker = $derived(['measure', 'move', 'checking'].includes(screenName));
-  const showSeat = $derived(['place', 'measure', 'move', 'checking'].includes(screenName));
+  const showTracker = $derived(['timing', 'measure', 'move', 'checking'].includes(screenName));
+  const showSeat = $derived(['place', 'timing', 'measure', 'move', 'checking'].includes(screenName));
+  //: ADR-0185: the speakers' timing, once read - during the run, and with
+  //: the correction it brings.
+  const aligned = $derived(['measure', 'correction', 'nothing', 'result'].includes(screenName)
+    ? (screenName === 'measure' ? alignedLine(run?.distance_cm) : alignedLine(pending?.distance_cm, pending?.delay_ms))
+    : null);
   const done = $derived(run?.done ?? []);
   //: The scale round the aim, as the design's 50 · 75 · 85 is round 75.
   const aim = $derived(run?.aim_db ?? 65);
@@ -240,7 +261,9 @@
       case 'before': return [null, null, ['Measure', () => send('measure'), !full?.can_measure]];
       case 'place': return [cancel, null, ['Start', () => send('start')]];
       case 'level': return [cancel, null, tooQuiet ? ['Try again', () => send('again')] : null];
+      case 'timing':
       case 'measure': return [cancel, null, null];
+      case 'far': return [cancel, null, ['Measure anyway', () => send('next')]];
       case 'move': return counting ? [cancel, checking ? ['Skip', () => send('skip'), false, true] : null, null]
         : [cancel, checking ? ['Skip', () => send('skip'), false, true] : null, ['Measure here', () => send('next')]];
       case 'correction': return [['Discard', () => finish('discard')], null, ['Check it', () => send('check')]];
@@ -378,6 +401,23 @@
         <div class="after">Sweeps with the correction on, from each speaker and both together.</div>
       {/if}
 
+      {#if screenName === 'timing'}
+        <div class="card speakers">
+          <div class="check">
+            {@render mark('playing')}
+            <div class="check__text">
+              <div class="check__name">{n === 1 ? 'How far each speaker is' : 'Left and right'}</div>
+              <div class="check__sub">{n === 1 ? 'Short sweeps: the left, the right, then the left again.' : 'From here, to the left of your head, the left speaker should sound nearer.'}</div>
+            </div>
+          </div>
+        </div>
+        <div class="note">A few seconds. Keep quiet until the whistles stop.</div>
+      {/if}
+
+      {#if aligned && screenName === 'measure'}
+        <div class="after">{aligned}</div>
+      {/if}
+
       <!-- The check as the measuring (George, 2026-11-19): a sweep it plays
            again is said, as it is while measuring (ADR-0185 D4). -->
       {#if screenName === 'measure' || screenName === 'checking'}
@@ -449,6 +489,9 @@
         <div class="worse" role="status"><span class="worse__mark">!</span><span>{worse}</span></div>
       {/if}
 
+      {#if aligned && screenName !== 'measure'}
+        <div class="tail tail--quiet">{aligned}</div>
+      {/if}
       {#if tail}
         <div class="tail tail--{tail.ink}">{tail.text}</div>
       {/if}

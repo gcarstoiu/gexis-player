@@ -234,3 +234,23 @@ def test_the_chart_of_a_measurement_from_before():
     assert c["range"] == rc.BASS and c["freqs"][-1] < 520 and c["speakers"]["L"]["above"] == []
     assert c["speakers"]["L"]["after_bass"] == c["speakers"]["L"]["after"]
     assert c["speakers"]["L"]["within"] is None
+
+
+def test_the_speakers_delay_is_kept_and_played_at_either_reach_never_without():
+    """ADR-0185 D2: kept with the measurement; on the stage with the cuts,
+    under *Bass* too (it is the room's geometry); *Hear it without* takes
+    it out with them. One kept from before has none."""
+    from dataclasses import replace
+    m = replace(measurement(), delay=(0.0, 0.42), distance_cm=-14.4)
+    again = Measurement.from_dict(m.as_dict())
+    assert again.delay == (0.0, 0.42) and again.distance_cm == -14.4
+    older = m.as_dict()
+    del older["delay"], older["distance_cm"]
+    assert Measurement.from_dict(older).delay == (0.0, 0.0) and Measurement.from_dict(older).distance_cm is None
+    wild = m.as_dict()
+    wild["delay"] = [0.0, 500.0]
+    assert Measurement.from_dict(wild).delay == (0.0, rc.MAX_DELAY_MS)
+    room = Room().keep("DAC", m)
+    assert room.stage("DAC").delay == (0.0, 0.42)
+    assert room.set_reach("DAC", rc.BASS).stage("DAC").delay == (0.0, 0.42)
+    assert room.set_without("DAC", True).stage("DAC").delay == (0.0, 0.0)

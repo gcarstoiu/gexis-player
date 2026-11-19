@@ -123,13 +123,17 @@ class Audio:
 
     async def play(self, signal, channel: int | None, tail_s: float = TAIL_S):
         """`signal` played - to `channel` alone, to the channels of a tuple,
-        or to both with None - while the microphone listens from `LEAD_S`
-        before to `tail_s` after; the recording, as floats."""
+        or to both with None; as (samples, 2) frames, each column to its own
+        speaker (ADR-0185's timing) - while the microphone listens from
+        `LEAD_S` before to `tail_s` after; the recording, as floats."""
         import numpy as np
         signal = np.clip(np.asarray(signal, dtype=float), -1.0, 1.0)
-        frames = np.zeros((len(signal), 2))
-        for c in ((0, 1) if channel is None else (channel,) if isinstance(channel, int) else tuple(channel)):
-            frames[:, c] = signal
+        if signal.ndim == 2:
+            frames = signal[:, :2]
+        else:
+            frames = np.zeros((len(signal), 2))
+            for c in ((0, 1) if channel is None else (channel,) if isinstance(channel, int) else tuple(channel)):
+                frames[:, c] = signal
         data = (frames * (2 ** 31 - 1)).astype("<i4").tobytes()
         samples = int((LEAD_S + len(signal) / FS + tail_s) * FS)
         rec = await self._exec("arecord", "-q", "-D", self.mic.device, "-f", "S32_LE", "-r", str(FS),

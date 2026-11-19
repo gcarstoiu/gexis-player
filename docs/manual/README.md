@@ -1028,13 +1028,30 @@ nothing to press. On the player's screen, *Measure from your phone* (or
    the microphone hears about 60 dB, the level of a conversation, never
    above the output's *Maximum volume*. Only if it cannot reach 45 dB, turn
    the amplifier up a little and tap **Try again**.
-4. Each speaker plays two sweeps on its own, then both together, about a
+4. First a few short whistles, from the left, the right and the left
+   again: how much further one speaker is than the other. The nearer one
+   is then delayed by that much, so both reach your seat together, and the
+   phone says so. More than 34 cm apart, the phone says a speaker or the
+   seat looks out of place: move it and measure again, or **Measure
+   anyway**. A speaker with its + and − wires swapped stops the
+   measurement: swap them at one speaker, amplifier off, and measure again.
+   In a room too noisy for the whistles, nothing is said and nothing
+   delayed.
+5. Each speaker plays two sweeps on its own, then both together, about a
    minute a position.
    Then move the microphone where the phone shows - three positions: your
    head, and about 40 cm to either side - step back and tap **Measure
    here**; three seconds later the sweeps play. It never moves on without
-   the tap. A sweep spoiled by a noise (a door, a voice) is measured again.
-5. The correction: the cuts in the bass, worked out from both speakers
+   the tap. At the second position, to the left of your head, the whistles
+   play again: the left speaker must sound nearer there. If it sounds
+   further, the speakers look swapped - left plays from the right speaker -
+   or the microphone went to the right; the measurement stops, and nothing
+   changes. A sweep spoiled by a noise (a door, a voice) is measured again;
+   the room's steady noise is no reason to, so where a sweep stands well
+   over it, two that differ were disturbed, and elsewhere the sweeps are
+   averaged instead. What stands too little over the noise is not
+   corrected.
+6. The correction: the cuts in the bass, worked out from both speakers
    playing together - the bass of most music is the same in both, and what
    you hear is the two adding up - and the same on both speakers; above the
    bass, broad corrections for each speaker of its own. A chart shows
@@ -1044,14 +1061,16 @@ nothing to press. On the player's screen, *Measure from your phone* (or
    further from the target; where the three positions disagree, less is
    corrected. **Check it** measures the three positions again with the
    correction on, a tap at each again, showing each speaker as measuring
-   does - a sweep a noise spoiled is said and made again; **Skip** keeps it
-   as worked out, marked *Not checked*. If a position ends further from the
-   target than before, the result says which.
-6. **Keep it** switches room correction on, at the full range; **Discard**
+   does - a sweep a noise spoiled is said and made again; as it plays a
+   little lower to leave room for what the correction raises, it takes more
+   sweeps to make up for it. **Skip** keeps it as worked out, marked *Not
+   checked*. If a position ends further from the target than before, the
+   result says which.
+7. **Keep it** switches room correction on, at the full range; **Discard**
    leaves the output as it was. **Cancel**, at any step, leaves it as it was
    too, and so does ten minutes without a tap. A room already near the
-   target, in the bass and above it, has nothing to correct, and room
-   correction stays off.
+   target, in the bass and above it, with both speakers the same distance
+   away, has nothing to correct, and room correction stays off.
 
 On its page:
 
@@ -1067,6 +1086,9 @@ On its page:
 - **Hear it without** (*A/B*): no correction at all, to compare, heard at
   once, and amber while set. It stays where you put it, after a restart
   too, until switched back.
+- **Measured** says when, at how many positions and how far, and - for a
+  measurement that timed the speakers - how much further one is and how
+  much later the nearer one plays, at either reach.
 - **The level stays the same** across the three: the broad corrections may
   raise by up to 3 dB, so the player lowers the music that much before them,
   and the volume gives it back - except near the top of the volume and with
