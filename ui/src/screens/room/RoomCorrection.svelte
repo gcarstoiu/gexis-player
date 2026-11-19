@@ -275,7 +275,7 @@
               <div class="chartcard__title">{resultHead}</div>
               <div class="chartcard__line">{resultLine}</div>
             </div>
-            <RoomChart surface="phone" freqs={chart?.freqs ?? []} {speaker} {kind} {span} {reach} {range} />
+            <RoomChart surface="phone" freqs={chart?.freqs ?? []} {speaker} {kind} {span} {reach} {range} {both} />
           </div>
           <button type="button" class="again" class:is-lit={bassOnly} onclick={() => (view = 'flow')}>{againLabel}</button>
           {#if error}<div class="error" role="status">{error}</div>{/if}
@@ -324,7 +324,7 @@
               {@render segs('bar')}
             </div>
             <div class="chartbar" class:is-dim={dsd || !on}>
-              <RoomChart surface="bar" freqs={chart?.freqs ?? []} {speaker} {kind} {span} {reach} {range} />
+              <RoomChart surface="bar" freqs={chart?.freqs ?? []} {speaker} {kind} {span} {reach} {range} {both} />
             </div>
           {:else}
             <div class="never never--bar">
@@ -384,7 +384,7 @@
                 </div>
                 {@render segs('panel')}
               </div>
-              <RoomChart surface="panel" freqs={chart?.freqs ?? []} {speaker} {kind} {span} {reach} {range} />
+              <RoomChart surface="panel" freqs={chart?.freqs ?? []} {speaker} {kind} {span} {reach} {range} {both} />
             {:else}
               <div class="never">
                 <div class="never__title">Correct what your room adds to the sound</div>

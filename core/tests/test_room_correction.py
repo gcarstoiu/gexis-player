@@ -229,6 +229,32 @@ def test_the_chart_over_the_whole_range():
     assert rc.chart(None) is None
 
 
+def test_the_shading_is_before_with_the_corrections_as_designed():
+    """ADR-0186 D2, C1: whatever the check measured, the shading is before
+    with the kept filters, worked out as the design does - the cuts alone
+    for *Bass*, and for *Both* its cuts only."""
+    import numpy as np
+    from gexis_core import room_dsp as dsp
+    flat = tuple(0.0 for _ in range(N))
+    shared = ((46.0, -6.0, 4.0),)
+    m = Measurement("2026-11-19", True, {"L": speaker(), "R": speaker(),
+                                          rc.BOTH: Speaker(cuts=shared, before=flat, target=flat, after=flat,
+                                                           positions=(flat,) * 3)})
+    c = rc.chart(m)
+    grid = np.asarray(dsp.GRID)
+    sp = c["speakers"]["L"]
+    cuts = dsp.cuts_db([dsp.Cut(*x) for x in speaker().cuts], grid)
+    broad = dsp.cuts_db([dsp.Broad(*x) for x in ABOVE], grid)
+    assert np.allclose(sp["corrected_bass"], np.asarray(sp["before"]) + cuts, atol=0.01)
+    assert np.allclose(sp["corrected"], np.asarray(sp["before"]) + cuts + broad, atol=0.01)
+    assert sp["after"] == list(flat), "the after stays what the check measured"
+    both = c["speakers"][rc.BOTH]
+    assert np.allclose(both["corrected"], dsp.cuts_db([dsp.Cut(*shared[0])], grid), atol=0.01)
+    assert both["corrected"] == both["corrected_bass"]
+    old = rc.chart(bass_only())["speakers"]["L"]
+    assert len(old["corrected"]) == len(old["before"]) and old["corrected"] == old["corrected_bass"]
+
+
 def test_the_chart_of_a_measurement_from_before():
     c = rc.chart(bass_only())
     assert c["range"] == rc.BASS and c["freqs"][-1] < 520 and c["speakers"]["L"]["above"] == []

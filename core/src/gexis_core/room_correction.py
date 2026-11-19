@@ -11,6 +11,7 @@ plays (`stage`) and what the screens draw (`summary`, `chart`).
 """
 from __future__ import annotations
 
+import functools
 import math
 import re
 from dataclasses import dataclass, field, replace
@@ -488,21 +489,39 @@ def shown(filters) -> list[dict]:
     return [{"freq": round(f), "gain": round(g, 1)} for f, g, _ in filters]
 
 
+#: The rate the corrections are designed at (`room_dsp.FS`).
+DESIGN_FS = 48000
+
+
+@functools.lru_cache(maxsize=16)
+def _filters_db(filters: tuple, n: int) -> tuple[float, ...]:
+    """**What `filters` (freq, gain, q) do together** at the first `n` grid
+    points, in dB, as designed (ADR-0186 C1)."""
+    return tuple(sum(eq.band_db(f0, g, f, DESIGN_FS, q) for f0, g, q in filters) for f in grid(n))
+
+
 def chart(measurement: Measurement | None, expected: bool | None = None) -> dict | None:
     """**What the chart draws** (the design's §2), for each speaker, on the
     whole grid the measurement has (to 20 kHz, or to 500 Hz for one kept
     before Phase 30): before, each position, the target, after - measured,
     or expected when the check was skipped - with everything and with the
-    bass's cuts alone (`after_bass`, for *Bass*), and the corrections."""
+    bass's cuts alone (`after_bass`, for *Bass*), and the corrections.
+    **What the shading draws** (ADR-0186 D2): before with the corrections
+    kept (`corrected`; `corrected_bass` with the cuts alone) - exact, the
+    filters being the same on every position."""
     if measurement is None:
         return None
     first = next(iter(measurement.speakers.values()), None)
     n = len(first.before) if first else 0
     out = {"freqs": grid(n), "limit": int(LIMIT), "range": measurement.range, "speakers": {}}
     for k, s in measurement.speakers.items():
+        cuts = _filters_db(tuple(s.cuts), len(s.before))
+        broad = _filters_db(tuple(measurement.above(k)), len(s.before))
         out["speakers"][k] = {
             "before": _round(s.before), "target": _round(s.target), "after": _round(s.after),
             "after_bass": _round(s.after_bass or s.after), "positions": [_round(p) for p in s.positions],
+            "corrected": _round(tuple(b + c + a for b, c, a in zip(s.before, cuts, broad))),
+            "corrected_bass": _round(tuple(b + c for b, c in zip(s.before, cuts))),
             "cuts": shown(s.cuts), "above": shown(measurement.above(k)),
             "peaks_down": round(s.peaks_down()), "within": s.within, "room_within": s.room_within,
         }
