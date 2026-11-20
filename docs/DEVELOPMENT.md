@@ -4393,7 +4393,8 @@ database (`database { plugin "proxy" }`, the music on a share).
 **Started 2026-11-20** (George, after desk research on how room correction
 is done, and a strategy marked point by point as decided, measured or new):
 [ADR-0187](decisions/0187-room-measurement-reworked-setup-check-five-positions-timing-mark.md)
-proposed the same day with George's decisions:
+accepted the same day (George approved Claude's choices C1-C10), with his
+decisions:
 - a setup check of its own before the measurement - left and right,
   polarity, the distance's difference and now the level, matched in full;
 - five positions around the head, varied in height and depth;

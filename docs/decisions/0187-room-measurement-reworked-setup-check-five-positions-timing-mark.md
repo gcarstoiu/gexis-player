@@ -1,7 +1,8 @@
 # ADR-0187 — Room measurement reworked: a setup check, five positions, a timing mark on every sweep
 
-**Status:** **Proposed** 2026-11-20. George decided D1-D9 the same day;
-C1-C10 are Claude's, for approval. Phase 37 (`ph-room-measurement`).
+**Status:** **Accepted** 2026-11-20 (George approved C1-C10). Proposed
+the same day; George decided D1-D9; C1-C10 are Claude's. Phase 37
+(`ph-room-measurement`).
 **Amends:** [ADR-0175](0175-room-correction-for-the-bass.md) (three
 positions, equal weights, the bass fitted at 1/6 octave),
 [ADR-0185](0185-room-measurement-speakers-checked-and-aligned-fewer-repeats.md)
@@ -95,7 +96,7 @@ alone can sit far from its target (on George's run of 19 Nov up to 8 dB over
 and 18 dB under, the pair within −3.8/+1.8 dB) - decided when ADR-0186 D4's
 chart is resumed; whether a noisy room may lengthen the run, after the logs.
 
-## Claude's choices (for approval)
+## Claude's choices (approved 2026-11-20)
 
 - **C1 — The setup check's flow.** At the head, ADR-0185's left-right-left
   recording gives the timing, the polarity and now the level; at position 2's
