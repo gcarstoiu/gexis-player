@@ -21,6 +21,17 @@ move the screen's cable and power supply away from the Pi, try another cable,
 or connect the Pi to the router with a network cable, which avoids the
 problem entirely.
 
+**There is a hum that goes away when the screen's touch cable is unplugged.
+What is it?**
+Most likely a ground problem, not the player's software: the touch cable is
+a second connection between the screen and the Pi, beside HDMI, and a small
+current finds its way into the ground the DAC and amplifier share. A
+full-speed USB isolator on the touch cable usually cures it while touch
+keeps working; the screen then needs its own power supply. The causes, how
+to tell them apart and the other remedies are in the
+[hardware guide](HARDWARE.md#hum-from-a-touch-screens-usb-cable). Never
+remove an earth connection to cure a hum.
+
 **Will a library scan by the Lyrion server interrupt the music?**
 It should not. The Lyrion server runs at the lowest priority, and 40 minutes
 of playback during a full scan of a large library had no gaps. The Pi
@@ -1014,23 +1025,38 @@ the cover up when the source sends none. The match has to be at least as
 sure as *Confidence threshold* (recommended 90 %); below it the player shows
 nothing rather than a wrong cover. Since 0.9.2, covers are found more often,
 including for tracks by several artists.
+With Plexamp claimed and *Information from Plex* on (*Settings → Sources*,
+under Plexamp), the player looks in your Plex library first, then on the
+internet.
 
 **Where do lyrics come from, and why are some not synced?**
 From LRCLIB, switched on with *Settings → Enrichment → Lyrics*. Where LRCLIB
-has only plain lyrics, they are shown without timing. Some tracks have none.
+has none, or only plain ones, and Plexamp is claimed with *Information from
+Plex* on, the player shows your Plex library's, timed when it has them; the
+credit under the lyrics says whose they are. Your Plex server hands out only
+about five lyrics every ten minutes, so the player asks it only while the lyrics are on
+screen, and a track skipped within its first seconds is not asked about.
+Plain lyrics are shown without timing. Some tracks have none.
 The Lyrics button on Now Playing, or the Lyrics corner of the phone's
 remote, shows them.
 
 **Where do artist pictures and biographies come from?**
-Biographies from Wikipedia; album and artist details from MusicBrainz. Artist
-pictures from fanart.tv with a key of your own (*fanart.tv key*), then
-TheAudioDB; without a fanart.tv key, from the Lyrion server's Music & Artist
-Information plugin, or initials where it is not installed.
+With Plexamp claimed and *Information from Plex* on (*Settings → Sources*,
+under Plexamp), from your Plex library first: the biography, the picture,
+similar artists and the artist page's *Popular* tracks. Otherwise, and for
+artists your Plex library does not have: biographies from Wikipedia; album
+and artist details from MusicBrainz; artist pictures from fanart.tv with a
+key of your own (*fanart.tv key*), then TheAudioDB; without a fanart.tv key,
+from the Lyrion server's Music & Artist Information plugin, or initials
+where it is not installed; *Popular* tracks from ListenBrainz, with a token
+of your own.
 
 **How do I fill in portraits and covers for the whole library?**
 *Settings → Enrichment → Lyrion Client → Find portraits and covers* checks
-every album artist and album on fanart.tv and TheAudioDB, keeping Lyrion's
-picture where neither has one. It runs in the background without stopping
+every album artist and album in your Plex library first (with Plexamp claimed
+and *Information from Plex* on), then on fanart.tv and TheAudioDB, keeping
+Lyrion's picture where none has one. With *Information from Plex* off, the
+lists show what fanart.tv and TheAudioDB found, without another run. It runs in the background without stopping
 the music, and shows what its last run found. Without a TheAudioDB key of
 your own it uses a shared key and can take noticeably longer.
 

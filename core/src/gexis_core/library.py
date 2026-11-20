@@ -28,6 +28,7 @@ import unicodedata
 import aiohttp
 
 from gexis_core.artwork_sweep import ALBUM_NAMESPACE, remembered
+from gexis_core.plex import SWEPT_ALBUMS, swept
 from gexis_core.enrichment import fold
 
 logger = logging.getLogger("gexis_core.library")
@@ -136,6 +137,9 @@ class LmsLibrary:
         #: artist and title. Optional: without it every cover is LMS's, which
         #: is what shipped before.
         self._store = store
+        #: The lent Plex library (ADR-0184, second step, 4): the sweep's Plex
+        #: covers come first while it is ready. Set by the daemon.
+        self.plex = None
         #: `artist id -> name`, rebuilt when LMS reports a new scan.
         self._names: dict[int, str] | None = None
         self._names_scan: str | None = None
@@ -227,19 +231,25 @@ class LmsLibrary:
         return f"{self._base}/music/{track_id}/cover_{size}x{size}_o.jpg"
 
     def _cover(self, raw: dict, size: int) -> str | None:
-        """An album's cover: **fanart's if the sweep found one, LMS's
-        otherwise** ([ADR-0059](../../../docs/decisions/0059-artist-portraits-in-the-list.md)).
+        """An album's cover: **the Plex library's if the sweep found one
+        there and Plex is on, fanart's if it found one there, LMS's
+        otherwise** ([ADR-0059](../../../docs/decisions/0059-artist-portraits-in-the-list.md),
+        [ADR-0184](../../../docs/decisions/0184-plex-information-through-plexamps-claim.md)).
 
-        Through LMS's image proxy either way, so a 1000px fanart cover
-        arrives at the size the grid asked for and LMS does the caching.
+        Plex's through the core, scaled by Plex; fanart's through LMS's
+        image proxy, so a 1000px cover arrives at the size the grid asked
+        for and LMS does the caching.
         """
         lms = self._artwork(raw.get("artwork_track_id") or raw.get("coverid"), size)
         artist, title = raw.get("artist"), raw.get("album")
         if self._store is None or not artist or not title:
             return lms
-        found = remembered(
-            self._store, ALBUM_NAMESPACE, f"{fold(artist)}\x1f{fold(title)}"
-        )
+        key = f"{fold(artist)}\x1f{fold(title)}"
+        if self.plex is not None and self.plex.ready():
+            from_plex = swept(self._store, SWEPT_ALBUMS, key, size)
+            if from_plex:
+                return from_plex
+        found = remembered(self._store, ALBUM_NAMESPACE, key)
         if not found or found is True:
             return lms
         return f"{self._base}/imageproxy/{found}/image_{size}x{size}_o.jpg"

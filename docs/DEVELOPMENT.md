@@ -3399,6 +3399,11 @@ received 2026-10-26, `design/source/21`.
 
 **ID:** `ph-multiroom` · numbered 22 on 2026-10-27, moved before room correction with AirPlay 2 (George: room correction cannot be tried yet); added 2026-10-25 as 24, 25 from 2026-10-26.
 
+**Closed 2026-11-16** (George, with 1.17.0 on Stable: every phase then in progress closed), in 1.10.0. Left, on the to-do list: the measurement session (at
+192 kHz the bar lost sync over Wi-Fi), the Home Assistant integration's
+join and unjoin (its `multiroom` branch), Lyrion-app grouping back and
+forth with the player's.
+
 **Added 2026-10-25** (George, with AirPlay 2). Spotify, AirPlay and Bluetooth
 playing in sync on several players, as Lyrion's own playback already does.
 
@@ -3462,6 +3467,10 @@ by the session's safety check).
 ### Phase 23 — AirPlay 2
 
 **ID:** `ph-airplay` · numbered 23 on 2026-10-27, after multiroom and before room correction (George); added 2026-10-25 as 23; numbered 24 on 2026-10-26.
+
+**Closed 2026-11-16** (George, with 1.17.0 on Stable: every phase then in progress closed), in every release since 1.9.0, on Stable from 1.10.0, still marked
+*Limited testing*. Left: the test with an Apple device (to-do `ph23-test`),
+then T1-T9 and the mark removed.
 
 **Added 2026-10-25** (George moved the Must ideas, and internet radio
 without Lyrion, into phases of their own after room correction). Play from
@@ -3674,6 +3683,10 @@ player can show of what Roon plays.
 (George: building on the local machine has become troublesome); a *Should*
 idea since 2026-10-18.
 
+**Closed 2026-11-16** (George, with 1.17.0 on Stable: every phase then in progress closed), in 1.12.1, on Stable from 1.13.0. Left: a card flashed from
+1.12.1's image (criterion 4), then R2D2's pi-gen container and build
+images removed (decision 3).
+
 **Added 2026-11-02.** The packages, the UI, the image and the release's
 parts are built on GitHub's arm64 machines from the release tag, not on
 R2D2. Signing stays on R2D2 (ADR-0105 decision 1). The proposal is
@@ -3712,6 +3725,10 @@ packs) is read from GitHub.
 correction (George). **On Stable with 1.13.0** (2026-11-06, George; Testing
 from 2026-11-03); criterion 5 and first use on a fresh card still to be seen.
 
+**Closed 2026-11-16** (George, with 1.17.0 on Stable: every phase then in progress closed), on Stable from 1.13.0. Left: criterion 5 and first use on a
+fresh card, Plexamp played once on 0.5.1, George's look at the Plugins
+page; ADR-0174's setup fix (part 2's list) not built.
+
 **Added 2026-11-03** (George: Plexamp, and Beszel's agent and hub, out of the
 player, as standalone plugins). Today they are plugins shipped with the
 player: in the image, pinned by `gexis-player`, updated only by a player
@@ -3746,6 +3763,10 @@ how.
    technical guide and plugin manual updated.
 
 ### Phase 29 — Room correction for the bass, with a USB microphone
+
+**Closed 2026-11-16** (George, with 1.17.0 on Stable: every phase then in progress closed), on Stable from 1.16.1. Not measured: the cuts read from
+CamillaDSP while music plays, the level against a meter, two sweeps'
+agreement at 60 dB, the stage's cost, the A/B bit-exactness.
 
 **Started 2026-11-03** (George), on `ph-room-correction`;
 [ADR-0175](decisions/0175-room-correction-for-the-bass.md) accepted the same
@@ -3822,6 +3843,11 @@ Pi, and the microphones (miniDSP UMIK-1 first).
 ### Phase 30 — Room correction for the full range
 
 **ID:** `ph-room-correction-full` · numbered 30 on 2026-11-03, after Plexamp and Beszel to the catalogue (George); numbered 29 on 2026-11-02, after releases built on GitHub (George); numbered 28 on 2026-11-01, after the Roon plugin (George); numbered 27 on 2026-10-29, with Phase 26; numbered 25 on 2026-10-27, after multiroom and AirPlay 2 (George: no room correction can be tried yet); added 2026-10-20 as 19, split from `ph-room-correction`; numbered 20 on 2026-10-21, 21 on 2026-10-24, 22 on 2026-10-25, 23 on 2026-10-26.
+
+**Closed 2026-11-16** (George, with 1.17.0 on Stable: every phase then in progress closed), on Stable from 1.16.1, Full range still marked *Limited
+testing*. Left: George's run at the full range; the stage's cost at
+44.1/96/192 kHz; acceptance 2 as a finding from a run checked at Full
+range. Phase 34 next for room correction.
 
 **Added 2026-10-20** (George, splitting room correction in two). After the
 bass (Phase 29, `ph-room-correction`): correction above the Schroeder
@@ -3918,6 +3944,9 @@ Bass, Full range and Without, the times). Built the same day, and **on Testing w
 
 **ID:** `ph-radio` · numbered 31 on 2026-11-03, after Plexamp and Beszel to the catalogue (George); numbered 30 on 2026-11-02, after releases built on GitHub (George); numbered 29 on 2026-11-01, after the Roon plugin (George); numbered 28 on 2026-10-29 (the plugin catalogue and themes brought forward); added 2026-10-25 as 26; numbered 27 on 2026-10-26.
 
+**Closed 2026-11-16** (George, with 1.17.0 on Stable: every phase then in progress closed), in 1.17.0, on Stable the same day. Left: the Home Assistant
+integration's release from its `radio` branch (acceptance 8).
+
 **Added 2026-10-25** (George, with AirPlay 2; it was a Should idea). A radio
 directory for players that only stream, with no Lyrion server: today the
 library's Radio is Lyrion's own directory.
@@ -3953,8 +3982,9 @@ taken out of its group and put back): the stream's rate to the DAC, 22 kHz
 raised to 48 with room correction running (acceptance 4 met), a cut recovered
 and a station down stopped with the message (5 met), 4.8-7.0 % of a core
 through the real chain (7 for George to read against Finding 146's silent
-3-6 %), memory flat over an hour. **Next:** George's regression pass on
-sofapi (the preview stays installed); the Home Assistant integration.
+3-6 %), memory flat over an hour. **In 1.17.0, on Testing 2026-11-16**,
+after George's regression pass (its two findings fixed). **Next:** the
+Home Assistant integration's release (acceptance 8).
 
 **Acceptance:**
 
@@ -3981,6 +4011,22 @@ sofapi (the preview stays installed); the Home Assistant integration.
 ### Phase 32 — The library answers for itself
 
 **ID:** `ph-library` · numbered 32 on 2026-11-03, after Plexamp and Beszel to the catalogue (George); numbered 31 on 2026-11-02, after releases built on GitHub (George); numbered 30 on 2026-11-01, after the Roon plugin (George); numbered 29 on 2026-10-26 (28 from 2026-10-25, 24 earlier that day, 23 from 2026-10-21, 22 from 2026-10-20, 21 from 2026-10-19, 20 from 2026-10-15, 19 from 2026-10-14, 18 from 2026-10-13; was 11a).
+
+**Started 2026-11-16** (George, after 1.17.0 on Stable):
+[ADR-0184](decisions/0184-plex-information-through-plexamps-claim.md) proposed
+for acceptance 1; George answered its decisions the same day: no second
+sign-in - the Plexamp plugin lends Plexamp's claim (its token and the local
+server it plays from) to the core, which keeps it in memory only; the row in
+Sources beside Plexamp. **Accepted** the same day, when he confirmed that
+Plex then answers only where Plexamp is installed and claimed, and the row
+(*Information from Plex*, on, in ADR-0022).
+
+**In 1.18.0** (George, 2026-11-18: to Testing with everything, the notes
+approved): its four steps (covers; the artist; the artist's MusicBrainz id;
+lyrics behind LRCLIB's) with gexis-plexamp 0.6.0 in the catalogue (serial
+9, lowest release 1.18.0); Findings 149, 150, 152 and 153. Left: George
+seeing Plex's lyrics on a track LRCLIB has none timed for; the phase closes
+at his word.
 
 **Added 2026-09-25 (George):** *"Let's introduce another phase … which should tackle the question of how we can we leverage the plexamp/Plex
 server metadata that is available. Anything that can reduce the dependency on
@@ -4049,11 +4095,29 @@ consumes. **Popular tracks do remain ListenBrainz's**, 404 on that server.
    Plexamp displays them, so there is a way. **Find it before building a
    provider**; a lyrics source that works once an evening is worse than none,
    because it would win the merge and then fail.
+   - **Found, and rationed** ([Finding 153](findings/153-plex-lyrics-are-rationed.md)):
+     Plexamp's request, about five lyrics per ten minutes for the whole
+     server. **Plex behind LRCLIB** (George, 2026-11-18): asked only where
+     LRCLIB has no lyrics or none timed, and only while lyrics are on screen
+     (ADR-0184, fourth step).
 7. **Decided in this phase, not before:** whether the three things Plex has and
    this project does not — **sonic similarity with distances**, **moods and
    styles**, and **ReplayGain** — are worth model changes, or are noted and left.
    They are not enrichment as ADR-0040 defines it, and one of them (ReplayGain)
    is an audio decision rather than a metadata one.
+   - **Sonic similarity: noted and left** (George, 2026-11-17). It replaces
+     no internet source, nothing here uses it, and Plexamp offers it for
+     what it plays; a *Sounds like* row or a queue kept going by it were the
+     choices not taken, either still possible later.
+   - **Moods and styles: noted and left** (George, 2026-11-17). They replace
+     no internet source, and the Artist tab already carries the library's
+     own genres; Plex's styles beside them, or browsing by mood or style,
+     were the choices not taken.
+   - **ReplayGain: noted and left** (George, 2026-11-17). Levelling mostly
+     turns loud albums down, so LMS would play quieter at the same setting -
+     what ADR-0052 took out of Spotify at his word; the music stays as
+     recorded. Album levelling as an option, off by default, and track
+     levelling with it were the choices not taken. **Acceptance 7 decided.**
 
 **Out of scope, and named:** Plex's `UltraBlurColors`, its album reviews, and
 its own catalogue groupings (*Singles & EPs*, *Live Albums*, *Compilations*).
@@ -4114,6 +4178,11 @@ must settle:
 ### Phase 35 — A page from Home Assistant on the screen
 
 **ID:** `ph-ha-page` · added 2026-11-07 as 35 (George).
+
+**Closed 2026-11-16** (George, with 1.17.0 on Stable: every phase then in progress closed), on Stable from 1.16.1 with the integration's 0.6.0. Not yet on
+a player: the heat take-down, a USB keyboard's key, one page replacing
+another, the switch turned off while a page is up; acceptance 4 (192 kHz
+with room correction).
 
 **Added 2026-11-07** (George, asked from the Home Assistant side). Home
 Assistant puts a page of its own on a player's screen for a while - live

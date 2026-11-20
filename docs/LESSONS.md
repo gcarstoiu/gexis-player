@@ -522,6 +522,14 @@ drops it at every reload, and the core reloads at each start. A guard is
 checked after the events of an ordinary day - a reload, a restart, a
 reconnection - not only right after it is set up.
 
+**97. A stop not read before the unmute** (2026-11-18, Finding 154). A
+muted group test of the Wi-Fi fix played a radio station; the restore sent
+`POST /transport/stop` and `POST /group/mute {muted: false}` in one command.
+`stop` is no transport command (a live station stops on `pause`): a 404,
+and the station played aloud at both players' levels for 10-15 s before it
+was muted again. A step that silences is read back - the cards idle, the
+source stopped - before the step that makes sound possible again.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target, the check quietly

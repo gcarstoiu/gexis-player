@@ -24,7 +24,7 @@ c4f57ae7cae1e9a24b546d76d34e0596e1b67d7898f521d2821b08938a4eb5ef	GPL-3.0	Gelo5's
 553ee276fac0427083f98966602973846ad4753fbdf5d10a055b0125a5a3551f	GPL-3.0	squeezelite, source	https://codeload.github.com/ralph-irving/squeezelite/tar.gz/262994a989dc29ce3be4390c57c6a43373dfdca2
 e8e0db5767cd57685e67a3712737e68fdebe368ed5cb76073d71458abe7048f2	GPL-3.0	peppyalsa, source	https://codeload.github.com/project-owner/peppyalsa/tar.gz/7dcb0c5e783e0c86315a0f655684613affd3e9d2
 3e90e2ea1f52f5c1559a5a46b2cdadb46ac6532a08a34f8cd7e77aa39f6a90c7	GPL-2.0	nqptp, source	https://codeload.github.com/mikebrady/nqptp/tar.gz/ab8fb67483411640fd7f1e193889482f2421c37c
-3e5a58aba5a751ed8c33ebd73228218105f0afe26da382cd76fd93fbf21f83f4	MIT and others, per file	shairport-sync, source	https://codeload.github.com/mikebrady/shairport-sync/tar.gz/0a34fbda83724cc06266aadcf7c88acc8fef4e7d
+f5b3b66f57197f11526de2e3c1c22e24ed6552e247242bf0ec89e5d3d7410dd5	MIT and others, per file	shairport-sync, source	https://codeload.github.com/mikebrady/shairport-sync/tar.gz/7ce90d89529dd760488f20592a7cbff626672f6c
 dc249e97cfd33993c8642da256cc025b32ae3584ae4bd049eee8c390b37d1184	GPL-3.0	go-librespot v0.10.7, source of the binary we ship	https://codeload.github.com/devgianlu/go-librespot/tar.gz/v0.10.7
 7e2fdca1e9c73885426ac889d27682c76d49ea1ea52c5f5bfe5356d7fdfa52df	GPL-3.0	CamillaDSP v4.1.3, source of the binary we ship	https://codeload.github.com/HEnquist/camilladsp/tar.gz/v4.1.3
 8c700340a06adac0ba31ad1ea36e99d4a131fb5f0c8cae56a9c47a3ef185d131	MIT	peppy_templates: 1280x400_Aluminium_frame_01	https://raw.githubusercontent.com/foonerd/peppy_templates/f80c166a9682467f0631c374b6ed4eb088fc6e3c/template_peppy/1280/400/1280x400_Aluminium_frame_01.zip

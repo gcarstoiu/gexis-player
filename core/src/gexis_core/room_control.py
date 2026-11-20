@@ -94,6 +94,34 @@ class RoomControl:
         self._run_card: str | None = None
         self._ended: dict | None = None
         self._ended_run = None       # the run whose end that is
+        self._redesign_kept()
+
+    def _redesign_kept(self) -> None:
+        """**Measurements kept from before ADR-0175's amendment** (George,
+        2026-11-17): their bass, designed for each speaker alone, is designed
+        again from their *Both* sweeps, once, when the player starts -
+        before anything plays through the stage. One that cannot be (no
+        *Both* sweeps) is kept as it is; a failure never stops the start."""
+        try:
+            room = self.state()
+            kept = [(card, here) for card, here in room.outputs.items()
+                    if here.measured is not None and here.measured.bass_from != rc.BOTH]
+            if not kept:
+                return
+            from dataclasses import replace
+
+            from gexis_core import room_run
+            done = 0
+            for card, here in kept:
+                new = room_run.redesign(here.measured)
+                if new is not None:
+                    room = room._with(card, replace(here, measured=new))
+                    done += 1
+            if done:
+                self._store.set(rc.KEY, room.to_settings())
+                logger.info("room correction: %d kept measurement(s) redesigned from both speakers", done)
+        except Exception:
+            logger.exception("room correction: a kept measurement could not be redesigned")
 
     # -- reading ------------------------------------------------------------------
 

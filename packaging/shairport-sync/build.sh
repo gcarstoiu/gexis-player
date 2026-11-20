@@ -11,17 +11,17 @@
 set -eu
 
 VERSION_ARG="$1"   # the repository's version: unused, Shairport Sync has its own
-TAG=5.6.2
-COMMIT=0a34fbda83724cc06266aadcf7c88acc8fef4e7d
-COMMIT_DATE=20261025
+TAG=5.6.3
+COMMIT=7ce90d89529dd760488f20592a7cbff626672f6c
+COMMIT_DATE=20261110
 # sha256 of every tracked file, sorted by name (as Squeezelite's pin).
-SOURCE_SHA256=65568447b74493eeadaf6f897c9552007d968bf1b61155e1d22107bc3f0115a5
+SOURCE_SHA256=5622daeda8347946eabe795be2f1cb96a528468b7c0e604305ef40067c63771f
 # GitHub's archive of the commit (fetch-source.sh, ADR-0173), in the inputs
 # mirror like every download. That the tag is this commit was checked when
 # it was pinned.
-ARCHIVE_SHA256=3e5a58aba5a751ed8c33ebd73228218105f0afe26da382cd76fd93fbf21f83f4
+ARCHIVE_SHA256=f5b3b66f57197f11526de2e3c1c22e24ed6552e247242bf0ec89e5d3d7410dd5
 # The revision is ours: raised with every change to the build (LESSONS 53).
-VERSION="${TAG}-2"
+VERSION="${TAG}-1"
 PKG=gexis-shairport-sync
 STAGE=/tmp/pkg/debian/$PKG
 SRC=/tmp/shairport-sync

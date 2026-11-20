@@ -6,6 +6,26 @@
 Every release of Gexis Player and its notes, newest first. The player
 shows the last 10 under Settings → System → Change logs.
 
+## 1.18.0 — 18 November 2026
+
+### New
+
+- With Plexamp claimed and Information from Plex on, the player looks in the Plex library first for an artist's biography, picture, similar artists and Popular tracks, and for an album's cover when a source sends none.
+- Find portraits and covers takes the Plex library's first, then fanart.tv and TheAudioDB.
+- Lyrics from the Plex library where LRCLIB has none, or none timed, while the lyrics are on screen.
+
+### Fixed
+
+- Room correction works out the bass's cuts from both speakers playing together, the same on both, instead of from each speaker alone, which took too much out of the low voice range.
+- A player on Wi-Fi no longer searches for networks every forty seconds or so, which could stop a group's music for a few seconds.
+
+### Good to know
+
+- Information from Plex needs the Plexamp plugin 0.6.0: its row in Settings → Plugins shows Update to 0.6.0. It uses the Plex server Plexamp plays from, only while that server is on the home network.
+- A Plex server hands out only about five lyrics every ten minutes, so the player asks for them only while they are on screen.
+- A room correction measured before is worked out again and shows Not checked until it is checked.
+- AirPlay uses Shairport Sync 5.6.3, with its fixes.
+
 ## 1.17.0 — 16 November 2026
 
 ### New

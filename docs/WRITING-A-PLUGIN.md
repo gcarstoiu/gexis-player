@@ -210,6 +210,12 @@ a picture rather than an address goes in an `artwork` event first; the
 player serves it, and your `artwork` names the path it is served at
 (`/plugins/<id>/artwork/<key>`, the contract says how the key is made).
 
+**A library to lend.** The Plexamp plugin sends a `library` event: the Plex
+server Plexamp plays from, its address on the local network and that
+server's token. The player then asks that library about whatever plays,
+ahead of the internet's sources, and keeps the token in memory only
+(ADR-0184). Only the plugin with the id `plexamp` is listened to for now.
+
 **Volume.** With `volume_mechanism: "software_api"`, report your level with
 `{"t": "volume", "value": 62, "steps": 100}` and apply `set_volume` when told.
 The player keeps the DAC's own level separately; read ADR-0053 and ADR-0054

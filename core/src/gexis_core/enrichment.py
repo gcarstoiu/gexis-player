@@ -76,13 +76,14 @@ RECLAIM_MIN_BYTES = 1024 ** 2
 #: where a wrong answer is unlikely rather than where matches are plentiful.
 CONFIDENCE_MIN = 90
 
-#: Warmed as soon as a track starts. The two LMS providers because they are
-#: on this network and cost nothing anyone else pays for - and LRCLIB
+#: Warmed as soon as a track starts. The two LMS providers and the lent Plex
+#: library (ADR-0184) because they are on this network and cost nothing
+#: anyone else pays for - and LRCLIB
 #: because the Track tab itself shows synced lyrics when a track has them
 #: (George, 2026-09-18), so they are not a tab nobody opened: they are what
 #: the main screen draws. LRCLIB publishes no rate limit and asks only for
 #: serial requests and a real User-Agent, both of which `Http` does.
-PREFETCH_PROVIDERS = ("lms", "lms-release", "lrclib")
+PREFETCH_PROVIDERS = ("plex-release", "plex-artist", "lms", "lms-release", "lrclib")
 
 #: **What each provider's answer depends on** (`TrackKey.scoped`). Not in
 #: the list: the track itself (lyrics, a recording's cover).
@@ -90,13 +91,21 @@ SCOPES = {
     "lms": "artist", "popular": "artist", "fanart": "artist", "tadb-bg": "artist",
     "wikipedia": "artist", "listenbrainz": "artist", "fanart-bgs": "artist",
     "lms-release": "album", "mb-release": "album", "coverart": "album",
+    "plex-release": "album", "plex-artist": "artist",
 }
 
 #: The providers that find a cover. **Asked only for a track whose renderer
 #: sent none, and asked first** (2026-10-06): each began with MusicBrainz
 #: behind the biography and release searches on one limiter, and for LMS
 #: tracks with their own artwork they spent that allowance on nothing.
-ARTWORK_PROVIDERS = ("coverart", "recording-art")
+#: **The lent Plex library's first** (ADR-0184): on this network, and it
+#: holds the cover of every album it has (Finding 086).
+ARTWORK_PROVIDERS = ("plex-release", "coverart", "recording-art")
+
+#: **The lyrics move as one set** (ADR-0184, fourth step): the words, their
+#: timing, whose they are, and "instrumental". Merged field by field, a
+#: later provider's timed words would sit under the first one's credit.
+LYRIC_FIELDS = ("lyrics", "lyrics_synced", "lyrics_source", "instrumental")
 
 #: How long a track must have been playing before its enrichment is warmed.
 #: Skipping through an album would otherwise cost one lookup per track.
@@ -297,13 +306,17 @@ class Enrichment:
 
     def merged_with(self, other: "Enrichment") -> "Enrichment":
         """`self` wins: the first provider to answer a field keeps it, which
-        is what makes ADR-0040 §1's "LMS first" mean anything."""
+        is what makes ADR-0040 §1's "LMS first" mean anything. **The lyrics
+        are one set** (`LYRIC_FIELDS`): `other`'s replace `self`'s only when
+        theirs are timed, or say instrumental, and `self`'s are neither."""
         fields = {}
         for name, mine in self.__dict__.items():
-            if name == "sources":
+            if name == "sources" or name in LYRIC_FIELDS:
                 continue
             theirs = getattr(other, name)
             fields[name] = mine if mine else theirs
+        words = other if _lyrics_rank(other) > _lyrics_rank(self) else self
+        fields.update({name: getattr(words, name) for name in LYRIC_FIELDS})
         sources = self.sources + tuple(s for s in other.sources if s not in self.sources)
         return replace(self, **fields, sources=sources)
 
@@ -660,6 +673,14 @@ class Cache:
                                [(p,) for p in providers])
         self._conn.commit()
 
+    def forget_misses(self, *providers: str) -> int:
+        """Every "nothing" these providers answered: what a better match
+        than theirs may now find."""
+        gone = sum(self._conn.execute("DELETE FROM enrichment WHERE provider = ? AND outcome = ?",
+                                      (p, Outcome.MISSING.value)).rowcount for p in providers)
+        self._conn.commit()
+        return gone
+
     def forget(self, key: TrackKey, provider: str) -> None:
         self._conn.execute(
             "DELETE FROM enrichment WHERE key = ? AND provider = ?",
@@ -688,6 +709,14 @@ def _rehydrate(raw: dict) -> dict:
 
 def _always_ready() -> bool:
     return True
+
+
+def _lyrics_rank(found: Enrichment) -> int:
+    """How much a set of lyrics says: timed words or "instrumental" over
+    plain words over none (`Enrichment.merged_with`)."""
+    if found.lyrics_synced or found.instrumental:
+        return 2
+    return 1 if found.lyrics else 0
 
 
 #: A picture on the LMS server - its image proxy, which LMS's own photos and
@@ -787,12 +816,24 @@ class EnrichmentService:
         # 2026-09-18: still not seeing lyrics on Spotify). Each host still
         # has its own limiter, so this changes what waits for what, not how
         # often anyone is asked.
+        # **A provider behind another** (`behind`, ADR-0184, fourth step) is
+        # asked only with the one it stands behind, and started once that
+        # one has answered (`_ask_behind`). One step: the one ahead stands
+        # behind nobody.
+        heads = {p.name for p in asked if getattr(p, "behind", None) is None}
+        asked = [p for p in asked if getattr(p, "behind", None) in (None, *heads)]
+        ahead_of = {p.name: i for i, p in enumerate(asked) if getattr(p, "behind", None) is None}
         if not asked:
             return Enrichment()
         # The covers first: what is started first waits least on a host's
         # limiter. Merged in the providers' own order all the same.
         first = sorted(range(len(asked)), key=lambda i: asked[i].name not in ARTWORK_PROVIDERS)
-        started = {i: asyncio.ensure_future(self._ask(asked[i], key)) for i in first}
+        started = {i: asyncio.ensure_future(self._ask(asked[i], key))
+                   for i in first if getattr(asked[i], "behind", None) is None}
+        for i, provider in enumerate(asked):
+            if i not in started:
+                started[i] = asyncio.ensure_future(
+                    self._ask_behind(provider, key, started[ahead_of[provider.behind]]))
         tasks = [started[i] for i in range(len(asked))]
         # Bounded: whatever has not answered keeps going in the background
         # and its result is cached for the next ask.
@@ -832,6 +873,27 @@ class EnrichmentService:
             await self.for_track(key, renderer=renderer, only=PREFETCH_PROVIDERS)
         except Exception as exc:  # a warm cache is a convenience, never a duty
             logger.info("enrichment: prefetch failed: %s", exc)
+
+    def asks(self, name: str, renderer: str | None = None) -> bool:
+        """Whether a `for_track` now would ask this provider at all: there,
+        serving this renderer, configured, its row on."""
+        return any(
+            provider.name == name and provider.serves(renderer)
+            and getattr(provider, "ready", _always_ready)() and self._gate(name)
+            for provider in self._providers
+        )
+
+    async def _ask_behind(self, provider, key: TrackKey, ahead: asyncio.Future) -> Answer:
+        """**Asked only when the answer ahead leaves it something to add**
+        (`provider.wanted`, given what that one found): Plex's lyrics, about
+        five every ten minutes, are not spent on a track LRCLIB has timed words for
+        (ADR-0184, fourth step). Not asked is no answer, so nothing is
+        stored for it."""
+        before = await asyncio.shield(ahead)
+        if (before.outcome is Outcome.FOUND and before.confidence >= self.confidence_min
+                and not provider.wanted(before.enrichment)):
+            return Answer(Outcome.MISSING)
+        return await self._ask(provider, key)
 
     async def _ask(self, provider, key: TrackKey) -> Answer:
         key = key.scoped(SCOPES.get(provider.name, "track"))

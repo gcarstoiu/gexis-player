@@ -127,6 +127,8 @@ from gexis_core.systemd import set_enabled as _set_unit_enabled
 from gexis_core.systemd import restart_if_enabled as _restart_if_enabled
 from gexis_core.systemd import unit_state as _unit_state
 from gexis_core.artwork_sweep import ArtworkSweep
+from gexis_core.plex import (LENDER as PLEX_LENDER, LYRICS_PROVIDER as PLEX_LYRICS, PlexArtist,
+                              PlexLibrary, PlexLyrics, PlexRelease)
 from gexis_core.bluealsa_volume import BluealsaVolume
 from gexis_core.remote_volume import RemoteVolume
 from gexis_core.volume import (
@@ -4223,6 +4225,42 @@ async def main() -> None:
             await asyncio.sleep(MUSIC_FLOOR_S)
 
     asyncio.ensure_future(_music_floor_loop())
+    # ADR-0184: the Plex library the Plexamp plugin lends - held in memory,
+    # asked first, its pictures served through the core.
+    plex = PlexLibrary(store=enrichment_cache, allowed=lambda: _plex_allowed())
+    # The library's grid reads the sweep's Plex covers first (ADR-0184,
+    # second step, 4).
+    library.plex = plex
+    #: The row is the plugin's (`plexamp.plex_info`, on by default); a
+    #: plugin too old to have it lends nothing either.
+    PLEX_ROW = f"{PLEX_LENDER}.plex_info"
+
+    def _plex_allowed() -> bool:
+        try:
+            return settings.value(PLEX_ROW) is not False
+        except UnknownSetting:
+            return True
+
+    def _plex_row() -> bool:
+        """ADR-0022: *Information from Plex* greyed, *Claim Plexamp first*,
+        until the plugin says Plexamp is claimed. Returns whether that
+        changed what the row shows."""
+        said = settings.reported(f"{PLEX_LENDER}.claim_token")
+        claimed = bool(said) and (said.get("state") == "done" or bool(said.get("text")))
+        greyed = {} if claimed else {True: "Claim Plexamp first"}
+        # Said again every time: a registry rebuilt for a plugin added or
+        # removed must not lose it.
+        try:
+            settings.restrict(PLEX_ROW, greyed)
+        except UnknownSetting:
+            return False
+        changed = plex_greyed.get("now") != greyed
+        plex_greyed["now"] = greyed
+        return changed
+
+    plex_greyed: dict = {}
+    _plex_row()
+
     # ADR-0040 §1: LMS's own plugin first where it answers, the key-free
     # providers behind it and for the renderers that have no LMS ids.
     http = Http()
@@ -4246,13 +4284,16 @@ async def main() -> None:
         # Once at the end: the panel's answer to this is to drop every
         # artist photo it holds and ask again.
         on_finish=state_store.bump_pictures_revision,
+        # ADR-0184, second step, 4: both buttons ask the lent Plex library
+        # first (George, 2026-11-17).
+        plex=plex,
     )
     #: ADR-0059: Enrichment's own rows, wired at last. Each is a reason not
     #: to *ask* somebody rather than a reason to throw their answer away.
     #: `artwork_lookup` is the automatic half of the album-cover button
     #: (George, 2026-09-24: *"automatic way for sure"*) - new albums get a
     #: cover as they arrive, and the button does the library on demand.
-    LYRIC_PROVIDERS = ("lrclib",)
+    LYRIC_PROVIDERS = ("lrclib", PLEX_LYRICS)
 
     def _may_ask(name: str) -> bool:
         if settings.value("enrichment") is False:
@@ -4265,6 +4306,12 @@ async def main() -> None:
 
     enrichment = EnrichmentService(
         [
+            # **The lent Plex library first** (ADR-0184; Phase 32,
+            # acceptance 2): nothing else reordered, and it answers only what
+            # it has - an album's cover; an artist's biography, picture,
+            # similar artists and popular tracks (the second step).
+            PlexRelease(plex, allowed=_plex_allowed, identity=identity),
+            PlexArtist(plex, allowed=_plex_allowed, identity=identity),
             # **Pictures before LMS, text after it** (George, 2026-09-18,
             # once the speed was measured). Fanart has a portrait for
             # artists the plugin has nothing for, and this list merges
@@ -4297,6 +4344,12 @@ async def main() -> None:
             # and wins the merge where it has anything.
             MusicBrainzRelease(http),
             LrclibLyrics(http),
+            # **The lent Plex library's lyrics, behind LRCLIB's** (ADR-0184,
+            # fourth step; George, 2026-11-18): started once LRCLIB has
+            # answered, only when it has no timed words, and only while the
+            # lyrics are on screen (`/enrichment`). About five every ten minutes
+            # for the whole server (Finding 153).
+            PlexLyrics(plex, allowed=_plex_allowed, identity=identity),
             CoverArtProvider(http),
             # Last: the radio case, where there is no album to match on
             # (Phase 8 criterion 7).
@@ -5072,6 +5125,7 @@ async def main() -> None:
         # ADR-0170: the panel proves itself; a plugin on loopback does not.
         panel_token=panel_token.ensure(),
         plugin_artwork=plugin_art,
+        plex=plex,
         lyrion_known=lyrion_known,
         cable=cable,
         wifi_address=wifi_address,
@@ -5307,6 +5361,10 @@ async def main() -> None:
             logger.warning("plugins: cannot withdraw %s's announcements: %s", session.id, exc)
         if settings.forget_reports(f"{session.id}."):
             state_store.bump_settings_revision()
+        # ADR-0184: what the plugin lent goes with it.
+        plex.withdraw(session.id)
+        if session.id == PLEX_LENDER and _plex_row():
+            state_store.bump_settings_revision()
         plugin_art.forget(session.id)
         adapter = plugin_adapters.pop(session.id, None)
         if adapter is None:
@@ -5363,6 +5421,10 @@ async def main() -> None:
                                   if message.get(k) is not None})
             _publish_components()
             return
+        if kind == "library":
+            # ADR-0184: Plexamp's library, lent; never logged.
+            plex.lend(session.id, message)
+            return
         if kind == "row":
             # ADR-0119: a plugin says what one of its own rows is - a
             # service as much as a renderer, so before the adapter lookup.
@@ -5373,6 +5435,9 @@ async def main() -> None:
             except (UnknownSetting, InvalidValue) as exc:
                 logger.warning("plugins: %s reported an unusable row: %s", session.id, exc)
                 return
+            # ADR-0184: *Information from Plex* follows Plexamp's claim.
+            if session.id == PLEX_LENDER and _plex_row():
+                changed = True
             if changed:
                 state_store.bump_settings_revision()
             return

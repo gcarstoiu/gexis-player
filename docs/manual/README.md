@@ -604,6 +604,15 @@ What Home Assistant gets:
   track); volume and mute, and with Fixed volume mute alone where the output
   has a volume control of its own; the source playing (each source is taken
   over from its own app, as on the player).
+- **Internet radio**, on a player with it switched on: the favourites are
+  the media player's sources, the station directory is in Home Assistant's
+  media browser with its search, and *Favourite station*
+  (`gexis.radio_favourite`) is the heart.
+- **Groups**: Home Assistant's own *Join* and *Unjoin* group players as the
+  phone does - the player that leads, unjoined, ends its group - and the
+  group's players are listed, the one that leads first; *Set the group's
+  volume* (`gexis.set_group_volume`) and *Mute the group*
+  (`gexis.mute_group`) are the group's *All* slider and mute.
 - **The equaliser**, on any player: a switch, *Equaliser*, and *Equaliser
   setting*, the setting in use - the presets, then your own.
 - **On a player with a screen, four switches**: *Screen* (off is display
@@ -631,7 +640,9 @@ What Home Assistant gets:
   each left out where the phone leaves it out; the volume, with mute and
   the equaliser's setting, beside the button that opens the equaliser. A
   player without a screen gets a large cover and a bar to move through the
-  track. In the player's own look, or Home Assistant's
+  track. Grouped, it shows the group as the phone does: in the list, with
+  Join, Remove, Leave group and Undo group, and the group's volume beside
+  each player's own; and a Radio view lists the favourites. In the player's own look, or Home Assistant's
   (*look: home-assistant*); full, or compact with the D-pad folded away. It goes on a dashboard edited by hand (Home
   Assistant's new *Overview* takes favourite entities, not cards): *Settings
   → Dashboards → Add dashboard → New dashboard from scratch* if there is
@@ -641,7 +652,8 @@ What Home Assistant gets:
 It needs Home Assistant 2026.3 or later and a player on 1.5.0 or later (the
 D-pad 1.6.0 or later; the equaliser, seeking and mute with Fixed volume
 1.7.0 or later, with the integration's 0.5.0; pages 1.15.0 or later, with
-the integration's 0.6.0); an older player is found and asked to update. With Home Assistant's own
+the integration's 0.6.0; groups 1.8.0 or later and internet radio 1.17.0 or
+later, with the integration's 0.7.0); an older player is found and asked to update. With Home Assistant's own
 *Lyrion Music Server* integration also set up, the player shows there too,
 as Lyrion's player.
 
@@ -906,7 +918,16 @@ still mounted.
 | Internet radio: Popular here | The country whose stations *Popular here* lists; at first, the time zone's. The list shows the countries the directory has stations in, each with its number of stations, and marks the time zone's *From your time zone*; while the directory cannot be reached, it shows every country. |
 
 Plugins add their own rows here once switched on: **Plexamp** (claim the
-player into your Plex account).
+player into your Plex account), and with it **Information from Plex**: on,
+the player looks in your Plex library first, then on the internet, for an
+artist's biography, picture, similar artists and *Popular* tracks, and for
+an album's cover when a source sends none with a track (Bluetooth often does
+not); *Find portraits and covers* takes your Plex library's first too. For
+lyrics it comes after LRCLIB: the player shows your Plex library's where
+LRCLIB has none, or none timed, while the lyrics are on screen. It
+uses the Plex server Plexamp plays from, through Plexamp's own sign-in, and
+only while that server is on your home network. It is greyed with *Claim
+Plexamp first* until Plexamp is claimed.
 
 ### Handoff — *Who gets the player*
 
@@ -1011,10 +1032,13 @@ nothing to press. On the player's screen, *Measure from your phone* (or
    head, and about 40 cm to either side - step back and tap **Measure
    here**; three seconds later the sweeps play. It never moves on without
    the tap. A sweep spoiled by a noise (a door, a voice) is measured again.
-5. The correction, for each speaker: the cuts in the bass and the broad
-   corrections above it, and a chart of before (the average of the three
-   positions), each position, the target and the expected after. A peak is
-   cut, and a broad correction made, unless most positions would end
+5. The correction: the cuts in the bass, worked out from both speakers
+   playing together - the bass of most music is the same in both, and what
+   you hear is the two adding up - and the same on both speakers; above the
+   bass, broad corrections for each speaker of its own. A chart shows
+   before (the average of the three positions), each position, the target
+   and the expected after, for each speaker and for both together. A peak
+   is cut, and a broad correction made, unless most positions would end
    further from the target; where the three positions disagree, less is
    corrected. **Check it** measures the three positions again with the
    correction on, a tap at each again; **Skip** keeps it as worked out,
@@ -1105,10 +1129,10 @@ On its page:
 | Enrichment | Looks up what a source does not send: lyrics, biographies, covers, artist pictures. |
 | Lyrics | Fetches lyrics, synchronised where available. |
 | Look up missing artwork | Finds a cover for sources that send none (Bluetooth, radio). |
-| ListenBrainz token | For the artist page's *Popular* list; a free token. |
+| ListenBrainz token | For the artist page's *Popular* list where your Plex library has none; a free token. |
 | fanart.tv key, TheAudioDB key | Optional keys for artist pictures and album covers. |
 | Confidence threshold | How sure the match must be (recommended 90 %). Below it, nothing is shown rather than something wrong. |
-| Lyrion Client: Find portraits and covers | Looks up every album artist's portrait and every album's cover, keeps Lyrion's where none is found, and shows what the last run found. |
+| Lyrion Client: Find portraits and covers | Looks up every album artist's portrait and every album's cover - in your Plex library first while *Information from Plex* is on, then on fanart.tv and TheAudioDB - keeps Lyrion's where none is found, and shows what the last run found. |
 
 ### Plugins — *What is installed beyond the player itself*
 

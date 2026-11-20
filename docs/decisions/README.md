@@ -43,7 +43,7 @@ been written properly. **0098 has no record either.**
 | [0019](0019-peppy-screen-lifecycle.md) | Peppy screen: entry, exit and lifecycle | Accepted 2026-09-04 |
 | [0020](0020-library-browse-tree.md) | Library browse as a normalised tree | Accepted 2026-09-04; **partly superseded by [0030](0030-library-typed-radio-slimbrowse.md)**; cross-cutting table amended by 0029 |
 | [0021](0021-deployment-flashable-image.md) | Deployment as a flashable image | Accepted 2026-09-04; distribution channel deferred |
-| [0022](0022-settings.md) | Settings | Accepted 2026-09-04; remote-only text entry **superseded by [0029](0029-text-entry-on-every-surface.md)**; first-boot blocker answered by 0031; rows appended as confirmed (latest 2026-11-14) |
+| [0022](0022-settings.md) | Settings | Accepted 2026-09-04; remote-only text entry **superseded by [0029](0029-text-entry-on-every-surface.md)**; first-boot blocker answered by 0031; rows appended as confirmed (latest 2026-11-16) |
 | [0023](0023-svelte-ui.md) | The UI is Svelte | Accepted 2026-09-04 |
 | [0024](0024-bluetooth-pairing-no-pin.md) | Bluetooth pairing: no PIN, for this installation | Accepted 2026-09-06; **reversed by [0045](0045-bluetooth-pairing-confirmation.md)** |
 | [0025](0025-project-licence-gplv3.md) | gexis-player is licensed GPL v3 | Accepted 2026-09-08 |
@@ -183,7 +183,7 @@ been written properly. **0098 has no record either.**
 | [0160](0160-the-player-in-home-assistant.md) | The player in Home Assistant | Accepted 2026-10-24 (Phase 19): our own integration in its own repository; a media player plus screen, dashboard and visualiser switches; `id` on `/player/status` |
 | [0161](0161-a-d-pad-on-the-panel.md) | A D-pad on the panel | Accepted 2026-10-25 (Phase 19), built the same day, in 1.6.0: real key presses, focus by position, a Home Assistant remote; the design's teal ring |
 | [0162](0162-a-simple-equaliser.md) | A simple equaliser | Built 2026-10-26, in 1.7.0 (Phase 20; George's product decisions, Claude's C1-C18 confirmed): ten bands, genre presets, ten of the owner's, per output; CamillaDSP per stream on a loopback (Finding 138) |
-| [0163](0163-a-gexis-player-card-for-dashboards.md) | A Gexis Player card for Home Assistant dashboards | Accepted 2026-10-25 (Phase 19; decisions delegated to Claude), built in the integration's 0.3.0, as the phone remote in 0.5.0 (2026-10-27), changed after George's check in 0.4.0: shipped inside the integration, a plain web component in the player's look, everything through Home Assistant's services |
+| [0163](0163-a-gexis-player-card-for-dashboards.md) | A Gexis Player card for Home Assistant dashboards | Accepted 2026-10-25 (Phase 19; decisions delegated to Claude), built in the integration's 0.3.0, as the phone remote in 0.5.0 (2026-10-27), the phone's group in 0.7.0 (2026-11-16), changed after George's check in 0.4.0: shipped inside the integration, a plain web component in the player's look, everything through Home Assistant's services |
 | [0164](0164-the-phone-remote.md) | The phone remote | Built 2026-10-27, in 1.7.0 (Phase 21, the second design; George's three answers, Claude's C1-C13, all confirmed): Remote and Settings pages, a trackpad for the panel's pointer or a D-pad, seeking |
 | [0165](0165-mute-with-fixed-output.md) | Mute with fixed output | Built 2026-10-27, in 1.7.0 (Phase 21): mute silences an output with a control of its own; none where it has no control; amends 0018 and 0046 |
 | [0166](0166-multiroom-for-every-source.md) | Multiroom for every source | Accepted 2026-10-27 (Phase 22; George's nine answers, Claude's C1-C6 confirmed): one group, Lyrion's sync for Lyrion, Snapcast for the rest; amended 2026-10-28 (Lyrion's syncs are Gexis groups; the design; D1 per Finding 139) and 2026-11-12 (the buffer a second; never resampled for a member's link) |
@@ -204,6 +204,7 @@ been written properly. **0098 has no record either.**
 | [0181](0181-go-librespot-from-upstreams-own-build-until-its-release.md) | go-librespot from upstream's own build until a release carries its fix | **Accepted** 2026-11-15 (George, B): upstream's build of `775ba5883` (the Android app's crash fixed), kept in the mirror; 1.16.3 from `main` |
 | [0182](0182-upstream-releases-checked-daily-and-a-part-only-patch-release.md) | Upstream releases checked daily, and a patch release for one part | **Accepted** 2026-11-15 (George: 1 and 2): a daily check opens a bump PR into `main` with a preview; a one-part patch release from `main` |
 | [0183](0183-spotify-keeps-playing-on-the-lead-through-a-group-change.md) | Spotify keeps playing on the lead through a group change | Proposed 2026-11-15 (George: keep it going on the lead): pause, rewrite the chain, resume; reopen as the fallback |
+| [0184](0184-plex-information-through-plexamps-claim.md) | Plex information through Plexamp's claim | **Accepted** 2026-11-16 (Phase 32, acceptance 1; George: 1-4, the consequence and the row): the plugin lends Plexamp's token and local server to the core, held in memory only; the row in Sources beside Plexamp; 2026-11-17: the artist, popular tracks and both sweeps ask Plex first (George) |
 
 ## Cross-cutting rules
 
