@@ -4420,8 +4420,9 @@ sofapi before release.
 2. Five positions take about as long to sweep as three do today.
 3. The pair added up by the player matches the pair played together at
    every position on sofapi, as closely as two repeated sweeps agree.
-4. Every change to the design is kept only where sofapi's check shows the
-   positions closer to the target and none worse - recorded as a finding.
+4. Every change to the design is kept only where sofapi's check - its
+   positions placed again by eye, as a user would - shows them closer to
+   the target and none worse; recorded as a finding.
 
 
 ## Test tiers

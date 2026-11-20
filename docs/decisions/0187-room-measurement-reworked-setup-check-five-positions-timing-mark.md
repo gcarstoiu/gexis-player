@@ -71,6 +71,9 @@ a new measurement (7 Nov); *Left* and *Right* tabs (ADR-0186 D4).
   15 cm up; 3 40 cm right and 15 cm down; 4 30 cm in front; 5 30 cm above
   the head. Replaces ADR-0175's three (5 Nov). Over: measuring the benefit
   on sofapi first; leaving it with Phase 34; wider (to 60 cm); sideways only.
+  The distances are a guide, placed by eye: no user places a microphone
+  precisely (George, 2026-11-20). So every change is judged on the check's
+  positions, placed again.
 - **D4 — A timing mark on every sweep; the together sweeps go once
   proven:** the pair added up by the player must match the pair played
   together, at every position on sofapi, as closely as two repeated sweeps
