@@ -43,6 +43,7 @@ from dataclasses import dataclass, replace
 from typing import Awaitable, Callable
 
 from gexis_core import room_correction as rc
+from gexis_core import room_research
 
 logger = logging.getLogger("gexis_core.room_run")
 
@@ -238,6 +239,9 @@ class Run:
         self._waiting = False
         self._prep: asyncio.Future | None = None
         self._finishing = False
+        #: Phase 37's research build: every sweep's response kept (ADR-0187).
+        self._research = room_research.Keeper(self._dsp.FS)
+        self._research_id = None
         #: The player put back after the run: no other source until then.
         self.released = False
 
@@ -386,6 +390,7 @@ class Run:
         if self._finishing:
             return
         self._finishing = True
+        self._keep_research()
         if self._prep is not None and not self._prep.done():
             await asyncio.wait([self._prep])
         try:
@@ -396,6 +401,25 @@ class Run:
         logger.info("room: the run ended (%s%s)", self.ended["how"],
                     f", {self.ended['why']}" if self.ended.get("why") else "")
         self._host.publish(None, dict(self.ended))
+
+    def _keep_research(self) -> None:
+        """Phase 37's research build: the run's responses and what it
+        decided, kept on the player (`room_research`)."""
+        try:
+            import numpy as np
+            fine = 10.0 * 2 ** (np.arange(int(96 * np.log2(24000 / 10.0)) + 1) / 96)
+            meta = {"ended": self.ended, "positions": rc.POSITIONS, "sweep_s": self._sweep_s,
+                    "level_dbfs": self._level_dbfs, "check_db": self._check_db,
+                    "delay_ms": list(self._delay),
+                    "timing": None if self._timing is None else
+                    {"late_s": self._timing.late_s, "same_polarity": self._timing.same_polarity},
+                    "measurement": None if self.pending is None else self.pending.as_dict(),
+                    "calibration": {"freq": [float(f) for f in fine],
+                                    "db": [float(self._cal.db_at(float(f))) for f in fine]}}
+        except Exception:  # noqa: BLE001
+            logger.exception("room research: the run's notes not gathered")
+            meta = {"ended": self.ended}
+        self._research.save(meta)
 
     async def _move(self, n: int, checking: bool) -> str:
         done = tuple(range(1, n))
@@ -496,6 +520,14 @@ class Run:
         for _ in range(MAX_SWEEPS):
             recording = await self._audio.play(signal, channel=None, tail_s=TIMING_TAIL_S)
             got = dsp.timing(recording)
+            try:
+                self._research.timing(position=n, got=got, slot=int(dsp.TIMING_SLOT_S * dsp.FS),
+                                      ir_full=dsp.deconvolve(
+                                          recording, dsp.log_sweep(dsp.FS, dsp.TIMING_LO, dsp.TIMING_HI,
+                                                                   dsp.TIMING_S),
+                                          dsp.FS, band=(dsp.TIMING_LO, dsp.TIMING_HI)))
+            except Exception:  # noqa: BLE001
+                logger.exception("room research: a timing reading not kept")
             if got is None:
                 continue
             for other in found:
@@ -585,12 +617,18 @@ class Run:
         both = channel == rc.BOTH
         played = sweep * scale * (0.5 if both else 1.0)
         recording = await self._audio.play(played, channel=(0, 1) if both else rc.CHANNELS.index(channel))
-        curve = dsp.response_db(dsp.transfer(recording, played))
+        ir_full = dsp.deconvolve(recording, played)
+        peak = int(np.argmax(np.abs(ir_full[: len(ir_full) // 2])))
+        curve = dsp.response_db(dsp._window(ir_full, max(0, peak - int(dsp.PRE_S * dsp.FS))))
+        self._research_id = self._research.sweep(position=self.state.position, channel=channel,
+                                                 checking=self.state.checking, scale=scale,
+                                                 ir_full=ir_full, recording_len=len(recording))
         snr = None
         if self._noise is not None:
             key = (len(recording), round(float(np.max(np.abs(played))), 9))
             if key not in self._noise_curves:
                 self._noise_curves[key] = dsp.noise_curve(self._noise, played, len(recording))
+                self._research.noise_curve(key, self._noise_curves[key])
             snr = dsp.snr_db(curve, self._noise_curves[key])
         return curve - self._calibration_curve(), snr
 
@@ -650,7 +688,7 @@ class Run:
         done = tuple(range(1, n))
         wanted = self._sweeps_wanted(checking)
         for channel in rc.SWEPT:
-            curves, snrs = [], []
+            curves, snrs, ids = [], [], []
             noise = False
             while True:
                 k = len(curves) + 1
@@ -660,6 +698,7 @@ class Run:
                 curve, snr = await self._curve(channel)
                 curves.append(curve)
                 snrs.append(snr)
+                ids.append(self._research_id)
                 if checking and self._skip_sent():
                     raise _Skipped()
                 if len(curves) < wanted:
@@ -672,6 +711,7 @@ class Run:
                     kept = list(pair)
                     break
                 noise = True
+            self._research.kept(ids, kept)
             chosen = [curves[k] for k in kept]
             (self._checked if checking else self._positions)[channel].append(dsp.power_average(chosen))
             if not checking:

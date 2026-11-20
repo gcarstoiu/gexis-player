@@ -94,8 +94,10 @@ def curve(seed: int, modes=MODES, grid=rd.GRID, broad=BROAD) -> np.ndarray:
 
 #: Speakers at ±30° about 2.7 m away: 40 cm to the left (position 2) the
 #: left is about 20 cm nearer and the right 20 cm further; to the right
-#: (position 3) the other way.
-SIDES = {1: (0.0080, 0.0080), 2: (0.0074, 0.0086), 3: (0.0086, 0.0074)}
+#: (position 3) the other way; 30 cm in front (4) both about 26 cm nearer,
+#: 30 cm above (5) both about 2 cm further (ADR-0187 D3).
+SIDES = {1: (0.0080, 0.0080), 2: (0.0074, 0.0086), 3: (0.0086, 0.0074), 4: (0.0072, 0.0072),
+         5: (0.00805, 0.00805)}
 
 
 class Audio:
@@ -108,7 +110,7 @@ class Audio:
         #: ADR-0185: each speaker's distance as its sound's delay, by position
         #: (the same everywhere unless a test sets `SIDES`), and its polarity;
         #: `swapped` plays the left channel from the right speaker.
-        self.delays = {n: (0.003, 0.003) for n in (1, 2, 3)}
+        self.delays = {n: (0.003, 0.003) for n in range(1, 6)}
         self.polarity = (1.0, 1.0)
         self.swapped = False
         #: How far apart the recording and the playback start, at random up

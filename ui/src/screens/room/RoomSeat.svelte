@@ -24,6 +24,7 @@
     const dx = x2 - x1;
     const dy = y2 - y1;
     const len = Math.hypot(dx, dy);
+    if (len < 1) return null;
     const ux = dx / len;
     const uy = dy / len;
     const sx = x1 + ux * 13;

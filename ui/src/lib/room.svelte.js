@@ -196,9 +196,9 @@ export function correctionGroups(k, speaker, { range = 'full', reach = 'full' } 
   ];
 }
 
-/** **Where a run measures**: three positions (George, 2026-11-05, over the
- *  design's five). A measurement keeps its own number. */
-export const POSITIONS = 3;
+/** **Where a run measures**: five positions around the head (ADR-0187 D3,
+ *  George, 2026-11-20). A measurement keeps its own number. */
+export const POSITIONS = 5;
 const COUNTS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight'];
 /** *three*, *five*: a number of positions in words. */
 export const countWord = (n) => COUNTS[n] ?? String(n);
@@ -206,11 +206,14 @@ export const capitalised = (w) => w.charAt(0).toUpperCase() + w.slice(1);
 
 /** **Where to move the microphone** (the design's R19-R20). */
 export const MOVES = {
-  2: 'About 40 cm to the left of where your head was',
-  3: 'About 40 cm to the right of where your head was',
+  2: 'About 40 cm to the left of where your head was and 15 cm higher',
+  3: 'About 40 cm to the right of where your head was and 15 cm lower',
+  4: 'About 30 cm in front of where your head was, at its height',
+  5: 'About 30 cm straight above where your head was',
 };
-//: The seat drawing's places in its 340 x 196 box (1 is the head).
-export const PLACES = [[170, 98], [122, 98], [218, 98]];
+//: The seat drawing's places in its 340 x 196 box (1 is the head; 5 is
+//: above it, so drawn on it).
+export const PLACES = [[170, 98], [122, 98], [218, 98], [170, 62], [170, 98]];
 
 /** The dips the correction leaves, for the correction's tail: the lowest
  *  points below the target under the limit, two at most, low to high. */

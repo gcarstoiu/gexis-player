@@ -38,8 +38,9 @@ EACH = "each"
 SWEPT = CHANNELS + (BOTH,)
 #: Where a run measures (George, 2026-11-05: three, over the five first
 #: drawn - the head and 40 cm to either side). A measurement keeps its own
-#: number, so one made at five still reads as five.
-POSITIONS = 3
+#: number, so one made at five still reads as five. Five, around the head
+#: (ADR-0187 D3, George, 2026-11-20).
+POSITIONS = 5
 
 #: The grid the curves are kept on (`room_dsp.GRID`: 1/24 octave from
 #: 15 Hz; to 500 Hz before Phase 30, to 20 kHz from it).
