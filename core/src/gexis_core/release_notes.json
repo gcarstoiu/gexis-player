@@ -1,6 +1,10 @@
 {
  "_about": "Every release's notes, newest first, exactly as published and signed (ADR-0116). publish.sh reads a release's notes from here; Settings -> Change logs shows the last 10.",
  "releases": {
+  "1.18.2": {
+   "date": "2026-11-21",
+   "notes": "Fixed\n• Timed lyrics come first: the first time a track's lyrics are shown, the player waits up to 10 seconds for the Plex library's timed lyrics before showing plain ones, rather than swapping plain lyrics for timed ones a few seconds later.\n• Room correction can be measured on a player whose group was undone, instead of being refused as in a group.\n• While room correction checks its result, each speaker is shown as during the measurement; on a phone the bass chart and the one above it sit one under the other.\n• In first use on a narrow phone, AirPlay's Limited testing tag no longer covers its name."
+  },
   "1.18.1": {
    "date": "2026-11-21",
    "notes": "Fixed\n• Spotify on the player that leads a group keeps playing when a player joins or leaves, after a short pause, instead of the cast ending.\n\nGood to know\n• Spotify Connect now comes from go-librespot 0.10.7, a release that carries the fix for Spotify on Android, in place of the development build."
