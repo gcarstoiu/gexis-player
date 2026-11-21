@@ -20,17 +20,15 @@ and the ideas as Must / Should / Could. It follows `docs/DEVELOPMENT.md`'s
 phases; change it when a phase opens, closes or moves, and show George first. History: `docs/HANDOFF-ARCHIVE.md`
 (search it; never read it whole).
 
-**Testing and Stable: 1.18.1** (Testing serial 75, Stable serial 18,
-promoted 2026-11-21 at George's word; both read back with a good signature).
-AirPlay stays *Limited testing* (no Apple device's play; closed by George).
-Plugin catalogue serial 9 (gexis-plexamp 0.6.0, gexis-beszel 0.21.2-1).
-
-**Waiting for the next release** (branches from `next`, pushed, no
-worktree): `fix-lyrics-timed-first` (ADR-0184 items 7-10; preview on sofapi
-after George's room run), `fix-first-use-tag` (AirPlay's tag over its name
-at 390 px), `upstream-shairport-nqptp`, and Phase 37's room work below. The
-integration's `fix-card-narrow` (the transport under the cover at 345 px and
-under) is for a 0.7.1 at George's word.
+**Testing and Stable: 1.18.2** (2026-11-21; Testing serial 76, Stable
+serial 19, both read back with a good signature; released without a preview
+at George's word): timed lyrics first (ADR-0184 items 7-10), the room's two
+held fixes (`fix-room-grouped-after-undo`, `fix-room-screens`), first use's
+AirPlay tag, the upstream watch of Shairport Sync and NQPTP. Squeezelite is
+-4 (BUILD-TRAPS). **PR #110 for George**; after the merge, the post-merge
+steps and the routine clean-up. AirPlay stays *Limited testing*. The
+integration's **0.7.1** (the card's transport under the cover at 345 px and
+under) released 2026-11-21 as Latest. Plugin catalogue serial 9.
 
 **Phase 37, room measurement reworked** (`ph-room-measurement`;
 [ADR-0187](docs/decisions/0187-room-measurement-reworked-setup-check-five-positions-timing-mark.md)
@@ -49,15 +47,12 @@ Automatic, so the night only checks). Then `~/projects/scratch/ph37/check/analys
 check's re-placed positions, the ringing (C6), the joint over-cut (C7), the
 level readings (C2); a finding; the run's logs for ADR-0185 C4 and C8.
 
-**Room work held for Phase 37's release** (George, 2026-11-21):
-`fix-room-grouped-after-undo` (f175b600: the room asks for a group, not its
-chain) and `fix-room-screens` (c2059ac6, ADR-0185 D4), not yet seen live; `room-checks` (0aee0318, ADR-0185
+**Room work held for Phase 37's release** (George, 2026-11-21; the two
+finished fixes went out in 1.18.2): `room-checks` (0aee0318, ADR-0185
 D1-D3, amended by ADR-0187: D1's check moves into the setup check);
 `room-chart` (ADR-0186; D4's edits uncommitted in its worktree, on hold; its
 full-Both preview, run 44606811416, never to be installed).
-`preview-1.18.1-room` holds them all. `upstream-shairport-nqptp` (Shairport
-Sync and NQPTP watched) was on the 1.18.1 preview, not released: it goes
-with the next release PR.
+`preview-1.18.1-room` held them all and can go after #110's merge.
 
 **ADR-0182 in `main`**: `.github/workflows/upstream.yml` runs
 `packaging/upstream-daily.sh` daily (a bump branch for a part packaged here,
