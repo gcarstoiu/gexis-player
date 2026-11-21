@@ -74,8 +74,12 @@ there limits the DAC's rates or stops it, and a DAC powered over USB may
 want more current than an isolator passes. Or a full-speed isolator on the
 touch cable, which needs only full speed (on sofapi it did not help); the
 screen then needs its own supply. Check afterwards that the DAC still
-connects at high speed: over SSH, `lsusb -t` shows its line,
-`Driver=snd-usb-audio`, ending `480M`. Then: the
+connects at high speed: in *Settings → Audio → Output* its line starts
+*USB 2.0* (the speed it connected at), not *USB 1.1*, with the rates it had.
+Or **an optical cable**: a USB-to-optical adapter into the DAC's optical
+input carries light, no current, so no ground passes - at that adapter's
+rates (see the FAQ's *Which DACs work?*: up to 192 kHz / 24-bit); not tried
+against this hum. Then: the
 screen on its own supply through its power-only port; one power strip for
 everything, the cables run together; an RCA ground-loop isolator between
 the DAC and the amplifier (cheap ones dull the extremes); a DAC HAT instead
