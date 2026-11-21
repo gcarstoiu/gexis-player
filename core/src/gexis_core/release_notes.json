@@ -1,6 +1,10 @@
 {
  "_about": "Every release's notes, newest first, exactly as published and signed (ADR-0116). publish.sh reads a release's notes from here; Settings -> Change logs shows the last 10.",
  "releases": {
+  "1.18.1": {
+   "date": "2026-11-21",
+   "notes": "Fixed\n• Spotify on the player that leads a group keeps playing when a player joins or leaves, after a short pause, instead of the cast ending.\n\nGood to know\n• Spotify Connect now comes from go-librespot 0.10.7, a release that carries the fix for Spotify on Android, in place of the development build."
+  },
   "1.18.0": {
    "date": "2026-11-18",
    "notes": "New\n• With Plexamp claimed and Information from Plex on, the player looks in the Plex library first for an artist's biography, picture, similar artists and Popular tracks, and for an album's cover when a source sends none.\n• Find portraits and covers takes the Plex library's first, then fanart.tv and TheAudioDB.\n• Lyrics from the Plex library where LRCLIB has none, or none timed, while the lyrics are on screen.\n\nFixed\n• Room correction works out the bass's cuts from both speakers playing together, the same on both, instead of from each speaker alone, which took too much out of the low voice range.\n• A player on Wi-Fi no longer searches for networks every forty seconds or so, which could stop a group's music for a few seconds.\n\nGood to know\n• Information from Plex needs the Plexamp plugin 0.6.0: its row in Settings → Plugins shows Update to 0.6.0. It uses the Plex server Plexamp plays from, only while that server is on the home network.\n• A Plex server hands out only about five lyrics every ten minutes, so the player asks for them only while they are on screen.\n• A room correction measured before is worked out again and shows Not checked until it is checked.\n• AirPlay uses Shairport Sync 5.6.3, with its fixes."

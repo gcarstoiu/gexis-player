@@ -1,6 +1,7 @@
 # ADR-0184 — Plex information through Plexamp's claim
 
-**Status:** **Accepted** 2026-11-16 (Phase 32's acceptance 1): George
+**Status:** **Built** 2026-11-16 to 18, in 1.18.0 (Testing serial 74), its
+four steps below. **Accepted** 2026-11-16 (Phase 32's acceptance 1): George
 answered its four decisions and then confirmed the consequence and the
 settings row, the same day. **Builds on:**
 [ADR-0016](0016-plugins-as-separate-processes.md) (plugins are separate

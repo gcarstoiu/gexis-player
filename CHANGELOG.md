@@ -6,6 +6,16 @@
 Every release of Gexis Player and its notes, newest first. The player
 shows the last 10 under Settings → System → Change logs.
 
+## 1.18.1 — 21 November 2026
+
+### Fixed
+
+- Spotify on the player that leads a group keeps playing when a player joins or leaves, after a short pause, instead of the cast ending.
+
+### Good to know
+
+- Spotify Connect now comes from go-librespot 0.10.7, a release that carries the fix for Spotify on Android, in place of the development build.
+
 ## 1.18.0 — 18 November 2026
 
 ### New

@@ -4162,7 +4162,8 @@ Research comes first, and what it shows decides whether anything is built.
 
 **More positions** (George, 2026-11-10): whether more than Phase 30's three
 help, in sofapi's room and others, is checked separately, probably with this
-phase.
+phase. *Moved to Phase 37 (George, 2026-11-20): five positions, and a timing
+mark on every sweep that also answers the clocks' drift below.*
 
 **An ADR before anything is built**, if the research supports building. It
 must settle:
@@ -4384,6 +4385,44 @@ database (`database { plugin "proxy" }`, the music on a share).
 3. Volume, arbitration and now playing behave as for the other sources.
 4. First-time setup takes in MPD in its new order, and a player set up without
    it is unchanged.
+
+### Phase 37 — Room measurement reworked
+
+**ID:** `ph-room-measurement` · added 2026-11-20 as 37 (George).
+
+**Started 2026-11-20** (George, after desk research on how room correction
+is done, and a strategy marked point by point as decided, measured or new):
+[ADR-0187](decisions/0187-room-measurement-reworked-setup-check-five-positions-timing-mark.md)
+accepted the same day (George approved Claude's choices C1-C10), with his
+decisions:
+- a setup check of its own before the measurement - left and right,
+  polarity, the distance's difference and now the level, matched in full;
+- five positions around the head, varied in height and depth;
+- a timing mark on every sweep, so the player adds the two speakers up
+  itself; the together sweeps go once that is proven on sofapi;
+- the head counting more, by a weight tried on sofapi first;
+- cuts only in the bass, confirmed; the bass's ringing checked; the dips it
+  leaves explained.
+
+What stands from Phases 29-30 is listed in the ADR. The correction in time
+stays Phase 34.
+
+**Order:** on sofapi first, measured before anything ships - finer detail
+in the bass, the head's weight, the ringing - then the setup check, then the
+timing mark proven, then five positions with it. Each with a preview on
+sofapi before release.
+
+**Acceptance (draft):**
+
+1. The setup check finds a swapped pair, a reversed speaker, the distance's
+   and the level's difference, and the measurement starts with the delay
+   and the level set.
+2. Five positions take about as long to sweep as three do today.
+3. The pair added up by the player matches the pair played together at
+   every position on sofapi, as closely as two repeated sweeps agree.
+4. Every change to the design is kept only where sofapi's check - its
+   positions placed again by eye, as a user would - shows them closer to
+   the target and none worse; recorded as a finding.
 
 
 ## Test tiers

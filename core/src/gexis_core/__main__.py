@@ -110,6 +110,7 @@ from gexis_core import room_control as room_control_module
 from gexis_core import room_correction
 from gexis_core import group as group_module
 from gexis_core import multiroom as multiroom_module
+from gexis_core import rechain
 from gexis_core import snapcast
 from gexis_core import eq_engine
 from gexis_core.eq_engine import EqEngine
@@ -5532,6 +5533,13 @@ async def main() -> None:
                 # nothing else holds, is new.
                 if await _rechain_around_squeezelite():
                     return
+            spotify_unit = adapters["spotify"].unit_name if "spotify" in adapters else None
+            if supervisor.active == "spotify" and set(held) <= {spotify_unit}:
+                # **ADR-0183: Spotify keeps playing on the lead** - paused,
+                # the chain rewritten under it, resumed; its unit never
+                # stopped, so the phone keeps the player.
+                if await _rechain_around_spotify(adapters["spotify"]):
+                    return
             if supervisor.active is not None or held:
                 await _rewrite_output_conf("the group changed", wait=True)
                 return
@@ -5543,6 +5551,29 @@ async def main() -> None:
             await _equaliser_follows(chosen)
             await _restart_renderers(wait=False)
             logger.info("outputs: the group's chain is in place; nothing played, the renderers restart to read it")
+
+    async def _rechain_around_spotify(spotify) -> bool:
+        """The group's chain written under a paused Spotify (ADR-0183); False,
+        and nothing written, when it cannot be (`rechain.keep_spotify_playing`)."""
+        chosen = _with_software(outputs.in_force(settings.value("output_device"))[0])
+        if chosen is None:
+            return False
+
+        async def rewrite() -> None:
+            if multiroom is not None:
+                await multiroom.snap.listen(None)
+            others = [u for u in (*RENDERER_UNITS, *_plugin_renderer_units()) if u != spotify.unit_name]
+            stop = await asyncio.create_subprocess_exec("systemctl", "stop", *others)
+            await stop.wait()
+            outputs.write(chosen, tuning=_tuning(), fixed=fixed_wanted["value"])
+            await _equaliser_follows(chosen)
+            # The others are idle here: restarted, not waited for.
+            await _restart_renderers(wait=False, keep=frozenset({spotify.unit_name}))
+            if multiroom is not None:
+                await multiroom.relisten()
+
+        return await rechain.keep_spotify_playing(
+            spotify, holds=lambda: alsa.device_held_by(spotify.unit_name), rewrite=rewrite)
 
     def _wait_block(text: str | None) -> str | None:
         if not text or "pcm.output_wait {" not in text:
