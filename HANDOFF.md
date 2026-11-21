@@ -53,8 +53,6 @@ finished fixes went out in 1.18.2): `room-checks` (0aee0318, ADR-0185
 D1-D3, amended by ADR-0187: D1's check moves into the setup check);
 `room-chart` (ADR-0186; D4's edits uncommitted in its worktree, on hold; its
 full-Both preview, run 44606811416, never to be installed).
-`preview-1.18.1-room` (merge commits only, all held by `main`, `room-checks`
-and `room-chart`) waits for George's word to go.
 
 **ADR-0182 in `main`**: `.github/workflows/upstream.yml` runs
 `packaging/upstream-daily.sh` daily (a bump branch for a part packaged here,
