@@ -4,6 +4,7 @@ asked for an album's cover and an artist's biography, picture, similar
 artists and popular tracks; the pictures served through the core."""
 from __future__ import annotations
 
+import asyncio
 import logging
 from pathlib import Path
 
@@ -773,13 +774,14 @@ async def test_the_route_asks_plex_for_lyrics_only_while_they_are_on_screen_and_
         assert (body["enrichment"]["lyrics_source"], body["pending"]) == ("LRCLIB", False), "lyrics not on screen"
         store.set_panel(lyrics=True)
         body = await ask()
-        assert (body["enrichment"]["lyrics_source"], body["pending"]) == ("LRCLIB", True), \
-            "a track just begun: not yet, and the panel looks back"
+        assert (body["enrichment"]["lyrics"], body["pending"], body["lyrics_pending"]) == (None, True, True), \
+            "a track just begun: Plex not yet, the plain words held back (ADR-0184, 7), the panel looks back"
         assert fake.lyrics_asked == []
         monkeypatch.setattr(wsserver, "LYRICS_SETTLE_S", 0.0)
         body = await ask()
         assert body["enrichment"]["lyrics_source"] == "Plex · LyricFind" and not body["pending"]
         assert body["enrichment"]["lyrics_synced"].startswith("[00:23.06]Sung one")
+        assert body["lyrics_pending"] is False
     assert [key for key, _ in fake.lyrics_asked] == ["903"]
     await library.close()
 
@@ -801,3 +803,99 @@ async def test_a_track_just_begun_is_not_held_back_where_plex_would_not_be_asked
         body = await (await client.get("/enrichment")).json()
     assert body["pending"] is False
     await library.close()
+
+
+class _SlowPlex:
+    """Plex's lyrics, answering only when let: still going after the
+    enrichment's wait."""
+    name = "plex-lyrics"
+    behind = "lrclib"
+    wanted = staticmethod(PlexLyrics.wanted)
+
+    def __init__(self, answer):
+        self.answer, self.go = answer, asyncio.Event()
+
+    def serves(self, renderer):
+        return renderer != "radio"
+
+    async def fetch(self, key):
+        await self.go.wait()
+        return self.answer
+
+
+def _lyrics_route(provider, *, words=None):
+    from gexis_core.enrichment import EnrichmentService
+    from gexis_core.model import TrackMetadata
+
+    plain = Answer(Outcome.FOUND, words or Enrichment(lyrics="Plain", lyrics_source="LRCLIB", sources=("lrclib",)))
+    store = StateStore({"spotify": True})
+    store.set_active("spotify")
+    store.set_metadata("spotify", TrackMetadata(artist="The Artist", album="An Album", title="A Song"))
+    store.set_panel(lyrics=True)
+    service = EnrichmentService([_Lrclib(plain), provider], Cache(Path(":memory:")))
+    return service, StateServer(store, enrichment=service, library=_Library([]))
+
+
+async def test_plain_words_wait_while_plex_is_still_answering_and_timed_ones_replace_them(monkeypatch):
+    """ADR-0184, 7 (George, 2026-11-21: timed lyrics first): no plain words
+    and then a swap - the panel is told lyrics are coming."""
+    from gexis_core import enrichment, wsserver
+    monkeypatch.setattr(wsserver, "LYRICS_SETTLE_S", 0.0)
+    monkeypatch.setattr(enrichment, "WAIT_S", 0.05)
+    timed = Answer(Outcome.FOUND, Enrichment(lyrics="Sung", lyrics_synced="[00:01.00]Sung",
+                                             lyrics_source="Plex", sources=("plex-lyrics",)))
+    slow = _SlowPlex(timed)
+    _service, server = _lyrics_route(slow)
+    async with TestClient(TestServer(server.make_app())) as client:
+        body = await (await client.get("/enrichment")).json()
+        assert (body["enrichment"]["lyrics"], body["enrichment"]["lyrics_source"]) == (None, None)
+        assert body["pending"] and body["lyrics_pending"]
+        slow.go.set()
+        await asyncio.sleep(0)
+        body = await (await client.get("/enrichment")).json()
+    assert body["enrichment"]["lyrics_synced"] == "[00:01.00]Sung" and body["enrichment"]["lyrics_source"] == "Plex"
+    assert not body["lyrics_pending"]
+
+
+async def test_the_plain_words_show_once_the_wait_is_over_and_timed_ones_still_replace_them(monkeypatch):
+    """ADR-0184, 8: at most `LYRICS_WAIT_S`, counted from the first ask with
+    the lyrics on screen; a timed answer after it still wins (item 3)."""
+    from gexis_core import enrichment, wsserver
+    monkeypatch.setattr(wsserver, "LYRICS_SETTLE_S", 0.0)
+    monkeypatch.setattr(enrichment, "WAIT_S", 0.05)
+    clock = [1000.0]
+    monkeypatch.setattr(wsserver, "_now", lambda: clock[0])
+    timed = Answer(Outcome.FOUND, Enrichment(lyrics="Sung", lyrics_synced="[00:01.00]Sung",
+                                             lyrics_source="Plex", sources=("plex-lyrics",)))
+    slow = _SlowPlex(timed)
+    _service, server = _lyrics_route(slow)
+    async with TestClient(TestServer(server.make_app())) as client:
+        assert (await (await client.get("/enrichment")).json())["lyrics_pending"]
+        clock[0] += wsserver.LYRICS_WAIT_S - 0.5
+        assert (await (await client.get("/enrichment")).json())["lyrics_pending"], "still within the wait"
+        clock[0] += 0.5
+        body = await (await client.get("/enrichment")).json()
+        assert body["enrichment"]["lyrics"] == "Plain" and body["enrichment"]["lyrics_source"] == "LRCLIB"
+        assert body["pending"] and not body["lyrics_pending"], "Plex still going: the panel looks back"
+        slow.go.set()
+        await asyncio.sleep(0)
+        body = await (await client.get("/enrichment")).json()
+    assert body["enrichment"]["lyrics_synced"] == "[00:01.00]Sung"
+
+
+async def test_no_wait_when_plex_is_backed_off_or_lrclib_already_has_timed_words(monkeypatch):
+    """ADR-0184, 9: the allowance spent (item 5's back-off) or nothing left
+    for Plex to add - the words show at once."""
+    from gexis_core import enrichment
+    monkeypatch.setattr(enrichment, "WAIT_S", 0.05)
+    slow = _SlowPlex(Answer(Outcome.UNAVAILABLE))
+    service, server = _lyrics_route(slow)
+    service._unavailable_until["plex-lyrics"] = service._clock() + 900
+    async with TestClient(TestServer(server.make_app())) as client:
+        body = await (await client.get("/enrichment")).json()
+    assert body["enrichment"]["lyrics"] == "Plain" and not body["lyrics_pending"] and not body["pending"]
+    timed = Enrichment(lyrics="Sung", lyrics_synced="[00:01.00]Sung", lyrics_source="LRCLIB", sources=("lrclib",))
+    _service, server = _lyrics_route(_SlowPlex(Answer(Outcome.UNAVAILABLE)), words=timed)
+    async with TestClient(TestServer(server.make_app())) as client:
+        body = await (await client.get("/enrichment")).json()
+    assert body["enrichment"]["lyrics_synced"] == "[00:01.00]Sung" and not body["lyrics_pending"]
