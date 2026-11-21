@@ -95,6 +95,17 @@ POPULAR_ROWS = 5
 #: (Finding 153). Under the panel's look-back (6 s), so its next ask is the
 #: one that gets them.
 LYRICS_SETTLE_S = 5.0
+#: **Timed lyrics first** (ADR-0184, 7-8; George, 2026-11-21): LRCLIB's plain
+#: words are held back while Plex may still bring timed ones, at most this
+#: long from the first ask with the lyrics on screen. A timed answer after it
+#: still replaces them; only the wait is bounded.
+LYRICS_WAIT_S = 10.0
+
+
+def _now() -> float:
+    """The route's clock for the lyrics' waits - its own name, so a test can
+    move it without moving the event loop's."""
+    return time.monotonic()
 
 logger = logging.getLogger("gexis_core.wsserver")
 
@@ -282,6 +293,9 @@ class StateServer:
         #: ADR-0184, fourth step: the track `/enrichment` was last asked for,
         #: and when it was first asked for it (`_plex_lyrics_now`).
         self._asked_track: tuple[TrackKey, float] | None = None
+        #: The track whose lyrics were first asked for on screen, and when
+        #: (ADR-0184, 8): the plain words wait at most `LYRICS_WAIT_S` from it.
+        self._lyrics_shown: tuple[TrackKey, float] | None = None
         self._radio = radio
         #: ADR-0180: the player's own internet radio (`radio_service`).
         self._stations = stations
@@ -1635,15 +1649,37 @@ class StateServer:
         # library's**, which comes first (ADR-0184, second step, 3).
         if swept and not (found.artist_image or "").startswith("/plex/"):
             found = replace(found, artist_image=swept)
+        lyrics_pending = self._hold_plain_lyrics(key, state, pending, found)
+        if lyrics_pending:
+            found = replace(found, lyrics=None, lyrics_source=None)
         return web.json_response({
             # True when a provider had not finished: the panel asks again
             # rather than treating this as the final word.
             "pending": bool(pending),
+            # True while plain words are held back for timed ones that may
+            # still come (ADR-0184, 7): the panel shows its looking state.
+            "lyrics_pending": lyrics_pending,
             # The panel checks this before drawing: by the time a lookup
             # returns, the track may have changed.
             "track": {"artist": key.artist, "title": key.title},
             "enrichment": found.to_json(),
         })
+
+    def _hold_plain_lyrics(self, key: TrackKey, state, pending: list, found) -> bool:
+        """**Whether to hold LRCLIB's plain words back** (ADR-0184, 7-9;
+        George, 2026-11-21: timed lyrics first, not plain words and then a
+        swap): only plain words so far, the lyrics on screen, Plex waiting to
+        be asked or still answering for this track (`pending`, which a
+        backed-off Plex never joins), and under `LYRICS_WAIT_S` since the
+        lyrics were first asked for on screen."""
+        if not (state.panel or {}).get("lyrics"):
+            return False
+        now = _now()
+        if self._lyrics_shown is None or self._lyrics_shown[0] != key:
+            self._lyrics_shown = (key, now)
+        if not found.lyrics or found.lyrics_synced or found.instrumental:
+            return False
+        return LYRICS_PROVIDER in pending and now - self._lyrics_shown[1] < LYRICS_WAIT_S
 
     def _plex_lyrics_now(self, key: TrackKey, state, pending: list) -> bool:
         """**Whether the Plex library's lyrics may be asked for now**
@@ -1652,7 +1688,7 @@ class StateServer:
         while lyrics are on the panel's screen**, and not for a track
         skipped past: one asked for under `LYRICS_SETTLE_S` ago is answered
         as not final, and the panel's look-back asks again."""
-        now = time.monotonic()
+        now = _now()
         if self._asked_track is None or self._asked_track[0] != key:
             self._asked_track = (key, now)
         if not (state.panel or {}).get("lyrics"):

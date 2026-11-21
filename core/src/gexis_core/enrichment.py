@@ -876,7 +876,12 @@ class EnrichmentService:
 
     def asks(self, name: str, renderer: str | None = None) -> bool:
         """Whether a `for_track` now would ask this provider at all: there,
-        serving this renderer, configured, its row on."""
+        serving this renderer, configured, its row on - and not backed off,
+        where `_ask` answers "could not ask" without asking (ADR-0184, 9:
+        no wait for Plex's lyrics while its allowance is spent)."""
+        until = self._unavailable_until.get(name)
+        if until is not None and self._clock() < until:
+            return False
         return any(
             provider.name == name and provider.serves(renderer)
             and getattr(provider, "ready", _always_ready)() and self._gate(name)

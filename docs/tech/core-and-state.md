@@ -565,7 +565,13 @@ wins):
    about in its first 5 s, so skipping does not spend the server's few
    lyrics an hour (Finding 153); a 404 on a listed lyric stream is
    UNAVAILABLE and backs off `plex-lyrics` alone. The panel asks again when
-   its lyrics come on screen.
+   its lyrics come on screen. **Timed lyrics first** (ADR-0184, 7-9): while
+   `plex-lyrics` is in `pending` and LRCLIB's answer is plain words only,
+   the route leaves the words out and answers `lyrics_pending`, for at most
+   `LYRICS_WAIT_S` (10 s) from the first ask with lyrics on screen; the
+   panel and the bar show their looking state meanwhile. A backed-off
+   `plex-lyrics` is not "asked" (`EnrichmentService.asks`), so it never
+   holds the words back.
 
 Providers with a key (fanart, TheAudioDB, ListenBrainz) are skipped until
 configured. Settings rows gate them: `enrichment` (all), `lyrics` (LRCLIB

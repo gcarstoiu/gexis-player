@@ -163,7 +163,7 @@
   const plainLines = $derived((info?.lyrics ?? '').split('\n'));
   //: The panel's order of precedence (NowPlaying.svelte, Lyrics tab).
   const lyricsState = $derived(
-    enrichment.state === 'loading' ? 'loading'
+    enrichment.state === 'loading' || enrichment.lyricsPending ? 'loading'
       : info?.instrumental ? 'instrumental'
       : sung.length ? 'synced'
       : info?.lyrics ? 'plain'

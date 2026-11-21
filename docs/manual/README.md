@@ -926,7 +926,9 @@ artist's biography, picture, similar artists and *Popular* tracks, and for
 an album's cover when a source sends none with a track (Bluetooth often does
 not); *Find portraits and covers* takes your Plex library's first too. For
 lyrics it comes after LRCLIB: the player shows your Plex library's where
-LRCLIB has none, or none timed, while the lyrics are on screen. It
+LRCLIB has none, or none timed, while the lyrics are on screen. Timed lyrics
+come first: the first time a track's lyrics are shown, the player looks for
+up to 10 seconds before showing plain lyrics in their place. It
 uses the Plex server Plexamp plays from, through Plexamp's own sign-in, and
 only while that server is on your home network. It is greyed with *Claim
 Plexamp first* until Plexamp is claimed.

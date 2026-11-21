@@ -1037,7 +1037,9 @@ Plex* on, the player shows your Plex library's, timed when it has them; the
 credit under the lyrics says whose they are. Your Plex server hands out only
 about five lyrics every ten minutes, so the player asks it only while the lyrics are on
 screen, and a track skipped within its first seconds is not asked about.
-Plain lyrics are shown without timing. Some tracks have none.
+Timed lyrics come first: while your Plex server may still have timed ones,
+the player waits up to 10 seconds before showing plain lyrics. Plain lyrics
+are shown without timing. Some tracks have none.
 The Lyrics button on Now Playing, or the Lyrics corner of the phone's
 remote, shows them.
 
