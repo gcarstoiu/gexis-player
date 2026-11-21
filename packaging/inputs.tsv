@@ -4,7 +4,7 @@
 # The two "source of the binary we ship" are not built from: they sit beside
 # the GPL binaries we redistribute.
 d9a17092923ebfe5d20a770c6b6a7eb2268f9700f999bf604b9db09f518aca5a	GPL-3.0	CamillaDSP, binary v4.1.3	https://github.com/HEnquist/camilladsp/releases/download/v4.1.3/camilladsp-linux-aarch64.tar.gz
-6bc182075bb3037896001707037f9de91030988a5a1489295fdee32c5953127b	GPL-3.0	go-librespot, binary of master 775ba5883 as upstream's workflow built it (ADR-0181)	https://github.com/devgianlu/go-librespot/actions/runs/43070007237
+1959a87033c5d8ff012e6f8acd1ca1994234104455d9796b688c8d2193e7f28b	GPL-3.0	go-librespot, binary v0.10.7	https://github.com/devgianlu/go-librespot/releases/download/v0.10.7/go-librespot_linux_arm64.tar.gz
 4b0ed6491ac36a55b1bb87f94106b4e5919f3a1ca5cd2a7ceb0aa6d9fad95292	GPL-3.0	gexis-airplay 0.1.0, our plugin's adapter	https://github.com/gcarstoiu/gexis-airplay/releases/download/v0.1.0/gexis-airplay-${PLUGIN_VERSION}.tar.gz
 414b5dedaffab5f1c9e0b37955cc54e1ad6b0661fbab67d2f221a22f04efb3b5	GPL-3.0	gexis-roon 0.2.1, our plugin's adapter	https://github.com/gcarstoiu/gexis-roon/releases/download/v0.2.1/gexis-roon-${PLUGIN_VERSION}.tar.gz
 ce4bddb4a7fa33469411a463505c92fab0bd894d0017373d957c0a092c42a4f9	GPL-3.0	PeppyMeter (foonerd), source	https://codeload.github.com/foonerd/PeppyMeter/tar.gz/ee2de2882669f62604ce568f4aa3959501b313d6
@@ -25,7 +25,7 @@ c4f57ae7cae1e9a24b546d76d34e0596e1b67d7898f521d2821b08938a4eb5ef	GPL-3.0	Gelo5's
 e8e0db5767cd57685e67a3712737e68fdebe368ed5cb76073d71458abe7048f2	GPL-3.0	peppyalsa, source	https://codeload.github.com/project-owner/peppyalsa/tar.gz/7dcb0c5e783e0c86315a0f655684613affd3e9d2
 3e90e2ea1f52f5c1559a5a46b2cdadb46ac6532a08a34f8cd7e77aa39f6a90c7	GPL-2.0	nqptp, source	https://codeload.github.com/mikebrady/nqptp/tar.gz/ab8fb67483411640fd7f1e193889482f2421c37c
 f5b3b66f57197f11526de2e3c1c22e24ed6552e247242bf0ec89e5d3d7410dd5	MIT and others, per file	shairport-sync, source	https://codeload.github.com/mikebrady/shairport-sync/tar.gz/7ce90d89529dd760488f20592a7cbff626672f6c
-4f746d305926b8a3fafe749b9d9607a7c9748c2eeb99d3dd02c632b2d63649df	GPL-3.0	go-librespot 775ba5883, source of the binary we ship	https://codeload.github.com/devgianlu/go-librespot/tar.gz/775ba588394ce8f3c983447cbc73e73a53ec545c
+dc249e97cfd33993c8642da256cc025b32ae3584ae4bd049eee8c390b37d1184	GPL-3.0	go-librespot v0.10.7, source of the binary we ship	https://codeload.github.com/devgianlu/go-librespot/tar.gz/v0.10.7
 7e2fdca1e9c73885426ac889d27682c76d49ea1ea52c5f5bfe5356d7fdfa52df	GPL-3.0	CamillaDSP v4.1.3, source of the binary we ship	https://codeload.github.com/HEnquist/camilladsp/tar.gz/v4.1.3
 8c700340a06adac0ba31ad1ea36e99d4a131fb5f0c8cae56a9c47a3ef185d131	MIT	peppy_templates: 1280x400_Aluminium_frame_01	https://raw.githubusercontent.com/foonerd/peppy_templates/f80c166a9682467f0631c374b6ed4eb088fc6e3c/template_peppy/1280/400/1280x400_Aluminium_frame_01.zip
 82499a4c6fce6de7d9412bd90f19d9d995cc58941a083a8a42f371f42fe45cb3	MIT	peppy_templates: 1280x400_Aluminium_green_02	https://raw.githubusercontent.com/foonerd/peppy_templates/f80c166a9682467f0631c374b6ed4eb088fc6e3c/template_peppy/1280/400/1280x400_Aluminium_green_02.zip
