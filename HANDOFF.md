@@ -29,7 +29,7 @@ go-librespot 0.10.7 in place of ADR-0181's development build - Spotify only
 together, the Wi-Fi rescan fix and Shairport Sync 5.6.3. **Stable: 1.17.0**
 (serial 17). The plugin catalogue (serial 9) lists gexis-plexamp 0.6.0
 (lowest release 1.18.0) and gexis-beszel 0.21.2-1.
-**Owed by George on 1.18.0:** Plex's lyrics seen on screen; his listening
+**Owed by George on 1.18.0:** his listening
 to the bass from both speakers; his ear in a Spotify group (after the fix
 the gaps could not be reproduced: the access point had moved shelvespi to
 another, where a scan costs no audio); a play from an Apple device
@@ -170,8 +170,11 @@ Closed: 0-31 and 35 (13 with letters a-f); 22, 23, 27-31 and 35 on
 numbered consecutively without letters, each with a stable ID (George,
 2026-10-13). **In progress: 32**, the library answers for itself
 (`ph-library`): in 1.18.0 on Testing with gexis-plexamp 0.6.0; Findings 149,
-150, 152 and 153 (counts and timings only). Left: George seeing Plex's
-lyrics on screen; the phase closes at his word. **And 37**, room measurement
+150, 152 and 153 (counts and timings only). Plex's lyrics seen by George
+2026-11-21; ADR-0184 amended the same day (timed lyrics first, plain words
+held back up to 10 s): build it on `fix-lyrics-timed-first`, preview after
+George's room run (sofapi keeps the research build until then). The phase
+closes at his word. **And 37**, room measurement
 reworked (above). Then 33 (Lyrion's own menus: the look), 36 (Glass,
 a finding first); MPD parked. 34 (room correction in time) closed
 2026-11-21 without being built (George, on Finding 155). `docs/DEVELOPMENT.md` holds each phase's

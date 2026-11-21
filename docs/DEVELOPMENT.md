@@ -4024,9 +4024,12 @@ Plex then answers only where Plexamp is installed and claimed, and the row
 **In 1.18.0** (George, 2026-11-18: to Testing with everything, the notes
 approved): its four steps (covers; the artist; the artist's MusicBrainz id;
 lyrics behind LRCLIB's) with gexis-plexamp 0.6.0 in the catalogue (serial
-9, lowest release 1.18.0); Findings 149, 150, 152 and 153. Left: George
-seeing Plex's lyrics on a track LRCLIB has none timed for; the phase closes
-at his word.
+9, lowest release 1.18.0); Findings 149, 150, 152 and 153. **Plex's lyrics
+seen on screen** (George, 2026-11-21, on sofapi): Plex's timed lyrics came a
+few seconds after LRCLIB's plain ones; George decided timed lyrics come
+first (ADR-0184 amended, items 7-10: plain words held back up to 10 s while
+Plex may bring timed ones). Left: that change built and previewed; the phase
+closes at his word.
 
 **Added 2026-09-25 (George):** *"Let's introduce another phase … which should tackle the question of how we can we leverage the plexamp/Plex
 server metadata that is available. Anything that can reduce the dependency on
