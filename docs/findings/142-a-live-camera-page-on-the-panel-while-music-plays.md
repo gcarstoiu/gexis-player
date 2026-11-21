@@ -69,6 +69,10 @@ while music plays. One run; no more were wanted (George, 2026-11-07).
    decoder (`/dev/video10`, twice) while the page was up and not before;
    whether any stream went through it is not established, and the
    renderer's 105 % is where software decoding runs.
+   *Qualified 2026-11-21 ([Finding 157](157-webrtc-h264-is-hardware-decoded-on-a-pi-4.md)):
+   a WebRTC H.264 stream does use the hardware decoder in this browser,
+   with the profile list empty all the same; Raspberry Pi's build keeps
+   about two decoders at once, so with seven cameras most went to software.*
 
 5. **Most pictures kept coming, with frames dropped, and two nearly
    stopped.** Frames over the 300 s by the video elements' own counts
