@@ -89,5 +89,6 @@ workflow starts, and the next runs repeated none of it.
 
 **Needs George:** GitHub's *Allow GitHub Actions to create and approve pull
 requests* (Settings → Actions → General) is off, so the workflow cannot open
-its pull request until it is on. `main`'s ruleset asks for no approvals, so
+its pull request until it is on. *Switched on by George 2026-11-18; read back
+on 2026-11-21.* `main`'s ruleset asks for no approvals, so
 the setting adds nothing to what an approval could do there.

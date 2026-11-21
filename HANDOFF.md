@@ -95,9 +95,8 @@ on Stable): what each left is in its *Closed* paragraph in
 archive (2026-11-21).
 
 **The Home Assistant integration's 0.7.0** (released 2026-11-16 at George's
-word): internet radio, join and unjoin, the card's group. **Not yet seen in a
-real Home Assistant** (mocked entities only, `~/projects/scratch/ha-0.7.0/card`):
-acceptance 8, join and unjoin, the card's group.
+word): internet radio, join and unjoin, the card's group. **Seen by George
+in his Home Assistant 2026-11-21: all good.**
 
 **Open, small:** a preview's download still holds the skin packs (1.1 of
 1.2 GB) though `release.yml` excludes them; `gen_personalise.py` out of step since Phase 23;
