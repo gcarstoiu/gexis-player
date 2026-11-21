@@ -9272,3 +9272,112 @@ Join), seen on the players. On those two a list opening waits 2 s, up to 4 s
 behind a background look, for the fresh answer; the kept list shows
 meanwhile. Masked probes in
 `~/projects/scratch/ph31/dbg/` (`reach.py`, `link.py`, `seen.py`).
+
+## 2026-11-21 — 1.18.0 on Testing, 1.18.1 under way, ADR-0183 proposed, the players, the routine's last line, the phases, the hum's first tests (moved verbatim after 1.18.1)
+
+**Testing: 1.18.0** (2026-11-18, serial 74; PR #107 merged by George):
+Phase 32 (information from the Plex library first, ADR-0184), room
+correction's bass from both speakers together (ADR-0175's amendment,
+Finding 151), a group's gaps over Wi-Fi fixed (Finding 154: the core's
+Wi-Fi-name read let nmcli rescan every ~43 s), Shairport Sync 5.6.3.
+**Stable: 1.17.0** (serial 17). The plugin catalogue (serial 9) lists
+gexis-plexamp 0.6.0 (lowest release 1.18.0) and gexis-beszel 0.21.2-1.
+**Owed by George on 1.18.0:** Plex's lyrics seen on screen; his listening
+to the bass from both speakers; his ear in a Spotify group (after the fix
+the gaps could not be reproduced: the access point had moved shelvespi to
+another, where a scan costs no audio); a play from an Apple device
+(Shairport Sync 5.6.3, with `ph23-test`). Then Stable at his word.
+
+**Next: 1.18.1** (George, 2026-11-18): go-librespot 0.10.7 (the daily job's
+`bump-go-librespot-0.10.7`; 0.10.6 contains ADR-0181's commit, so our
+development build goes) and **ADR-0183, accepted** (A: Spotify on the lead
+paused, the chain rewritten under it, resumed; `spotify-group-change`
+3759f835, `rechain.keep_spotify_playing`, 3,605 core tests pass), with
+`upstream-shairport-nqptp` (Shairport Sync and NQPTP watched). All three on
+`preview-1.18.1` (from `next`; the inputs list's conflict resolved to
+Shairport 5.6.3 and go-librespot 0.10.7), preview run 44408717854, **on
+sofapi since 2026-11-18 23:16** (George's go-ahead; core 1.18.0+git6, player
+git13, go-librespot 0.10.7-4; idle, core clean, the group kept). Then George with his phone: go-librespot's checklist
+(`docs/tech/updates-and-releases.md`) and ADR-0183's (a join and a leave
+under Spotify on the lead: the music back, the phone keeps the player and
+the position, the gap timed; the phone's Pause and Next still reach the
+player; the follower in time; the equaliser on at the lead). GitHub Actions
+may now open and approve pull requests (George, 2026-11-18; read back).
+
+**Spotify on the lead through a group change** (George, 2026-11-15: it
+should keep playing): a group change stops go-librespot, which ends the
+cast. [ADR-0183](docs/decisions/0183-spotify-keeps-playing-on-the-lead-through-a-group-change.md)
+**proposed**: pause it, rewrite, resume (go-librespot reopens its device on
+resume with the ALSA configuration read afresh); not built until George
+accepts it.
+
+**The players** (2026-11-18): **sofapi** and **guestpi** on 1.18.0's code
+before its tag (core 1.17.0+git87, player git90, UI git86, system git22,
+Shairport Sync 5.6.3-1; run 44391293146); **shelvespi** on 1.17.0 with the
+Wi-Fi fix (core and player git65, run 44365618347); **bedroompi** on 1.17.0.
+All on Testing, which offers 1.18.0. sofapi leads a group with shelvespi;
+room correction on at sofapi, its Plexamp library lent, its Beszel agent
+0.21.2-1 (uploaded); AirPlay on at guestpi only. Each has its own Lyrion
+server. Lyrion stops on a player that leaves its sync (Lyrion's own).
+
+**Routine clean-up** (`docs/ROUTINE-CLEANUP.md`, George 2026-10-12): after
+every merged release PR, otherwise weekly on Sunday evening. **Last run:
+2026-11-18, after 1.18.0**: five merged worktrees and six branches removed
+(here and on GitHub); HANDOFF 3,232 words to about 1,950, the finished
+blocks moved verbatim to the archive; ADR-0175's and ADR-0184's index rows
+brought up to date; the repository scan clean, except that the home
+network's name was not checked (reading it on a player was refused). Still
+owed: `docs/LESSONS.md` (5,272 words) cut back; the start-of-session set is
+about 9,500 words.
+
+Closed: 0-31 and 35 (13 with letters a-f); 22, 23, 27-31 and 35 on
+2026-11-16 (George, with 1.17.0 on Stable), what each left above. Phases are
+numbered consecutively without letters, each with a stable ID (George,
+2026-10-13). **In progress: 32**, the library answers for itself
+(`ph-library`, George 2026-11-16): ADR-0184's four steps (covers; the
+artist, popular tracks and both sweeps; MusicBrainz ids; lyrics behind
+LRCLIB's) in 1.18.0 on Testing, with gexis-plexamp 0.6.0; Findings 149,
+150, 152 and 153, measured on George's library with his consent (counts
+and timings only, no names, track listings or screenshots). Left: George
+seeing Plex's lyrics on screen; the phase closes at his word.
+Then 33 (Lyrion's own menus: the look), 34 (room correction in time,
+research first), 36 (Glass, a finding first); MPD parked. `docs/DEVELOPMENT.md` holds each phase's
+acceptance criteria.
+
+- **A hum with the touch cable in** (sofapi, 2026-11-17): causes, tests and
+  remedies in `docs/HARDWARE.md`; George's tests come first.
+
+**Phases 22, 23, 27 to 31 and 35 closed 2026-11-16** (George, with 1.17.0
+on Stable). Each one's *Closed* paragraph in `docs/DEVELOPMENT.md` says what
+was left, and the to-do list carries it; their full notes are in the archive
+(2026-11-16).
+- **22, multiroom**: the measurement session (at 192 kHz the bar lost sync
+  over Wi-Fi); Lyrion-app grouping back and forth with the player's.
+- **23, AirPlay 2** (*Limited testing*): the test with an Apple device
+  (to-do `ph23-test`), then T1-T9 to George and the mark removed.
+- **27 and 28**: a card flashed from
+  `image/deploy/2026-11-03-gexis-player-v1.12.1.img.xz`, set up without
+  Plexamp or Beszel, updated, then reset for first use offering Plexamp; then
+  R2D2's pi-gen container (8.9 GB) and build images (2.9 GB) removed.
+  Plexamp played once on 0.5.1 and George's look at the Plugins page, on
+  sofapi. ADR-0174's setup fix (`plugin_store.ADDED`) not built.
+- **29, the bass**: not measured - the cuts read from CamillaDSP while music
+  plays, the level against a meter, two sweeps' agreement at 60 dB, the
+  stage's cost, the A/B bit-exactness. Heard thin by George (Finding 151);
+  the cuts now designed from both speakers together, in 1.18.0. Owed:
+  George's listening, the bass rise judged by ear.
+- **A hum with the touch cable in** (sofapi, 2026-11-17): gone completely
+  (George, 2026-11-21) with a high-speed (480 Mb/s) USB isolator on the DAC's
+  cable, the DAC still at USB 2.0 with every rate; on the touch cable it did
+  nothing. `docs/HARDWARE.md` and the FAQ corrected on `docs`; they reach
+  `main` with the next release.
+- **30, the full range** (*Limited testing*): George's run at Full range on
+  sofapi; the stage's cost at 44.1/96/192 kHz; acceptance 2 as a finding.
+  Phase 34 next for room correction, research first.
+- **31, internet radio**: the follower's Stop on a follower running 1.17.0
+  (to-do `ph31-regression-fixes`). `core/tests/test_main_order.py` reads
+  `main()` for a name used before it is assigned (LESSONS 19).
+- **35, a page from Home Assistant**: not yet on a player - the heat
+  take-down, a USB keyboard's key, one page replacing another, the switch
+  turned off while a page is up; acceptance 4 (192 kHz with room
+  correction).
