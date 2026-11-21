@@ -1073,6 +1073,9 @@ phone only.
   chain as it reopens - go-librespot's unit never stops, so the phone keeps
   the player. Where that cannot be (its state unread, the pause refused,
   the device not let go in 2 s) the rewrite is as before.
+  That chain is not a group: a room measurement is refused only in one
+  (`Multiroom.grouped`), and once it has stopped the source it takes the
+  player's own chain at once (`alone_now`).
 - **A source playing on a member leads** (D4, amended 2026-10-28): the
   supervisor's `on_active_change` reaches `Multiroom.on_local_active`, which
   notes the source; `_lead_if_playing`, run on every state change, claims

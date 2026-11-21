@@ -282,6 +282,22 @@ class Multiroom:
     async def undo(self) -> Record:
         return await self.group.undo()
 
+    def grouped(self) -> bool:
+        """In a group - not merely on its chain, which a leader keeps after
+        an undo while its source plays or is paused (B3)."""
+        return self.group.record is not None
+
+    async def alone_now(self) -> bool:
+        """**The group's chain given up at once** where the group is undone
+        but this player, which led it, plays on through it (B3): a room
+        measurement, its source stopped, needs the player's own chain
+        (sofapi, 2026-11-19: undone with the radio paused, the chain stayed
+        the group's and the room asked to leave a group that was gone)."""
+        if self.group.record is not None or not self._alone_when_idle:
+            return False
+        await self._alone()
+        return True
+
     async def receive(self, data: dict) -> bool:
         try:
             record = Record.from_json(data)
