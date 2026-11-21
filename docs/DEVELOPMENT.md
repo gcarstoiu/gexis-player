@@ -3683,9 +3683,10 @@ player can show of what Roon plays.
 (George: building on the local machine has become troublesome); a *Should*
 idea since 2026-10-18.
 
-**Closed 2026-11-16** (George, with 1.17.0 on Stable: every phase then in progress closed), in 1.12.1, on Stable from 1.13.0. Left: a card flashed from
-1.12.1's image (criterion 4), then R2D2's pi-gen container and build
-images removed (decision 3).
+**Closed 2026-11-16** (George, with 1.17.0 on Stable: every phase then in progress closed), in 1.12.1, on Stable from 1.13.0. The card from
+1.12.1's image (criterion 4) dropped by George 2026-11-21; R2D2's pi-gen
+container, its work volume and the build images removed the same day
+(decision 3).
 
 **Added 2026-11-02.** The packages, the UI, the image and the release's
 parts are built on GitHub's arm64 machines from the release tag, not on
@@ -3725,9 +3726,9 @@ packs) is read from GitHub.
 correction (George). **On Stable with 1.13.0** (2026-11-06, George; Testing
 from 2026-11-03); criterion 5 and first use on a fresh card still to be seen.
 
-**Closed 2026-11-16** (George, with 1.17.0 on Stable: every phase then in progress closed), on Stable from 1.13.0. Left: criterion 5 and first use on a
-fresh card, Plexamp played once on 0.5.1, George's look at the Plugins
-page; ADR-0174's setup fix (part 2's list) not built.
+**Closed 2026-11-16** (George, with 1.17.0 on Stable: every phase then in progress closed), on Stable from 1.13.0. Left: ADR-0174's setup fix (part 2's
+list) not built. Criterion 5 and first use on a fresh card dropped with the
+card (George, 2026-11-21); Plexamp on 0.5.1 overtaken by 0.6.0.
 
 **Added 2026-11-03** (George: Plexamp, and Beszel's agent and hub, out of the
 player, as standalone plugins). Today they are plugins shipped with the

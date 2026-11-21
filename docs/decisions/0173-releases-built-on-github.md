@@ -205,7 +205,9 @@ The traps are in `docs/BUILD-TRAPS.md`.
   proposed: once the first release built on GitHub is out and verified,
   the warm pi-gen container, its work volume and the build images go. A
   local build stays possible, from cold. Chosen over keeping them warm as a
-  fallback.
+  fallback. *Done 2026-11-21* (George dropped the 1.12.1 card test): the
+  container, its 8.9 GB work volume and the pi-gen, deb builder, Debian
+  arm64 and skin check images removed.
 
 ## The trial (2026-11-02)
 
