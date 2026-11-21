@@ -30,8 +30,9 @@ together, the Wi-Fi rescan fix and Shairport Sync 5.6.3. **Stable: 1.18.1**
 (serial 18, promoted 2026-11-21 at George's word; both channels read back
 with a good signature, `releases/latest` is r1.18.1 with its signed image).
 George found the bass from both speakers and a Spotify group good by ear;
-a play from an Apple device (Shairport Sync 5.6.3, with `ph23-test`) is
-still owed and did not block Stable (George). The plugin catalogue (serial
+the play from an Apple device (Shairport Sync 5.6.3 and Phase 23's test) was
+closed by George without being done, so AirPlay stays marked *Limited
+testing* until one is. The plugin catalogue (serial
 9) lists gexis-plexamp 0.6.0 (lowest release 1.18.0) and gexis-beszel
 0.21.2-1.
 
