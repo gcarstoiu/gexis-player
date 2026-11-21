@@ -67,8 +67,8 @@ with the next release PR.
 **ADR-0182 in `main`**: `.github/workflows/upstream.yml` runs
 `packaging/upstream-daily.sh` daily (a bump branch for a part packaged here,
 an issue otherwise). *Allow GitHub Actions to create and approve pull
-requests* on since 2026-11-18 (George). **Owed by George:** the ADR's
-*Claude's choices*.
+requests* on since 2026-11-18 (George). The ADR's *Claude's choices*
+confirmed by George 2026-11-21.
 
 **The plugin catalogue** (Phase 24, closed 2026-10-31):
 `gcarstoiu/gexis-plugins` (local `~/projects/gexis-plugins`; `tools/publish.sh`

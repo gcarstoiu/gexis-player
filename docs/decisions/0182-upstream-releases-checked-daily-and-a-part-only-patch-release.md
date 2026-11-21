@@ -2,8 +2,8 @@
 
 **Status:** **Accepted** 2026-11-15 (George: options 1 and 2 together, after
 go-librespot's fix for the Android app sat unreleased; the fourth, upstream
-builds as a standing rule, not chosen). Items marked *Claude's choice* are
-for George to confirm.
+builds as a standing rule, not chosen). Items marked *Claude's choice*
+**confirmed by George 2026-11-21**, all six as written.
 **Relates to:** [ADR-0100](0100-software-we-may-not-redistribute-is-fetched-on-the-device.md)
 (we choose the version; `packaging/check-upstream.sh`),
 [ADR-0173](0173-releases-built-on-github.md) (releases built on GitHub),
@@ -70,7 +70,7 @@ byte; the whole run, against a local copy and a stand-in for `gh`, made the
 branch, the commit, the mirror's two files, the pull request and the two
 workflow starts, and the next runs repeated none of it.
 
-*Claude's choices*, for George to confirm:
+*Claude's choices*, confirmed by George 2026-11-21:
 
 - **Beszel gets an issue**, not a pull request: since ADR-0174 its pin is in
   `gcarstoiu/gexis-beszel`, which this repository's token cannot write.
