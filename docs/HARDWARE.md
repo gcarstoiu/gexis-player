@@ -50,7 +50,8 @@ the recommendation for the largest screens.
 HDMI screen with its touch over USB) a low hum rose with the volume, and
 went when the touch cable was unplugged, the HDMI cable still in. **On
 2026-11-21** an isolator on the touch cable left the hum; a high-speed
-(480 Mb/s) isolator on the USB DAC's cable helped, the DAC still at
+(480 Mb/s) isolator on the USB DAC's cable removed it, even at the preamplifier's
+high gain, the DAC still at
 high speed with all its rates (to 768 kHz, and DSD) - so the current came
 in through the DAC's USB ground. A second cable between the screen and the Pi is a
 second ground path; what reaches the amplifier depends on which of these
@@ -68,7 +69,7 @@ not the music. Playing through a DAC HAT instead of the USB DAC for a
 minute shows whether the USB DAC's ground is where it gets in.
 
 **Remedies, in order:** a **high-speed (480 Mb/s) USB isolator on the
-USB DAC's cable** - what helped on sofapi; a full-speed one (ADuM4160 type)
+USB DAC's cable** - what removed it on sofapi; a full-speed one (ADuM4160 type)
 there limits the DAC's rates or stops it, and a DAC powered over USB may
 want more current than an isolator passes. Or a full-speed isolator on the
 touch cable, which needs only full speed (on sofapi it did not help); the
