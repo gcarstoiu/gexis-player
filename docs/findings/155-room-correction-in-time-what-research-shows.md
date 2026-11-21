@@ -268,10 +268,11 @@ One blind test of one variable:
 
 **Left against right.** Both speakers get the same cuts in the bass
 (ADR-0175), so the bass has no phase difference between them. Above the bass,
-each speaker has its own broad filters (ADR-0177: Q 0.5, ±3 dB). The worst
-case is one speaker at +3 dB and the other at −3 dB at 1 kHz. That differs
-by at most 19.7° near 415 Hz (arithmetic on the RBJ peaking filter, not
-measured).
+each speaker has its own broad filters (ADR-0177: ±3 dB, Q 0.5-2). The worst
+case for one filter is one speaker at +3 dB and the other at −3 dB at the
+same frequency. That differs by at most 19.7°, whatever the Q and the
+frequency; at 1 kHz with Q 0.5, the largest difference falls near 415 Hz.
+This is arithmetic on the RBJ peaking filter, not a measurement.
 
 **Phase 34 closed for now** (George, 2026-11-21, on this finding) without
 being built. Nothing found shows an audible benefit. The parts of correction
