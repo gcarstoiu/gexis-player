@@ -55,8 +55,7 @@ level readings (C2); a finding; the run's logs for ADR-0185 C4 and C8.
 
 **Room work held for Phase 37's release** (George, 2026-11-21):
 `fix-room-grouped-after-undo` (f175b600: the room asks for a group, not its
-chain) and `fix-room-screens` (c2059ac6, ADR-0185 D4), both on
-`preview-1.18.1` and not yet seen live; `room-checks` (0aee0318, ADR-0185
+chain) and `fix-room-screens` (c2059ac6, ADR-0185 D4), not yet seen live; `room-checks` (0aee0318, ADR-0185
 D1-D3, amended by ADR-0187: D1's check moves into the setup check);
 `room-chart` (ADR-0186; D4's edits uncommitted in its worktree, on hold; its
 full-Both preview, run 44606811416, never to be installed).
@@ -163,9 +162,8 @@ every merged release PR, otherwise weekly on Sunday evening. **Last run:
 2026-11-21, after 1.18.1**: `spotify-group-change` removed (its worktree,
 here and on GitHub; GitHub removed `release-1.18.1` and
 `bump-go-librespot-0.10.7` itself); HANDOFF brought to the current state, the
-finished blocks moved verbatim to the archive. Listed for George:
-`bump-go-librespot-0.10.6` and `preview-1.18.1` on GitHub (not in `main`, no
-PR). Still owed: `docs/LESSONS.md` (5,272 words) cut back.
+finished blocks moved verbatim to the archive; then, at George's word,
+`bump-go-librespot-0.10.6` and `preview-1.18.1` deleted. Still owed: `docs/LESSONS.md` (5,272 words) cut back.
 
 ## Phases
 
