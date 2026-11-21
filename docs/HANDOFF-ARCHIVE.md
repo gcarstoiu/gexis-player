@@ -9381,3 +9381,93 @@ was left, and the to-do list carries it; their full notes are in the archive
   take-down, a USB keyboard's key, one page replacing another, the switch
   turned off while a page is up; acceptance 4 (192 kHz with room
   correction).
+
+## 2026-11-21 — 1.18.1 on Stable, Phase 32 closed, George's checks closed; HANDOFF trimmed (moved verbatim)
+
+**Testing: 1.18.1** (2026-11-21, serial 75; PR #109 merged by George,
+bringing in #108): Spotify keeps playing on the lead through a group change
+(ADR-0183, A; a join's pause 1.77 s on sofapi, accepted by George) and
+go-librespot 0.10.7 in place of ADR-0181's development build - Spotify only
+(George, 2026-11-21: the room fixes wait for Phase 37's release). 1.18.0
+(2026-11-18, serial 74) brought Phase 32, the bass from both speakers
+together, the Wi-Fi rescan fix and Shairport Sync 5.6.3. **Stable: 1.18.1**
+(serial 18, promoted 2026-11-21 at George's word; both channels read back
+with a good signature, `releases/latest` is r1.18.1 with its signed image).
+George found the bass from both speakers and a Spotify group good by ear;
+the play from an Apple device (Shairport Sync 5.6.3 and Phase 23's test) was
+closed by George without being done, so AirPlay stays marked *Limited
+testing* until one is. The plugin catalogue (serial
+9) lists gexis-plexamp 0.6.0 (lowest release 1.18.0) and gexis-beszel
+0.21.2-1.
+
+(ADR-0147, ADR-0169). George closed the phone test of the
+dialogs and the 31 October fixes unchecked (2026-11-21; both in every release
+since 1.10.0). The mocked-screen checks
+
+**Phases 22, 23, 27 to 31 and 35 closed 2026-11-16** (George, with 1.17.0
+on Stable): what each left is in its *Closed* paragraph in
+`docs/DEVELOPMENT.md` and on the to-do list; the list as it stood is in the
+archive (2026-11-21).
+
+**The Home Assistant integration's 0.7.0** (released 2026-11-16 at George's
+word): internet radio, join and unjoin, the card's group. **Seen by George
+in his Home Assistant 2026-11-21: all good.**
+
+**Open, small:** a preview's download still holds the skin packs (1.1 of
+1.2 GB) though `release.yml` excludes them; `gen_personalise.py` out of step since Phase 23;
+the mocked Settings → Display showed two *Screen port* rows
+(`screen_port`, `screen_port_info`), not yet looked at on a player.
+
+- **Glass** (foonerd's Rust PeppyMeter, Finding 133) is **Phase 36**
+  (`ph-glass`, George 2026-11-13): a finding first (Glass as released, a
+  fork of ours, or our own engine), then an ADR. The PeppyMeter,
+  PeppySpectrum and peppy_screensaver forks we pin were archived on
+  2026-10-04; every pinned download from foonerd's repositories still matched
+  its checksum on 2026-11-13 (130).
+
+**The Home Assistant integration**: `gcarstoiu/gexis-player-homeassistant`
+0.7.0 (local
+
+2026-11-21, after 1.18.1**: `spotify-group-change` removed (its worktree,
+here and on GitHub; GitHub removed `release-1.18.1` and
+`bump-go-librespot-0.10.7` itself); HANDOFF brought to the current state, the
+finished blocks moved verbatim to the archive; then, at George's word,
+`bump-go-librespot-0.10.6` and `preview-1.18.1` deleted. Still owed: `docs/LESSONS.md` (5,272 words) cut back.
+
+- **The visualiser made cheaper, the rest left** (Finding 134; George,
+  2026-10-22: stop here): the needle and spectrum skins are unchanged - the
+  present itself and the vendored engines' drawing (to-do `viz-cheaper`).
+
+Closed: 0-31 and 35 (13 with letters a-f); 22, 23, 27-31 and 35 on
+2026-11-16 (George, with 1.17.0 on Stable), what each left above. Phases are
+numbered consecutively without letters, each with a stable ID (George,
+2026-10-13). **In progress: 37**, room measurement
+reworked (above). **32** (the library answers for itself) closed 2026-11-21
+(George, with 1.18.1 on Stable); left: ADR-0184's amendment (timed lyrics
+first) on `fix-lyrics-timed-first` (43de3d8b; 3,608 core tests pass),
+previewed on sofapi after George's room run, which keeps the research build
+until then. Then 33 (Lyrion's own menus: the look), 36 (Glass,
+a finding first); MPD parked. 34 (room correction in time) closed
+2026-11-21 without being built (George, on Finding 155). `docs/DEVELOPMENT.md` holds each phase's
+acceptance criteria.
+
+by eye), a timing mark on every sweep; the head's weight and finer bass
+detail kept only if the data shows them better. **First step, on sofapi**:
+the research build `ph37-research` (af7d1134, never released: five
+positions, each sweep's deconvolved response kept in
+`/var/lib/gexis/room-research/`, never a recording), installed 2026-11-20
+14:29 at George's word, with his consent to keep the responses and copy them
+(about 30 MB) to `~/projects/scratch/ph37/`; both copies deleted after the
+analysis.
+
+**The plugin catalogue** (Phase 24, closed 2026-10-31):
+`gcarstoiu/gexis-plugins` (local `~/projects/gexis-plugins`; `tools/publish.sh`
+with `GEXIS_CATALOGUE_GNUPGHOME=~/projects/gexis-catalogue-key`), serial 9
+(2026-11-18): TV remote 0.1.1, Plexamp 0.6.0, Beszel and its hub 0.21.2-1;
+its pull requests are George's to merge, or Claude's at his word (#18). The catalogue key's master and revocation
+certificate wait in `~/projects/gexis-catalogue-key-for-george` until George
+has them. Not yet seen on a player: the visualiser back after a real drop of
+the TV's output; the store on a bar; setup writing a plugin record; Remove
+with *Keep* off (ADR-0147, ADR-0169). The mocked-screen checks
+(`~/projects/scratch/dpad`, `ph24`, `ph26/sources`, `ph26/blog`) build from
+`~/projects/gexis-player-next` unless `WT` names another worktree.
