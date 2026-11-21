@@ -54,9 +54,11 @@ traps below are a local build's, kept for when GitHub is unavailable.
   release** (1.18.2, 2026-11-21): `packaging/release/reuse.py` refuses it
   (*already published with different content*). Squeezelite's sources and
   build were unchanged since 1.18.1, yet the runner built its -3 with other
-  bytes. Raise the package's revision in its `build.sh`, then move the tag:
-  the failed run uploaded nothing (*Upload, unsigned* skipped), so delete the
-  tag here and on GitHub, tag the new commit and push.
+  bytes. Raise the package's revision in its `build.sh` **and in
+  `packaging/revisions.json`** (its test fails otherwise, as #110's did), run
+  the suite, then move the tag: the failed run uploaded nothing (*Upload,
+  unsigned* skipped), so delete the tag here and on GitHub, tag the new
+  commit and push.
 
 **Building**
 - **R2D2's `/` fills up** (moved from HANDOFF, 2026-11-10): Docker's
