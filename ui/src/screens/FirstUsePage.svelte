@@ -1421,7 +1421,10 @@ class Component extends DCLogic {
                           {#if o.isRad}<RadioMark size={24} stroke={2.2} />{/if}
                           <span style="width:22px;height:22px;border-radius:50%;border:2px solid var(--c-ink-70);box-sizing:border-box;align-items:center;justify-content:center;font-size:11px;font-weight:800;display:{o.letterDisplay};">{o.letter}</span>
                         </span>
-                        <span style="flex:1;min-width:0;">
+                        <!-- **A tagged row keeps its name whole** (2026-11-21: at 390 px, AirPlay's
+                             Limited testing tag lay over the name): the name never narrower than
+                             its longest word, and the tag below folds onto two lines instead. -->
+                        <span style="flex:1;min-width:{o.tagDisplay === 'block' ? 'min-content' : '0'};">
                           <span style="display:block;font-size:17px;font-weight:600;text-wrap:pretty;color:{o.labelInk};">{o.label}</span>
                           <span style="font-size:14px;line-height:1.4;color:var(--ink-quiet);margin-top:3px;text-wrap:pretty;display:{o.noteDisplay};">{o.note}</span>
                           <span style="font-family:var(--font-mono);font-size:13px;letter-spacing:0.04em;margin-top:3px;color:var(--ink-quiet);display:{o.metaDisplay};">{o.meta}</span>
@@ -1443,7 +1446,7 @@ class Component extends DCLogic {
                           <span style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--c-ink-75);"><span style="width:7px;height:7px;border-radius:50%;background:{o.footDot};flex-shrink:0;"></span>{o.foot}</span>
                           <span style="font-family:var(--font-mono);font-size:12px;color:var(--ink-tab-off);">{o.footMeta}</span>
                         </span>
-                        <span style="font-family:var(--font-mono);font-size:11px;letter-spacing:0.14em;text-transform:uppercase;padding:4px 8px;border-radius:var(--r-6);flex-shrink:0;display:{o.tagDisplay};background:{o.tagBg};color:{o.tagInk};">{o.tag}</span>
+                        <span style="font-family:var(--font-mono);font-size:11px;letter-spacing:0.14em;text-transform:uppercase;padding:4px 8px;border-radius:var(--r-6);flex:1 1 min-content;max-width:max-content;text-align:center;display:{o.tagDisplay};background:{o.tagBg};color:{o.tagInk};">{o.tag}</span>
                         <span style="align-items:flex-end;gap:3px;height:18px;flex-shrink:0;display:{o.barsDisplay};">
                           <span style="width:4px;height:6px;border-radius:1px;display:block;background:{o.b1};"></span>
                           <span style="width:4px;height:10px;border-radius:1px;display:block;background:{o.b2};"></span>
