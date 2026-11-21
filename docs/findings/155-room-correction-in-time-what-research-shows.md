@@ -11,9 +11,11 @@ time-domain section, which found no listening test in its favour.
 changes the impulse or step response at the seat. Dirac Live, Trinnov,
 Audiolense, Acourate, Focus Fidelity and DRC-FIR correct this way. The
 question was whether listeners can be shown to hear a benefit from it beyond
-what the player already does. The player corrects the level only:
-minimum-phase IIR filters from several positions averaged by power, plus delay
-and level alignment between the speakers.
+what the player does. The player corrects the level only: minimum-phase IIR
+filters from several positions averaged by power. Aligning the two speakers'
+delay and level is decided (ADR-0185 D2, ADR-0187 D1-D2) and comes with
+Phase 37; it was not yet in a release on 2026-11-21. The searches were briefed
+as if it were, which changes none of their results.
 
 ## Scope
 
@@ -254,7 +256,7 @@ One blind test of one variable:
 
 | Part of correction in time | Verdict | Here |
 |---|---|---|
-| Delay and level alignment between the speakers | supported: 9 of 10 listeners heard 0.06 ms or less between channels ([McMullin 2016](https://www.aes.org/e-lib/browse.cfm?elib=18467), abstract) | done (ADR-0175) |
+| Delay and level alignment between the speakers | supported: 9 of 10 listeners heard 0.06 ms or less between channels ([McMullin 2016](https://www.aes.org/e-lib/browse.cfm?elib=18467), abstract) | decided, comes with Phase 37 (ADR-0185 D2, ADR-0187 D1-D2) |
 | Shorter decay of bass modes | supported, given cuts that match the modes | the cuts are minimum-phase; the ringing is measured against Fazenda's thresholds (ADR-0187 C6/D7) |
 | Excess-phase correction of the bass at the seat | unsupported: no test; pre-ringing and failure away from the seat documented | not built |
 | Linearising the loudspeaker's own phase | unsupported for music in rooms; weak evidence it is inaudible | not built |
