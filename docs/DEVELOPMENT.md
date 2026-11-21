@@ -4148,6 +4148,16 @@ decided here.
 
 **ID:** `ph-room-correction-time` · added 2026-11-07 as 34, split from `ph-room-correction-full` (George).
 
+**Closed 2026-11-21 without being built** (George, on
+[Finding 155](findings/155-room-correction-in-time-what-research-shows.md),
+the research done again in full). No published test shows an audible
+benefit from correction in time over level-only correction from several
+positions: every test in its favour was run by its developers against no
+correction, and the controlled ones point the other way. The parts with
+support - the speakers' delay and level, the bass's ringing shortened by
+matched cuts - are done or in Phase 37 (ADR-0187 C6). Reopened only if a
+published blind test of the time part shows a benefit.
+
 **Added 2026-11-07** (George, after
 [Finding 141](findings/141-room-correction-above-the-bass-what-is-known.md)).
 The time-domain part of room correction is what Dirac adds beyond the level:
@@ -4405,7 +4415,7 @@ decisions:
   leaves explained.
 
 What stands from Phases 29-30 is listed in the ADR. The correction in time
-stays Phase 34.
+stays Phase 34 (closed 2026-11-21 without being built, Finding 155).
 
 **Order:** on sofapi first, measured before anything ships - finer detail
 in the bass, the head's weight, the ringing - then the setup check, then the

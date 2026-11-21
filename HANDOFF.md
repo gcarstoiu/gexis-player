@@ -172,9 +172,9 @@ numbered consecutively without letters, each with a stable ID (George,
 (`ph-library`): in 1.18.0 on Testing with gexis-plexamp 0.6.0; Findings 149,
 150, 152 and 153 (counts and timings only). Left: George seeing Plex's
 lyrics on screen; the phase closes at his word. **And 37**, room measurement
-reworked (above). Then 33 (Lyrion's own menus: the look), 34 (room
-correction in time, research first; more positions moved to 37), 36 (Glass,
-a finding first); MPD parked. `docs/DEVELOPMENT.md` holds each phase's
+reworked (above). Then 33 (Lyrion's own menus: the look), 36 (Glass,
+a finding first); MPD parked. 34 (room correction in time) closed
+2026-11-21 without being built (George, on Finding 155). `docs/DEVELOPMENT.md` holds each phase's
 acceptance criteria.
 
 ## Machines

@@ -13,7 +13,8 @@ D4 (the joint sweep, once D4 here is proven). **Builds on:**
 [Finding 144](../findings/144-room-correction-above-the-bass-one-room-measured.md),
 [Finding 151](../findings/151-room-correction-thins-the-voice-range.md).
 **Relates to:** Phase 34 (the correction in time), which keeps its own
-question.
+question. *Phase 34 closed 2026-11-21 without being built (George, on
+[Finding 155](../findings/155-room-correction-in-time-what-research-shows.md)).*
 
 ## Context
 
