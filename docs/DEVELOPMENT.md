@@ -4012,6 +4012,11 @@ Home Assistant integration's release (acceptance 8).
 
 **ID:** `ph-library` · numbered 32 on 2026-11-03, after Plexamp and Beszel to the catalogue (George); numbered 31 on 2026-11-02, after releases built on GitHub (George); numbered 30 on 2026-11-01, after the Roon plugin (George); numbered 29 on 2026-10-26 (28 from 2026-10-25, 24 earlier that day, 23 from 2026-10-21, 22 from 2026-10-20, 21 from 2026-10-19, 20 from 2026-10-15, 19 from 2026-10-14, 18 from 2026-10-13; was 11a).
 
+**Closed 2026-11-21** (George, with 1.18.1 promoted to Stable): its four
+steps in 1.18.0, Plex's lyrics seen on screen on sofapi. Left: ADR-0184's
+amendment (timed lyrics first, items 7-10) on `fix-lyrics-timed-first`, to
+be previewed on sofapi after the room run and released after that.
+
 **Started 2026-11-16** (George, after 1.17.0 on Stable):
 [ADR-0184](decisions/0184-plex-information-through-plexamps-claim.md) proposed
 for acceptance 1; George answered its decisions the same day: no second

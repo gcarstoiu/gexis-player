@@ -26,14 +26,14 @@ bringing in #108): Spotify keeps playing on the lead through a group change
 go-librespot 0.10.7 in place of ADR-0181's development build - Spotify only
 (George, 2026-11-21: the room fixes wait for Phase 37's release). 1.18.0
 (2026-11-18, serial 74) brought Phase 32, the bass from both speakers
-together, the Wi-Fi rescan fix and Shairport Sync 5.6.3. **Stable: 1.17.0**
-(serial 17). The plugin catalogue (serial 9) lists gexis-plexamp 0.6.0
-(lowest release 1.18.0) and gexis-beszel 0.21.2-1.
-**Owed by George on 1.18.0:** his listening
-to the bass from both speakers; his ear in a Spotify group (after the fix
-the gaps could not be reproduced: the access point had moved shelvespi to
-another, where a scan costs no audio); a play from an Apple device
-(Shairport Sync 5.6.3, with `ph23-test`). Then Stable at his word.
+together, the Wi-Fi rescan fix and Shairport Sync 5.6.3. **Stable: 1.18.1**
+(serial 18, promoted 2026-11-21 at George's word; both channels read back
+with a good signature, `releases/latest` is r1.18.1 with its signed image).
+George found the bass from both speakers and a Spotify group good by ear;
+a play from an Apple device (Shairport Sync 5.6.3, with `ph23-test`) is
+still owed and did not block Stable (George). The plugin catalogue (serial
+9) lists gexis-plexamp 0.6.0 (lowest release 1.18.0) and gexis-beszel
+0.21.2-1.
 
 **Phase 37, room measurement reworked** (`ph-room-measurement`;
 [ADR-0187](docs/decisions/0187-room-measurement-reworked-setup-check-five-positions-timing-mark.md)
@@ -168,14 +168,12 @@ finished blocks moved verbatim to the archive; then, at George's word,
 Closed: 0-31 and 35 (13 with letters a-f); 22, 23, 27-31 and 35 on
 2026-11-16 (George, with 1.17.0 on Stable), what each left above. Phases are
 numbered consecutively without letters, each with a stable ID (George,
-2026-10-13). **In progress: 32**, the library answers for itself
-(`ph-library`): in 1.18.0 on Testing with gexis-plexamp 0.6.0; Findings 149,
-150, 152 and 153 (counts and timings only). Plex's lyrics seen by George
-2026-11-21; ADR-0184 amended the same day (timed lyrics first, plain words
-held back up to 10 s): build it on `fix-lyrics-timed-first`, preview after
-George's room run (sofapi keeps the research build until then). The phase
-closes at his word. **And 37**, room measurement
-reworked (above). Then 33 (Lyrion's own menus: the look), 36 (Glass,
+2026-10-13). **In progress: 37**, room measurement
+reworked (above). **32** (the library answers for itself) closed 2026-11-21
+(George, with 1.18.1 on Stable); left: ADR-0184's amendment (timed lyrics
+first) on `fix-lyrics-timed-first` (43de3d8b; 3,608 core tests pass),
+previewed on sofapi after George's room run, which keeps the research build
+until then. Then 33 (Lyrion's own menus: the look), 36 (Glass,
 a finding first); MPD parked. 34 (room correction in time) closed
 2026-11-21 without being built (George, on Finding 155). `docs/DEVELOPMENT.md` holds each phase's
 acceptance criteria.
