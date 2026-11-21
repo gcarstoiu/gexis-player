@@ -128,6 +128,10 @@ firmware starts slowing it - or the firmware reports it throttled, the core
 takes the page down (`closed.by: heat`) and logs it (George, over no guard).
 The manual advises fewer cameras and the smaller streams for a player's
 screen.
+*Kept as it is (George, 2026-11-21)*, after a page with one camera was
+taken down twice on sofapi at 80.8 and 82.8 °C: no warning before, no higher
+limit. The stream was hardware-decoded ([Finding 157](../findings/157-webrtc-h264-is-hardware-decoded-on-a-pi-4.md));
+sofapi stood at 78 °C with no page, which George is bringing down.
 
 **P9 - The integration** (its own repository, a minor version):
 - `gexis.show_page` (target: the player's media player; `url`, `id`,

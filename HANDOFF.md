@@ -82,6 +82,8 @@ a group, the plugin off and on, Roon Bridge's own update.
 **Open, small:** a preview's download still holds the skin packs (1.1 of
 1.2 GB) though `release.yml` excludes them.
 
+**sofapi runs hot** (2026-11-21): 78 °C with no page; a Home Assistant page with one camera was closed for the heat twice (Finding 157). ADR-0176 P8 kept as it is; George is bringing the temperature down.
+
 **The players** (2026-11-21): **sofapi** on Phase 37's research build (core,
 player and UI 1.18.0+git22.af7d113, which carries all of the 1.18.1 preview;
 go-librespot 0.10.7-4, Shairport Sync 5.6.3-1), room correction on, a USB
