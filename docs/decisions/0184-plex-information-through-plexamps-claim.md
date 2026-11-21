@@ -1,7 +1,8 @@
 # ADR-0184 — Plex information through Plexamp's claim
 
 **Status:** **Built** 2026-11-16 to 18, in 1.18.0 (Testing serial 74), its
-four steps below. **Accepted** 2026-11-16 (Phase 32's acceptance 1): George
+four steps below; **amended** 2026-11-21 (George): timed lyrics first, items
+7-10. **Accepted** 2026-11-16 (Phase 32's acceptance 1): George
 answered its four decisions and then confirmed the consequence and the
 settings row, the same day. **Builds on:**
 [ADR-0016](0016-plugins-as-separate-processes.md) (plugins are separate
@@ -294,6 +295,39 @@ asked only where LRCLIB has no lyrics, or none timed**.
    week as the others' are.
 6. **The switches that exist**: *Lyrics* (Enrichment) and *Information from
    Plex* (Sources) both stop it. No new row.
+
+## Amended: timed lyrics first (George, 2026-11-21)
+
+**Seen on sofapi**, George's check of Plex's lyrics: on a track LRCLIB has
+only plain words for, the panel showed them first and swapped in Plex's
+timed ones a few seconds later. The plain words come at once from LRCLIB.
+Plex is not asked in a track's first `LYRICS_SETTLE_S` (5 s, item 4), then
+it is asked behind the enrichment's 4 s wait, and the panel's look-back
+(6 s) picks up its answer. **George: timed lyrics always come first.**
+Offered three ways to handle the wait (wait with a limit, wait as long as
+it takes, keep the swap), he chose **to wait, with a limit**.
+
+7. **Plain words held back while Plex may still bring timed ones.** For a
+   track whose LRCLIB answer is plain words only, while Plex is waiting to
+   be asked or still answering for it, the route leaves the words out and
+   says `lyrics_pending`. The panel then shows its looking state for lyrics
+   on the Lyrics tab, the Track tab and the bar, and its look-back asks
+   again.
+8. **At most 10 s** (`LYRICS_WAIT_S`), counted from the first ask for the
+   track with its lyrics on screen. After that the plain words show. A timed
+   answer that comes later still replaces them (item 3): timed words come
+   first in every case, and only the wait is bounded.
+9. **No wait when Plex will not be asked**:
+   - lyrics not on screen;
+   - *Lyrics* or *Information from Plex* off, or no library lent;
+   - `plex-lyrics` backed off, its allowance spent (item 5);
+   - LRCLIB's answer timed, instrumental or empty.
+
+   Both answers are stored, so the wait happens only the first time a
+   track's lyrics are shown.
+10. **The cost**: on those first showings, plain words appear up to 10 s
+    later than before. Plex had timed words for 1 of the 92 tracks played
+    on sofapi (Finding 153), so most such waits end in the plain words.
 
 ## Consequences
 

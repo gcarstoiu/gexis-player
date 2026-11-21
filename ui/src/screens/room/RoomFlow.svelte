@@ -232,7 +232,6 @@
   //: The scale round the aim, as the design's 50 · 75 · 85 is round 75.
   const aim = $derived(run?.aim_db ?? 65);
   const levelPct = (db) => `${Math.max(0, Math.min(100, Math.round(((db - (aim - 25)) / 35) * 100)))}%`;
-  const checkPct = $derived(`${Math.round(Math.max(0, Math.min(1, ((run?.progress ?? 0.8) - 0.8) / 0.2)) * 100)}%`);
 
   //: The foot: [quiet, second, primary], each [label, action] or null.
   const foot = $derived.by(() => {
@@ -379,7 +378,9 @@
         <div class="after">Sweeps with the correction on, from each speaker and both together.</div>
       {/if}
 
-      {#if screenName === 'measure'}
+      <!-- The check as the measuring (George, 2026-11-19): a sweep it plays
+           again is said, as it is while measuring (ADR-0185 D4). -->
+      {#if screenName === 'measure' || screenName === 'checking'}
         <div class="card speakers">
           {#each SWEPT as k, i (k)}
             {@const s = speakerRow(k)}
@@ -392,7 +393,11 @@
             </div>
           {/each}
         </div>
-        <div class="note">Nothing to do while it runs, about a minute a position. Each sweep ends in a high whistle: keep quiet until it stops.</div>
+        {#if screenName === 'checking'}
+          <div class="note">Each sweep ends in a high whistle: keep quiet until it stops. Skip keeps the correction as it is worked out, marked Not checked.</div>
+        {:else}
+          <div class="note">Nothing to do while it runs, about a minute a position. Each sweep ends in a high whistle: keep quiet until it stops.</div>
+        {/if}
       {/if}
 
       {#if counting}
@@ -400,11 +405,6 @@
           <span class="count__ring">{run.count}</span>
           <span class="count__text">Sweeps in {run.count}. Stay where you are and keep quiet.</span>
         </div>
-      {/if}
-
-      {#if screenName === 'checking'}
-        <div class="progress"><div class="progress__fill" style="width:{checkPct}"></div></div>
-        <div class="note">Skip keeps the correction as it is worked out, marked Not checked.</div>
       {/if}
 
       {#if ['correction', 'nothing', 'result'].includes(screenName) && pending}
@@ -967,22 +967,6 @@
     font-size: 16px;
     line-height: 1.4;
     text-wrap: pretty;
-  }
-  .progress {
-    position: relative;
-    height: 10px;
-    border-radius: var(--r-5);
-    background: var(--rc-run-track);
-    flex-shrink: 0;
-  }
-  .progress__fill {
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    border-radius: var(--r-5);
-    background: var(--accent-lms);
-    transition: width 300ms ease;
   }
   .segs {
     flex-shrink: 0;

@@ -288,7 +288,9 @@
   //: The design keeps the compact Track panel while the lookup is running,
   //: so the screen does not jump from the tall block to the short one when
   //: the words arrive.
-  const lyricsPending = $derived(artistInfo.state === 'loading');
+  //: Also while plain words are held back for timed ones that may still
+  //: come (ADR-0184, 7): looking, never plain words and then a swap.
+  const lyricsPending = $derived(artistInfo.state === 'loading' || artistInfo.lyricsPending);
 
   // Which synced line is current. The playhead interpolates between pushes
   // (playhead.svelte.js), so this follows the same clock the progress bar
@@ -588,7 +590,7 @@
                  not three). -->
             <div class="artisttab">
 
-              {#if artistInfo.state === 'loading'}
+              {#if lyricsPending}
                 <div class="skel"><span></span><span></span><span></span></div>
               {:else if info?.instrumental}
                 <div class="lyrics__none">Instrumental</div>

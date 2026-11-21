@@ -304,7 +304,9 @@ page at `#room`, which opens it there); `RoomFlow.svelte` is the phone's
 measurement, from *Before* to *Keep it*, showing the run the core holds
 (`room.run` on `/state`), so a page opened mid-run picks it up; `RoomRun.svelte`
 covers the panel and the bars while it runs, display only;
-`RoomChart.svelte` and `RoomSeat.svelte` are the chart and the seat drawing;
+`RoomChart.svelte` and `RoomSeat.svelte` are the chart (its two panes side by
+side on the panel and the bars, one under the other at full width on the
+phone, ADR-0185 D4) and the seat drawing;
 `RoomQuick.svelte` is the *Room* control in the volume drawer, the bar's tray
 and the phone's volume row. The summary comes from `/state`'s `room`
 (`lib/room.svelte.js`), the curves from `GET /room-correction`, read again
@@ -884,7 +886,7 @@ flowchart LR
 | `HandoffScreen` | `$handoff` set | From → to, minimum length a setting (ADR-0094) |
 | `PairingFrame` | `$pairing` set | Bluetooth first-pair confirmation. The agent dismisses it, not the frame's own countdown (ADR-0045) |
 | `SetupScreen` (panel) | setup network up, or the device needs setup | Shows QR codes and the way in. Takes no input. Readable from 2 m (ADR-0104 §5). The password comes from loopback-only `/setup/status`, never from `/state` |
-| `FirstUsePage` (phone) | the device needs setup (`mode="p1"`), or part 2 is owed (`mode="p2"`) | First use, generated from the design files by `tools/design/gen_personalise.py`: setup, its answers saved step by step to the core; then Make it yours |
+| `FirstUsePage` (phone) | the device needs setup (`mode="p1"`), or part 2 is owed (`mode="p2"`) | First use, first generated from the design files and kept by hand since (ADR-0149 item 20, amended): setup, its answers saved step by step to the core; then Make it yours |
 | `NewScreen` / `KeepScreen` | a different screen is attached / a new screen awaits confirmation | Keep is answered on the panel for a fingerprinted touch panel; another listed panel shows its buttons (`panel_buttons`) and the phone's `PhoneKeepScreen` answers too, and a TV or an unlisted screen is answered on the phone alone (`phone`; ADR-0147 D3 as amended by Finding 125). A countdown reverts (ADR-0109 decision 5). The countdown starts when the question is drawn: two frames after it appears the panel posts `/screen/shown` (repeated every 3 s until the core's `deadline` arrives); before that, `NEVER_DRAWN_S` (120 s from the core's start) still reverts |
 | `TestPattern` (panel) | `screen_check` showing | The hardware feedback's test pattern; the panel's four corner taps go back to the core. Mounted over everything but *Keep this screen?* and the update lock (ADR-0126) |
 | `UpdateModal` (Settings) | the user checks for an update | One modal, from the check to the outcome (ADR-0110 §3). It notes the status when it asks and takes any change from it as the answer, not a comparison of the player's clock with the phone's |

@@ -46,10 +46,14 @@ the recommendation for the largest screens.
 
 ### Hum from a touch screen's USB cable
 
-**Reported, 2026-11-17, cause not yet narrowed down:** on sofapi (a Pi 4
-playing through a USB DAC, an HDMI screen with its touch over USB) a low
-hum rose with the volume, and went when the touch cable was unplugged, the
-HDMI cable still in. A second cable between the screen and the Pi is a
+**Reported, 2026-11-17:** on sofapi (a Pi 4 playing through a USB DAC, an
+HDMI screen with its touch over USB) a low hum rose with the volume, and
+went when the touch cable was unplugged, the HDMI cable still in. **On
+2026-11-21** an isolator on the touch cable left the hum; a high-speed
+(480 Mb/s) isolator on the USB DAC's cable removed it, even at the preamplifier's
+high gain, the DAC still at
+high speed with all its rates (to 768 kHz, and DSD) - so the current came
+in through the DAC's USB ground. A second cable between the screen and the Pi is a
 second ground path; what reaches the amplifier depends on which of these
 it is:
 
@@ -64,10 +68,18 @@ With playback paused and the amplifier up, a hum still there is electrical,
 not the music. Playing through a DAC HAT instead of the USB DAC for a
 minute shows whether the USB DAC's ground is where it gets in.
 
-**Remedies, in order:** a full-speed USB isolator (ADuM4160 type) on the
-touch cable - touch needs only full speed, and it breaks that cable's
-ground; the screen then needs its own supply, as an isolator passes little
-current. Not on a USB DAC's cable, which needs high speed. Then: the
+**Remedies, in order:** a **high-speed (480 Mb/s) USB isolator on the
+USB DAC's cable** - what removed it on sofapi; a full-speed one (ADuM4160 type)
+there limits the DAC's rates or stops it, and a DAC powered over USB may
+want more current than an isolator passes. Or a full-speed isolator on the
+touch cable, which needs only full speed (on sofapi it did not help); the
+screen then needs its own supply. Check afterwards that the DAC still
+connects at high speed: in *Settings → Audio → Output* its line starts
+*USB 2.0* (the speed it connected at), not *USB 1.1*, with the rates it had.
+Or **an optical cable**: a USB-to-optical adapter into the DAC's optical
+input carries light, no current, so no ground passes - at that adapter's
+rates (see the FAQ's *Which DACs work?*: up to 192 kHz / 24-bit); not tried
+against this hum. Then: the
 screen on its own supply through its power-only port; one power strip for
 everything, the cables run together; an RCA ground-loop isolator between
 the DAC and the amplifier (cheap ones dull the extremes); a DAC HAT instead

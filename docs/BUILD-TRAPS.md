@@ -46,7 +46,10 @@ traps below are a local build's, kept for when GitHub is unavailable.
   again cancels the run on the release commit, and `main`'s ruleset counts a
   cancelled *Core tests* as failed, though the PR's own run passed. **Push
   `next` again only once the release PR's checks have finished**; if a run
-  was cancelled, re-run it (`gh run rerun <id>`).
+  was cancelled, re-run it (`gh run rerun <id>`). **Start no *Tests* run by
+  hand after a push of ours** (#108, 2026-11-20): it shares the push's
+  concurrency group and cancels its run; only the daily job's bump branches,
+  pushed with GitHub's own token, start nothing by themselves.
 
 **Building**
 - **R2D2's `/` fills up** (moved from HANDOFF, 2026-11-10): Docker's

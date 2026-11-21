@@ -851,7 +851,7 @@
           "Library"
         ],
         "summary": "Enrichment for the track playing now",
-        "description": "What is known about what is playing beyond what the renderer said: biography, pictures, lyrics, release facts (ADR-0012, ADR-0040). A route rather than part of /state because it is wanted only while a tab is open and takes seconds. When pending is true a provider had not finished and the client asks again; it compares track with what is playing before drawing. The sweep's portrait is used when there is one (ADR-0075), and a cover is looked for only when the renderer sent none. The lent Plex library's lyrics are asked for only behind LRCLIB's, while the panel shows lyrics, and pending is true for a track asked about in its first seconds (ADR-0184).",
+        "description": "What is known about what is playing beyond what the renderer said: biography, pictures, lyrics, release facts (ADR-0012, ADR-0040). A route rather than part of /state because it is wanted only while a tab is open and takes seconds. When pending is true a provider had not finished and the client asks again; it compares track with what is playing before drawing. The sweep's portrait is used when there is one (ADR-0075), and a cover is looked for only when the renderer sent none. The lent Plex library's lyrics are asked for only behind LRCLIB's, while the panel shows lyrics, and pending is true for a track asked about in its first seconds (ADR-0184). Timed lyrics come first: while Plex may still bring timed ones, LRCLIB's plain lyrics are left out and lyrics_pending is true, for at most 10 s.",
         "responses": {
           "200": {
             "description": "The enrichment, or track null and empty enrichment when nothing is playing.",
@@ -9645,6 +9645,10 @@
           "pending": {
             "type": "boolean",
             "description": "True when a provider had not finished: ask again. Absent when nothing is playing."
+          },
+          "lyrics_pending": {
+            "type": "boolean",
+            "description": "True while plain lyrics are held back because the lent Plex library may still answer with timed ones, for at most 10 s from the first ask with lyrics on screen: show that lyrics are being looked for, not that there are none (ADR-0184, 7-9). Absent when nothing is playing."
           },
           "track": {
             "type": [

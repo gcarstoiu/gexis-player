@@ -565,7 +565,13 @@ wins):
    about in its first 5 s, so skipping does not spend the server's few
    lyrics an hour (Finding 153); a 404 on a listed lyric stream is
    UNAVAILABLE and backs off `plex-lyrics` alone. The panel asks again when
-   its lyrics come on screen.
+   its lyrics come on screen. **Timed lyrics first** (ADR-0184, 7-9): while
+   `plex-lyrics` is in `pending` and LRCLIB's answer is plain words only,
+   the route leaves the words out and answers `lyrics_pending`, for at most
+   `LYRICS_WAIT_S` (10 s) from the first ask with lyrics on screen; the
+   panel and the bar show their looking state meanwhile. A backed-off
+   `plex-lyrics` is not "asked" (`EnrichmentService.asks`), so it never
+   holds the words back.
 
 Providers with a key (fanart, TheAudioDB, ListenBrainz) are skipped until
 configured. Settings rows gate them: `enrichment` (all), `lyrics` (LRCLIB
@@ -1067,6 +1073,9 @@ phone only.
   chain as it reopens - go-librespot's unit never stops, so the phone keeps
   the player. Where that cannot be (its state unread, the pause refused,
   the device not let go in 2 s) the rewrite is as before.
+  That chain is not a group: a room measurement is refused only in one
+  (`Multiroom.grouped`), and once it has stopped the source it takes the
+  player's own chain at once (`alone_now`).
 - **A source playing on a member leads** (D4, amended 2026-10-28): the
   supervisor's `on_active_change` reaches `Multiroom.on_local_active`, which
   notes the source; `_lead_if_playing`, run on every state change, claims

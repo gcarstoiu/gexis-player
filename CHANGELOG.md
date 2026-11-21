@@ -6,6 +6,15 @@
 Every release of Gexis Player and its notes, newest first. The player
 shows the last 10 under Settings → System → Change logs.
 
+## 1.18.2 — 21 November 2026
+
+### Fixed
+
+- Timed lyrics come first: the first time a track's lyrics are shown, the player waits up to 10 seconds for the Plex library's timed lyrics before showing plain ones, rather than swapping plain lyrics for timed ones a few seconds later.
+- Room correction can be measured on a player whose group was undone, instead of being refused as in a group.
+- While room correction checks its result, each speaker is shown as during the measurement; on a phone the bass chart and the one above it sit one under the other.
+- In first use on a narrow phone, AirPlay's Limited testing tag no longer covers its name.
+
 ## 1.18.1 — 21 November 2026
 
 ### Fixed

@@ -25,9 +25,10 @@ problem entirely.
 What is it?**
 Most likely a ground problem, not the player's software: the touch cable is
 a second connection between the screen and the Pi, beside HDMI, and a small
-current finds its way into the ground the DAC and amplifier share. A
-full-speed USB isolator on the touch cable usually cures it while touch
-keeps working; the screen then needs its own power supply. The causes, how
+current finds its way into the ground the DAC and amplifier share. A USB
+isolator breaks that ground: a high-speed (480 Mb/s) one on the USB DAC's
+cable removed it on a test player, where one on the touch cable did not. The
+music keeps its full resolution through a high-speed isolator. The causes, how
 to tell them apart and the other remedies are in the
 [hardware guide](HARDWARE.md#hum-from-a-touch-screens-usb-cable). Never
 remove an earth connection to cure a hum.
@@ -1036,7 +1037,9 @@ Plex* on, the player shows your Plex library's, timed when it has them; the
 credit under the lyrics says whose they are. Your Plex server hands out only
 about five lyrics every ten minutes, so the player asks it only while the lyrics are on
 screen, and a track skipped within its first seconds is not asked about.
-Plain lyrics are shown without timing. Some tracks have none.
+Timed lyrics come first: while your Plex server may still have timed ones,
+the player waits up to 10 seconds before showing plain lyrics. Plain lyrics
+are shown without timing. Some tracks have none.
 The Lyrics button on Now Playing, or the Lyrics corner of the phone's
 remote, shows them.
 

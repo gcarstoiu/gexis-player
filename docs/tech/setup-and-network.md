@@ -256,14 +256,13 @@ name can be changed too (and, renamed, *A second player*); the rest is the
 backup's. Each step is saved as it is left, with the step it goes to, so a
 page that drops resumes there.
 
-**The page is generated from the design** (ADR-0149):
-`tools/design/gen_personalise.py` converts Claude Design's
-`design/source/14-first-use/Setup Prototype.dc.html` - its markup and inline
-styles mechanically (`dc2svelte.py`), its logic verbatim - and applies a
-list of asserted replacements where the prototype simulates the player
-(`personalise-part1.js.txt` holds part 1's screens on real data;
-`personalise-adapter.svelte.txt` the calls to the core). Change the design
-and generate again rather than editing the `.svelte`.
+**The page came from the design** (ADR-0149): it was first generated from
+Claude Design's `design/source/14-first-use/Setup Prototype.dc.html` - its
+markup and inline styles converted mechanically, its logic kept verbatim,
+with replacements where the prototype simulates the player. The generator
+was retired on 2026-11-21 (ADR-0149 item 20, amended), out of step since
+Phase 23; the page, `PanelMini` and `PhoneDeviceList` are kept by hand, a
+change from the design made in them to match its files.
 
 ```mermaid
 sequenceDiagram

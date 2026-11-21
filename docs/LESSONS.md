@@ -356,11 +356,9 @@ device's behaviour from a test, check what of our own software acts on the
 same thing, and prove the observer on a known-good case first.
 
 **73. Tests that read the source while the code never ran** (2026-10-15,
-the stand-in watcher, 1.0.0 and 1.0.1). The Finding 125 #10 fix moved the
-whole lookup into a worker thread; the settings store refuses any thread but
-its own, so it failed every 3 s and the jack never stood in. Its tests only
-asserted the source's shape and passed. Run the changed code once - on a
-device or in a test that executes it - and read the log after a change.
+1.0.0 and 1.0.1). Run the changed code once - on a device or in a test that
+executes it - and read the log after a change: tests of the source's shape
+passed while the moved lookup failed every 3 s.
 
 **74. A test environment emptied by the system's clean-up** (2026-10-16,
 before 1.0.3). The test venv lived under `/tmp`, where the system deletes
@@ -388,13 +386,10 @@ does); `systemctl is-active` said active of the old process, and the new
 setting was missing. After a preview install, restart what changed and check
 its start time is after the install.
 
-**78. A remedy expected, not measured** (2026-10-19, Finding 129). Finding
-118 measured the idle screen at 4-6 % with its icons paused by hand, and
-*Weather icon motion: Static* was built on that - "expected at the paused
-figure, not yet measured with the setting itself". Measured nine days later
-it was 45-58 %: the setting paused the icons, and other animations under the
-idle screen ran on. A remedy is measured through the switch users will use,
-not through the test that motivated it.
+**78. A remedy expected, not measured** (2026-10-19, Finding 129). A remedy
+is measured through the switch users will use, not through the test that
+motivated it: icons paused by hand gave 4-6 %, the *Static* setting itself
+45-58 %.
 
 **79. A way in that was never tried** (2026-10-21, ADR-0156). Signing in to
 Home Assistant "once, typing from the phone" went into the ADR, the manual,
@@ -421,13 +416,10 @@ was reasoned from the chain. When a chain under a tap changes what it
 accepts, set each renderer's format order against it and try the tap in
 each format a renderer can pick.
 
-**83. A fake that always answered** (2026-10-28, Phase 22). The multiroom
-tests' list of players answered for every player in every round, so a member
-missing one round was never tried; and no test drove the half-minute round's
-own rewrite of the chain. On the bar both met: sofapi missed a round, the
-chain changed, the rewrite stopped the client, and nothing started it again.
-Let a fake fail the way the real thing does, and follow every path that stops
-something to where it starts again.
+**83. A fake that always answered** (2026-10-28, Phase 22). Let a fake fail
+the way the real thing does, and follow every path that stops something to
+where it starts again: a list of players that always answered hid the missed
+round that, on the bar, stopped a Snapcast client for good.
 
 **84. A belief a lesson had already disproved** (2026-10-28, Phase 22). ADR-0166
 B2 restarted only the renderers that played, on the belief case 81 had
@@ -437,12 +429,9 @@ another program behaves, search the lessons and the code; before blaming the
 other end, look at where our own process writes.
 
 **85. A group tested with every member alike** (2026-10-28, Phase 22).
-"The equaliser in a group is fine" was tried with the equaliser set the same
-on every member, so what CamillaDSP adds after the Snapcast client was added
-everywhere and cancelled out. With it on at sofapi and off at the bar, sofapi
-played about 46 ms late, and George heard it. Where a design keeps things in
-step, test it with the members different in what lies after the point it
-keeps in step.
+Where a design keeps things in step, test it with the members different in
+what lies after that point: the equaliser on everywhere cancelled out; on at
+sofapi only, it played about 46 ms late.
 
 **86. A source that started always played** (2026-10-28, Phase 22). The
 tests' players "played" by becoming active, nothing more, and the code took
@@ -450,13 +439,10 @@ the lead on the same edge; after a member's core restarted, Lyrion came up
 active with nothing playing and took the group from its leader. Let a fake's
 states be as many as the real one's: active is not playing.
 
-**87. Players that were never started** (2026-10-31, Phase 22). Case 86's
-fix was tested on players the tests built but never started, and starting is
-what ties each change of state to the look that stops a member's own
-source. On every real player that look stopped a new source before it could
-play, so no member led again after 1.9.1; George found it as music that would
-not play in a group. Build what a test drives the way the program starts it,
-and see the test fail without the fix.
+**87. Players that were never started** (2026-10-31, Phase 22). Build what
+a test drives the way the program starts it, and see the test fail without
+the fix: case 86's fix passed on players the tests never started, and on
+real ones no member led again after 1.9.1.
 
 **88. A screen measured at its pixels** (2026-10-31, Phase 24). The 7"
 panel was laid out at 1024 x 600 CSS pixels, not the 1280 x 750 the kiosk's
@@ -484,22 +470,16 @@ exits 3 for *inactive*, so a finished update looked like a reboot for 27
 minutes, until George asked. A watcher tells "no answer" from "an answer
 it did not like", and reports a state it has not seen for too long.
 
-**92. A device free because nothing sounded** (2026-11-05, Phase 29). Before
-installing a preview on sofapi the check was the one that gates every
-install - no card playing - while George's room measurement waited on its
-*Place* screen, silent, with the output raised to 100 %. The restart ended
-the run without putting the level back: 100 % instead of his 44 %. In use
-is anything a person has started that is not finished, a silent step
-included: a measurement (`room.run`), an update, a pairing - read the
-core's state, not only the cards.
+**92. A device free because nothing sounded** (2026-11-05, Phase 29). In
+use is anything a person has started and not finished, a silent step
+included - a measurement (`room.run`), an update, a pairing: read the core's
+state, not only the cards. A preview installed mid-measurement left the
+output at 100 %.
 
 **93. A restore passed on the line that logged it** (2026-11-05, Phase 29).
-The fix for Lesson 92 was tested on sofapi by a run cut short by a restart;
-the start-up logged *the volume back to 44%*, and the case was reported as
-passed. A minute later George's next run saved 100 % as the level before it
-and put the output back at 100 %, and so did his next. A restore is checked
-by reading the level back from the device, and again after the next
-ordinary use of the same path - not by the line that logs the write.
+A restore is checked by reading the level back from the device, and again
+after the next ordinary use of the same path - not by the line that logs the
+write: sofapi logged *the volume back to 44%*, and the next runs left 100 %.
 
 **94. A suite green on the machine it was written on** (2026-11-11, the
 review of 1.16.1). A fix linked an open upload into the share through
@@ -523,12 +503,9 @@ checked after the events of an ordinary day - a reload, a restart, a
 reconnection - not only right after it is set up.
 
 **97. A stop not read before the unmute** (2026-11-18, Finding 154). A
-muted group test of the Wi-Fi fix played a radio station; the restore sent
-`POST /transport/stop` and `POST /group/mute {muted: false}` in one command.
-`stop` is no transport command (a live station stops on `pause`): a 404,
-and the station played aloud at both players' levels for 10-15 s before it
-was muted again. A step that silences is read back - the cards idle, the
-source stopped - before the step that makes sound possible again.
+step that silences is read back - the cards idle, the source stopped - before
+the step that makes sound possible again, never in the same command: a
+`stop` that answered 404 left a station playing aloud for 10-15 s.
 
 ## Common shape
 

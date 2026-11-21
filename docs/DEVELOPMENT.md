@@ -3683,9 +3683,10 @@ player can show of what Roon plays.
 (George: building on the local machine has become troublesome); a *Should*
 idea since 2026-10-18.
 
-**Closed 2026-11-16** (George, with 1.17.0 on Stable: every phase then in progress closed), in 1.12.1, on Stable from 1.13.0. Left: a card flashed from
-1.12.1's image (criterion 4), then R2D2's pi-gen container and build
-images removed (decision 3).
+**Closed 2026-11-16** (George, with 1.17.0 on Stable: every phase then in progress closed), in 1.12.1, on Stable from 1.13.0. The card from
+1.12.1's image (criterion 4) dropped by George 2026-11-21; R2D2's pi-gen
+container, its work volume and the build images removed the same day
+(decision 3).
 
 **Added 2026-11-02.** The packages, the UI, the image and the release's
 parts are built on GitHub's arm64 machines from the release tag, not on
@@ -3725,9 +3726,9 @@ packs) is read from GitHub.
 correction (George). **On Stable with 1.13.0** (2026-11-06, George; Testing
 from 2026-11-03); criterion 5 and first use on a fresh card still to be seen.
 
-**Closed 2026-11-16** (George, with 1.17.0 on Stable: every phase then in progress closed), on Stable from 1.13.0. Left: criterion 5 and first use on a
-fresh card, Plexamp played once on 0.5.1, George's look at the Plugins
-page; ADR-0174's setup fix (part 2's list) not built.
+**Closed 2026-11-16** (George, with 1.17.0 on Stable: every phase then in progress closed), on Stable from 1.13.0. Left: ADR-0174's setup fix (part 2's
+list) not built. Criterion 5 and first use on a fresh card dropped with the
+card (George, 2026-11-21); Plexamp on 0.5.1 overtaken by 0.6.0.
 
 **Added 2026-11-03** (George: Plexamp, and Beszel's agent and hub, out of the
 player, as standalone plugins). Today they are plugins shipped with the
@@ -3764,9 +3765,12 @@ how.
 
 ### Phase 29 — Room correction for the bass, with a USB microphone
 
-**Closed 2026-11-16** (George, with 1.17.0 on Stable: every phase then in progress closed), on Stable from 1.16.1. Not measured: the cuts read from
-CamillaDSP while music plays, the level against a meter, two sweeps'
-agreement at 60 dB, the stage's cost, the A/B bit-exactness.
+**Closed 2026-11-16** (George, with 1.17.0 on Stable: every phase then in progress closed), on Stable from 1.16.1. Not measured: the level against a meter, two
+sweeps' agreement at 60 dB. Measured 2026-11-21
+([Finding 156](findings/156-room-correction-stage-cost-bit-exact-and-read-back.md)):
+the stage's cost, the cuts read back from the live CamillaDSP (all matching),
+and the A/B - bit-exact with the filters at 0 dB, level-matched (not
+bit-exact) where a *Full range* correction boosts.
 
 **Started 2026-11-03** (George), on `ph-room-correction`;
 [ADR-0175](decisions/0175-room-correction-for-the-bass.md) accepted the same
@@ -3845,9 +3849,10 @@ Pi, and the microphones (miniDSP UMIK-1 first).
 **ID:** `ph-room-correction-full` · numbered 30 on 2026-11-03, after Plexamp and Beszel to the catalogue (George); numbered 29 on 2026-11-02, after releases built on GitHub (George); numbered 28 on 2026-11-01, after the Roon plugin (George); numbered 27 on 2026-10-29, with Phase 26; numbered 25 on 2026-10-27, after multiroom and AirPlay 2 (George: no room correction can be tried yet); added 2026-10-20 as 19, split from `ph-room-correction`; numbered 20 on 2026-10-21, 21 on 2026-10-24, 22 on 2026-10-25, 23 on 2026-10-26.
 
 **Closed 2026-11-16** (George, with 1.17.0 on Stable: every phase then in progress closed), on Stable from 1.16.1, Full range still marked *Limited
-testing*. Left: George's run at the full range; the stage's cost at
-44.1/96/192 kHz; acceptance 2 as a finding from a run checked at Full
-range. Phase 34 next for room correction.
+testing*. Left: George's run at the full range; acceptance 2 as a finding
+from a run checked at Full range. The stage's cost at 44.1/96/192 kHz:
+[Finding 156](findings/156-room-correction-stage-cost-bit-exact-and-read-back.md)
+(2026-11-21). Phase 34 next for room correction.
 
 **Added 2026-10-20** (George, splitting room correction in two). After the
 bass (Phase 29, `ph-room-correction`): correction above the Schroeder
@@ -4012,6 +4017,11 @@ Home Assistant integration's release (acceptance 8).
 
 **ID:** `ph-library` · numbered 32 on 2026-11-03, after Plexamp and Beszel to the catalogue (George); numbered 31 on 2026-11-02, after releases built on GitHub (George); numbered 30 on 2026-11-01, after the Roon plugin (George); numbered 29 on 2026-10-26 (28 from 2026-10-25, 24 earlier that day, 23 from 2026-10-21, 22 from 2026-10-20, 21 from 2026-10-19, 20 from 2026-10-15, 19 from 2026-10-14, 18 from 2026-10-13; was 11a).
 
+**Closed 2026-11-21** (George, with 1.18.1 promoted to Stable): its four
+steps in 1.18.0, Plex's lyrics seen on screen on sofapi. Left: ADR-0184's
+amendment (timed lyrics first, items 7-10) on `fix-lyrics-timed-first`, to
+be previewed on sofapi after the room run and released after that.
+
 **Started 2026-11-16** (George, after 1.17.0 on Stable):
 [ADR-0184](decisions/0184-plex-information-through-plexamps-claim.md) proposed
 for acceptance 1; George answered its decisions the same day: no second
@@ -4024,9 +4034,12 @@ Plex then answers only where Plexamp is installed and claimed, and the row
 **In 1.18.0** (George, 2026-11-18: to Testing with everything, the notes
 approved): its four steps (covers; the artist; the artist's MusicBrainz id;
 lyrics behind LRCLIB's) with gexis-plexamp 0.6.0 in the catalogue (serial
-9, lowest release 1.18.0); Findings 149, 150, 152 and 153. Left: George
-seeing Plex's lyrics on a track LRCLIB has none timed for; the phase closes
-at his word.
+9, lowest release 1.18.0); Findings 149, 150, 152 and 153. **Plex's lyrics
+seen on screen** (George, 2026-11-21, on sofapi): Plex's timed lyrics came a
+few seconds after LRCLIB's plain ones; George decided timed lyrics come
+first (ADR-0184 amended, items 7-10: plain words held back up to 10 s while
+Plex may bring timed ones). Left: that change built and previewed; the phase
+closes at his word.
 
 **Added 2026-09-25 (George):** *"Let's introduce another phase … which should tackle the question of how we can we leverage the plexamp/Plex
 server metadata that is available. Anything that can reduce the dependency on
@@ -4147,6 +4160,16 @@ decided here.
 ### Phase 34 — Room correction in time
 
 **ID:** `ph-room-correction-time` · added 2026-11-07 as 34, split from `ph-room-correction-full` (George).
+
+**Closed 2026-11-21 without being built** (George, on
+[Finding 155](findings/155-room-correction-in-time-what-research-shows.md),
+the research done again in full). No published test shows an audible
+benefit from correction in time over level-only correction from several
+positions: every test in its favour was run by its developers against no
+correction, and the controlled ones point the other way. The parts with
+support - the speakers' delay and level, the bass's ringing shortened by
+matched cuts - are done or in Phase 37 (ADR-0187 C6). Reopened only if a
+published blind test of the time part shows a benefit.
 
 **Added 2026-11-07** (George, after
 [Finding 141](findings/141-room-correction-above-the-bass-what-is-known.md)).
@@ -4405,7 +4428,7 @@ decisions:
   leaves explained.
 
 What stands from Phases 29-30 is listed in the ADR. The correction in time
-stays Phase 34.
+stays Phase 34 (closed 2026-11-21 without being built, Finding 155).
 
 **Order:** on sofapi first, measured before anything ships - finer detail
 in the bass, the head's weight, the ringing - then the setup check, then the

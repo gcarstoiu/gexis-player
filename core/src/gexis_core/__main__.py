@@ -5026,6 +5026,10 @@ async def main() -> None:
 
     async def _room_take() -> None:
         await supervisor.stop_active()
+        # A group undone under this player keeps its chain while a source
+        # plays or is paused (multiroom B3); the run needs the player's own.
+        if multiroom is not None:
+            await multiroom.alone_now()
 
     async def _room_loud() -> None:
         """The output at its maximum for the run, **the DAC's own level kept
@@ -5097,7 +5101,8 @@ async def main() -> None:
         take=_room_take, release=_room_release, loud=_room_loud, quiet=_room_quiet,
         eq_on=lambda card: Equaliser.from_settings(settings_store.get(eq_control.KEY)).output(card).on,
         dsd=lambda: bool(equaliser_engine.status().get("dsd")),
-        grouped=lambda: outputs.group_in_path() is not None,
+        # In a group, not on the chain an undone group leaves (multiroom B3).
+        grouped=lambda: multiroom.grouped() if multiroom is not None else outputs.group_in_path() is not None,
         busy=_installing,
         screen=lambda: settings.value("headless") is not True,
         playing=_room_playing,
