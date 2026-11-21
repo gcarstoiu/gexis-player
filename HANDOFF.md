@@ -33,20 +33,27 @@ the gaps could not be reproduced: the access point had moved shelvespi to
 another, where a scan costs no audio); a play from an Apple device
 (Shairport Sync 5.6.3, with `ph23-test`). Then Stable at his word.
 
-**Next: 1.18.1, go-librespot 0.10.7** (George, 2026-11-18), from the daily
-job's branch `bump-go-librespot-0.10.7` (0.10.6 contains ADR-0181's commit,
-so our development build of `775ba5883` goes; `bump-go-librespot-0.10.6` is
-superseded): its preview on sofapi, the checklist in
-`docs/tech/updates-and-releases.md` with George's phone, one line of notes,
-the tag on the branch. With it to `main`: `upstream-shairport-nqptp`
-(bd9aa254: Shairport Sync and NQPTP watched too, an issue when one is
-behind).
+**Next: 1.18.1** (George, 2026-11-18): go-librespot 0.10.7 (the daily job's
+`bump-go-librespot-0.10.7`; 0.10.6 contains ADR-0181's commit, so our
+development build goes) and **ADR-0183, accepted** (A: Spotify on the lead
+paused, the chain rewritten under it, resumed; `spotify-group-change`
+3759f835, `rechain.keep_spotify_playing`, 3,605 core tests pass), with
+`upstream-shairport-nqptp` (Shairport Sync and NQPTP watched). All three on
+`preview-1.18.1` (from `next`; the inputs list's conflict resolved to
+Shairport 5.6.3 and go-librespot 0.10.7), preview run 44408717854, **on
+sofapi since 2026-11-18 23:16** (George's go-ahead; core 1.18.0+git6, player
+git13, go-librespot 0.10.7-4; idle, core clean, the group kept). Then George with his phone: go-librespot's checklist
+(`docs/tech/updates-and-releases.md`) and ADR-0183's (a join and a leave
+under Spotify on the lead: the music back, the phone keeps the player and
+the position, the gap timed; the phone's Pause and Next still reach the
+player; the follower in time; the equaliser on at the lead). GitHub Actions
+may now open and approve pull requests (George, 2026-11-18; read back).
 
 **ADR-0182 in `main`**: `.github/workflows/upstream.yml` runs
 `packaging/upstream-daily.sh` daily (a bump branch for a part packaged here,
-an issue otherwise). **Owed by George:** *Allow GitHub Actions to create and
-approve pull requests* is off, so the job pushes its branch but opens no
-pull request; the ADR's *Claude's choices*.
+an issue otherwise). *Allow GitHub Actions to create and approve pull
+requests* on since 2026-11-18 (George). **Owed by George:** the ADR's
+*Claude's choices*.
 
 **Spotify on the lead through a group change** (George, 2026-11-15: it
 should keep playing): a group change stops go-librespot, which ends the

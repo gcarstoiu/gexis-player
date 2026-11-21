@@ -388,7 +388,9 @@ and (c) a 150 Hz limit (it leaves 80-150 Hz).
    position is named worse on what the bass's cuts were designed from -
    both together - and on its own speaker for the broad corrections. The
    *Both* tab lists the shared cuts, and each speaker's tab shows its own
-   before and after under them.
+   before and after under them. *(The Both tab withdrawn by
+   [ADR-0186](0186-room-chart-both-in-the-bass-only-shading-the-corrections.md)
+   D4, George 2026-11-19: each speaker's own graph only.)*
 5. **Words:** the manual's room-correction steps (the correction is no
    longer each speaker's in the bass) and the technical guide's audio path
    (*Both* is designed from).
