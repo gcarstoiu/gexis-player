@@ -3764,9 +3764,12 @@ how.
 
 ### Phase 29 — Room correction for the bass, with a USB microphone
 
-**Closed 2026-11-16** (George, with 1.17.0 on Stable: every phase then in progress closed), on Stable from 1.16.1. Not measured: the cuts read from
-CamillaDSP while music plays, the level against a meter, two sweeps'
-agreement at 60 dB, the stage's cost, the A/B bit-exactness.
+**Closed 2026-11-16** (George, with 1.17.0 on Stable: every phase then in progress closed), on Stable from 1.16.1. Not measured: the level against a meter, two
+sweeps' agreement at 60 dB. Measured 2026-11-21
+([Finding 156](findings/156-room-correction-stage-cost-bit-exact-and-read-back.md)):
+the stage's cost, the cuts read back from the live CamillaDSP (all matching),
+and the A/B - bit-exact with the filters at 0 dB, level-matched (not
+bit-exact) where a *Full range* correction boosts.
 
 **Started 2026-11-03** (George), on `ph-room-correction`;
 [ADR-0175](decisions/0175-room-correction-for-the-bass.md) accepted the same
@@ -3845,9 +3848,10 @@ Pi, and the microphones (miniDSP UMIK-1 first).
 **ID:** `ph-room-correction-full` · numbered 30 on 2026-11-03, after Plexamp and Beszel to the catalogue (George); numbered 29 on 2026-11-02, after releases built on GitHub (George); numbered 28 on 2026-11-01, after the Roon plugin (George); numbered 27 on 2026-10-29, with Phase 26; numbered 25 on 2026-10-27, after multiroom and AirPlay 2 (George: no room correction can be tried yet); added 2026-10-20 as 19, split from `ph-room-correction`; numbered 20 on 2026-10-21, 21 on 2026-10-24, 22 on 2026-10-25, 23 on 2026-10-26.
 
 **Closed 2026-11-16** (George, with 1.17.0 on Stable: every phase then in progress closed), on Stable from 1.16.1, Full range still marked *Limited
-testing*. Left: George's run at the full range; the stage's cost at
-44.1/96/192 kHz; acceptance 2 as a finding from a run checked at Full
-range. Phase 34 next for room correction.
+testing*. Left: George's run at the full range; acceptance 2 as a finding
+from a run checked at Full range. The stage's cost at 44.1/96/192 kHz:
+[Finding 156](findings/156-room-correction-stage-cost-bit-exact-and-read-back.md)
+(2026-11-21). Phase 34 next for room correction.
 
 **Added 2026-10-20** (George, splitting room correction in two). After the
 bass (Phase 29, `ph-room-correction`): correction above the Schroeder
