@@ -107,9 +107,7 @@ the mocked Settings → Display showed two *Screen port* rows
 **The players** (2026-11-21): **sofapi** on Phase 37's research build (core,
 player and UI 1.18.0+git22.af7d113, which carries all of the 1.18.1 preview;
 go-librespot 0.10.7-4, Shairport Sync 5.6.3-1), room correction on, a USB
-isolator on its DAC's cable, in no group since the group test of 21 Nov;
-`~/spotify-check` (two scripts, three timing files) still in its home - its
-removal was refused by the safety check, George's to delete. **shelvespi** on
+isolator on its DAC's cable, in no group since the group test of 21 Nov. **shelvespi** on
 1.18.0. **guestpi** and **bedroompi** not read since 18 Nov. All on Testing,
 which offers 1.18.1. AirPlay on at guestpi only; sofapi's Plexamp library
 lent, its Beszel agent 0.21.2-1. Each has its own Lyrion server. Lyrion
