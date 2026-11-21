@@ -14,7 +14,9 @@
   measurement from before Phase 30 has no curves above it.
 
   `surface`: the phone's card (the legend under it), the panel's (fills), the
-  bar's (fills, no legend).
+  bar's (fills, no legend). **On the phone the panes are one under the other,
+  each the full width** (George, 2026-11-19, ADR-0185 D4: side by side the
+  range above the bass was too compressed to read).
 -->
 <script>
   import { BASS_SHARE, countWord, FMAX, FMIN, fill, fx, LIMIT, path } from '../../lib/room.svelte.js';
@@ -26,6 +28,7 @@
     range = 'full', legend = surface !== 'bar' } = $props();
 
   const big = $derived(surface !== 'phone');
+  const stacked = $derived(surface === 'phone');
   //: The design's sizes: the captions, the frequency labels, the least room
   //: between two of them, the gap at 250 Hz.
   const Z = $derived(big ? { cap: surface === 'panel' ? 26 : 24, lab: surface === 'panel' ? 21 : 19, minPx: 46, gap: 12 }
@@ -49,10 +52,10 @@
   const afterTo = $derived(shut ? LIMIT * 1.05 : Infinity);
 
   const panes = $derived.by(() => {
-    const wl = Math.round((width - Z.gap) * BASS_SHARE);
+    const wl = stacked ? width : Math.round((width - Z.gap) * BASS_SHARE);
     return [
       { key: 'bass', x0: FMIN, x1: LIMIT, span, w: wl, cap: 'Bass', scale: `±${span} dB` },
-      { key: 'above', x0: LIMIT, x1: FMAX, span: ABOVE_SPAN, w: Math.max(0, width - wl - Z.gap), cap: 'Above the bass',
+      { key: 'above', x0: LIMIT, x1: FMAX, span: ABOVE_SPAN, w: stacked ? width : Math.max(0, width - wl - Z.gap), cap: 'Above the bass',
         scale: `±${ABOVE_SPAN} dB` },
     ];
   });
@@ -63,7 +66,7 @@
     for (const f of TICKS) {
       if (f <= p.x0 * 1.06 || f >= p.x1 / 1.06) continue;
       const x = fx(f, p.x0, p.x1) * p.w;
-      if (x < 16 || x > p.w - 26) continue;
+      if (x < 16 || x > p.w - (stacked && p.key === 'bass' ? 54 : 26)) continue;
       if (acc.every((a) => Math.abs(fx(a, p.x0, p.x1) * p.w - x) >= Z.minPx)) acc.push(f);
     }
     return acc.sort((a, b) => a - b);
@@ -112,7 +115,7 @@
 {/snippet}
 
 <div class="chart chart--{surface}">
-  <div class="panes" bind:clientWidth={width} style="--gap:{Z.gap}px">
+  <div class="panes" class:panes--stacked={stacked} bind:clientWidth={width} style="--gap:{Z.gap}px">
     {#each panes as p, i (p.key)}
       <div class="pane" style="width:{p.w}px">
         <div class="cap" style="height:{Z.cap}px"><span>{p.cap}</span><span class="cap__scale">{p.scale}</span></div>
@@ -143,6 +146,7 @@
         </div>
         <div class="xrow" style="height:{Z.lab}px">
           {#if p.key === 'above'}<span class="xlab xlab--strong xlab--start">250</span>{/if}
+          {#if p.key === 'bass' && stacked}<span class="xlab xlab--strong xlab--end">250 Hz</span>{/if}
           {#each ticks(p) as f (f)}<span class="xlab" style="left:{pct(fx(f, p.x0, p.x1))}">{label(f)}</span>{/each}
           {#if p.key === 'above'}<span class="xlab xlab--strong xlab--end">Hz</span>{/if}
         </div>
@@ -183,6 +187,13 @@
     .chart--phone .panes {
       height: 250px;
     }
+  }
+  .panes.panes--stacked {
+    flex-direction: column;
+    height: auto;
+  }
+  .panes--stacked .pane {
+    height: 200px;
   }
   .chart--panel .panes,
   .chart--bar .panes {
