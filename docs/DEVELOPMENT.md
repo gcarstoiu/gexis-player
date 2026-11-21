@@ -4446,6 +4446,14 @@ sofapi before release.
 4. Every change to the design is kept only where sofapi's check - its
    positions placed again by eye, as a user would - shows them closer to
    the target and none worse; recorded as a finding.
+5. **Required before the phase closes** (George, 2026-11-21: kept open, not
+   dropped), each recorded as a finding:
+   - the level at the seat checked against a sound level meter, or a
+     calibrator on the microphone (ADR-0175's open sensitivity reading);
+   - the equaliser's measurement through sofapi's amplifier, left from
+     Phase 20 (to-do `eq-measure`);
+   - the multiroom measurement through the amplifiers, left from Phase 22
+     (to-do `ph22-measure`).
 
 
 ## Test tiers

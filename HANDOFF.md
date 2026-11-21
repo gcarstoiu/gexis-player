@@ -47,6 +47,9 @@ Automatic, so the night only checks). Then `~/projects/scratch/ph37/check/analys
 <run>.json` (`PYTHONPATH=<worktree>/core/src`): C5 and D5 judged on the
 check's re-placed positions, the ringing (C6), the joint over-cut (C7), the
 level readings (C2); a finding; the run's logs for ADR-0185 C4 and C8.
+**Before Phase 37 closes** (George, 2026-11-21; acceptance 5): the level at
+the seat against a meter, and the equaliser's and multiroom's measurements
+through the amplifiers - George present for each.
 
 **Room work held for Phase 37's release** (George, 2026-11-21; the two
 finished fixes went out in 1.18.2): `room-checks` (0aee0318, ADR-0185
