@@ -1,6 +1,6 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
-<!-- GENERATED from Claude Design's `Phone Device List.dc.html` (design/source/14-first-use)
-     by `tools/design/gen_personalise.py`: Spotify's device list, the player in it. -->
+<!-- First generated from Claude Design's `Phone Device List.dc.html` (design/source/14-first-use):
+     Spotify's device list, the player in it. Kept by hand since (ADR-0149 item 20, amended 2026-11-21). -->
 <script>
   let { device = 'Living Room' } = $props();
   const V = $derived({ device });

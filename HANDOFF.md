@@ -82,9 +82,7 @@ and the loopback's states); not measured: bit-perfect, rates above 44.1 kHz,
 a group, the plugin off and on, Roon Bridge's own update.
 
 **Open, small:** a preview's download still holds the skin packs (1.1 of
-1.2 GB) though `release.yml` excludes them; `tools/design/gen_personalise.py`
-out of step since Phase 23 (retire it or bring it in step: ADR-0149's, for
-George).
+1.2 GB) though `release.yml` excludes them.
 
 **The players** (2026-11-21): **sofapi** on Phase 37's research build (core,
 player and UI 1.18.0+git22.af7d113, which carries all of the 1.18.1 preview;

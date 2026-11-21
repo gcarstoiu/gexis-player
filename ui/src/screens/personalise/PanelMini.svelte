@@ -1,9 +1,9 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <!--
-  **The panel in miniature** (ADR-0149). GENERATED from Claude Design's
-  `Panel Mini.dc.html` (design/source/14-first-use) by
-  `tools/design/gen_personalise.py`: its markup, inline styles, keyframes
-  and logic as designed. Change the design, then generate again.
+  **The panel in miniature** (ADR-0149). First generated from Claude
+  Design's `Panel Mini.dc.html` (design/source/14-first-use): its markup,
+  inline styles, keyframes and logic as designed. Kept by hand since the
+  generator was retired (ADR-0149 item 20, amended 2026-11-21).
 -->
 <script>
   import artistPhoto from '../../assets/personalise/artist-photo.webp';

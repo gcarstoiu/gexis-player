@@ -235,6 +235,11 @@ to Claude, and each choice is recorded here with its reason.
 **The look** (revised 2026-10-18, after George: *"Check properly and let's do
 it as it should be"*)
 20. **The page is generated from the design files, not drawn after them.**
+    *Amended 2026-11-21 (George): the generator is retired. It had been out
+    of step since Phase 23 (AirPlay, the tokens, Internet radio and a
+    narrow-row fix were made by hand), so generating again would have taken
+    them out. The page, `PanelMini` and `PhoneDeviceList` are kept by hand
+    from then on, a change from the design made in them to match its files.*
     `tools/design/gen_personalise.py` converts `Setup Prototype.dc.html`'s
     phone frame - markup, inline styles, keyframes - mechanically
     (`dc2svelte.py`), and keeps the prototype's script verbatim: its screens,

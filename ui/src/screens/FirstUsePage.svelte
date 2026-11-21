@@ -4,16 +4,13 @@
   Phase 14, `ph-first-use`). `mode` p1 is setup, on the setup network;
   p2 is part 2, at the player's own address.
 
-  GENERATED from Claude Design's `Setup Prototype.dc.html` (first-use
-  hand-off) by `tools/design/gen_personalise.py`: the frame's markup and
-  inline styles converted mechanically, the prototype's own logic -
-  screens, paths, copy, Back and Next - kept verbatim, with the documented
-  replacements where the prototype simulates what the player does. Change
-  the design, then generate again; do not restyle by hand.
-  **Changed by hand since it was generated**: AirPlay (Phase 23,
-  2026-10-28), the colours through the tokens (ADR-0171, 2026-11-01) and
-  Internet radio (ADR-0180, design/source/31 F01-F03); the generator has
-  none of them, so generating again would take them out.
+  First generated from Claude Design's `Setup Prototype.dc.html` (first-use
+  hand-off): the frame's markup and inline styles converted mechanically,
+  the prototype's own logic - screens, paths, copy, Back and Next - kept
+  verbatim, with replacements where the prototype simulates the player.
+  **Kept by hand since** (ADR-0149 item 20, amended 2026-11-21: the
+  generator retired, out of step since Phase 23): a change from the design
+  is made here to match its files, in the same inline-style form.
 -->
 <script>
   import { onMount, untrack } from 'svelte';
