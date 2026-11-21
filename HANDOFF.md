@@ -77,8 +77,9 @@ its pull requests are George's to merge, or Claude's at his word (#18). The cata
 certificate wait in `~/projects/gexis-catalogue-key-for-george` until George
 has them. Not yet seen on a player: the visualiser back after a real drop of
 the TV's output; the store on a bar; setup writing a plugin record; Remove
-with *Keep* off (ADR-0147, ADR-0169); George's phone test of the dialogs
-(to-do `fix-remote-dialogs-test`). The mocked-screen checks
+with *Keep* off (ADR-0147, ADR-0169). George closed the phone test of the
+dialogs and the 31 October fixes unchecked (2026-11-21; both in every release
+since 1.10.0). The mocked-screen checks
 (`~/projects/scratch/dpad`, `ph24`, `ph26/sources`, `ph26/blog`) build from
 `~/projects/gexis-player-next` unless `WT` names another worktree.
 
