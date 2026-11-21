@@ -2,7 +2,7 @@
 
 **Status:** **Built** 2026-11-16 to 18, in 1.18.0 (Testing serial 74), its
 four steps below; **amended** 2026-11-21 (George): timed lyrics first, items
-7-10. **Accepted** 2026-11-16 (Phase 32's acceptance 1): George
+7-10, in 1.18.2. **Accepted** 2026-11-16 (Phase 32's acceptance 1): George
 answered its four decisions and then confirmed the consequence and the
 settings row, the same day. **Builds on:**
 [ADR-0016](0016-plugins-as-separate-processes.md) (plugins are separate

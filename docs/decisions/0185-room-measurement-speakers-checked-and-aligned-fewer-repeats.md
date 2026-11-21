@@ -2,7 +2,8 @@
 
 **Status:** **Accepted** 2026-11-19 (George approved C1-C4). Proposed the
 same day; George decided D1-D3 after his full-range run on sofapi; C1-C4 are
-Claude's. D4 built on `fix-room-screens`, for 1.18.1 (George, 2026-11-19).
+Claude's. D4 built on `fix-room-screens`, released in 1.18.2 (2026-11-21); D1-D3
+on `room-checks`, held for Phase 37's setup check (ADR-0187).
 **Amends:** [ADR-0175](0175-room-correction-for-the-bass.md) (the run) and
 [ADR-0177](0177-room-correction-for-the-full-range.md) (its check and
 chart). **Relates to:** ADR-0166 D7 (the delay after a member's client).

@@ -74,7 +74,7 @@ workflow starts, and the next runs repeated none of it.
 
 - **Beszel gets an issue**, not a pull request: since ADR-0174 its pin is in
   `gcarstoiu/gexis-beszel`, which this repository's token cannot write.
-- **Shairport Sync and NQPTP get an issue too** (added 2026-11-18, George:
+- **Shairport Sync and NQPTP get an issue too** (in `main` with 1.18.2; added 2026-11-18, George:
   5.6.3 was out a week unseen): built here from a tag's commit (ADR-0167),
   their pin is a commit with its archive's and source tree's hashes, which
   the workflow does not compute; the issue lists what to move by hand.

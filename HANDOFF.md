@@ -25,8 +25,9 @@ serial 19, both read back with a good signature; released without a preview
 at George's word): timed lyrics first (ADR-0184 items 7-10), the room's two
 held fixes (`fix-room-grouped-after-undo`, `fix-room-screens`), first use's
 AirPlay tag, the upstream watch of Shairport Sync and NQPTP. Squeezelite is
--4 (BUILD-TRAPS). **PR #110 for George**; after the merge, the post-merge
-steps and the routine clean-up. AirPlay stays *Limited testing*. The
+-4 (BUILD-TRAPS; `packaging/revisions.json` with it). PR #110 merged by
+George 2026-11-21; `main` into `docs` and `next`. AirPlay stays *Limited
+testing*. The
 integration's **0.7.1** (the card's transport under the cover at 345 px and
 under) released 2026-11-21 as Latest. Plugin catalogue serial 9.
 
@@ -52,7 +53,8 @@ finished fixes went out in 1.18.2): `room-checks` (0aee0318, ADR-0185
 D1-D3, amended by ADR-0187: D1's check moves into the setup check);
 `room-chart` (ADR-0186; D4's edits uncommitted in its worktree, on hold; its
 full-Both preview, run 44606811416, never to be installed).
-`preview-1.18.1-room` held them all and can go after #110's merge.
+`preview-1.18.1-room` (merge commits only, all held by `main`, `room-checks`
+and `room-chart`) waits for George's word to go.
 
 **ADR-0182 in `main`**: `.github/workflows/upstream.yml` runs
 `packaging/upstream-daily.sh` daily (a bump branch for a part packaged here,
@@ -123,10 +125,12 @@ in Claude's memory, not here) holds the open items with their detail.
 
 **Routine clean-up** (`docs/ROUTINE-CLEANUP.md`, George 2026-10-12): after
 every merged release PR, otherwise weekly on Sunday evening. **Last run:
-2026-11-21, after 1.18.1**; the same evening at George's word: LESSONS.md
-cut to 4,948 words (eight rules shortened, their cases already in the
-archive), HANDOFF trimmed, seven clean worktrees removed (`ph37` and
-`roomchart` kept).
+2026-11-21, after 1.18.2** (#110): the five merged branches and
+`release-1.18.2` deleted here and on GitHub; the 1.12.1 card image (1.1 GB)
+and 1.16 GB of dangling images removed; the ADR index complete, ADR-0182,
+0184 and 0185 brought to 1.18.2; the repository scan clean. Earlier the same
+day: LESSONS.md cut to 4,948 words, HANDOFF trimmed, seven worktrees and
+R2D2's pi-gen machinery (about 9 GB) removed.
 
 ## Phases
 
