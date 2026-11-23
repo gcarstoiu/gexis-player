@@ -1016,7 +1016,8 @@ nothing to press. On the player's screen, *Measure from your phone* (or
 *Measure again*) shows a code that opens this page on a phone.
 
 1. *Settings → Audio → Room correction* lists what is needed: the
-   microphone, its calibration and a quiet room - about five minutes. The
+   microphone, its calibration and a quiet room - about 20 minutes, the
+   check included. The
    first time, **Choose the file** takes the 90° file (*miniDSP's page* is
    where to get it); a 0° file, or one that is not a calibration file, is
    refused with **Choose another file**. A file given before the full range
@@ -1039,8 +1040,10 @@ nothing to press. On the player's screen, *Measure from your phone* (or
    measurement: swap them at one speaker, amplifier off, and measure again.
    In a room too noisy for the whistles, nothing is said and nothing
    delayed.
-5. Each speaker plays two sweeps on its own, then both together, about a
-   minute a position.
+5. Each speaker plays two sweeps on its own, about a minute a position;
+   each sweep follows a short whistle from the left a second before it, so
+   the player can add the two speakers up to get both together, without
+   playing them.
    Then move the microphone where the phone shows - five positions: your
    head; about 40 cm to its left and a little higher; 40 cm to its right
    and a little lower; 30 cm in front; 30 cm above - step back and tap
@@ -1057,8 +1060,8 @@ nothing to press. On the player's screen, *Measure from your phone* (or
    averaged instead. What stands too little over the noise is not
    corrected.
 6. The correction: the cuts in the bass, worked out from both speakers
-   playing together - the bass of most music is the same in both, and what
-   you hear is the two adding up - and the same on both speakers; above the
+   together - the bass of most music is the same in both, and what you hear
+   is the two adding up - and the same on both speakers; above the
    bass, broad corrections for each speaker of its own. Your head counts
    as much as the other four positions together, and the bass is read in
    finer detail than above it, so a narrow peak is cut to its own width. A
@@ -1068,7 +1071,8 @@ nothing to press. On the player's screen, *Measure from your phone* (or
    from the target; where the positions disagree, less is corrected.
    **Check it** measures the five positions again with the
    correction on, a tap at each again, showing each speaker as measuring
-   does - a sweep a noise spoiled is said and made again; as it plays a
+   does; at your head both also play together, to compare with the two
+   added up - a sweep a noise spoiled is said and made again; as it plays a
    little lower to leave room for what the correction raises, it takes more
    sweeps to make up for it. **Skip** keeps it as worked out, marked *Not
    checked*. If a position ends further from the target than before, the

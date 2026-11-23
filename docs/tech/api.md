@@ -124,7 +124,7 @@ for `next`), with `distance_cm` once timed; a run that stops by itself ends
 `cancelled` with `why` `polarity` (a speaker's + and − swapped) or `swapped`
 (left and right, or the microphone on the wrong side) - ADR-0185.
 While sweeps play, `speaker` names the one playing - in `timing` too - and
-`sweeps` how many the set takes (two; the check more, ADR-0185 C3);
+`sweeps` how many the set takes (two; the check more, ADR-0185 C3); `sets` what the position sweeps, in order (`L`, `R`; `both` too at the check's head, or where a mark was missed - ADR-0187 D4);
 `positions` is five (ADR-0187).
 `/state` carries the summary as `room`. `PUT /room-correction` with
 `on`, `reach` or `without`;

@@ -15355,7 +15355,7 @@
               "object",
               "null"
             ],
-            "description": "A measurement in progress: `step` (place, level, timing, far, measure, move, countdown, correction, nothing, checking, result), `position` from 1 to `positions` (how many the run measures, 5), `speaker` L, R or both (the two together) - in `timing` too, the speaker each short sweep comes from - `sweep` and `sweeps` (the one playing and how many its set takes: 2, the check more), `noise`, `level_db`, `aim_db`, `count`, `checking`, `progress` 0-1, `done`, `expected`, `too_quiet`."
+            "description": "A measurement in progress: `step` (place, level, timing, far, measure, move, countdown, correction, nothing, checking, result), `position` from 1 to `positions` (how many the run measures, 5), `speaker` L, R or both (the two together) - in `timing` too, the speaker each short sweep comes from - `sweep` and `sweeps` (the one playing and how many its set takes: 2, the check more), `sets` (what the position sweeps, in order: L and R; both too at the check's head, or where a timing mark was missed - otherwise both are added from the two), `noise`, `level_db`, `aim_db`, `count`, `checking`, `progress` 0-1, `done`, `expected`, `too_quiet`."
           },
           "ended": {
             "type": [

@@ -174,11 +174,12 @@
     } else if (why === 'busy') {
       out.push({ kind: 'warn', name: 'An update is installing', sub: 'Measure once it has finished.' });
     } else {
-      // ADR-0177 decision 4: the times from Finding 144's run.
+      // George, 2026-11-23: about 20 minutes, the check and the moves
+      // included (Finding 159's run, without the together sweeps).
       out.push({ kind: 'wait', name: 'A quiet room',
-        sub: playing?.dsd ? 'About five minutes. DSD is playing: it stops when you start.'
-          : playing?.source ? `About five minutes. ${playing.source} is playing: it stops when you start.`
-            : 'About five minutes, music stops' });
+        sub: playing?.dsd ? 'About 20 minutes. DSD is playing: it stops when you start.'
+          : playing?.source ? `About 20 minutes. ${playing.source} is playing: it stops when you start.`
+            : 'About 20 minutes, music stops' });
     }
     return out;
   });
@@ -279,11 +280,14 @@
   const back = () => (screenName === 'cancelled' ? doneAndLeave(!!full?.measured)
     : full?.measured ? onpage?.() : onback?.());
 
-  //: A row while a position is measured (R16-R18): each speaker, then both.
-  const SWEPT = ['L', 'R', BOTH];
+  //: A row while a position is measured (R16-R18): what the position
+  //: sweeps, as the player says - each speaker; both too at the check's
+  //: head, or where a mark was missed (ADR-0187 D4: both are otherwise
+  //: added from the two, not played).
+  const swept = $derived(run?.sets?.length ? run.sets : ['L', 'R']);
   function speakerRow(k) {
     const now = run?.speaker;
-    const doneK = SWEPT.indexOf(now) > SWEPT.indexOf(k);
+    const doneK = swept.indexOf(now) > swept.indexOf(k);
     const nowK = now === k;
     const noise = nowK && run?.noise;
     //: How many the set takes: two, the check more for playing lower
@@ -402,7 +406,7 @@
       {:else if screenName === 'move' && !counting}
         <div class="after">{moveText(n)}</div>
       {:else if screenName === 'checking'}
-        <div class="after">Sweeps with the correction on, from each speaker and both together.</div>
+        <div class="after">{n === 1 ? 'Sweeps with the correction on, from each speaker and both together.' : 'Sweeps with the correction on, from each speaker.'}</div>
       {/if}
 
       {#if screenName === 'timing'}
@@ -426,7 +430,7 @@
            again is said, as it is while measuring (ADR-0185 D4). -->
       {#if screenName === 'measure' || screenName === 'checking'}
         <div class="card speakers">
-          {#each SWEPT as k, i (k)}
+          {#each swept as k, i (k)}
             {@const s = speakerRow(k)}
             <div class="check" class:check--rule={i > 0}>
               {@render mark(s.kind)}

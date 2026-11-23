@@ -161,9 +161,13 @@ def transfer(recording, played, fs: int = FS, band=(SWEEP_LO, SWEEP_HI)) -> np.n
     """**The room's impulse response** from a recording of `played`
     (`deconvolve`), starting at the arrival, `WINDOW_S` long, its end
     faded."""
-    ir = deconvolve(recording, played, fs, band)
-    # The direct sound arrives in the first half (the recording started
-    # before the sweep); later than that is the circular wrap.
+    return from_arrival(deconvolve(recording, played, fs, band), fs)
+
+
+def from_arrival(ir, fs: int = FS) -> np.ndarray:
+    """A whole response (`deconvolve`) windowed from just before its
+    arrival: the direct sound arrives in the first half (the recording
+    started before the sweep); later than that is the circular wrap."""
     peak = int(np.argmax(np.abs(ir[: len(ir) // 2])))
     return _window(ir, max(0, peak - int(PRE_S * fs)), fs)
 
@@ -944,6 +948,58 @@ def mark_at(recording, fs: int = FS) -> float | None:
         if den < 0:
             shift = 0.5 * (y0 - y2) / den
     return k + shift
+
+
+#: **Where an added pair's window starts** (ADR-0187 D4): this long before
+#: the mark arrives, so either speaker's sound falls inside it - off to one
+#: side the other speaker's comes up to a few milliseconds before the left's.
+PAIR_PRE_S = 0.010
+
+
+def placed(ir, mark: float, fs: int = FS) -> np.ndarray:
+    """**A sweep's response on its mark's clock** (ADR-0187 D4): of the whole
+    response (`deconvolve`, with `mark_reference`), `WINDOW_S` from
+    `PAIR_PRE_S` before the mark's arrival (`mark_at`), moved by the mark's
+    fraction of a sample - so the responses of one position's playbacks
+    share one clock, and one speaker's adds to the other's as waves."""
+    whole = int(math.floor(mark))
+    start = whole - int(PAIR_PRE_S * fs)
+    n = int(WINDOW_S * fs) + 64
+    part = np.zeros(n)
+    lo = max(0, start)
+    got = ir[lo:start + n]
+    part[lo - start:lo - start + len(got)] = got
+    size = 1 << int(math.ceil(math.log2(2 * n)))
+    f = np.fft.rfftfreq(size, 1 / fs)
+    part = np.fft.irfft(np.fft.rfft(part, size) * np.exp(2j * np.pi * f * (mark - whole) / fs), size)[:n]
+    return _window(part, 0, fs)
+
+
+def pair_noise(left, right) -> np.ndarray:
+    """**The noise in an added pair** (ADR-0185 C3 for D4): each speaker's
+    `(noise_curve, sweeps averaged)` - its noise power over their number -
+    the two added: two recordings' noise, where a pair played has one's."""
+    (nl, kl), (nr, kr) = left, right
+    return 10 * np.log10(10 ** (np.asarray(nl, dtype=float) / 10) / kl
+                         + 10 ** (np.asarray(nr, dtype=float) / 10) / kr)
+
+
+#: **What the check's head logs** (ADR-0187 D4): how far the added pair lies
+#: from the pair played, where the bass is cut (1/6 octave) and above it
+#: (1/3) - from 2 kHz they differed by 1-3 dB on sofapi (Finding 159).
+PAIR_BANDS = ((30.0, LIMIT, False), (LIMIT, 1600.0, True), (2000.0, 5000.0, True))
+
+
+def pair_gaps(added, played, grid=GRID) -> list[tuple[float, float, float, float]]:
+    """`(lo, hi, largest, rms)` of the added pair less the played one, each
+    band of `PAIR_BANDS`; both as `response_db` gives them."""
+    grid = np.asarray(grid)
+    out = []
+    for lo, hi, third in PAIR_BANDS:
+        a, p = (smooth(c) if third else np.asarray(c, dtype=float) for c in (added, played))
+        d = (a - p)[(grid >= lo) & (grid <= hi)]
+        out.append((lo, hi, float(np.max(np.abs(d))), float(np.sqrt(np.mean(d ** 2)))))
+    return out
 
 
 def timing(recording, fs: int = FS) -> Timing | None:

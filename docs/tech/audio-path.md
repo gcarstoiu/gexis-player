@@ -865,10 +865,19 @@ hw:Loopback,1,0 → CamillaDSP (headroom fader, ten bands, then on each speaker 
   sweeps lower by what the corrections raise, takes that many more, up to
   five; the run's state says how many a set takes (`sweeps`). Every
   comparison is logged as numbers (C4); a run's logs settled the limits
-  (Finding 158). After each speaker
-  alone, **both together** (George, 2026-11-05), 6 dB lower each so the two
-  adding in the bass are no louder than one: before in the run and after
-  in the check (`both` in the chart). **The bass is designed from them**
+  (Finding 158). **Both together**
+  (George, 2026-11-05; `both` in the chart) are **added, not played**
+  (ADR-0187 D4, George 2026-11-23, Finding 159): each speaker's kept sweeps
+  placed by their marks (`room_dsp.placed`, a 1 s window from 10 ms before
+  the mark's arrival, moved by its fraction of a sample), averaged as
+  waves, the two summed; their noise is both recordings'
+  (`room_dsp.pair_noise`). The check's head also plays both, 6 dB lower each
+  so the two adding in the bass are no louder than one, and logs how far
+  the added pair lies from it (`room_dsp.pair_gaps`: on sofapi within the
+  repeats from 30 Hz to 1.6 kHz, 1-3 dB louder added from 2 kHz, unused
+  above the bass). Where a kept sweep found no mark, both are played at
+  that position as before; the run's state lists what a position sweeps
+  (`sets`). **The bass is designed from them**
   (ADR-0175's amendment, George, 2026-11-17; Finding 151): the cuts go on
   both speakers alike; above the bass the corrections stay each speaker's.
 - **Five positions** (ADR-0187 D3): the head; 40 cm to its left and 15 cm

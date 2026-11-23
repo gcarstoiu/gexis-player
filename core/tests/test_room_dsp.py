@@ -515,13 +515,9 @@ def test_the_pair_added_by_its_marks_matches_the_pair_played_together():
     fs = rd.FS
 
     def placed(recording, played, by_mark=True):
-        ir = rd.deconvolve(recording, rd.mark_reference(played))
-        n = len(ir)
         at = rd.mark_at(recording) if by_mark else 0.3 * fs
         assert at is not None
-        f = np.fft.rfftfreq(n, 1 / fs)
-        moved = np.fft.irfft(np.fft.rfft(ir) * np.exp(2j * np.pi * f * (at - 0.01 * fs) / fs), n)
-        return rd._window(moved, 0)
+        return rd.placed(rd.deconvolve(recording, rd.mark_reference(played)), at)
 
     async def go():
         got = {}
@@ -536,6 +532,30 @@ def test_the_pair_added_by_its_marks_matches_the_pair_played_together():
     assert np.max(np.abs(added - played)[band]) < 0.5
     unmarked = rd.response_db(placed(*got["L"], by_mark=False) + placed(*got["R"], by_mark=False))
     assert np.max(np.abs(unmarked - played)[band]) > 3, "the starts alone do not line them up"
+
+
+def test_a_response_is_placed_to_a_fraction_of_a_sample():
+    """ADR-0187 D4: a mark between two samples moves its response by that
+    fraction, so two playbacks a fraction of a sample apart line up - at
+    4 kHz a sample is 30 degrees."""
+    fs = rd.FS
+    ir = sim.impulse(seed=1)
+    n = 1 << 18
+    f = np.fft.rfftfreq(n, 1 / fs)
+    at = lambda d: np.fft.irfft(np.fft.rfft(ir, n) * np.exp(-2j * np.pi * f * d / fs), n)  # noqa: E731
+    a = rd.placed(at(20000.0), 20000.0 + 144)
+    b = rd.placed(at(20000.4), 20000.4 + 144)
+    assert np.max(np.abs(a - b)) < 3e-3 * np.max(np.abs(a))
+    rounded = rd.placed(at(20000.4), 20000.0 + 144)
+    assert np.max(np.abs(rounded - a)) > 0.05 * np.max(np.abs(a))
+
+
+def test_an_added_pair_carries_both_recordings_noise():
+    """C3 for D4: each speaker's noise over the sweeps averaged, the two
+    powers added - two sweeps each at -60 dB leave -60 dB in the pair."""
+    noise = np.full(4, -60.0)
+    assert np.allclose(rd.pair_noise((noise, 2), (noise, 2)), -60.0)
+    assert np.allclose(rd.pair_noise((noise, 1), (noise - 300, 1)), -60.0)
 
 
 def test_the_mark_leaves_the_measured_curve_as_it_was():

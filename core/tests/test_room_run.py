@@ -184,29 +184,86 @@ async def test_the_tap_is_followed_by_a_countdown():
     await rig.run.wait()
 
 
-async def test_each_speaker_alone_then_both_two_sweeps_each():
+async def test_each_speaker_alone_two_sweeps_each_both_added():
+    """ADR-0187 D4 (George, 2026-11-23): each speaker alone, two sweeps
+    each; both together are added from them, placed by their marks - not
+    played."""
     rig = Rig()
-    levels = {}
-    real = rig.audio.play
+    await rig.run.start()
+    await rig.until("place")
+    rig.run.tap("start")
+    await rig.until("move", 2)
+    sweeps = [c for c, _ in rig.audio.plays if c not in (None, "frames")]
+    assert sweeps == [0, 0, 1, 1]
+    before = [c for c, _ in rig.audio.plays[: -4]]
+    level = before[:before.index("frames")]
+    assert level == [None] * len(level), "the level with both"
+    assert set(before[len(level):]) == {"frames"}, "then the speakers timed (ADR-0185)"
+    run = rig.run
+    assert len(run._positions[rc.BOTH]) == len(run._fine) == 1 and run._snrs[rc.BOTH][0] is not None
+    assert {s.sets for s in rig.states if s.step == "measure"} == {("L", "R")}
+    rig.run.cancel()
+    await rig.run.wait()
 
-    async def play(signal, channel, tail_s=1.1):
+
+async def test_both_added_match_both_played_at_the_checks_head(monkeypatch):
+    """D4 as on sofapi (Finding 159), in the made-up room with each playback
+    starting apart from its recording at random: the pair added on the
+    marks' clock matches the pair the check's head plays - 6 dB lower each,
+    no louder than one - and that is logged."""
+    got = []
+    real = rd.pair_gaps
+
+    def spy(added, played, grid=rd.GRID):
+        got.append((np.array(added), np.array(played)))
+        return real(added, played, grid)
+    monkeypatch.setattr(rd, "pair_gaps", spy)
+    rig = Rig(Audio(jitter_s=0.02))
+    levels = {}
+    play = rig.audio.play
+
+    async def heard(signal, channel, tail_s=1.1):
         if channel is not None:
-            # The sweep after its mark (ADR-0187 C4), on its first speaker.
             x = np.asarray(signal)[int(rd.MARK_GAP_S * rd.FS):, channel if isinstance(channel, int) else channel[0]]
-            levels.setdefault(str(channel), float(np.sqrt(np.mean(np.square(x)))))
-        return await real(signal, channel, tail_s)
-    rig.audio.play = play
+            levels[str(channel)] = float(np.sqrt(np.mean(np.square(x))))
+        return await play(signal, channel, tail_s)
+    rig.audio.play = heard
+    await rig.measure_all()
+    rig.run.tap("check")
+    await rig.until("move", 1, checking=True)
+    rig.audio.position = 1
+    rig.run.tap("next")
+    await rig.until("move", 2, checking=True)
+    assert [s.sets for s in rig.states if s.step == "checking"][0] == ("L", "R", rc.BOTH)
+    assert levels["(0, 1)"] == pytest.approx(levels["0"] / 2), "both 6 dB lower each, no louder than one"
+    assert len(got) == 1
+    added, played = got[0]
+    bass = (rd.GRID >= 30) & (rd.GRID <= 250)
+    above = (rd.GRID >= 300) & (rd.GRID <= 16000)
+    assert np.max(np.abs(added - played)[bass]) < 0.3
+    assert np.max(np.abs(rd.smooth(added) - rd.smooth(played))[above]) < 0.3
+    assert rig.run._checked[rc.BOTH][0] is not None
+    rig.run.cancel()
+    await rig.run.wait()
+
+
+async def test_a_sweep_without_its_mark_has_both_played(monkeypatch):
+    """Where a mark is not found nothing can be added: both are played at
+    that position, as before D4, after the right - and the progress still
+    only goes up."""
+    monkeypatch.setattr(rd, "mark_at", lambda recording, fs=rd.FS: None)
+    rig = Rig()
     await rig.run.start()
     await rig.until("place")
     rig.run.tap("start")
     await rig.until("move", 2)
     sweeps = [c for c, _ in rig.audio.plays if c not in (None, "frames")]
     assert sweeps == [0, 0, 1, 1, (0, 1), (0, 1)]
-    before = [c for c, _ in rig.audio.plays[: -6]]
-    level = before[:before.index("frames")]
-    assert level == [None] * len(level), "the level with both"
-    assert set(before[len(level):]) == {"frames"}, "then the speakers timed (ADR-0185)"
-    assert levels["(0, 1)"] == pytest.approx(levels["0"] / 2), "both 6 dB lower each, no louder than one"
+    assert len(rig.run._positions[rc.BOTH]) == len(rig.run._fine) == 1 and rig.run._fine[0] is not None
+    measuring = [s for s in rig.states if s.step == "measure"]
+    assert measuring[-1].speaker == rc.BOTH and measuring[-1].sets == ("L", "R", rc.BOTH)
+    progress = [s.progress for s in measuring]
+    assert progress == sorted(progress)
     rig.run.cancel()
     await rig.run.wait()
 
@@ -661,7 +718,8 @@ async def test_noise_alone_no_longer_repeats_sweeps_and_is_not_corrected():
     rig = Rig(Audio(noise_db=-55))
     await _to(rig, "move", 2)
     sweeps = [c for c, _ in rig.audio.plays if c not in (None, "frames")]
-    assert sweeps == [0, 0, 1, 1, (0, 1), (0, 1)]
+    assert sweeps == [0, 0, 1, 1]
+    assert rig.run._trust(rc.BOTH) is not None, "both added are judged by two recordings' noise"
     trust = rig.run._trust("L")
     # Up to 200 Hz: the noise a sweep is judged by is one draw, whose points
     # scatter by 2-3 dB from draw to draw, and this room stands within about

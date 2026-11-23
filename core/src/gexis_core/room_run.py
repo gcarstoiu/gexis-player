@@ -13,16 +13,18 @@ it is (the design's R18), and the panel shows that it is running. The steps:
    nearer one is, and whether one has + and - swapped (ADR-0185 D2, C1),
    which stops the run; the nearer is delayed from here on, so both arrive
    together; more than `FAR_S` apart, *far* waits for *Measure anyway*;
-   then *measure* - each speaker alone, then both together (George,
-   2026-11-05: as heard, shown and never corrected), two sweeps that agree
-   each, at position 1;
+   then *measure* - each speaker alone, two sweeps that agree each, at
+   position 1; both together (George, 2026-11-05: as heard) are added from
+   the two, placed by their timing marks (ADR-0187 D4, George 2026-11-23),
+   not played;
    then *move* (waiting for *Measure here*), a 3-second *countdown*, and
    *measure* again, to the last position - at position 2 *timing* again
    first: 40 cm to the left the left speaker must be nearer than at 1, or
    the speakers are swapped and the run stops (ADR-0185 D1);
 4. *correction* (or *nothing* to cut) - waiting for *Check it*;
 5. the check: *move*, *countdown* and *checking* at each position with the
-   correction on - *Skip* on every one;
+   correction on - *Skip* on every one; at the head both are played too,
+   and how far the pair added lies from it is logged (D4);
 6. *result* - measured, or expected when skipped - waiting for *Keep it*.
 
 *Cancel* ends it at any step; a step waiting for a tap for 10 minutes is
@@ -108,6 +110,29 @@ class Cancelled(Exception):
     pass
 
 
+class _Set(tuple):
+    """A set's average - `(curve, snr, fine)` - and the sweeps kept for it."""
+
+    def __new__(cls, curve, snr, fine, kept):
+        self = super().__new__(cls, (curve, snr, fine))
+        self.kept = kept
+        return self
+
+
+@dataclass(frozen=True)
+class _Sweep:
+    """One sweep: its curve (calibrated), how far it stood over the room's
+    noise at each point (None before the level step heard the noise), its
+    curve on the bass's finer grid (both played, in the run; else None), its
+    response on its mark's clock (None without a mark, ADR-0187 D4) and the
+    noise curve it was judged by (None with no noise read)."""
+    curve: object
+    snr: object
+    fine: object
+    placed: object
+    noise: object
+
+
 class _Skipped(Exception):
     """*Skip* pressed while the check sweeps."""
 
@@ -118,6 +143,7 @@ class RunState:
     step: str                       # place level timing far measure move countdown correction nothing checking result
     position: int = 1               # 1 to rc.POSITIONS
     speaker: str | None = None      # "L" / "R" / "both" while one plays
+    sets: tuple[str, ...] = ()      # what this position sweeps, in order (ADR-0187 D4)
     sweep: int = 0                  # 1-2 while one plays
     sweeps: int = 0                 # how many the set takes: 2, the check more (ADR-0185 C3)
     noise: bool = False             # the last sweep was spoiled and is repeated
@@ -136,7 +162,7 @@ class RunState:
 
     def as_dict(self) -> dict:
         return {"step": self.step, "position": self.position, "speaker": self.speaker, "sweep": self.sweep,
-                "sweeps": self.sweeps,
+                "sweeps": self.sweeps, "sets": list(self.sets),
                 "noise": self.noise, "level_db": None if self.level_db is None else round(self.level_db),
                 "aim_db": None if self.aim_db is None else round(self.aim_db),
                 "count": self.count, "checking": self.checking, "progress": round(self.progress, 3),
@@ -151,13 +177,27 @@ def _screen(state: RunState) -> tuple:
     return state.step, state.position, state.checking, state.too_quiet
 
 
+def _sets(position: int, checking: bool) -> tuple[str, ...]:
+    """**What a position sweeps** (ADR-0187 D4, George 2026-11-23): each
+    speaker alone - both together are added from them; the check's head
+    plays both too, so how far the added pair lies from it is logged."""
+    return rc.SWEPT if checking and position == 1 else rc.CHANNELS
+
+
 def _progress(step: str, position: int = 1, speaker: str | None = None, sweep: int = 0,
               checking: bool = False) -> float:
     """The design's §3: the level 5 %; positions 8 to 78 % (each an equal
-    share for the left, the right and both, half of it a sweep); checking 80
-    to 100 %."""
-    share = 1 / len(rc.SWEPT)
-    part = rc.SWEPT.index(speaker) * share if speaker in rc.SWEPT else 0.0
+    share for each set it sweeps, half of it a sweep); checking 80 to 100 %.
+    Both played where a mark was missing (`Run._measure`) take the right's
+    last quarter's place."""
+    sets = _sets(position, checking)
+    share = 1 / len(sets)
+    if speaker in sets:
+        part = sets.index(speaker) * share
+    elif speaker == rc.BOTH:
+        part, share = 1 - share / 2, share / 2
+    else:
+        part = 0.0
     if checking:
         return 0.8 + 0.2 * (position - 1 + (part if step == "checking" else 0)) / rc.POSITIONS
     if step == "level":
@@ -404,7 +444,7 @@ class Run:
     async def _move(self, n: int, checking: bool) -> str:
         done = tuple(range(1, n))
         self._set(RunState("move", position=n, checking=checking, done=done, level_db=self.state.level_db,
-                           progress=_progress("move", n, checking=checking)))
+                           sets=_sets(n, checking), progress=_progress("move", n, checking=checking)))
         what = await self._wait("next", "skip") if checking else await self._wait("next")
         if what == "skip":
             return what
@@ -588,11 +628,11 @@ class Run:
         sweep = dsp.log_sweep(seconds=self._sweep_s)
         return 10 ** (self._level_dbfs / 20) / 10 ** (dsp.band_level_db(sweep) / 20)
 
-    async def _curve(self, channel: str) -> tuple:
-        """One sweep: its curve, how far it stood over the room's noise at
-        each point (ADR-0185 C3; None before the level step heard it), and
-        for both speakers in the run its curve on the bass's finer grid
-        (ADR-0187 C5; else None)."""
+    async def _curve(self, channel: str) -> _Sweep:
+        """One sweep (`_Sweep`): its curve, how far it stood over the room's
+        noise at each point (ADR-0185 C3), for both played in the run its
+        curve on the bass's finer grid (ADR-0187 C5), and its response on
+        its mark's clock (D4)."""
         import numpy as np
         dsp = self._dsp
         sweep = dsp.log_sweep(seconds=self._sweep_s)
@@ -615,16 +655,19 @@ class Run:
                                            channel=columns if both else columns[0])
         played = dsp.mark_reference(played)
         self._mark = dsp.mark_at(recording)
-        ir = dsp.transfer(recording, played)
+        whole = dsp.deconvolve(recording, played)
+        ir = dsp.from_arrival(whole)
         curve = dsp.response_db(ir)
         fine = dsp.response_fine(ir) - self._calibration_fine() if both and not self.state.checking else None
-        snr = None
+        snr = noise = None
         if self._noise is not None:
             key = (len(recording), round(float(np.max(np.abs(played))), 9))
             if key not in self._noise_curves:
                 self._noise_curves[key] = dsp.noise_curve(self._noise, played, len(recording))
-            snr = dsp.snr_db(curve, self._noise_curves[key])
-        return curve - self._calibration_curve(), snr, fine
+            noise = self._noise_curves[key]
+            snr = dsp.snr_db(curve, noise)
+        on_mark = None if self._mark is None else dsp.placed(whole, self._mark)
+        return _Sweep(curve - self._calibration_curve(), snr, fine, on_mark, noise)
 
     def _calibration_fine(self):
         if not hasattr(self, "_cal_fine"):
@@ -680,44 +723,93 @@ class Run:
         return kept, (gap, where, there, (i, j))
 
     async def _measure(self, n: int, checking: bool) -> None:
-        """Each speaker alone at position `n` (item 4), then both: sweeps
-        until those no noise disturbed agree (`_undisturbed`), up to
-        `MAX_SWEEPS`, then the two closest; all of those averaged."""
+        """**Each speaker alone at position `n`** (item 4), then **both
+        together added from them** (ADR-0187 D4, George 2026-11-23). The
+        check's head plays both as well and logs how far the added pair is
+        from it (C4); where a kept sweep found no mark, both are played, as
+        before D4."""
+        sets = {}
+        for channel in _sets(n, checking):
+            sets[channel] = await self._sweep_set(n, channel, checking)
+        added = self._added(sets["L"], sets["R"], fine=not checking)
+        if added is None:
+            logger.info("room: %s %d: a sweep without its mark - both played", "check" if checking else "position", n)
+            if rc.BOTH not in sets:
+                sets[rc.BOTH] = await self._sweep_set(n, rc.BOTH, checking, extra=True)
+        elif rc.BOTH in sets:
+            # Like with like: the pair played, on its marks' clock too.
+            played = self._added(sets[rc.BOTH], None, fine=False) or sets[rc.BOTH]
+            gaps = self._dsp.pair_gaps(added[0], played[0])
+            logger.info("room: check %d: both added against both played: %s", n,
+                        "; ".join(f"{lo:.0f}-{hi:.0f} Hz at most {most:.2f} dB, rms {rms:.2f}"
+                                  for lo, hi, most, rms in gaps))
+        if added is not None:
+            sets[rc.BOTH] = added
+        for channel, (curve, snr, fine) in sets.items():
+            (self._checked if checking else self._positions)[channel].append(curve)
+            if not checking:
+                self._snrs[channel].append(snr)
+                if channel == rc.BOTH:
+                    self._fine.append(fine)
+
+    async def _sweep_set(self, n: int, channel: str, checking: bool, extra: bool = False) -> tuple:
+        """**One speaker's set** (or both's) at position `n`: sweeps until
+        those no noise disturbed agree (`_undisturbed`), up to `MAX_SWEEPS`,
+        then the two closest; all of those averaged. `(curve, snr, fine)`
+        of the average, with the kept sweeps (`kept`) for the pair."""
         dsp = self._dsp
         step = "checking" if checking else "measure"
         done = tuple(range(1, n))
         wanted = self._sweeps_wanted(checking)
-        for channel in rc.SWEPT:
-            curves, snrs, fines = [], [], []
-            noise = False
-            while True:
-                k = len(curves) + 1
-                self._set(RunState(step, position=n, speaker=channel, sweep=min(k, wanted), sweeps=wanted,
-                                   noise=noise, checking=checking, done=done, level_db=self.state.level_db,
-                                   progress=_progress(step, n, channel, min(k, SWEEPS), checking)))
-                curve, snr, fine = await self._curve(channel)
-                curves.append(curve)
-                snrs.append(snr)
-                fines.append(fine)
-                if checking and self._skip_sent():
-                    raise _Skipped()
-                if len(curves) < wanted:
-                    continue
-                kept, (gap, where, there, pair) = self._undisturbed(curves, snrs)
-                self._log_sweeps(n, channel, checking, curves, snrs, gap, where, there, kept)
-                if kept is not None:
-                    break
-                if len(curves) >= MAX_SWEEPS:
-                    kept = list(pair)
-                    break
-                noise = True
-            chosen = [curves[k] for k in kept]
-            (self._checked if checking else self._positions)[channel].append(dsp.power_average(chosen))
-            if fines[0] is not None:
-                self._fine.append(dsp.power_average([fines[k] for k in kept]))
-            if not checking:
-                got = [snrs[k] for k in kept if snrs[k] is not None]
-                self._snrs[channel].append(dsp.averaged_snr(got) if got else None)
+        shown = _sets(n, checking) + ((rc.BOTH,) if extra else ())
+        sweeps = []
+        noise = False
+        while True:
+            k = len(sweeps) + 1
+            self._set(RunState(step, position=n, speaker=channel, sets=shown, sweep=min(k, wanted),
+                               sweeps=wanted, noise=noise, checking=checking, done=done,
+                               level_db=self.state.level_db,
+                               progress=_progress(step, n, channel, min(k, SWEEPS), checking)))
+            sweeps.append(await self._curve(channel))
+            if checking and self._skip_sent():
+                raise _Skipped()
+            if len(sweeps) < wanted:
+                continue
+            curves, snrs = [x.curve for x in sweeps], [x.snr for x in sweeps]
+            kept, (gap, where, there, pair) = self._undisturbed(curves, snrs)
+            self._log_sweeps(n, channel, checking, curves, snrs, gap, where, there, kept)
+            if kept is not None:
+                break
+            if len(sweeps) >= MAX_SWEEPS:
+                kept = list(pair)
+                break
+            noise = True
+        chosen = [sweeps[k] for k in kept]
+        got = [x.snr for x in chosen if x.snr is not None]
+        fine = dsp.power_average([x.fine for x in chosen]) if chosen[0].fine is not None else None
+        return _Set(dsp.power_average([x.curve for x in chosen]), dsp.averaged_snr(got) if got else None,
+                    fine, tuple(chosen))
+
+    def _added(self, left, right, fine: bool) -> tuple | None:
+        """**Both together, added** (ADR-0187 D4): each speaker's kept
+        sweeps on their marks' clock, averaged as waves, the two summed -
+        `(curve, snr, fine)` as a set gives them; its noise two recordings'
+        (`pair_noise`). None when a kept sweep found no mark. With `right`
+        None, `left`'s sweeps alone on that clock (the pair played, to
+        compare)."""
+        import numpy as np
+        dsp = self._dsp
+        sides = [x for x in (left, right) if x is not None]
+        if any(x.placed is None for side in sides for x in side.kept):
+            return None
+        ir = sum(np.mean([x.placed for x in side.kept], axis=0) for side in sides)
+        curve = dsp.response_db(ir)
+        snr = None
+        if right is not None and left.kept[0].noise is not None and right.kept[0].noise is not None:
+            snr = dsp.snr_db(curve, dsp.pair_noise((left.kept[0].noise, len(left.kept)),
+                                                   (right.kept[0].noise, len(right.kept))))
+        return (curve - self._calibration_curve(), snr,
+                dsp.response_fine(ir) - self._calibration_fine() if fine else None)
 
     def _log_sweeps(self, n, channel, checking, curves, snrs, gap, where, there, kept) -> None:
         """**ADR-0185 C4: every comparison, as numbers**, so `AGREE_DB` and
