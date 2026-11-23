@@ -1066,7 +1066,7 @@ nothing to press. On the player's screen, *Measure from your phone* (or
    as much as the other four positions together, and the bass is read in
    finer detail than above it, so a narrow peak is cut to its own width. A
    chart shows before (the average of the positions), the target and the
-   expected after, for each speaker and for both together. A peak is cut,
+   expected after, for each speaker. A peak is cut,
    and a broad correction made, unless most positions would end further
    from the target; where the positions disagree, less is corrected.
    **Check it** measures the five positions again with the
@@ -1113,13 +1113,11 @@ On its page:
   switch under it adds each position's own curve; it starts off. The shading
   is what the correction cuts and raises; where the measured after strays
   from it, that is the room and the microphone's place, not the correction.
-  With *Bass* chosen, above 250 Hz is left alone. **Both** shows the two
-  speakers together, as you hear them. The cuts in the bass are worked out
-  from the two together; above it each speaker is corrected on its own, and
-  *Both*'s shading there is an estimate of what the two corrections do
-  together. Above about 1 kHz the two together change with the microphone's
-  exact place, so there the measured after can stray from the shading by a
-  few dB.
+  With *Bass* chosen, above 250 Hz is left alone. **Left** and **Right** each
+  show that speaker alone, in the bass too. The cuts in the bass are worked
+  out for the two together, the same on both, so on its own a speaker can
+  sit well off the target there, as the line under the chart says; above
+  the bass each speaker is corrected on its own.
 - **The corrections**, on the panel's page: in the bass, narrow cuts; above
   it, broad, up or down.
 - **Measure again** replaces the measurement once the new one is kept.

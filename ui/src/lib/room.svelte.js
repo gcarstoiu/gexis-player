@@ -87,11 +87,11 @@ export class RoomReader {
 export const outputPhrase = (o) => (o ? `the ${o.kind}, ${o.name}` : '');
 export const outputShort = (o) => o?.kind ?? '';
 
-/** **The chart's tabs**: each speaker, and both together where the
- *  measurement has them (George, 2026-11-05: as heard, never corrected). */
+/** **The chart's tabs**: each speaker's own (George, 2026-11-19, ADR-0186
+ *  D4). `BOTH`: the two swept together, which the bass's cuts come from. */
 export const BOTH = 'both';
-export const sides = (chart) => ['L', 'R', ...(chart?.speakers?.[BOTH] ? [BOTH] : [])];
-export const sideName = (k) => ({ L: 'Left', R: 'Right', both: 'Both' })[k] ?? k;
+export const sides = () => ['L', 'R'];
+export const sideName = (k) => ({ L: 'Left', R: 'Right' })[k] ?? k;
 
 /** A frequency as the design writes it: *46 Hz*, *2.4 kHz*, *11 kHz*. */
 export const freqWord = (f) => (f < 1000 ? `${Math.round(f)} Hz`
@@ -130,7 +130,6 @@ export function correctionsHeading(bass, above) {
 
 /** *Left speaker · 8 corrections* (the design's 1g). */
 export function correctionsWho(k, bass, above) {
-  if (k === BOTH) return 'Both speakers';
   const n = bass + above;
   return `${k === 'L' ? 'Left' : 'Right'} speaker${n ? ` · ${n} ${n === 1 ? 'correction' : 'corrections'}` : ''}`;
 }
@@ -141,17 +140,12 @@ export const peaksDown = (db) => `Peaks down by up to ${Math.max(0, Math.round(d
 const halfDb = (db) => String(Math.round((db ?? 0) * 2) / 2);
 
 /** **The result's heading and line** (the design's §2, *Result words*), for
- *  the speaker shown: `speaker` from the chart, `both` its tab, `range` how
- *  far the measurement was made, `reach` how far it plays, `expected` not
- *  checked (`expectedMark`: say so in the heading). */
-export function resultWords({ speaker, both = false, range = 'full', reach = 'full', expectedMark = false }) {
-  const bothAfter = both && !!speaker?.after?.length;
-  if (both && !bothAfter) {
-    return ['Both speakers, before', 'The two together, as you hear them. Measure again and check it to see them after.'];
-  }
+ *  the speaker shown: `speaker` from the chart, `range` how far the
+ *  measurement was made, `reach` how far it plays, `expected` not checked
+ *  (`expectedMark`: say so in the heading). */
+export function resultWords({ speaker, range = 'full', reach = 'full', expectedMark = false }) {
   const cuts = (speaker?.cuts ?? []).length;
   const above = (speaker?.above ?? []).length;
-  if (both) return [peaksDown(speaker?.peaks_down) + (expectedMark ? ', expected' : ''), 'The two together, as you hear them.'];
   const bassOnly = range !== 'full';
   if (!cuts && !above && !bassOnly) return ['Nothing to correct', 'Already near the target, in the bass and above it.'];
   const head = !cuts ? 'Nothing to cut in the bass' : peaksDown(speaker?.peaks_down) + (expectedMark ? ', expected' : '');
@@ -174,17 +168,7 @@ export function worseLine(worse) {
 
 /** **The corrections in two groups** (the design's 1g): in the bass, narrow
  *  cuts; above it, broad, up or down - each empty one saying why. */
-export function correctionGroups(k, speaker, { range = 'full', reach = 'full' } = {}) {
-  if (k === BOTH) {
-    // ADR-0175's amendment (George, 2026-11-17): the bass is designed from
-    // the two together and cut the same on both; above it, each speaker's.
-    const shared = cutRows(speaker?.cuts);
-    return [
-      { name: 'In the bass', kind: shared.length ? 'the same cuts on both speakers' : '', rows: shared,
-        empty: 'Nothing to cut: the two together are near the target already.' },
-      { name: 'Above the bass', kind: '', rows: [], empty: "Each speaker's own: on its tab." },
-    ];
-  }
+export function correctionGroups(speaker, { range = 'full', reach = 'full' } = {}) {
   const bass = cutRows(speaker?.cuts);
   const above = range === 'full' && reach === 'full' ? cutRows(speaker?.above) : [];
   return [

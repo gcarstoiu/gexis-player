@@ -187,10 +187,9 @@
   // ---- each screen's words -------------------------------------------------------
 
   const moveText = (k) => `${k === 1 ? 'Back where your head was, at its height' : MOVES[k]}, still pointing at the ceiling. Step back, then tap Measure here.`;
-  //: The correction for the speaker shown (Both: the left's list says so).
-  const groups = $derived(correctionGroups(ch, speaker));
-  const counts = $derived(ch === BOTH ? correctionGroups('L', pending?.chart?.speakers?.L) : groups);
-  const resultPair = $derived(resultWords({ speaker, both: ch === BOTH, expectedMark: screenName === 'result' && !!run?.expected }));
+  //: The correction for the speaker shown.
+  const groups = $derived(correctionGroups(speaker));
+  const resultPair = $derived(resultWords({ speaker, expectedMark: screenName === 'result' && !!run?.expected }));
   const worse = $derived(screenName === 'result' && !run?.expected && pending?.worse?.length ? worseLine(pending.worse) : '');
   //: ADR-0185 C2: more than 1 ms apart (`far_cm`).
   const farHead = $derived.by(() => {
@@ -217,7 +216,7 @@
       case 'far': return farHead;
       case 'measure': return [`Position ${n} of ${count}`, ''];
       case 'move': return [checking && n === 1 ? 'Move it back to position 1' : `Move it to position ${n}`, ''];
-      case 'correction': return [correctionsHeading(counts[0].rows.length, counts[1].rows.length), ''];
+      case 'correction': return [correctionsHeading(groups[0].rows.length, groups[1].rows.length), ''];
       case 'nothing': return ['Nothing to correct', ''];
       case 'checking': return [`Checking at position ${n}`, ''];
       case 'result': return resultPair;
@@ -234,7 +233,6 @@
   }[screenName] ?? '');
   const tail = $derived.by(() => {
     if (screenName === 'place') return { text: `Music stops now, on every source.${full?.screen ? " The player's screen shows that it is measuring." : ''}`, ink: 'quiet' };
-    if (screenName === 'correction' && ch === BOTH) return { text: 'The two together, as you hear them: the bass is corrected from these, the same on both speakers. Check it measures them with the correction on.', ink: 'quiet' };
     if (screenName === 'correction') return { text: correctionTail(dips(speaker, freqs), speaker), ink: 'quiet' };
     if (screenName === 'nothing') return { text: 'Your room is already near the target, in the bass and above it, so there is nothing worth correcting. Room correction stays off.', ink: 'body' };
     if (screenName === 'result' && !run?.expected) return worse ? null : { text: 'No position is worse than before.', ink: 'ink' };
@@ -457,7 +455,7 @@
 
       {#if ['correction', 'nothing', 'result'].includes(screenName) && pending}
         <div class="segs" role="group" aria-label="Speaker">
-          {#each sides(pending.chart) as k (k)}
+          {#each sides() as k (k)}
             <button type="button" class="segbtn" class:is-sel={ch === k} aria-pressed={ch === k} onclick={() => (ch = k)}>{sideName(k)}</button>
           {/each}
         </div>

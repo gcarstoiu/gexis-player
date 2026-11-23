@@ -13,8 +13,10 @@
   charts were too busy); without a legend (the bar) they are not drawn.
   **The shading is the corrections'** (George,
   2026-11-19, ADR-0186 D2): before against before with them, whatever the
-  check measured - the after is a line of its own. *Both*'s, above the bass,
-  is the two speakers' corrections together, as the core estimates it (C3).
+  check measured - the after is a line of its own. **Each speaker's tab is
+  that speaker alone, in the bass too** (George, 2026-11-23, ADR-0186 D5): the
+  bass is cut for both together, so the legend's line says a speaker alone
+  can sit off the target there.
 
   With *Bass* chosen the upper pane is hatched and after stops at 250 Hz; a
   measurement from before Phase 30 has no curves above it.
@@ -110,6 +112,8 @@
   const cutShown = $derived(!!(d[0]?.cut || d[1]?.cut));
   const raised = $derived(!!(d[0]?.raise || d[1]?.raise));
   const count = $derived(countWord(speaker?.positions?.length ?? 0));
+  //: ADR-0186 D5: wherever the bass is cut, the cuts are both speakers'.
+  const shared = $derived(!!speaker?.cuts?.length);
 </script>
 
 {#snippet sample(which)}
@@ -179,6 +183,7 @@
       {#if shown === 'expected'}<span class="key">{@render sample('after')}After, expected</span>{/if}
       {#if cutShown}<span class="key">{@render sample('cut')}Cut</span>{/if}
       {#if raised}<span class="key">{@render sample('raise')}Raised</span>{/if}
+      {#if shared}<p class="shared">The bass is cut for both speakers together: on its own, a speaker can sit well off the target there.</p>{/if}
     </div>
   {/if}
 </div>
@@ -418,6 +423,11 @@
   }
   .chart--panel .legend {
     font-size: 15px;
+  }
+  .shared {
+    flex-basis: 100%;
+    margin: 4px 0 0;
+    line-height: 1.4;
   }
   .key {
     display: flex;
