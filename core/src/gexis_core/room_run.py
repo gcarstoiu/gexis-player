@@ -604,7 +604,17 @@ class Run:
             scale *= 10 ** (-self._check_db / 20)
         both = channel == rc.BOTH
         played = sweep * scale * (0.5 if both else 1.0)
-        recording = await self._audio.play(played, channel=(0, 1) if both else rc.CHANNELS.index(channel))
+        # ADR-0187 C4: every sweep after its timing mark, the timing step's
+        # sweep on the left at the timing step's level (lower in the check,
+        # with the sweeps).
+        columns = (0, 1) if both else (rc.CHANNELS.index(channel),)
+        mark_amp = min(1.0, self._sweep_scale())
+        if self.state.checking:
+            mark_amp *= 10 ** (-self._check_db / 20)
+        recording = await self._audio.play(dsp.marked(played, columns, mark_amp),
+                                           channel=columns if both else columns[0])
+        played = dsp.mark_reference(played)
+        self._mark = dsp.mark_at(recording)
         ir = dsp.transfer(recording, played)
         curve = dsp.response_db(ir)
         fine = dsp.response_fine(ir) - self._calibration_fine() if both and not self.state.checking else None

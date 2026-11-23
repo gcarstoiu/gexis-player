@@ -433,7 +433,7 @@
     color: inherit;
     background: transparent;
     border: 1px solid var(--ink-line);
-    border-radius: 999px;
+    border-radius: var(--r-pill);
     padding: 4px 10px 4px 5px;
     min-height: 30px;
     cursor: pointer;
@@ -450,7 +450,7 @@
     flex-shrink: 0;
     width: 26px;
     height: 16px;
-    border-radius: 8px;
+    border-radius: var(--r-pill);
     background: var(--c-ink-22);
     transition: background 0.15s;
   }
@@ -460,7 +460,7 @@
     left: 2px;
     width: 12px;
     height: 12px;
-    border-radius: 50%;
+    border-radius: var(--r-circle);
     background: var(--ink);
     transition: transform 0.15s;
   }

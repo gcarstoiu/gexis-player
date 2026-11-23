@@ -191,7 +191,9 @@ async def test_each_speaker_alone_then_both_two_sweeps_each():
 
     async def play(signal, channel, tail_s=1.1):
         if channel is not None:
-            levels.setdefault(str(channel), float(np.sqrt(np.mean(np.square(signal)))))
+            # The sweep after its mark (ADR-0187 C4), on its first speaker.
+            x = np.asarray(signal)[int(rd.MARK_GAP_S * rd.FS):, channel if isinstance(channel, int) else channel[0]]
+            levels.setdefault(str(channel), float(np.sqrt(np.mean(np.square(x)))))
         return await real(signal, channel, tail_s)
     rig.audio.play = play
     await rig.run.start()
@@ -661,7 +663,10 @@ async def test_noise_alone_no_longer_repeats_sweeps_and_is_not_corrected():
     sweeps = [c for c, _ in rig.audio.plays if c not in (None, "frames")]
     assert sweeps == [0, 0, 1, 1, (0, 1), (0, 1)]
     trust = rig.run._trust("L")
-    assert trust is not None and not trust.all() and trust[(rd.GRID >= 100) & (rd.GRID <= 250)].all()
+    # Up to 200 Hz: the noise a sweep is judged by is one draw, whose points
+    # scatter by 2-3 dB from draw to draw, and this room stands within about
+    # 1 dB of the limit near 250 Hz (a longer, marked recording drew another).
+    assert trust is not None and not trust.all() and trust[(rd.GRID >= 100) & (rd.GRID <= 200)].all()
     rig.run.cancel()
     await rig.run.wait()
 

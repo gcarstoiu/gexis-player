@@ -887,6 +887,58 @@ def _lag(ref, segment, reach: int) -> tuple[float, float]:
     return k - reach + shift, float(c[k] / norm) if norm > 0 else 0.0
 
 
+#: **The timing mark** (ADR-0187 C4, REW's acoustic timing reference): the
+#: timing step's short sweep on the left speaker, this long before every
+#: measuring sweep starts, in the same playback - so every response at a
+#: position is placed against the same speaker, whatever the playback's own
+#: start. Long enough for the room's answer above 500 Hz to die away first.
+MARK_GAP_S = 1.0
+
+
+def marked(played, columns, amplitude: float, fs: int = FS) -> np.ndarray:
+    """**A measuring sweep with its mark** (C4), as (samples, 2) frames: the
+    mark on the left at the start, `played` on `columns` (0 the left, 1 the
+    right) `MARK_GAP_S` later."""
+    played = np.asarray(played, dtype=float)
+    gap = int(MARK_GAP_S * fs)
+    frames = np.zeros((gap + len(played), 2))
+    mark = log_sweep(fs, TIMING_LO, TIMING_HI, TIMING_S) * amplitude
+    frames[:len(mark), 0] = mark
+    for c in columns:
+        frames[gap:, c] = played
+    return frames
+
+
+def mark_reference(played, fs: int = FS) -> np.ndarray:
+    """What a marked recording is deconvolved with for the room's response:
+    the sweep where it plays, after the gap. The mark's own trace then lands
+    seconds before the arrival, in the circular response's far end - never
+    in the window kept."""
+    return np.concatenate((np.zeros(int(MARK_GAP_S * fs)), np.asarray(played, dtype=float)))
+
+
+def mark_at(recording, fs: int = FS) -> float | None:
+    """**Where the mark arrives** in a marked recording, in samples from its
+    start, to a fraction: deconvolved with the mark's sweep, the peak before
+    the measuring sweep can show there (seconds later). None when it does
+    not stand `TIMING_CLEAR` over the rest of that stretch."""
+    ir = deconvolve(recording, log_sweep(fs, TIMING_LO, TIMING_HI, TIMING_S), fs, band=(TIMING_LO, TIMING_HI))
+    part = np.abs(ir[:int((MARK_GAP_S + 0.5) * fs)])
+    k = int(np.argmax(part))
+    near = np.zeros(len(part), dtype=bool)
+    near[max(0, k - int(0.005 * fs)):k + int(0.05 * fs)] = True
+    rest = part[~near]
+    if not len(rest) or part[k] < TIMING_CLEAR * np.sqrt(np.mean(rest ** 2)):
+        return None
+    shift = 0.0
+    if 0 < k < len(part) - 1:
+        y0, y1, y2 = part[k - 1], part[k], part[k + 1]
+        den = y0 - 2 * y1 + y2
+        if den < 0:
+            shift = 0.5 * (y0 - y2) / den
+    return k + shift
+
+
 def timing(recording, fs: int = FS) -> Timing | None:
     """**The right's arrival against the left's** from a recording of
     `timing_signal` (ADR-0185 C1). The answer is deconvolved with the one

@@ -138,18 +138,23 @@ class Audio:
     async def play(self, signal, channel, tail_s=1.1):
         """`channel`: a speaker, a tuple of them (a sweep through both), or
         None (the level step's noise, which the left speaker stands for).
-        `signal` as (samples, 2) frames plays each column to its speaker
-        (ADR-0185's timing), `channel` then unused."""
+        `signal` as (samples, 2) frames plays each column to its speaker:
+        with `channel` None, the timing step's (ADR-0185); with a `channel`,
+        a measuring sweep after its timing mark (ADR-0187 C4), counted as
+        that speaker's sweep."""
         signal = np.asarray(signal, dtype=float)
         frames = signal.ndim == 2
-        self.plays.append(("frames" if frames else channel, self.position))
+        sweep = channel is not None
+        self.plays.append(("frames" if frames and not sweep else channel, self.position))
         self.calls += 1
         # The sweeps counted and their peaks kept: the timing's are not
-        # (ADR-0185), so `bursts` names a sweep as before.
-        if channel is not None and not frames:
+        # (ADR-0185), so `bursts` names a sweep as before; a marked sweep's
+        # peak is its sweep's, and its thump comes as far into it.
+        gap = int(rd.MARK_GAP_S * rd.FS) if frames and sweep else 0
+        if sweep:
             self.sweeps += 1
-            self.peaks.append(float(np.max(np.abs(signal))))
-        burst = (0.5, -20) if (channel is not None and not frames and self.sweeps in self.bursts) else None
+            self.peaks.append(float(np.max(np.abs(signal[gap:]))))
+        burst = (0.5 + gap / rd.FS, -20) if (sweep and self.sweeps in self.bursts) else None
         if frames:
             parts = [(c, signal[:, c]) for c in (0, 1) if np.any(signal[:, c])]
         else:
@@ -166,7 +171,7 @@ class Audio:
                           tail_s=tail_s, gain=self.gain * self.polarity[heard], broad=self.broad,
                           delay_s=self.delays[self.position][heard], lead_s=lead, length=length,
                           noise_seed=self.calls + 5000)
-            if self.stage is not None and channel is not None and not frames:
+            if self.stage is not None and sweep:
                 # The stage's filters, as CamillaDSP would play them.
                 cuts = [rd.Cut(f, g, q) for f, g, q in tuple(self.stage.cuts[c]) + tuple(self.stage.above[c])]
                 n = 1 << int(math.ceil(math.log2(len(part))))

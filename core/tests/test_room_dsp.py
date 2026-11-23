@@ -501,3 +501,57 @@ def test_a_peak_between_grid_points_is_placed_by_the_grids_own_step():
     got, _, _ = rd._peak(residual, g, inside)
     assert abs(math.log2(got / f0)) < 1 / 400
 
+
+
+def test_the_pair_added_by_its_marks_matches_the_pair_played_together():
+    """ADR-0187 C4/D4: each playback starting apart (as `aplay` and
+    `arecord` do), every sweep placed by its mark, the left's and the
+    right's responses added as waves give the two played together; added
+    by their own starts instead, they do not."""
+    import asyncio
+    audio = sim.Audio(jitter_s=0.05)
+    audio.delays[1] = (0.0080, 0.0086)        # the right 20 cm further
+    sweep = rd.log_sweep(seconds=1.0) * 0.3
+    fs = rd.FS
+
+    def placed(recording, played, by_mark=True):
+        ir = rd.deconvolve(recording, rd.mark_reference(played))
+        n = len(ir)
+        at = rd.mark_at(recording) if by_mark else 0.3 * fs
+        assert at is not None
+        f = np.fft.rfftfreq(n, 1 / fs)
+        moved = np.fft.irfft(np.fft.rfft(ir) * np.exp(2j * np.pi * f * (at - 0.01 * fs) / fs), n)
+        return rd._window(moved, 0)
+
+    async def go():
+        got = {}
+        for name, columns, scale in (("L", (0,), 1.0), ("R", (1,), 1.0), ("both", (0, 1), 0.5)):
+            rec = await audio.play(rd.marked(sweep * scale, columns, 0.3), columns if len(columns) > 1 else columns[0])
+            got[name] = (rec, sweep * scale)
+        return got
+    got = asyncio.run(go())
+    band = (rd.GRID >= 20) & (rd.GRID <= 1000)
+    played = rd.response_db(placed(*got["both"]))
+    added = rd.response_db(placed(*got["L"]) + placed(*got["R"]))
+    assert np.max(np.abs(added - played)[band]) < 0.5
+    unmarked = rd.response_db(placed(*got["L"], by_mark=False) + placed(*got["R"], by_mark=False))
+    assert np.max(np.abs(unmarked - played)[band]) > 3, "the starts alone do not line them up"
+
+
+def test_the_mark_leaves_the_measured_curve_as_it_was():
+    """C4: the mark's trace lands far from the window kept, so the room's
+    curve is the one measured without it."""
+    import asyncio
+    audio = sim.Audio()
+    sweep = rd.log_sweep(seconds=1.0) * 0.3
+
+    async def go():
+        plain = await audio.play(sweep, 0)
+        marked = await audio.play(rd.marked(sweep, (0,), 0.3), 0)
+        return plain, marked
+    plain, marked = asyncio.run(go())
+    a = rd.response_db(rd.transfer(plain, sweep))
+    b = rd.response_db(rd.transfer(marked, rd.mark_reference(sweep)))
+    inside = (rd.GRID >= 20) & (rd.GRID <= 16000)
+    assert np.max(np.abs(a - b)[inside]) < 0.2
+    assert rd.mark_at(marked) == pytest.approx(0.3 * rd.FS + 0.003 * rd.FS, abs=3)
