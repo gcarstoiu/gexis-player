@@ -17,7 +17,10 @@ question. *Phase 34 closed 2026-11-21 without being built (George, on
 [Finding 155](../findings/155-room-correction-in-time-what-research-shows.md)).*
 **Measured:** [Finding 158](../findings/158-room-measurement-five-positions-on-sofapi.md)
 (2026-11-23, George's run on the research build): D5 kept at half, C5 kept
-with it; see *Measured* below.
+with it; [Finding 159](../findings/159-room-measurement-timing-marks-on-sofapi.md)
+(the same day, research build 2): D4 proven in the bass, the together
+sweeps dropped (George); D5 and C5 confirmed at D3's heights. See
+*Measured* below.
 
 ## Context
 
@@ -216,3 +219,38 @@ room). The together sweeps stay until D4 is proven on sofapi, on a second
 research build that keeps each sweep's mark. And **C2's lead**: the
 distance step's three short sweeps after 0.25 s of silence.
 
+## Measured again (2026-11-23, Finding 159): D4 decided
+
+George's second run, on research build 2, at D3's heights, 52 dB at the
+seat; the check played the kept design (D5 with C5).
+- **D4 in the bass:** each speaker's sweeps placed by their marks and added
+  as waves match the pair played together from 30 Hz to 1.6 kHz as closely
+  as its own repeats agree. The bass's cuts designed from the added pair
+  are the played pair's within 0.2 dB. Below 30 Hz the noise decides.
+- **Above 2 kHz they do not:** at every position the pair played together
+  reads 1-3 dB under the two added (2-5 kHz). Not a timing error, and not
+  explained; nothing uses the pair above the bass.
+- **D4 decided (George, 2026-11-23): the test counts where the pair is used,
+  the bass; the together sweeps go.** The run sweeps each speaker alone;
+  the check plays the pair at the head only, and logs how far the added
+  pair is from it, which keeps watching the gap above 2 kHz. That removes
+  26 of the run's 91 sweeps (each 12.5 s on sofapi).
+- **D5 and C5 confirmed** in the bass at the check's places: the head 0.62 →
+  0.34 dB rms over the target (today's design → the kept one), no place
+  further away beyond the guard; the 50 Hz ringing under Fazenda's
+  threshold at all five.
+- **Above the bass,** places 15-30 cm off the head go up to 2.3 dB further
+  at one correction or another, the head's weight or not; acceptance 2 is
+  met on average, as before.
+- **C2:** the head placed again moved the 6 ms reading by 0.9 dB, while two
+  readings at one placing agree within 0.15 dB - for the setup check.
+
+**As built (2026-11-23, `ph-room-measurement`):** each speaker's set as
+before; both are then added from the kept sweeps, placed by their marks
+(`room_dsp.placed`: a 1 s window from 10 ms before the mark's arrival,
+moved by its fraction of a sample), averaged as waves and summed, their
+noise both recordings' (`room_dsp.pair_noise`). The check's head plays the
+pair too and logs the gaps (`room_dsp.pair_gaps`: 30-250 Hz, 250 Hz-1.6 kHz
+and 2-5 kHz). Where a kept sweep found no mark, the pair is played at that
+position, as before D4. The run's state lists what each position sweeps
+(`sets`), and the phone's rows follow it.

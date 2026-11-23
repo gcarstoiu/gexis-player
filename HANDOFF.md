@@ -35,32 +35,32 @@ under) released 2026-11-21 as Latest. Plugin catalogue serial 9.
 `~/projects/gexis-player-room`;
 [ADR-0187](docs/decisions/0187-room-measurement-reworked-setup-check-five-positions-timing-mark.md)
 accepted 2026-11-20): a setup check, five positions around the head, a
-timing mark on every sweep. **George's five-position run on the research
-build, 2026-11-23** ([Finding 158](docs/findings/158-room-measurement-five-positions-on-sofapi.md);
-48 dB at the seat, the amplifier lower than the run a minute before;
-positions 2 and 3 at ear height, not 15 cm up and down): the
-head at half the weight and the finer bass detail kept, built; the ringing
-read as the level at fixed times; the level window 6 ms; ADR-0185's limits
-kept, C8 not needed; Phase 30's acceptance 2 met on average, not point by
-point at 7.8-7.9 kHz. The run's responses deleted here and on sofapi
-(2026-11-23); the text results stay in `~/projects/scratch/ph37/run/`.
-**The branch** = `next` + `room-checks` + `room-chart` + five positions
-(without the research keeper) + the new design + George's three screen
-notes (the distance step lit, the check's *of 4*, the chart's *Each
-position* switch, off by default); the manual, technical guide and API
-updated; the manual's room picture still to be retaken. Also built: the
-timing mark before every sweep (C4) and the distance step's lead of silence.
-**`ph37-research-2`** = the branch + the keeper with each sweep's mark, for
-D4's proof (`~/projects/scratch/ph37/d4/d4.py <run>.json`; checked on a
-made-up run). George chose drawing C
-(2026-11-23), built; ADR-0022's [H] entries confirmed and appended. **Research
-build 2** (preview run 45171855527) **installed on sofapi 2026-11-23 13:19**
-at George's word (core 1.18.2+git25.520b018, player +git27.ddd5b44, UI
-+git25.9dc753b, Squeezelite -4); waiting for his run at 60 dB with D3's
-heights. Then `d4.py` and `analyse*.py` on the copied run, a finding, both
-copies deleted. Then the setup
-check, its screens designed first. **Do not update sofapi** before that
-run unless George says so: it runs research build 2.
+timing mark on every sweep. **George's two runs of 2026-11-23** on the
+research builds: [Finding 158](docs/findings/158-room-measurement-five-positions-on-sofapi.md)
+(the head at half the weight and the finer bass detail kept) and
+[Finding 159](docs/findings/159-room-measurement-timing-marks-on-sofapi.md)
+(D3's heights, 52 dB: D4 proven in the bass, both confirmed; from 2 kHz the
+pair played reads 1-3 dB under the added, unexplained; above the bass the
+check names places 3-5 worse, corrections following the microphone's
+place; the level reading moved 0.9 dB with the head placed again). **George
+decided the together sweeps go** (2026-11-23), built: both added from each
+speaker's sweeps by their marks, the check's head playing a pair and
+logging the gap (`sets` in the run's state, the phone's rows following).
+Both runs' responses deleted here and on sofapi; the text results stay in
+`~/projects/scratch/ph37/run/` (scripts in `check/`, `d4/`).
+**The branch** = `next` + `room-checks` + `room-chart` + five positions +
+the new design + George's notes (the distance step lit, the check's *of
+4*, the chart's *Each position* switch, drawing C) + the timing mark and
+the distance step's lead + the together sweeps gone; the manual, technical
+guide and API updated; the manual's room picture still to be retaken.
+**The chart shows *Both* in full** on the branch: `room-chart`'s committed
+tip is D3, merged 2026-11-23; ADR-0186 D4 (no *Both* tab) is uncommitted in
+its worktree, waiting on the owed decision of how each speaker's tab shows
+the bass (ADR-0187, *Owed later*). Research build 1 had D1. **sofapi** runs
+research build 2 (installed 13:19, Phase 37 before the together sweeps went,
+with the keeper - it keeps each run's responses in
+`/var/lib/gexis/room-research`, empty now). **Next:** the setup check, its
+screens designed first; the bass on each speaker's tab, for ADR-0186 D4.
 **Before Phase 37 closes** (George, 2026-11-21; acceptance 5): the level at
 the seat against a meter, and the equaliser's and multiroom's measurements
 through the amplifiers - George present for each.

@@ -4472,6 +4472,19 @@ the keeper, each sweep's mark kept); in the made-up room the pair added by
 its marks matches the pair played to 0.00 dB, and by the playbacks' own
 starts misses by up to 18 dB.
 
+**Measured again 2026-11-23** ([Finding 159](findings/159-room-measurement-timing-marks-on-sofapi.md),
+George's run on research build 2, D3's heights, 52 dB at the seat): the
+pair added by its marks matches the pair played from 30 Hz to 1.6 kHz as
+closely as its repeats, and cuts the bass the same within 0.2 dB; from
+2 kHz the pair played reads 1-3 dB under the added at every position, not
+explained. **George decided** (2026-11-23) that D4's test counts in the
+bass, where the pair is used: **the together sweeps go**, the check's head
+keeping a played pair that logs the gap. Built on `ph-room-measurement`
+the same day. The head's weight and the finer detail confirmed in the bass.
+Above the bass, the check named places 3-5 worse: corrections at
+0.7-1.9 kHz that follow the microphone's place, with or without the head's
+weight. The level reading moved 0.9 dB with the head placed again.
+
 **Acceptance (draft):**
 
 1. The setup check finds a swapped pair, a reversed speaker, the distance's
@@ -4479,7 +4492,8 @@ starts misses by up to 18 dB.
    and the level set.
 2. Five positions take about as long to sweep as three do today.
 3. The pair added up by the player matches the pair played together at
-   every position on sofapi, as closely as two repeated sweeps agree.
+   every position on sofapi, as closely as two repeated sweeps agree - in
+   the bass, where it is used (George, 2026-11-23). *Met, Finding 159.*
 4. Every change to the design is kept only where sofapi's check - its
    positions placed again by eye, as a user would - shows them closer to
    the target and none worse; recorded as a finding.
