@@ -54,11 +54,13 @@ timing mark before every sweep (C4) and the distance step's lead of silence.
 D4's proof (`~/projects/scratch/ph37/d4/d4.py <run>.json`; checked on a
 made-up run). George chose drawing C
 (2026-11-23), built; ADR-0022's [H] entries confirmed and appended. **Research
-build 2** (preview run 45171855527): George's go given 2026-11-23 to
-install it on sofapi once built and idle; then his run at 60 dB with D3's
-heights. Then the setup
-check, its screens designed first. **Do not update sofapi** otherwise: it
-still runs the first research build.
+build 2** (preview run 45171855527) **installed on sofapi 2026-11-23 13:19**
+at George's word (core 1.18.2+git25.520b018, player +git27.ddd5b44, UI
++git25.9dc753b, Squeezelite -4); waiting for his run at 60 dB with D3's
+heights. Then `d4.py` and `analyse*.py` on the copied run, a finding, both
+copies deleted. Then the setup
+check, its screens designed first. **Do not update sofapi** before that
+run unless George says so: it runs research build 2.
 **Before Phase 37 closes** (George, 2026-11-21; acceptance 5): the level at
 the seat against a meter, and the equaliser's and multiroom's measurements
 through the amplifiers - George present for each.
@@ -96,8 +98,8 @@ a group, the plugin off and on, Roon Bridge's own update.
 
 **sofapi runs hot** (2026-11-21): 78 °C with no page; a Home Assistant page with one camera was closed for the heat twice (Finding 157). ADR-0176 P8 kept as it is; George is bringing the temperature down.
 
-**The players** (2026-11-23): **sofapi** on Phase 37's research build (core,
-player and UI 1.18.0+git22.af7d113, which carries all of the 1.18.1 preview;
+**The players** (2026-11-23): **sofapi** on Phase 37's research build 2
+(core 1.18.2+git25.520b018, 1.18.2 with Phase 37's branch;
 go-librespot 0.10.7-4, Shairport Sync 5.6.3-1), room correction on, a USB
 isolator on its DAC's cable, in no group since the group test of 21 Nov. **shelvespi** on
 1.18.0. **guestpi** and **bedroompi** not read since 18 Nov. All on Testing,
