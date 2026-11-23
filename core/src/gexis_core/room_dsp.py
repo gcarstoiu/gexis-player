@@ -34,6 +34,13 @@ LIMIT = 250.0
 FIT_LO = 20.0
 #: What the chart shows (the design: 15-300 Hz).
 CHART_HI = 300.0
+#: **The bass's cuts fitted on finer detail** (ADR-0187 C5, kept with D5 on
+#: Finding 158): a grid of 1/96 octave to twice the limit, the curves on it
+#: smoothed to 1/48 octave below 100 Hz, widening to 1/24 at the limit
+#: (REW's variable smoothing), 1/6 above it as everywhere else. Only the
+#: cuts are fitted on it; every curve kept and drawn stays on `GRID`.
+FINE_STEPS = 96
+FINE_GRID = F_LO * 2 ** (np.arange(int(FINE_STEPS * math.log2(2 * LIMIT / F_LO)) + 1) / FINE_STEPS)
 
 #: The sweep (item 4): logarithmic, 10 Hz to 20 kHz (Phase 30). 8 s keeps
 #: the bass's time in each octave, so its signal over the room's noise, as
@@ -161,14 +168,15 @@ def transfer(recording, played, fs: int = FS, band=(SWEEP_LO, SWEEP_HI)) -> np.n
     return _window(ir, max(0, peak - int(PRE_S * fs)), fs)
 
 
-def response_db(ir, fs: int = FS, grid=GRID, fraction: int = 6) -> np.ndarray:
+def response_db(ir, fs: int = FS, grid=GRID, fraction=6) -> np.ndarray:
     """**The level at each grid point**, smoothed to 1/`fraction` octave: the
-    power within ±1/(2·fraction) octave around it, averaged (item 5)."""
+    power within ±1/(2·fraction) octave around it, averaged (item 5).
+    `fraction` may be one per point (`fine_fractions`)."""
     ir = np.asarray(ir, dtype=float)
     n = max(1 << 18, 1 << int(math.ceil(math.log2(len(ir)))))
     spectrum = np.abs(np.fft.rfft(ir, n)) ** 2
     f = np.fft.rfftfreq(n, 1 / fs)
-    half = 2 ** (1 / (2 * fraction))
+    half = 2 ** (1 / (2 * np.asarray(fraction, dtype=float)))
     # Cumulative power, so each band is a difference of two lookups.
     cum = np.concatenate(([0.0], np.cumsum(spectrum)))
     lo = np.searchsorted(f, np.asarray(grid) / half)
@@ -176,6 +184,30 @@ def response_db(ir, fs: int = FS, grid=GRID, fraction: int = 6) -> np.ndarray:
     hi = np.maximum(hi, lo + 1)
     mean = (cum[hi] - cum[lo]) / (hi - lo)
     return 10 * np.log10(np.maximum(mean, 1e-30))
+
+
+def fine_fractions(grid=FINE_GRID) -> np.ndarray:
+    """C5's smoothing per point: 1/48 octave to 100 Hz, from there to 1/24
+    at the limit, 1/6 above it."""
+    f = np.asarray(grid, dtype=float)
+    frac = np.full(f.shape, 6.0)
+    frac[f <= 100] = 48.0
+    mid = (f > 100) & (f <= LIMIT)
+    frac[mid] = 48.0 * 2 ** (-np.log2(f[mid] / 100) / np.log2(LIMIT / 100))
+    return frac
+
+
+def response_fine(ir, fs: int = FS) -> np.ndarray:
+    """A windowed response on `FINE_GRID` at C5's smoothing."""
+    return response_db(ir, fs, FINE_GRID, fine_fractions())
+
+
+def head_counts_more(positions) -> np.ndarray:
+    """**The head counts as much as the other positions together** (ADR-0187
+    D5, kept on Finding 158): the first, the head, repeated so it is half
+    the set - in the power average and in every vote of the positions."""
+    p = np.asarray(positions, dtype=float)
+    return p if len(p) < 3 else np.concatenate([p[:1]] * (len(p) - 2) + [p])
 
 
 def power_average(curves) -> np.ndarray:
@@ -401,7 +433,8 @@ def _peak(residual, grid, inside) -> tuple[float, float, float] | None:
         den = y0 - 2 * y1 + y2
         if den < 0:
             shift = 0.5 * (y0 - y2) / den
-            f0 = float(math.exp(math.log(grid[i]) + shift * math.log(2) / STEPS_PER_OCTAVE))
+            # The grid's own step, so a finer grid (C5) places it as finely.
+            f0 = float(math.exp(math.log(grid[i]) + shift * math.log(grid[i + 1] / grid[i])))
     q = f0 / max(f_hi - f_lo, 1e-6)
     return f0, min(height, MAX_CUT_DB), min(max(q, Q_MIN), Q_MAX)
 
@@ -694,7 +727,7 @@ def _bass_cuts(positions, before, target, grid, trust=None) -> list[Cut]:
     return cuts
 
 
-def design(positions, grid=GRID, cuts=None, target=None, trust=None) -> Design:
+def design(positions, grid=GRID, cuts=None, target=None, trust=None, head: bool = False) -> Design:
     """**The correction for one speaker** from its positions' curves:
 
     - the target: the speaker's own slope above the limit, the bass's rise
@@ -706,9 +739,12 @@ def design(positions, grid=GRID, cuts=None, target=None, trust=None) -> Design:
       cuts in place.
 
     `trust`: where the curves are far enough over their noise to correct
-    (ADR-0185 C3); nothing is fitted elsewhere."""
+    (ADR-0185 C3); nothing is fitted elsewhere. `head`: the first position
+    counts as much as the others together (`head_counts_more`); the curves
+    kept are the positions as measured."""
     grid = np.asarray(grid, dtype=float)
-    positions = np.asarray(positions, dtype=float)
+    measured = np.asarray(positions, dtype=float)
+    positions = head_counts_more(measured) if head else measured
     before = power_average(positions)
     target, offset = _target(before, grid, target)
     cuts = _bass_cuts(positions, before, target, grid, trust) if cuts is None else list(cuts)
@@ -716,24 +752,37 @@ def design(positions, grid=GRID, cuts=None, target=None, trust=None) -> Design:
     broad, room_within = _broad(positions, bass, target, grid, trust)
     after = power_average(positions + bass + cuts_db(broad, grid))
     after_bass = power_average(positions + bass)
-    return Design(tuple(cuts), offset, before - offset, target - offset, after - offset, positions - offset,
+    return Design(tuple(cuts), offset, before - offset, target - offset, after - offset, measured - offset,
                   tuple(broad), after_bass - offset, room_within, within_db(after, target, grid))
 
 
-def together(positions, grid=GRID, target=None, trust=None) -> Design:
+def together(positions, grid=GRID, target=None, trust=None, head: bool = False, fine=None) -> Design:
     """**Both speakers together**, as the positions heard them, and the
     bass's cuts designed from them (ADR-0175's amendment, 2026-11-17: the
     bass is mostly the same in both channels, and each speaker cut alone
     left the two together under the target - Finding 151). The same cuts
     go on both speakers, so the after here is exact; nothing above the bass,
-    which stays each speaker's."""
+    which stays each speaker's.
+
+    `head` as for `design`; `fine`: the same positions on `FINE_GRID`
+    (`response_fine`), the cuts then fitted on them against the target
+    carried over (ADR-0187 C5)."""
     grid = np.asarray(grid, dtype=float)
-    positions = np.asarray(positions, dtype=float)
+    measured = np.asarray(positions, dtype=float)
+    positions = head_counts_more(measured) if head else measured
     before = power_average(positions)
     target, offset = _target(before, grid, target)
-    cuts = _bass_cuts(positions, before, target, grid, trust)
+    if fine is None:
+        cuts = _bass_cuts(positions, before, target, grid, trust)
+    else:
+        fine = np.asarray(fine, dtype=float)
+        fine = head_counts_more(fine) if head else fine
+        x = np.log(FINE_GRID)
+        fine_target = np.interp(x, np.log(grid), target)
+        fine_trust = None if trust is None else np.interp(x, np.log(grid), np.asarray(trust, dtype=float)) >= 0.5
+        cuts = _bass_cuts(fine, power_average(fine), fine_target, FINE_GRID, fine_trust)
     after = power_average(positions + cuts_db(cuts, grid))
-    return Design(tuple(cuts), offset, before - offset, target - offset, after - offset, positions - offset,
+    return Design(tuple(cuts), offset, before - offset, target - offset, after - offset, measured - offset,
                   (), after - offset)
 
 

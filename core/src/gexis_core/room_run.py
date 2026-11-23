@@ -119,6 +119,7 @@ class RunState:
     position: int = 1               # 1 to rc.POSITIONS
     speaker: str | None = None      # "L" / "R" / "both" while one plays
     sweep: int = 0                  # 1-2 while one plays
+    sweeps: int = 0                 # how many the set takes: 2, the check more (ADR-0185 C3)
     noise: bool = False             # the last sweep was spoiled and is repeated
     level_db: float | None = None   # at the seat, in the level step and after
     aim_db: float | None = None     # the level aimed for
@@ -135,6 +136,7 @@ class RunState:
 
     def as_dict(self) -> dict:
         return {"step": self.step, "position": self.position, "speaker": self.speaker, "sweep": self.sweep,
+                "sweeps": self.sweeps,
                 "noise": self.noise, "level_db": None if self.level_db is None else round(self.level_db),
                 "aim_db": None if self.aim_db is None else round(self.aim_db),
                 "count": self.count, "checking": self.checking, "progress": round(self.progress, 3),
@@ -221,6 +223,8 @@ class Run:
         self._aim: float | None = None
         self._positions: dict[str, list] = {c: [] for c in rc.SWEPT}
         self._checked: dict[str, list] = {c: [] for c in rc.SWEPT}
+        #: Both speakers' positions on the bass's finer grid (ADR-0187 C5).
+        self._fine: list = []
         self._designs: dict = {}
         #: How much lower the check's sweeps play: the broad corrections'
         #: highest point (ADR-0177 item 7) - the stage takes no headroom for
@@ -494,7 +498,12 @@ class Run:
         found = []
         pair = None
         for _ in range(MAX_SWEEPS):
-            recording = await self._audio.play(signal, channel=None, tail_s=TIMING_TAIL_S)
+            lit = asyncio.ensure_future(self._light_timing())
+            try:
+                recording = await self._audio.play(signal, channel=None, tail_s=TIMING_TAIL_S)
+            finally:
+                lit.cancel()
+                self._set(replace(self.state, speaker=None))
             got = dsp.timing(recording)
             if got is None:
                 continue
@@ -517,6 +526,15 @@ class Run:
                     "%d readings), %s polarity, %.2f alike", n, timing.cm, abs(pair[0].cm - pair[1].cm),
                     len(found), "the same" if timing.same_polarity else "opposite", timing.alike)
         return timing
+
+    async def _light_timing(self) -> None:
+        """**The short sweeps light the speaker they come from** (George,
+        2026-11-23, as the measuring sweeps do): the left, the right, the
+        left again, a slot each, from when the signal starts."""
+        await self._sleep(getattr(self._audio, "lead_s", 0.0))
+        for channel in ("L", "R", "L"):
+            self._set(replace(self.state, speaker=channel))
+            await self._sleep(self._dsp.TIMING_SLOT_S)
 
     async def _align(self) -> None:
         """**Position 1, before the sweeps** (D2): the speakers timed; one
@@ -571,8 +589,10 @@ class Run:
         return 10 ** (self._level_dbfs / 20) / 10 ** (dsp.band_level_db(sweep) / 20)
 
     async def _curve(self, channel: str) -> tuple:
-        """One sweep: its curve, and how far it stood over the room's noise
-        at each point (ADR-0185 C3; None before the level step heard it)."""
+        """One sweep: its curve, how far it stood over the room's noise at
+        each point (ADR-0185 C3; None before the level step heard it), and
+        for both speakers in the run its curve on the bass's finer grid
+        (ADR-0187 C5; else None)."""
         import numpy as np
         dsp = self._dsp
         sweep = dsp.log_sweep(seconds=self._sweep_s)
@@ -585,14 +605,22 @@ class Run:
         both = channel == rc.BOTH
         played = sweep * scale * (0.5 if both else 1.0)
         recording = await self._audio.play(played, channel=(0, 1) if both else rc.CHANNELS.index(channel))
-        curve = dsp.response_db(dsp.transfer(recording, played))
+        ir = dsp.transfer(recording, played)
+        curve = dsp.response_db(ir)
+        fine = dsp.response_fine(ir) - self._calibration_fine() if both and not self.state.checking else None
         snr = None
         if self._noise is not None:
             key = (len(recording), round(float(np.max(np.abs(played))), 9))
             if key not in self._noise_curves:
                 self._noise_curves[key] = dsp.noise_curve(self._noise, played, len(recording))
             snr = dsp.snr_db(curve, self._noise_curves[key])
-        return curve - self._calibration_curve(), snr
+        return curve - self._calibration_curve(), snr, fine
+
+    def _calibration_fine(self):
+        if not hasattr(self, "_cal_fine"):
+            import numpy as np
+            self._cal_fine = np.array([self._cal.db_at(float(f)) for f in self._dsp.FINE_GRID])
+        return self._cal_fine
 
     def _calibration_curve(self):
         if not hasattr(self, "_cal_curve"):
@@ -650,16 +678,17 @@ class Run:
         done = tuple(range(1, n))
         wanted = self._sweeps_wanted(checking)
         for channel in rc.SWEPT:
-            curves, snrs = [], []
+            curves, snrs, fines = [], [], []
             noise = False
             while True:
                 k = len(curves) + 1
-                self._set(RunState(step, position=n, speaker=channel, sweep=min(k, wanted), noise=noise,
-                                   checking=checking, done=done, level_db=self.state.level_db,
+                self._set(RunState(step, position=n, speaker=channel, sweep=min(k, wanted), sweeps=wanted,
+                                   noise=noise, checking=checking, done=done, level_db=self.state.level_db,
                                    progress=_progress(step, n, channel, min(k, SWEEPS), checking)))
-                curve, snr = await self._curve(channel)
+                curve, snr, fine = await self._curve(channel)
                 curves.append(curve)
                 snrs.append(snr)
+                fines.append(fine)
                 if checking and self._skip_sent():
                     raise _Skipped()
                 if len(curves) < wanted:
@@ -674,6 +703,8 @@ class Run:
                 noise = True
             chosen = [curves[k] for k in kept]
             (self._checked if checking else self._positions)[channel].append(dsp.power_average(chosen))
+            if fines[0] is not None:
+                self._fine.append(dsp.power_average([fines[k] for k in kept]))
             if not checking:
                 got = [snrs[k] for k in kept if snrs[k] is not None]
                 self._snrs[channel].append(dsp.averaged_snr(got) if got else None)
@@ -720,12 +751,15 @@ class Run:
 
     def _design(self) -> None:
         """The bass's cuts from both speakers together, the same on both
-        (ADR-0175's amendment); above the bass each speaker's own."""
-        both = self._dsp.together(self._positions[rc.BOTH], trust=self._trust(rc.BOTH))
+        (ADR-0175's amendment), fitted on the finer grid (ADR-0187 C5);
+        above the bass each speaker's own. The head counts as much as the
+        other positions together throughout (D5; both kept on Finding 158)."""
+        fine = self._fine if len(self._fine) == len(self._positions[rc.BOTH]) else None
+        both = self._dsp.together(self._positions[rc.BOTH], trust=self._trust(rc.BOTH), head=True, fine=fine)
         self._designs[rc.BOTH] = both
         speakers = {rc.BOTH: _speaker(both)}
         for channel in rc.CHANNELS:
-            d = self._dsp.design(self._positions[channel], cuts=both.cuts, trust=self._trust(channel))
+            d = self._dsp.design(self._positions[channel], cuts=both.cuts, trust=self._trust(channel), head=True)
             self._designs[channel] = d
             speakers[channel] = _speaker(d)
         self.pending = rc.Measurement(self._today(), False, speakers, range=rc.FULL, delay=self._delay,

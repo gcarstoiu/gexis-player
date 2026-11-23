@@ -681,5 +681,32 @@ async def test_the_check_takes_more_sweeps_for_playing_lower():
     assert wanted > room_run.SWEEPS
     at_1 = [c for c, n in rig.audio.plays[-3 * wanted:] if n == 1]
     assert [at_1.count(c) for c in (0, 1, (0, 1))] == [wanted] * 3
+    # George, 2026-11-23: it said *sweep 3 of 2*; the count is the check's.
+    shown = [(s.sweep, s.sweeps) for s in rig.states if s.step == "checking" and s.position == 1]
+    assert {n for _, n in shown} == {wanted} and max(k for k, _ in shown) == wanted
+    rig.run.cancel()
+    await rig.run.wait()
+
+
+async def test_the_distance_steps_short_sweeps_light_the_speaker_they_come_from():
+    """George, 2026-11-23: as the measuring sweeps do - the left, the
+    right, the left again, then none."""
+    rig = Rig()
+    play = rig.audio.play
+
+    async def slow(signal, channel, tail_s=1.1):
+        if np.ndim(signal) == 2:            # the timing's frames: let time pass
+            for _ in range(20):
+                await asyncio.sleep(0)
+        return await play(signal, channel, tail_s)
+    rig.audio.play = slow
+    await rig.run.start()
+    await rig.until("place")
+    rig.run.tap("start")
+    await rig.until("measure", 1)
+    lit = [s.speaker for s in rig.states if s.step == "timing"]
+    changes = [k for i, k in enumerate(lit) if i == 0 or k != lit[i - 1]]
+    assert changes[:5] == [None, "L", "R", "L", None], changes
+    assert rig.run.state.as_dict()["sweeps"] == room_run.SWEEPS
     rig.run.cancel()
     await rig.run.wait()

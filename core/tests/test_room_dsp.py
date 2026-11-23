@@ -448,3 +448,56 @@ def test_no_peak_is_cut_where_the_curves_are_not_trusted():
     trust = ~((rd.GRID > 70) & (rd.GRID < 110))
     kept = rd.design(positions, trust=trust).cuts
     assert not any(70 < c.freq < 110 for c in kept)
+
+
+def test_the_head_counts_as_much_as_the_other_positions_together():
+    """ADR-0187 D5 (Finding 158): in the average and the votes; the curves
+    kept are the five as measured."""
+    p = np.array([[0.0], [1.0], [2.0], [3.0], [4.0]])
+    w = rd.head_counts_more(p)
+    assert len(w) == 8 and int(np.sum(w[:, 0] == 0.0)) == 4
+    assert len(rd.head_counts_more(p[:2])) == 2, "nothing to weigh against"
+    positions = np.array([sim.curve(seed) for seed in range(5)])
+    d = rd.design(positions, cuts=(), head=True)
+    assert np.allclose(d.positions + d.offset, positions)
+    assert np.allclose(d.before + d.offset, rd.power_average(rd.head_counts_more(positions)))
+
+
+def test_the_finer_grid_smooths_less_in_the_bass():
+    """ADR-0187 C5: 1/48 octave to 100 Hz, 1/24 at the limit, 1/6 above."""
+    frac = rd.fine_fractions(np.array([50.0, 100.0, 250.0, 400.0]))
+    assert list(np.round(frac, 3)) == [48.0, 48.0, 24.0, 6.0]
+    assert rd.FINE_GRID[0] == rd.F_LO and rd.FINE_GRID[-1] <= 2 * rd.LIMIT
+
+
+def test_a_narrow_peak_is_cut_closer_on_the_finer_grid():
+    """C5: a +12 dB Q 15 peak at 50 Hz reads lower and wider at 1/6 octave;
+    fitted on the finer grid the cut takes it nearer the target."""
+    def ir_of(f0, gain, q):
+        n = 1 << 16
+        f = np.fft.rfftfreq(n, 1 / rd.FS)
+        h = 10 ** (rd.peaking_db(f0, gain, q, f) / 20)
+        return np.fft.irfft(h * np.exp(-2j * np.pi * f * 0.002), n)    # the curves read |H| only
+    ir = ir_of(50.0, 12.0, 15.0)
+    coarse = np.array([rd.response_db(ir)] * 3)
+    fine = np.array([rd.response_fine(ir)] * 3)
+    flat = rd.target_db(rd.GRID) + float(np.median(rd.response_db(ir)[(rd.GRID > 300) & (rd.GRID < 1000)]))
+    a = rd.together(coarse, target=flat)
+    b = rd.together(coarse, target=flat, fine=fine)
+    true = rd.peaking_db(50.0, 12.0, 15.0, rd.FINE_GRID)
+    aim = np.interp(np.log(rd.FINE_GRID), np.log(rd.GRID), flat - float(np.median(rd.response_db(ir)[
+        (rd.GRID > 300) & (rd.GRID < 1000)])))
+    over = lambda cuts: float(np.max(true + rd.cuts_db(cuts, rd.FINE_GRID) - aim))   # noqa: E731
+    assert over(b.cuts) < over(a.cuts) - 0.8, (over(a.cuts), over(b.cuts))
+
+
+def test_a_peak_between_grid_points_is_placed_by_the_grids_own_step():
+    """On the finer grid the top between points is placed at its own step,
+    not the 1/24 octave grid's."""
+    g = rd.FINE_GRID
+    f0 = 47.3
+    residual = 6.0 - 40 * np.log2(g / f0) ** 2
+    inside = (g >= 20) & (g <= 250)
+    got, _, _ = rd._peak(residual, g, inside)
+    assert abs(math.log2(got / f0)) < 1 / 400
+

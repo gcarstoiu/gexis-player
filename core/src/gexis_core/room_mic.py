@@ -102,6 +102,9 @@ async def _exec(*args: str, stdin=None, stdout=None):
 class Audio:
     """What a run plays and hears, on the player."""
 
+    #: How long after `play` is called the signal starts (`LEAD_S`).
+    lead_s = LEAD_S
+
     def __init__(self, mic: Microphone, cal, playback: str = PLAYBACK, exec_=_exec):
         self.mic = mic
         self._cal = cal
