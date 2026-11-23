@@ -101,7 +101,9 @@ a group, the plugin off and on, Roon Bridge's own update.
 **The players** (2026-11-23): **sofapi** on Phase 37's research build 2
 (core 1.18.2+git25.520b018, 1.18.2 with Phase 37's branch;
 go-librespot 0.10.7-4, Shairport Sync 5.6.3-1), room correction on, a USB
-isolator on its DAC's cable, in no group since the group test of 21 Nov. **shelvespi** on
+isolator on its DAC's cable, in no group since the group test of 21 Nov. On 23 Nov its DAC fell
+silent after the install while sofapi showed the stream running; a USB
+replug brought it back (Lesson 98, cause open). **shelvespi** on
 1.18.0. **guestpi** and **bedroompi** not read since 18 Nov. All on Testing,
 which offers 1.18.1. AirPlay on at guestpi only; sofapi's Plexamp library
 lent, its Beszel agent 0.21.2-1. Each has its own Lyrion server. Lyrion

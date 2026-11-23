@@ -1863,3 +1863,20 @@ stopped with `pause`, both cards read idle, and only then unmuted. **Rule:**
 a step that silences is read back from the device - no card running, the
 source stopped - before the step that makes sound possible again; never in
 the same command.
+
+**98. A DAC playing because its stream ran** (2026-11-23, Phase 37,
+sofapi). Nothing played between research build 2's install (13:19) and
+George's next try at 14:30, when he heard nothing. Read from sofapi, the
+whole path looked right: the renderer writing into the loopback, CamillaDSP
+running with its output peaking near -20 dBFS, the software volume at
+-1 dB, nothing muted, the SMSL's USB stream *Running* with its feedback rate
+moving (44105 Hz), and no error in the core's log. The DAC was still silent.
+Unplugging its USB cable and plugging it in again brought the sound back, and
+the core took the DAC up again by itself. During the tries, at 14:30:31 and
+14:38:08, the kernel logged `xhci_hcd: ERROR Transfer event for disabled
+endpoint`. sofapi has logged the same error on most days since 18 Nov,
+about 170 times, mostly during room measurements, with no silence reported,
+so it is a lead, not the cause. A USB isolator sits on that cable.
+**Rule:** the Pi's state proves what it sends, not what the DAC plays. Sound
+is confirmed by a listener or the microphone, and a check that reads only
+the Pi says *sent*.

@@ -507,6 +507,12 @@ step that silences is read back - the cards idle, the source stopped - before
 the step that makes sound possible again, never in the same command: a
 `stop` that answered 404 left a station playing aloud for 10-15 s.
 
+**98. A DAC playing because its stream ran** (2026-11-23, Phase 37). The
+SMSL's USB stream read *Running* on sofapi, its feedback rate moving and
+CamillaDSP's output near -20 dBFS, yet it played nothing until its cable was
+plugged in again. The Pi's state proves what was sent; sound is confirmed by
+a listener or the microphone.
+
 ## Common shape
 
 Every case had a *plausible* substitute for the real target, the check quietly
