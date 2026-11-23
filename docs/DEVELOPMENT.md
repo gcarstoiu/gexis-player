@@ -4485,11 +4485,28 @@ Above the bass, the check named places 3-5 worse: corrections at
 0.7-1.9 kHz that follow the microphone's place, with or without the head's
 weight. The level reading moved 0.9 dB with the head placed again.
 
+**The chart and the speaker check, decided from mock-ups and built**
+(2026-11-23, `ph-room-measurement`):
+- **The chart:** each speaker's tab shows that speaker alone, in the bass
+  too, with a line saying the bass is cut for both (ADR-0186 D5, George
+  chose A); the *Both* tab is gone (D4).
+- **The speaker check:** its own step, 3 of 5.
+  - At the head, one set of whistles reads the distance, the wiring and the
+    level.
+  - At position 2, left and right.
+  - *Your speakers are ready* lists what was found and set (George chose
+    A), with *Check again* or *Measure*.
+  - A swap or a crossed wire waits for *Check again*.
+- **The level match:** the louder speaker is turned down in full by a
+  CamillaDSP `Gain` beside the delay (ADR-0187 D2, C2). In the made-up room
+  only; not yet run on sofapi.
+
 **Acceptance (draft):**
 
 1. The setup check finds a swapped pair, a reversed speaker, the distance's
    and the level's difference, and the measurement starts with the delay
-   and the level set.
+   and the level set. *Built and tested in the made-up room; on sofapi
+   still to run.*
 2. Five positions take about as long to sweep as three do today.
 3. The pair added up by the player matches the pair played together at
    every position on sofapi, as closely as two repeated sweeps agree - in

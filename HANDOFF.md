@@ -55,14 +55,20 @@ the new design + George's notes (the distance step lit, the check's *of
 4*, the chart's *Each position* switch, drawing C) + the timing mark and
 the distance step's lead + the together sweeps gone; the manual, technical
 guide and API updated; the manual's room picture still to be retaken.
-**The chart shows *Both* in full** on the branch: `room-chart`'s committed
-tip is D3, merged 2026-11-23; ADR-0186 D4 (no *Both* tab) is uncommitted in
-its worktree, waiting on the owed decision of how each speaker's tab shows
-the bass (ADR-0187, *Owed later*). Research build 1 had D1. **sofapi** runs
-research build 2 (installed 13:19, Phase 37 before the together sweeps went,
-with the keeper - it keeps each run's responses in
-`/var/lib/gexis/room-research`, empty now). **Next:** the setup check, its
-screens designed first; the bass on each speaker's tab, for ADR-0186 D4.
+**Decided from mock-ups and built the same day** (George; mock-ups in
+`~/projects/scratch/ph37/variants/sheet/`): each speaker's tab the speaker
+alone in the bass too, with a line in the legend (ADR-0186 D4-D5; `room-chart`
+f4fcdd37 merged, 99652be9), and **the speaker check** as its own step 3 of 5
+- whistles at the head for distance, wiring and level, left and right at 2,
+a list with *Check again* / *Measure*, a swap or crossed wire waiting for
+*Check again*, the louder speaker turned down by a CamillaDSP `Gain`
+(ADR-0187 D1-D2, C1-C2, as built; ca235a95; ADR-0022 [H] for both, confirmed).
+Tested in the made-up room only.
+**sofapi** runs research build 2 (installed 13:19, Phase 37 before the
+together sweeps went, with the keeper - it keeps each run's responses in
+`/var/lib/gexis/room-research`, empty now). **Next:** a preview of the
+branch on sofapi for George to try the speaker check and a run (his
+go-ahead); the manual's room picture retaken; Phase 37's acceptance 5.
 **Before Phase 37 closes** (George, 2026-11-21; acceptance 5): the level at
 the seat against a meter, and the equaliser's and multiroom's measurements
 through the amplifiers - George present for each.

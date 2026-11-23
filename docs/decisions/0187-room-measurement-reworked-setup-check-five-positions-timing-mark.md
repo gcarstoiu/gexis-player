@@ -286,3 +286,27 @@ drawn.
     anyway**.
   - A level that cannot be read is an amber row in the list: nothing is
     matched.
+
+**As built (2026-11-23, `ph-room-measurement`):** the speaker check is the
+run's own loop before measuring (`Run._speakers`).
+- **At the head, one set of whistles:**
+  - read until two readings agree on the timing and, separately, two
+    agree on the level within 0.25 dB (`LEVEL_AGREE_DB`);
+  - the level is each arrival's power over 500 Hz-4 kHz in 6 ms
+    (`Timing.right_db`), the right's against the two lefts'.
+- **On the stage:** the nearer speaker delayed and the louder turned down
+  by the whole difference. The cut is a CamillaDSP `Gain` after each
+  speaker's `Delay` (`room_l_level`, `room_r_level`): in the pipeline
+  always at 0 dB, at most 12 dB, and checked with CamillaDSP 4.1.3's
+  `--check`. The measurement keeps it (`level`), and *Hear it without* takes
+  it out with the delay.
+- **The states:**
+  - each carries `setup`;
+  - *polarity* and *swapped* wait for *Check again*; *far* waits for
+    *Check again* or *Measure anyway*; *ready* for *Check again* or
+    *Measure*;
+  - *Check again* from position 2 first moves the microphone back to the
+    head.
+- **The screens** are as chosen; the panel's running screen says *Speaker
+  check*. The manual, FAQ, README, technical guide and API were updated
+  (ca235a95). ADR-0022's inventory: both [H], confirmed by George.

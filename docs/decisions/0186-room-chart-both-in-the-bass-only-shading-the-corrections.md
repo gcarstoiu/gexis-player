@@ -162,3 +162,6 @@ pair 1.1):
   bass is cut for both speakers together, so on its own a speaker can sit
   well off the target there. Over: B and C, which bring the pair back into
   the bass pane and partly reverse D4.
+
+**Built 2026-11-23:** D4 on `room-chart` (f4fcdd37), merged into
+`ph-room-measurement` with D5's line in the chart's legend (99652be9).

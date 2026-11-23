@@ -715,3 +715,12 @@ Confirmed by George, 2026-11-23, [ADR-0187](0187-room-measurement-reworked-setup
 | The head's weight | [H] | The head counts as much as the other four together, in the bass and above it |
 
 The chart's *Each position* switch is not kept (ADR-0186, amended 2026-11-23), so it is no setting.
+
+### Appended 2026-11-23 — the speaker check
+
+Confirmed by George, 2026-11-23, [ADR-0187](0187-room-measurement-reworked-setup-check-five-positions-timing-mark.md) D1-D2, C2:
+
+| Setting | Mark | Notes |
+|---|---|---|
+| Level match between the speakers | [H] | Always, in full: the louder turned down by the whole measured difference, no warning; nothing matched unless two readings agree within 0.25 dB; at most 12 dB |
+| The speaker check | [H] | Always before measuring, no skip: distance, wiring and level at the head, left and right at position 2 |
