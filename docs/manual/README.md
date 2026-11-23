@@ -1044,8 +1044,9 @@ nothing to press. On the player's screen, *Measure from your phone* (or
    Then move the microphone where the phone shows - five positions: your
    head; about 40 cm to its left and a little higher; 40 cm to its right
    and a little lower; 30 cm in front; 30 cm above - step back and tap
-   **Measure here**; three seconds later the sweeps play. The distances are
-   a guide: placed by eye is enough. It never moves on without
+   **Measure here**; three seconds later the sweeps play. The drawing marks
+   each position's height, beside a scale; the distances are a guide:
+   placed by eye is enough. It never moves on without
    the tap. At the second position, to the left of your head, the whistles
    play again: the left speaker must sound nearer there. If it sounds
    further, the speakers look swapped - left plays from the right speaker -
