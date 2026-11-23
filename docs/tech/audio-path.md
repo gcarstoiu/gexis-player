@@ -834,6 +834,9 @@ hw:Loopback,1,0 → CamillaDSP (headroom fader, ten bands, then on each speaker 
   the left, the left must be 10 cm nearer than at 1 - it moves by about
   2 × 40 cm × sin of half the speakers' angle, 21 cm at ±15° - or, 10 cm
   the other way, the run stops (`swapped`); in between, nothing is said.
+  While the three short sweeps play, the run's state names the speaker
+  each comes from (`speaker`), a slot apart from when the signal starts
+  (`room_mic.Audio.lead_s`).
 - **The sweeps**: a logarithmic sweep from 10 Hz to 20 kHz (Phase 30), 8 s
   so the bass keeps the time in each octave the 5 s to 1 kHz of Phase 29
   gave it, at the level found; the room's response is the recording's
@@ -852,22 +855,35 @@ hw:Loopback,1,0 → CamillaDSP (headroom fader, ten bands, then on each speaker 
   into the power average, and where every position's average still stands
   under 10 dB over the noise, nothing is fitted (`trust`). The check, its
   sweeps lower by what the corrections raise, takes that many more, up to
-  five. Every comparison is logged as numbers (C4). After each speaker
+  five; the run's state says how many a set takes (`sweeps`). Every
+  comparison is logged as numbers (C4); a run's logs settled the limits
+  (Finding 158). After each speaker
   alone, **both together** (George, 2026-11-05), 6 dB lower each so the two
   adding in the bass are no louder than one: before in the run and after
   in the check (`both` in the chart). **The bass is designed from them**
   (ADR-0175's amendment, George, 2026-11-17; Finding 151): the cuts go on
   both speakers alike; above the bass the corrections stay each speaker's.
+- **Five positions** (ADR-0187 D3): the head; 40 cm to its left and 15 cm
+  up; 40 cm to its right and 15 cm down; 30 cm in front; 30 cm above - a
+  guide, placed by eye. **The head counts as much as the other four
+  together** (D5, Finding 158; `room_dsp.head_counts_more`): it is repeated
+  so it is half the set, in every power average and in every vote of the
+  positions below; the curves kept and drawn are the five as measured. A
+  measurement keeps its own number of positions.
 - **The target** (ADR-0177 items 2-3): above 250 Hz the speaker's own
-  slope, a straight line on a log axis fitted to the three positions' power
+  slope, a straight line on a log axis fitted to the positions' power
   average at 1/3 octave from 300 Hz to 10 kHz; below it +3 dB below about
   80 Hz on the line's level at 250 Hz, so the two meet. A measurement made
   before Phase 30 keeps the level it took from its own average an octave
   above 250 Hz.
 - **The bass's cuts** (`room_dsp.together`, given to each speaker's
-  `room_dsp.design`): the power average of the three positions with both
-  speakers playing (the head and 40 cm to either side; a measurement keeps
-  its own number); a cut fitted to each peak above the target in turn (up to eight,
+  `room_dsp.design`): the power average of the positions with both
+  speakers playing, **read in finer detail** (ADR-0187 C5, Finding 158):
+  each such sweep is also kept on a 1/96-octave grid to 500 Hz
+  (`FINE_GRID`), smoothed to 1/48 octave below 100 Hz, widening to 1/24 at
+  250 Hz (`response_fine`), and the cuts are fitted there against the
+  target carried over - so a narrow peak is cut to its height and width;
+  a cut fitted to each peak above the target in turn (up to eight,
   12 dB at most, Q 1 to 15, 20-250 Hz), then all fitted together by damped
   least squares with dips and everything above 250 Hz left as they are; a
   cut that leaves more than half the positions more than 1 dB further from
@@ -881,7 +897,7 @@ hw:Loopback,1,0 → CamillaDSP (headroom fader, ten bands, then on each speaker 
   from 300 Hz to 14 kHz; else up to six, from 250 Hz to 14 kHz, each and all
   together within ±3 dB, Q 0.5 to 2, a third of an octave apart - one at a
   time at the largest gap left, then all together by damped least squares;
-  where the three positions' standard deviation is above 1.5 dB the gap
+  where the positions' standard deviation is above 1.5 dB the gap
   counts for less, not at all from 3 dB, so the correction is held near
   none there; and, as for the cuts, one that leaves most positions more
   than 1 dB further from the target at its frequency is made smaller.

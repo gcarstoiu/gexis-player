@@ -1041,9 +1041,11 @@ nothing to press. On the player's screen, *Measure from your phone* (or
    delayed.
 5. Each speaker plays two sweeps on its own, then both together, about a
    minute a position.
-   Then move the microphone where the phone shows - three positions: your
-   head, and about 40 cm to either side - step back and tap **Measure
-   here**; three seconds later the sweeps play. It never moves on without
+   Then move the microphone where the phone shows - five positions: your
+   head; about 40 cm to its left and a little higher; 40 cm to its right
+   and a little lower; 30 cm in front; 30 cm above - step back and tap
+   **Measure here**; three seconds later the sweeps play. The distances are
+   a guide: placed by eye is enough. It never moves on without
    the tap. At the second position, to the left of your head, the whistles
    play again: the left speaker must sound nearer there. If it sounds
    further, the speakers look swapped - left plays from the right speaker -
@@ -1056,12 +1058,14 @@ nothing to press. On the player's screen, *Measure from your phone* (or
 6. The correction: the cuts in the bass, worked out from both speakers
    playing together - the bass of most music is the same in both, and what
    you hear is the two adding up - and the same on both speakers; above the
-   bass, broad corrections for each speaker of its own. A chart shows
-   before (the average of the three positions), each position, the target
-   and the expected after, for each speaker and for both together. A peak
-   is cut, and a broad correction made, unless most positions would end
-   further from the target; where the three positions disagree, less is
-   corrected. **Check it** measures the three positions again with the
+   bass, broad corrections for each speaker of its own. Your head counts
+   as much as the other four positions together, and the bass is read in
+   finer detail than above it, so a narrow peak is cut to its own width. A
+   chart shows before (the average of the positions), the target and the
+   expected after, for each speaker and for both together. A peak is cut,
+   and a broad correction made, unless most positions would end further
+   from the target; where the positions disagree, less is corrected.
+   **Check it** measures the five positions again with the
    correction on, a tap at each again, showing each speaker as measuring
    does - a sweep a noise spoiled is said and made again; as it plays a
    little lower to leave room for what the correction raises, it takes more
@@ -1098,9 +1102,10 @@ On its page:
   correction on, *Bass* and *Without* alike.
 - **The chart**, for the left and the right speaker, in two parts: the bass,
   and above it on a closer scale (±5 dB) - side by side on the panel and the
-  bars, one under the other on the phone. Before, each position, the target
-  (dotted: the bass rise joined to the speaker's own slope) and after -
-  measured, or dashed and *expected* when the check was skipped. The shading
+  bars, one under the other on the phone. Before, the target (dotted: the
+  bass rise joined to the speaker's own slope) and after - measured, or
+  dashed and *expected* when the check was skipped. The **Each position**
+  switch under it adds each position's own curve; it starts off. The shading
   is what the correction cuts and raises; where the measured after strays
   from it, that is the room and the microphone's place, not the correction.
   With *Bass* chosen, above 250 Hz is left alone. **Both** shows the two
