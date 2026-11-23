@@ -253,4 +253,6 @@ noise both recordings' (`room_dsp.pair_noise`). The check's head plays the
 pair too and logs the gaps (`room_dsp.pair_gaps`: 30-250 Hz, 250 Hz-1.6 kHz
 and 2-5 kHz). Where a kept sweep found no mark, the pair is played at that
 position, as before D4. The run's state lists what each position sweeps
-(`sets`), and the phone's rows follow it.
+(`sets`), and the phone's rows follow it. **The start screen says about 20
+minutes** (George, 2026-11-23, over ADR-0177's five): George's run took 28
+minutes with the check and the moves, about 22 without the together sweeps.

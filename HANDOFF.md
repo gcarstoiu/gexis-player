@@ -45,7 +45,9 @@ check names places 3-5 worse, corrections following the microphone's
 place; the level reading moved 0.9 dB with the head placed again). **George
 decided the together sweeps go** (2026-11-23), built: both added from each
 speaker's sweeps by their marks, the check's head playing a pair and
-logging the gap (`sets` in the run's state, the phone's rows following).
+logging the gap (`sets` in the run's state, the phone's rows following;
+`ph-room-measurement` e5799dc4); the start screen says about 20 minutes
+(George, the same day).
 Both runs' responses deleted here and on sofapi; the text results stay in
 `~/projects/scratch/ph37/run/` (scripts in `check/`, `d4/`).
 **The branch** = `next` + `room-checks` + `room-chart` + five positions +
