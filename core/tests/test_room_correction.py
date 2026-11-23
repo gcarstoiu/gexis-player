@@ -1,8 +1,6 @@
 """Room correction as the player keeps it (ADR-0175, ADR-0177): each output's
 switch, *Hear it without*, how far it reaches and last measurement, and the
 microphones' calibrations."""
-from dataclasses import replace
-
 import pytest
 
 from gexis_core import room_correction as rc
@@ -234,8 +232,7 @@ def test_the_chart_over_the_whole_range():
 def test_the_shading_is_before_with_the_corrections_as_designed():
     """ADR-0186 D2, C1: whatever the check measured, the shading is before
     with the kept filters, worked out as the design does - the cuts alone
-    for *Bass*. *Both* (D3, C3): its cuts and the two speakers' broad
-    corrections together, exact while the two are the same."""
+    for *Bass*, and for *Both* its cuts only."""
     import numpy as np
     from gexis_core import room_dsp as dsp
     flat = tuple(0.0 for _ in range(N))
@@ -252,33 +249,10 @@ def test_the_shading_is_before_with_the_corrections_as_designed():
     assert np.allclose(sp["corrected"], np.asarray(sp["before"]) + cuts + broad, atol=0.01)
     assert sp["after"] == list(flat), "the after stays what the check measured"
     both = c["speakers"][rc.BOTH]
-    shared_db = dsp.cuts_db([dsp.Cut(*shared[0])], grid)
-    assert np.allclose(both["corrected_bass"], shared_db, atol=0.01)
-    assert np.allclose(both["corrected"], shared_db + broad, atol=0.01)
-    assert both["after"] == list(flat), "measured, so the check's"
+    assert np.allclose(both["corrected"], dsp.cuts_db([dsp.Cut(*shared[0])], grid), atol=0.01)
+    assert both["corrected"] == both["corrected_bass"]
     old = rc.chart(bass_only())["speakers"]["L"]
     assert len(old["corrected"]) == len(old["before"]) and old["corrected"] == old["corrected_bass"]
-
-
-def test_both_with_the_two_speakers_corrections_together():
-    """ADR-0186 C3-C4: where the speakers' corrections differ, *Both*'s are
-    their power gains weighted by each one's before; with the check skipped
-    that is *Both*'s expected after."""
-    import numpy as np
-    from gexis_core import room_dsp as dsp
-    flat = tuple(0.0 for _ in range(N))
-    loud = tuple(6.0 for _ in range(N))
-    left = replace(speaker(cuts=()), before=loud)
-    right = replace(speaker(cuts=(), above=()), before=flat)
-    together = Speaker(before=flat, target=flat, after=flat, positions=(flat,) * 3)
-    m = Measurement("2026-11-19", False, {"L": left, "R": right, rc.BOTH: together})
-    both = rc.chart(m)["speakers"][rc.BOTH]
-    gain = 10 ** (dsp.cuts_db([dsp.Broad(*x) for x in ABOVE], np.asarray(dsp.GRID)) / 10)
-    w = 10 ** 0.6
-    assert np.allclose(both["corrected"], 10 * np.log10((w * gain + 1) / (w + 1)), atol=0.01)
-    assert both["corrected_bass"] == list(flat)
-    assert both["after"] == both["corrected"] and both["after_bass"] == both["corrected_bass"]
-    assert rc.chart(m)["speakers"]["L"]["after"] == list(flat), "a speaker's expected after is as kept"
 
 
 def test_the_chart_of_a_measurement_from_before():

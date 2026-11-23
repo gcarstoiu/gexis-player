@@ -13,7 +13,7 @@
 <script>
   import { encode } from 'uqr';
   import { onDestroy } from 'svelte';
-  import { BOTH, capitalised, chartSpan, correctionGroups, correctionsWho, countWord, cutFreq, cutGain, cutRows,
+  import { capitalised, chartSpan, correctionGroups, correctionsWho, countWord, cutFreq, cutGain, cutRows,
     outputPhrase, outputShort, rangeWord, resultWords, room, RoomReader, setRoom, sideName, sides } from '../../lib/room.svelte.js';
   import { screen } from '../../lib/family.svelte.js';
   import RoomChart from './RoomChart.svelte';
@@ -98,20 +98,14 @@
   const REACHES = [['bass', 'Bass', 'Up to 250 Hz'], ['full', 'Full range', '15 Hz to 20 kHz']];
 
   const chart = $derived(full?.chart ?? null);
-  //: A measurement from before both were swept has no Both tab.
-  $effect(() => {
-    if (chart && !sides(chart).includes(ch)) ch = 'L';
-  });
-  const both = $derived(ch === BOTH);
   const speaker = $derived(chart?.speakers?.[ch] ?? null);
-  const bothAfter = $derived(both && !!speaker?.after?.length);
   const kind = $derived(chart?.after_kind ?? 'measured');
   const notChecked = $derived(!!measured && !measured.checked);
   //: The corrections in two groups (the design's 1g), for the speaker shown.
-  const groups = $derived(correctionGroups(ch, speaker, { range, reach }));
+  const groups = $derived(correctionGroups(speaker, { range, reach }));
   const cutsWho = $derived(correctionsWho(ch, groups[0]?.rows.length ?? 0, groups[1]?.rows.length ?? 0));
   //: The speaker shown: its own numbers, not the larger of the two.
-  const words = $derived(resultWords({ speaker, both, range, reach, expectedMark: notChecked }));
+  const words = $derived(resultWords({ speaker, range, reach, expectedMark: notChecked }));
   const resultHead = $derived(words[0]);
   const resultLine = $derived(words[1]);
   const span = $derived(chartSpan(chart));
@@ -173,7 +167,7 @@
 
 {#snippet segs(size)}
   <div class="segs segs--{size}" role="group" aria-label="Speaker">
-    {#each sides(chart) as k (k)}
+    {#each sides() as k (k)}
       <button type="button" class="segbtn" class:is-sel={ch === k} aria-pressed={ch === k} onclick={() => (ch = k)}>{sideName(k)}</button>
     {/each}
   </div>
@@ -1480,7 +1474,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  /* Three tabs (Both) beside the heading on the 1280-wide bar. */
+  /* The tabs beside the heading on the 1280-wide bar. */
   .right--narrow .segs--bar .segbtn {
     height: 46px;
     padding: 0 12px;
