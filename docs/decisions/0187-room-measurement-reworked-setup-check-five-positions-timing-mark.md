@@ -207,4 +207,12 @@ over the target at the head (today's design 0.50), no place's highest point
 more than 0.1 dB higher, less over-cut than today's at every place, and a
 50 Hz decay of 0.36-0.48 s (today's 0.46-0.67 s). The curves kept and drawn
 stay the five as measured, on the 1/24-octave grid.
+Also built the same day: **C4**, every measuring sweep after the timing
+step's short sweep on the left, a second before it in the same playback
+(`room_dsp.marked`, `mark_at`); deconvolved with the sweep where it plays,
+the mark's trace lands seconds before the arrival, outside the window, and
+the measured curve is unchanged (within 0.2 dB, 20 Hz-16 kHz, in the made-up
+room). The together sweeps stay until D4 is proven on sofapi, on a second
+research build that keeps each sweep's mark. And **C2's lead**: the
+distance step's three short sweeps after 0.25 s of silence.
 

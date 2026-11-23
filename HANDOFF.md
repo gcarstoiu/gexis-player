@@ -47,13 +47,16 @@ point at 7.8-7.9 kHz. The run's responses deleted here and on sofapi
 (without the research keeper) + the new design + George's three screen
 notes (the distance step lit, the check's *of 4*, the chart's *Each
 position* switch, off by default); the manual, technical guide and API
-updated; the manual's room picture still to be retaken. **Waiting on
-George**: which of three drawings of the five positions with height
-(mock-ups in `~/projects/scratch/ph37/mock/`); ADR-0022's [H] entries for
-five positions and the head's weight. **Next for Claude**: the timing mark
-(C4) on a research build for D4's proof - George's run at 60 dB; then the
-setup check, its screens designed first. **Do not update sofapi** before
-that run unless George says so: it still runs the first research build.
+updated; the manual's room picture still to be retaken. Also built: the
+timing mark before every sweep (C4) and the distance step's lead of silence.
+**`ph37-research-2`** = the branch + the keeper with each sweep's mark, for
+D4's proof (`~/projects/scratch/ph37/d4/d4.py <run>.json`; checked on a
+made-up run). **Waiting on George**: which of three drawings of the five
+positions with height (mock-ups in `~/projects/scratch/ph37/mock/`);
+ADR-0022's [H] entries for five positions and the head's weight; his go to
+install research build 2 on sofapi, then a run at 60 dB. Then the setup
+check, its screens designed first. **Do not update sofapi** otherwise: it
+still runs the first research build.
 **Before Phase 37 closes** (George, 2026-11-21; acceptance 5): the level at
 the seat against a meter, and the equaliser's and multiroom's measurements
 through the amplifiers - George present for each.

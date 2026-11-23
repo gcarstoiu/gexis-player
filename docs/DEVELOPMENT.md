@@ -4462,6 +4462,14 @@ next run, at 60 dB.
 - each position's curve on the charts behind a switch, off by default: with
   all of them the charts are too busy.
 
+**Built on `ph-room-measurement`** (2026-11-23): five positions, the head's
+weight and the finer bass detail, George's notes 1, 2 and 4, the timing mark
+before every sweep (C4) and the distance step's lead of silence (C2). **D4's
+proof** runs on a second research build (`ph37-research-2`: that branch with
+the keeper, each sweep's mark kept); in the made-up room the pair added by
+its marks matches the pair played to 0.00 dB, and by the playbacks' own
+starts misses by up to 18 dB.
+
 **Acceptance (draft):**
 
 1. The setup check finds a swapped pair, a reversed speaker, the distance's
