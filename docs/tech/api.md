@@ -105,14 +105,21 @@ ADR-0175 and ADR-0177, internal until Phase 30 closes. `GET
 /room-correction`: for the output in use, `on`, `reach` (`bass` or `full`),
 `without` (*Hear it without*), the last measurement (`measured`, with its
 `range` - `bass` for one from before Phase 30 - and figures: `peaks_down`,
-`within` and `room_within`; its `chart` - each speaker's `before`, `target`,
+`within` and `room_within`, `distance_cm` - how much further the right
+speaker is than the left, null when not timed - and `delay_ms`, each
+speaker's (ADR-0185); its `chart` - each speaker's `before`, `target`,
 `after`, `after_bass` and its `positions` in dB about the target's level at
 250 Hz, `cuts` and `above`, `freqs` on the measurement's grid (to 20 kHz, or
 500 Hz), `after_kind` measured or expected - and each speaker's `cuts` and
 `above`), the `microphone` and its `calibration` (`again` while the one kept
 stops at 2 kHz, from before Phase 30), `can_measure` with `why_not`, and a
 measurement in progress (`run`, and its `pending` correction before *Keep
-it*). `/state` carries the summary as `room`. `PUT /room-correction` with
+it*). A run's `step` includes `timing` (the speakers timed: at position 1,
+then at 2 for left and right) and `far` (more than `far_cm` apart, waiting
+for `next`), with `distance_cm` once timed; a run that stops by itself ends
+`cancelled` with `why` `polarity` (a speaker's + and − swapped) or `swapped`
+(left and right, or the microphone on the wrong side) - ADR-0185.
+`/state` carries the summary as `room`. `PUT /room-correction` with
 `on`, `reach` or `without`;
 `POST /room-correction/calibration {text, name}` gives the 90° file from
 miniDSP (checked, kept by its serial); `POST /room-correction/run {action}`

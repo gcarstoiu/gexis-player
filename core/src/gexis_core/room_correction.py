@@ -21,6 +21,11 @@ KEY = "_room_correction"
 
 #: The speakers, as the screens and the store name them.
 CHANNELS = ("L", "R")
+#: The most a speaker is delayed (ADR-0185 D2): what the timing can find
+#: (`room_dsp.TIMING_REACH_S`, about 5 m).
+MAX_DELAY_MS = 15.0
+#: Less than this (1 cm) the speakers are as far as the timing can tell.
+ALIGN_MIN_MS = 0.01 / 343.0 * 1000
 #: **Both speakers together** (George, 2026-11-05): swept at each position
 #: in the run and in the check, as heard. The bass's cuts are designed from
 #: them and go on both speakers (ADR-0175's amendment, George 2026-11-17);
@@ -160,10 +165,16 @@ class Measurement:
     worse: tuple[tuple[int, float], ...] = ()
     range: str = FULL
     bass_from: str = BOTH
+    #: **ADR-0185 D2**: the delay on each speaker (ms; the nearer one's), so
+    #: both arrive at the seat together, and how much further the right is
+    #: than the left (cm; None: not timed - one kept from before, or not read).
+    delay: tuple[float, float] = (0.0, 0.0)
+    distance_cm: float | None = None
 
     def as_dict(self) -> dict:
         return {"date": self.date, "checked": self.checked, "positions": self.positions, "range": self.range,
                 "bass_from": self.bass_from, "worse": [list(w) for w in self.worse],
+                "delay": [round(d, 4) for d in self.delay], "distance_cm": self.distance_cm,
                 "speakers": {k: v.as_dict() for k, v in self.speakers.items()}}
 
     @classmethod
@@ -176,9 +187,14 @@ class Measurement:
             speakers[BOTH] = Speaker.from_dict(value["speakers"][BOTH])
         worse = tuple((int(n), float(db)) for n, db in value.get("worse") or [])
         made = value.get("range", BASS)
+        delay = tuple(max(0.0, min(MAX_DELAY_MS, float(d))) for d in value.get("delay") or (0.0, 0.0))
+        if len(delay) != 2:
+            raise TypeError
+        distance = value.get("distance_cm")
         return cls(date, bool(value.get("checked", False)), speakers,
                    int(value.get("positions", POSITIONS)), worse, made if made in REACHES else BASS,
-                   BOTH if value.get("bass_from") == BOTH else EACH)
+                   BOTH if value.get("bass_from") == BOTH else EACH, delay,
+                   None if distance is None else float(distance))
 
     def cuts(self, channel: str) -> tuple[tuple[float, float, float], ...]:
         s = self.speakers.get(channel)
@@ -197,9 +213,16 @@ class Measurement:
         return not any(self.above(c) for c in CHANNELS)
 
     @property
+    def aligned(self) -> bool:
+        """**A speaker delayed** (ADR-0185 D2) by more than the timing can
+        tell from none (1 cm)."""
+        return max(self.delay) >= ALIGN_MIN_MS
+
+    @property
     def nothing_to_correct(self) -> bool:
-        """*Nothing to correct* (the design): no cut and no broad correction."""
-        return self.nothing_to_cut and self.nothing_above
+        """*Nothing to correct* (the design): no cut, no broad correction and
+        no speaker to delay (ADR-0185)."""
+        return self.nothing_to_cut and self.nothing_above and not self.aligned
 
     def peaks_down(self) -> float:
         return max((self.speakers[c].peaks_down() for c in CHANNELS if c in self.speakers), default=0.0)
@@ -422,7 +445,8 @@ class Room:
             return tuple((f, g if play else 0.0, q) for f, g, q in filters)
         cuts = tuple(at(m.cuts(c), not here.without) for c in CHANNELS)
         above = tuple(at(m.above(c), not here.without and here.reach == FULL) for c in CHANNELS)
-        return eq.RoomPlay(cuts, above, self.lift(card))
+        # The speakers' delay (ADR-0185 D2) at either reach; none *without*.
+        return eq.RoomPlay(cuts, above, self.lift(card), (0.0, 0.0) if here.without else m.delay)
 
     def lift(self, card: str) -> tuple | None:
         """Room correction's filters on `card` as measured, for the headroom

@@ -762,7 +762,7 @@ is on for the output in use (`outputs.eq_in_path` asks both), and with both
 off nothing below exists - bit-perfect, as before.
 
 ```text
-hw:Loopback,1,0 → CamillaDSP (headroom fader, ten bands, then fourteen filters on the left and fourteen on the right) → gexis_eq_out → card
+hw:Loopback,1,0 → CamillaDSP (headroom fader, ten bands, then on each speaker its delay and fourteen filters) → gexis_eq_out → card
 ```
 
 - **The filters** are Peaking filters, fourteen slots for each speaker
@@ -775,6 +775,13 @@ hw:Loopback,1,0 → CamillaDSP (headroom fader, ten bands, then fourteen filters
   0 dB) and a new measurement are each a `PatchConfig`, heard at once; with
   the equaliser off, switching it on or off reopens the output as the
   equaliser's switch does. Native DSD goes past it with the equaliser.
+- **The speakers' delay** (ADR-0185 D2): a `Delay` filter first in each
+  speaker's step (`room_l_delay`, `room_r_delay`, in ms), at 0 ms unless
+  the measurement timed the speakers apart - then the nearer one's, so both
+  arrive at the seat together. Played at either reach, out with *Hear it
+  without*; patched like the filters. A group's timing (ADR-0166 D7) is
+  unchanged: it reckons with CamillaDSP's hold, not its filters, and the
+  further speaker is not delayed.
 - **The headroom** (ADR-0177 item 7): the broad corrections may raise, so
   every filter of the measurement joins the curve the signal is lowered by
   before the bands (`equaliser.headroom_db(gains, lift)`, the same rule as
@@ -808,13 +815,44 @@ hw:Loopback,1,0 → CamillaDSP (headroom fader, ten bands, then fourteen filters
   from 45 dB and 15 dB above the noise is taken; below, *too quiet*. Once
   the noise is clearly heard, four steps that do not move the reading end
   it.
+- **The speakers timed** (ADR-0185 C1), after the level and before the
+  sweeps: one recording - so playback and capture start once, and nothing
+  between them varies - of a 0.5 s sweep from 500 Hz to 20 kHz on the left,
+  the right, then the left again, a second apart (`room_dsp.timing_signal`,
+  two channels in one `aplay`). Deconvolved with the one sweep, the three
+  arrivals sit a slot apart; the right's is lined up with the first left's
+  by cross-correlation over the first 2.5 ms, to a fraction of a sample,
+  and half the second left's lag - the DAC's and the microphone's clocks
+  drifting apart over the two slots - is taken off. The correlation's sign
+  is the polarity. A reading counts only if each arrival stands 20 dB over
+  the rest of its slot and the left heard twice matches (0.8); two readings
+  must agree within 1 cm and on the polarity, up to six, or nothing is
+  said and nothing delayed. At position 1 opposite polarity stops the run
+  (`polarity`); otherwise the nearer speaker is delayed on the stage from
+  there on, so the sweeps measure what will play, and more than 1 ms
+  (34 cm) apart *far* waits for *Measure anyway*. At position 2, 40 cm to
+  the left, the left must be 10 cm nearer than at 1 - it moves by about
+  2 × 40 cm × sin of half the speakers' angle, 21 cm at ±15° - or, 10 cm
+  the other way, the run stops (`swapped`); in between, nothing is said.
 - **The sweeps**: a logarithmic sweep from 10 Hz to 20 kHz (Phase 30), 8 s
   so the bass keeps the time in each octave the 5 s to 1 kHz of Phase 29
   gave it, at the level found; the room's response is the recording's
   spectrum over the sweep's, windowed to a second from the arrival, the
   calibration file subtracted, smoothed to 1/6 octave on a 1/24-octave grid
-  from 15 Hz to 20 kHz (`room_dsp.py`, numpy). Two sweeps per speaker and position that differ by
-  more than 1.5 dB below 250 Hz are repeated, up to six. After each speaker
+  from 15 Hz to 20 kHz (`room_dsp.py`, numpy). **Repeats** (ADR-0185 C3):
+  the quiet room, listened to for 3 s, is the noise every sweep is judged
+  by - turned into the noise a sweep's curve holds (`room_dsp.noise_curve`:
+  noise of its spectrum, as long as the recording, through the same
+  deconvolution, window and smoothing), so each point's signal over noise
+  is read as measured. Two sweeps per speaker and position are compared
+  below 250 Hz only where both stand 20 dB over it (noise alone moves a
+  curve under 1 dB there): more than 1.5 dB apart there, they were
+  disturbed and are repeated, up to six. Elsewhere they are not repeated
+  but averaged: the two closest and every other that agrees with both go
+  into the power average, and where every position's average still stands
+  under 10 dB over the noise, nothing is fitted (`trust`). The check, its
+  sweeps lower by what the corrections raise, takes that many more, up to
+  five. Every comparison is logged as numbers (C4). After each speaker
   alone, **both together** (George, 2026-11-05), 6 dB lower each so the two
   adding in the bass are no louder than one: before in the run and after
   in the check (`both` in the chart). **The bass is designed from them**

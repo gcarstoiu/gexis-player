@@ -64,8 +64,17 @@ CUT_MIN_DB = 0.5
 WORSE_DB = 1.0
 #: Item 4: two sweeps of a position that differ by more than this somewhere
 #: below the limit were disturbed (a door, a voice), and are repeated. To be
-#: checked against the microphone's own repeats in a quiet room.
+#: checked against the microphone's own repeats in a quiet room - from the
+#: logs ADR-0185 C4 keeps.
 AGREE_DB = 1.5
+#: **ADR-0185 C3: two sweeps are compared only where each is this far over
+#: its own noise** - there noise alone moves a curve by under 1 dB
+#: (20·log10(1 + 10^(-20/20)) = 0.83 dB), so a gap over `AGREE_DB` is a
+#: disturbance. Below it the sweeps are averaged, not repeated.
+JUDGE_SNR_DB = 20.0
+#: A point still under this over the noise once the sweeps are averaged is
+#: left uncorrected: nothing is fitted to noise.
+TRUST_SNR_DB = 10.0
 
 #: **Above the bass** (ADR-0177). The speaker's own slope (item 2): a straight
 #: line on a log axis, fitted to the positions' average at 1/3 octave from
@@ -112,11 +121,10 @@ def log_sweep(fs: int = FS, f1: float = SWEEP_LO, f2: float = SWEEP_HI, seconds:
     return x
 
 
-def transfer(recording, played, fs: int = FS, band=(SWEEP_LO, SWEEP_HI)) -> np.ndarray:
-    """**The room's impulse response** from a recording of `played`: the
-    recording's spectrum over the sweep's, regularised outside the sweep's
-    band, so its level is the room's own whatever the sweep's was. Starts
-    at the arrival, `WINDOW_S` long, its end faded."""
+def deconvolve(recording, played, fs: int = FS, band=(SWEEP_LO, SWEEP_HI)) -> np.ndarray:
+    """The recording's spectrum over the sweep's, regularised outside the
+    sweep's band, so its level is the room's own whatever the sweep's was:
+    the whole circular impulse response, unwindowed."""
     recording = np.asarray(recording, dtype=float)
     played = np.asarray(played, dtype=float)
     n = 1 << int(math.ceil(math.log2(len(recording) + len(played))))
@@ -128,17 +136,29 @@ def transfer(recording, played, fs: int = FS, band=(SWEEP_LO, SWEEP_HI)) -> np.n
     eps = 1e-3 * (np.mean(power[inside]) if inside.any() else 1.0)
     H = R * np.conj(X) / (power + eps)
     H[~inside] *= 0.0
-    ir = np.fft.irfft(H, n)
-    # The direct sound arrives in the first half (the recording started
-    # before the sweep); later than that is the circular wrap.
-    peak = int(np.argmax(np.abs(ir[: n // 2])))
-    start = max(0, peak - int(PRE_S * fs))
-    length = int(WINDOW_S * fs)
-    out = ir[start:start + length].copy()
+    return np.fft.irfft(H, n)
+
+
+def _window(ir, start: int, fs: int = FS) -> np.ndarray:
+    """`WINDOW_S` of `ir` from `start`, its end faded."""
+    out = np.zeros(int(WINDOW_S * fs))
+    part = ir[start:start + len(out)]
+    out[:len(part)] = part
     tail = len(out) // 5
     if tail:
         out[-tail:] *= 0.5 + 0.5 * np.cos(np.pi * np.arange(tail) / tail)
     return out
+
+
+def transfer(recording, played, fs: int = FS, band=(SWEEP_LO, SWEEP_HI)) -> np.ndarray:
+    """**The room's impulse response** from a recording of `played`
+    (`deconvolve`), starting at the arrival, `WINDOW_S` long, its end
+    faded."""
+    ir = deconvolve(recording, played, fs, band)
+    # The direct sound arrives in the first half (the recording started
+    # before the sweep); later than that is the circular wrap.
+    peak = int(np.argmax(np.abs(ir[: len(ir) // 2])))
+    return _window(ir, max(0, peak - int(PRE_S * fs)), fs)
 
 
 def response_db(ir, fs: int = FS, grid=GRID, fraction: int = 6) -> np.ndarray:
@@ -164,12 +184,74 @@ def power_average(curves) -> np.ndarray:
     return 10 * np.log10(np.mean(10 ** (curves / 10), axis=0))
 
 
-def agree_db(a, b, grid=GRID, lo: float = FIT_LO, hi: float = LIMIT) -> float:
+def agree_db(a, b, grid=GRID, lo: float = FIT_LO, hi: float = LIMIT, judged=None) -> float:
     """How far two sweeps of one position differ where it matters: the
-    largest gap between their curves from 20 Hz to the limit."""
+    largest gap between their curves from 20 Hz to the limit - only where
+    `judged` (ADR-0185 C3: both well over their noise); 0 where nothing is."""
+    return gap_at(a, b, grid, lo, hi, judged)[0]
+
+
+def gap_at(a, b, grid=GRID, lo: float = FIT_LO, hi: float = LIMIT, judged=None) -> tuple[float, float | None]:
+    """`agree_db`, and the frequency of that largest gap (None: nothing
+    judged)."""
     grid = np.asarray(grid)
     inside = (grid >= lo) & (grid <= hi)
-    return float(np.max(np.abs(np.asarray(a)[inside] - np.asarray(b)[inside])))
+    if judged is not None:
+        inside = inside & np.asarray(judged, dtype=bool)
+    if not inside.any():
+        return 0.0, None
+    gaps = np.where(inside, np.abs(np.asarray(a) - np.asarray(b)), -np.inf)
+    i = int(np.argmax(gaps))
+    return float(gaps[i]), float(grid[i])
+
+
+def band_power(x, fs: int = FS, grid=GRID, fraction: int = 6) -> np.ndarray:
+    """**Power per frequency bin, per sample**, at each grid point, over
+    ±1/(2·fraction) octave: a recording's or the quiet room's, comparable
+    whatever their lengths (ADR-0185 C3)."""
+    x = np.asarray(x, dtype=float)
+    n = 1 << int(math.ceil(math.log2(max(len(x), 2))))
+    spectrum = np.abs(np.fft.rfft(x, n)) ** 2 / max(len(x), 1)
+    f = np.fft.rfftfreq(n, 1 / fs)
+    half = 2 ** (1 / (2 * fraction))
+    cum = np.concatenate(([0.0], np.cumsum(spectrum)))
+    lo = np.searchsorted(f, np.asarray(grid) / half)
+    hi = np.maximum(np.searchsorted(f, np.asarray(grid) * half, side="right"), lo + 1)
+    return (cum[hi] - cum[lo]) / (hi - lo)
+
+
+def noise_curve(noise, played, length: int, fs: int = FS, grid=GRID, seed: int = 0) -> np.ndarray:
+    """**The room's noise as a sweep's curve holds it** (ADR-0185 C3): noise
+    with the quiet room's spectrum (`noise`, its `band_power`), as long as
+    the recording, through the same deconvolution, window and smoothing as
+    the sweep's answer - so the two compare point by point."""
+    n = 1 << int(math.ceil(math.log2(max(length, 2))))
+    f = np.fft.rfftfreq(n, 1 / fs)
+    grid = np.asarray(grid, dtype=float)
+    power = np.interp(np.log(np.maximum(f, grid[0])), np.log(grid), np.asarray(noise, dtype=float))
+    white = np.random.default_rng(seed).standard_normal(length)
+    x = np.fft.irfft(np.fft.rfft(white, n) * np.sqrt(power), n)[:length]
+    ir = deconvolve(x, played, fs)
+    return response_db(_window(ir, int(0.3 * fs), fs), fs, grid)
+
+
+def snr_db(curve, noise) -> np.ndarray:
+    """**How far a sweep's curve stands over the room's noise** at each
+    point (ADR-0185 C3), both from `response_db` - the curve as measured
+    (before the microphone's calibration) and `noise_curve`: what the curve
+    holds over the noise's part of it."""
+    excess = 10 ** ((np.asarray(curve, dtype=float) - np.asarray(noise, dtype=float)) / 10) - 1.0
+    return 10 * np.log10(np.maximum(excess, 1e-3))
+
+
+def averaged_snr(snrs) -> np.ndarray:
+    """The signal over noise of the power average of sweeps each this far
+    over their noise (ADR-0185 C3), as far as the noise moves the curve: its
+    random part falls with their number; what it adds on average stays,
+    under 0.5 dB from 10 dB over it (10·log10(1 + 10^(-10/10)) = 0.41 dB)."""
+    snrs = np.asarray(snrs, dtype=float)
+    noise = np.mean(10 ** (-snrs / 10), axis=0) / len(snrs)
+    return -10 * np.log10(np.maximum(noise, 1e-30))
 
 
 # ---- the level -----------------------------------------------------------------------
@@ -550,14 +632,21 @@ def _broad_majority(filters: list[Broad], positions, target, grid) -> list[Broad
     return filters
 
 
-def _broad(positions, bass, target, grid) -> tuple[list[Broad], float]:
+def _trusted(grid, trust) -> np.ndarray:
+    """Where the curves are far enough over their noise to fit to (ADR-0185
+    C3); everywhere when nothing says."""
+    return np.ones(len(grid), dtype=bool) if trust is None else np.asarray(trust, dtype=bool)
+
+
+def _broad(positions, bass, target, grid, trust=None) -> tuple[list[Broad], float]:
     """**The broad corrections above the bass** for one channel (item 4),
     with the bass's cuts in place, and the room's own figure: none when the
-    room is within 1.5 dB of the target already."""
+    room is within 1.5 dB of the target already. Nothing is fitted where
+    the curves are not `trust`ed."""
     room_within = within_db(power_average(positions), target, grid)
     if room_within <= ABOVE_LEAVE_DB:
         return [], room_within
-    inside = (grid >= LIMIT) & (grid <= ABOVE_HI)
+    inside = (grid >= LIMIT) & (grid <= ABOVE_HI) & _trusted(grid, trust)
     gap = (smooth(power_average(positions + bass)) - target) * spread_weight(positions)
     filters = _broad_fit(gap, inside, grid)
     filters = [b for b in filters if abs(b.gain) >= CUT_MIN_DB]
@@ -576,14 +665,15 @@ def _target(before, grid, target) -> tuple[np.ndarray, float]:
     return np.asarray(target, dtype=float), 0.0
 
 
-def _bass_cuts(positions, before, target, grid) -> list[Cut]:
+def _bass_cuts(positions, before, target, grid, trust=None) -> list[Cut]:
     """**The cuts in the bass** (ADR-0175 item 6): the highest peak above the
     target gets a Peaking cut fitted to its height and width, again while
     one stands more than 1 dB above, up to eight; then the cuts are fitted
     together, aiming the peaks at the target and leaving the dips and
     everything above the limit as they are; and a cut that would make most
-    positions worse is made smaller."""
-    inside = _fit_range(grid)
+    positions worse is made smaller. No peak is cut where the curves are not
+    `trust`ed (ADR-0185 C3)."""
+    inside = _fit_range(grid) & _trusted(grid, trust)
     # Peaks are brought to the target; dips and everything outside are
     # what they were, so a cut that digs into either costs.
     desired = np.where(inside, np.minimum(before, target), before)
@@ -604,7 +694,7 @@ def _bass_cuts(positions, before, target, grid) -> list[Cut]:
     return cuts
 
 
-def design(positions, grid=GRID, cuts=None, target=None) -> Design:
+def design(positions, grid=GRID, cuts=None, target=None, trust=None) -> Design:
     """**The correction for one speaker** from its positions' curves:
 
     - the target: the speaker's own slope above the limit, the bass's rise
@@ -613,21 +703,24 @@ def design(positions, grid=GRID, cuts=None, target=None) -> Design:
       together (`together`, ADR-0175's amendment of 2026-11-17), or else
       the speaker's own (`_bass_cuts`);
     - above it, broad corrections up or down (`_broad`), with the bass's
-      cuts in place."""
+      cuts in place.
+
+    `trust`: where the curves are far enough over their noise to correct
+    (ADR-0185 C3); nothing is fitted elsewhere."""
     grid = np.asarray(grid, dtype=float)
     positions = np.asarray(positions, dtype=float)
     before = power_average(positions)
     target, offset = _target(before, grid, target)
-    cuts = _bass_cuts(positions, before, target, grid) if cuts is None else list(cuts)
+    cuts = _bass_cuts(positions, before, target, grid, trust) if cuts is None else list(cuts)
     bass = cuts_db(cuts, grid)
-    broad, room_within = _broad(positions, bass, target, grid)
+    broad, room_within = _broad(positions, bass, target, grid, trust)
     after = power_average(positions + bass + cuts_db(broad, grid))
     after_bass = power_average(positions + bass)
     return Design(tuple(cuts), offset, before - offset, target - offset, after - offset, positions - offset,
                   tuple(broad), after_bass - offset, room_within, within_db(after, target, grid))
 
 
-def together(positions, grid=GRID, target=None) -> Design:
+def together(positions, grid=GRID, target=None, trust=None) -> Design:
     """**Both speakers together**, as the positions heard them, and the
     bass's cuts designed from them (ADR-0175's amendment, 2026-11-17: the
     bass is mostly the same in both channels, and each speaker cut alone
@@ -638,7 +731,7 @@ def together(positions, grid=GRID, target=None) -> Design:
     positions = np.asarray(positions, dtype=float)
     before = power_average(positions)
     target, offset = _target(before, grid, target)
-    cuts = _bass_cuts(positions, before, target, grid)
+    cuts = _bass_cuts(positions, before, target, grid, trust)
     after = power_average(positions + cuts_db(cuts, grid))
     return Design(tuple(cuts), offset, before - offset, target - offset, after - offset, positions - offset,
                   (), after - offset)
@@ -671,3 +764,113 @@ def worse_positions(before_positions, after_positions, target, filters, grid=GRI
         if worst > WORSE_DB:
             found.append((n, round(worst, 1)))
     return found
+
+
+# ---- the speakers' timing (ADR-0185 C1) ----------------------------------------------
+
+#: **The timing sweeps**: short, from 500 Hz up, where a speaker's direct
+#: sound arrives as a sharp peak.
+TIMING_LO, TIMING_HI, TIMING_S = 500.0, 20000.0, 0.5
+#: Each in a slot of its own - the left, the right, the left again - long
+#: enough for the room's answer above 500 Hz to die away in it.
+TIMING_SLOT_S = 1.0
+#: How far either way the right's arrival is looked for, against the left's:
+#: about 5 m of difference.
+TIMING_REACH_S = 0.015
+#: The part of each answer compared: from just before the direct sound to
+#: before most first reflections.
+TIMING_WINDOW_S = (-0.0005, 0.002)
+#: Below this the two speakers' arrivals are too unlike to compare (one not
+#: heard, or two different speakers): nothing is said.
+TIMING_ALIKE = 0.3
+#: **The left heard twice must match at least this well** - the same
+#: speaker from the same place, in a quiet room near 1: under it the
+#: arrivals are noise, and nothing is said (a noisy room's readings stopped
+#: the run for a polarity that was noise).
+TIMING_SAME = 0.8
+#: **Each arrival must stand this far over the rest of its slot** (20 dB):
+#: a direct sound does, noise does not - two short windows of noise can
+#: match by chance.
+TIMING_CLEAR = 10.0
+SPEED_OF_SOUND = 343.0
+
+
+def timing_signal(amplitude: float = 1.0, fs: int = FS) -> np.ndarray:
+    """**One recording for both speakers' timing** (ADR-0185 C1): a short
+    sweep on the left, the right, then the left again, a slot apart, as
+    (samples, 2) frames - one playback and one capture, so nothing starts
+    apart between them."""
+    sweep = log_sweep(fs, TIMING_LO, TIMING_HI, TIMING_S) * amplitude
+    slot = int(TIMING_SLOT_S * fs)
+    frames = np.zeros((3 * slot, 2))
+    for k, channel in enumerate((0, 1, 0)):
+        frames[k * slot:k * slot + len(sweep), channel] = sweep
+    return frames
+
+
+@dataclass(frozen=True)
+class Timing:
+    """How much later the right speaker's sound reaches the microphone than
+    the left's (`late_s`: positive, the right is further), whether the two
+    have the same polarity, and how alike their arrivals are (0-1)."""
+    late_s: float
+    same_polarity: bool
+    alike: float
+
+    @property
+    def cm(self) -> float:
+        return self.late_s * SPEED_OF_SOUND * 100
+
+
+def _lag(ref, segment, reach: int) -> tuple[float, float]:
+    """Where `ref` best matches inside `segment` (which reaches `reach`
+    samples beyond it either way), in samples to a fraction, and the match's
+    signed strength (-1 to 1)."""
+    c = np.correlate(segment, ref, mode="valid")
+    k = int(np.argmax(np.abs(c)))
+    shift = 0.0
+    if 0 < k < len(c) - 1:
+        y0, y1, y2 = np.abs(c[k - 1]), np.abs(c[k]), np.abs(c[k + 1])
+        den = y0 - 2 * y1 + y2
+        if den < 0:
+            shift = 0.5 * (y0 - y2) / den
+    norm = np.sqrt(np.sum(ref ** 2) * np.sum(segment[k:k + len(ref)] ** 2))
+    return k - reach + shift, float(c[k] / norm) if norm > 0 else 0.0
+
+
+def timing(recording, fs: int = FS) -> Timing | None:
+    """**The right's arrival against the left's** from a recording of
+    `timing_signal` (ADR-0185 C1). The answer is deconvolved with the one
+    sweep, which puts the three arrivals a slot apart; the right's is lined
+    up with the first left's by cross-correlation, and the second left's
+    lag over two slots is the drift between the DAC's and the microphone's
+    clocks - half of it taken off, as the right sits between the two. None
+    when the arrivals are too unlike to say."""
+    sweep = log_sweep(fs, TIMING_LO, TIMING_HI, TIMING_S)
+    ir = deconvolve(recording, sweep, fs, band=(TIMING_LO, TIMING_HI))
+    slot = int(TIMING_SLOT_S * fs)
+    reach = int(TIMING_REACH_S * fs)
+    if len(ir) < 3 * slot + reach:
+        return None
+    first = int(np.argmax(np.abs(ir[:slot - reach])))
+    a, b = (first + int(w * fs) for w in TIMING_WINDOW_S)
+    if a < reach:
+        return None
+    for k in range(3):
+        part = ir[k * slot:(k + 1) * slot]
+        near = np.zeros(len(part), dtype=bool)
+        near[max(0, a - 2 * reach):b + 2 * reach] = True
+        rest = part[~near]
+        peak = np.max(np.abs(part[near]))
+        if not len(rest) or peak < TIMING_CLEAR * np.sqrt(np.mean(rest ** 2)):
+            return None
+    ref = ir[a:b]
+
+    def at(k):
+        return _lag(ref, ir[k * slot + a - reach:k * slot + b + reach], reach)
+
+    right, alike = at(1)
+    again, same = at(2)
+    if abs(alike) < TIMING_ALIKE or same < TIMING_SAME:
+        return None
+    return Timing((right - again / 2) / fs, alike > 0, abs(alike))

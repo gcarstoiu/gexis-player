@@ -21,6 +21,7 @@
       case 'place':
       case 'move': return `${at} · Moving the microphone`;
       case 'countdown': return `${at} · Sweeps in ${run.count}`;
+      case 'timing': return `${at} · ${run.position === 1 ? 'How far each speaker is' : 'Left and right'}`;
       case 'measure':
       case 'checking': return `${at} · ${speaker(run.speaker ?? 'L')}`;
       default: return 'Waiting for the phone';

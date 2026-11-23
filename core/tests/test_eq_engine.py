@@ -487,6 +487,24 @@ async def test_hear_it_without_is_patched_at_once(monkeypatch, tmp_path):
     assert ("restart", eq_engine.UNIT) not in rig.units
 
 
+async def test_the_speakers_delay_starts_with_the_stream_and_is_patched_at_once(monkeypatch, tmp_path):
+    """ADR-0185 D2: the nearer speaker's delay is in the stream's
+    configuration, and *Hear it without* takes it out in the running
+    CamillaDSP - a value, no restart."""
+    rig = Rig(monkeypatch, tmp_path)
+    aligned = eq.RoomPlay(cuts=ROOM, delay=(0.0, 0.42))
+    await rig.engine.configure("sndrpihifiberry", eq.FLAT, room=aligned)
+    rig.amixer = contents()
+    await rig.engine._look()
+    config = json.loads(next(a for n, a in rig.camilla.sent if n == "SetConfigJson"))
+    assert config["filters"]["room_r_delay"]["parameters"]["delay"] == 0.42
+    rig.camilla.sent.clear()
+    await rig.engine.configure("sndrpihifiberry", eq.FLAT, room=eq.RoomPlay(cuts=ROOM))
+    await rig.settle()
+    assert rig.camilla.sent == [("PatchConfig", {"filters": {"room_r_delay": {"parameters": {"delay": 0.0}}}})]
+    assert ("restart", eq_engine.UNIT) not in rig.units
+
+
 async def test_the_rooms_raises_are_lowered_for_and_given_back(monkeypatch, tmp_path):
     """ADR-0177 item 7: a stream starts lowered by the room's raise, which
     the volume gives back; under *Bass* or *Without* the same - one headroom

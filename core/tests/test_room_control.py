@@ -183,6 +183,9 @@ async def test_a_run_kept_switches_it_on():
     play = rig.control.stage("sndrpihifiberry")
     assert play.cuts[0] and play.above[0] and play.lift, "the corrections on the stage, with their headroom"
     assert rig.control.frozen() is None and not rig.control.in_path("vc4hdmi0")
+    # ADR-0185: the speakers' timing, read in the made-up room - the same.
+    assert s["measured"]["distance_cm"] == pytest.approx(0.0, abs=1.0)
+    assert rig.control.summary()["measured"]["delay_ms"] == [pytest.approx(0.0, abs=0.05)] * 2
 
 
 async def test_while_it_runs_the_player_is_held_and_the_equaliser_flat():
