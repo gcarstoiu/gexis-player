@@ -212,8 +212,12 @@ export const MOVES = {
   5: 'About 30 cm straight above where your head was',
 };
 //: The seat drawing's places in its 340 x 196 box (1 is the head; 5 is
-//: above it, so drawn on it).
-export const PLACES = [[170, 98], [122, 98], [218, 98], [170, 62], [170, 98]];
+//: above it, drawn as a badge lifted off it - George, 2026-11-23, plan C).
+export const PLACES = [[170, 98], [122, 98], [218, 98], [170, 46], [151, 79]];
+//: Each position's height against the ear, in cm (ADR-0187 D3): marked on
+//: the drawing and on its scale (George, 2026-11-23: with only the words,
+//: positions 2 and 3 were placed at ear height).
+export const HEIGHTS = [0, 15, -15, 0, 30];
 
 /** The dips the correction leaves, for the correction's tail: the lowest
  *  points below the target under the limit, two at most, low to high. */
