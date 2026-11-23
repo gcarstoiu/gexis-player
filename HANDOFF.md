@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-11-21 (on R2D2).
+Last updated: 2026-11-23 (on R2D2).
 
 ## Start here
 
@@ -31,22 +31,29 @@ testing*. The
 integration's **0.7.1** (the card's transport under the cover at 345 px and
 under) released 2026-11-21 as Latest. Plugin catalogue serial 9.
 
-**Phase 37, room measurement reworked** (`ph-room-measurement`;
+**Phase 37, room measurement reworked** (`ph-room-measurement`, worktree
+`~/projects/gexis-player-room`;
 [ADR-0187](docs/decisions/0187-room-measurement-reworked-setup-check-five-positions-timing-mark.md)
-accepted 2026-11-20): a setup check, five positions around the head (placed
-by eye), a timing mark on every sweep; the head's weight and finer bass
-detail kept only if the data shows them better. **First step, on sofapi**:
-the research build `ph37-research` (af7d1134, never released), installed
-2026-11-20 at George's word; it keeps each sweep's deconvolved response in
-`/var/lib/gexis/room-research/` (never a recording), copied with George's
-consent to `~/projects/scratch/ph37/`, both copies deleted after the
-analysis. **Waiting: George's run at five positions** (the speaker cables
-back the right way if still swapped from 19 Nov). **Do not update sofapi to
-1.18.1 before it**: that replaces the research build (its *Updates* is not
-Automatic, so the night only checks). Then `~/projects/scratch/ph37/check/analyse.py
-<run>.json` (`PYTHONPATH=<worktree>/core/src`): C5 and D5 judged on the
-check's re-placed positions, the ringing (C6), the joint over-cut (C7), the
-level readings (C2); a finding; the run's logs for ADR-0185 C4 and C8.
+accepted 2026-11-20): a setup check, five positions around the head, a
+timing mark on every sweep. **George's five-position run on the research
+build, 2026-11-23** ([Finding 158](docs/findings/158-room-measurement-five-positions-on-sofapi.md);
+48 dB at the seat, the amplifier lower than the run a minute before): the
+head at half the weight and the finer bass detail kept, built; the ringing
+read as the level at fixed times; the level window 6 ms; ADR-0185's limits
+kept, C8 not needed; Phase 30's acceptance 2 met on average, not point by
+point at 7.8-7.9 kHz. The run's responses deleted here and on sofapi
+(2026-11-23); the text results stay in `~/projects/scratch/ph37/run/`.
+**The branch** = `next` + `room-checks` + `room-chart` + five positions
+(without the research keeper) + the new design + George's three screen
+notes (the distance step lit, the check's *of 4*, the chart's *Each
+position* switch, off by default); the manual, technical guide and API
+updated; the manual's room picture still to be retaken. **Waiting on
+George**: which of three drawings of the five positions with height
+(mock-ups in `~/projects/scratch/ph37/mock/`); ADR-0022's [H] entries for
+five positions and the head's weight. **Next for Claude**: the timing mark
+(C4) on a research build for D4's proof - George's run at 60 dB; then the
+setup check, its screens designed first. **Do not update sofapi** before
+that run unless George says so: it still runs the first research build.
 **Before Phase 37 closes** (George, 2026-11-21; acceptance 5): the level at
 the seat against a meter, and the equaliser's and multiroom's measurements
 through the amplifiers - George present for each.
@@ -84,7 +91,7 @@ a group, the plugin off and on, Roon Bridge's own update.
 
 **sofapi runs hot** (2026-11-21): 78 °C with no page; a Home Assistant page with one camera was closed for the heat twice (Finding 157). ADR-0176 P8 kept as it is; George is bringing the temperature down.
 
-**The players** (2026-11-21): **sofapi** on Phase 37's research build (core,
+**The players** (2026-11-23): **sofapi** on Phase 37's research build (core,
 player and UI 1.18.0+git22.af7d113, which carries all of the 1.18.1 preview;
 go-librespot 0.10.7-4, Shairport Sync 5.6.3-1), room correction on, a USB
 isolator on its DAC's cable, in no group since the group test of 21 Nov. **shelvespi** on

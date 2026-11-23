@@ -198,3 +198,13 @@ placed again by eye.
 - **C8 not needed:** the only bass left uncorrected for noise, in the
   design from both speakers, lay at 20-21 Hz, under the target.
 
+**As built (2026-11-23, `ph-room-measurement`):** the head repeated so it is
+half the set (`room_dsp.head_counts_more`), in the bass and above it; the
+bass's cuts fitted on a 1/96-octave grid to 500 Hz against the target
+carried over from the 1/24-octave one, a peak placed by that grid's own
+step. On George's kept run the code gives at the check's places 0.38 dB rms
+over the target at the head (today's design 0.50), no place's highest point
+more than 0.1 dB higher, less over-cut than today's at every place, and a
+50 Hz decay of 0.36-0.48 s (today's 0.46-0.67 s). The curves kept and drawn
+stay the five as measured, on the 1/24-octave grid.
+

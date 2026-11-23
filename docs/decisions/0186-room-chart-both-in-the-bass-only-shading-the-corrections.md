@@ -4,7 +4,8 @@
 same day: George decided D1-D2 after looking at his full-range check on
 sofapi; C1-C2 are Claude's. Built on `room-chart`. **Amended** the same
 day: D1 replaced by D3, *Both* in full (George); then D3 replaced by D4, no
-*Both* tab (George), and C3-C4 withdrawn.
+*Both* tab (George), and C3-C4 withdrawn. **Amended** 2026-11-23: each
+position's curve behind a switch, off by default (George; below).
 **Amends:** [ADR-0177](0177-room-correction-for-the-full-range.md) (the
 chart, the design's §2) and
 [ADR-0175](0175-room-correction-for-the-bass.md)'s amendment of 2026-11-17,
@@ -134,3 +135,14 @@ joint graph.
 - Not covered: each speaker's sweeps recorded with a timing reference and
   their phase kept, which would let the joint sweep go - a third of the
   run's sweep sets.
+
+## Amended 2026-11-23 (George): each position behind a switch
+
+After his five-position run on the research build, George found the charts
+too busy with every position drawn. **Each position's curve is behind a
+switch, off by default**: the legend's *Each position* key is the switch,
+on the phone, the panel and the bars that have a legend; without one (a
+bar's quick chart) they are not drawn. The switch is not kept: each chart
+opens with it off, so it is no setting. Built on `ph-room-measurement`
+(Phase 37).
+
