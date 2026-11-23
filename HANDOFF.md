@@ -37,7 +37,8 @@ under) released 2026-11-21 as Latest. Plugin catalogue serial 9.
 accepted 2026-11-20): a setup check, five positions around the head, a
 timing mark on every sweep. **George's five-position run on the research
 build, 2026-11-23** ([Finding 158](docs/findings/158-room-measurement-five-positions-on-sofapi.md);
-48 dB at the seat, the amplifier lower than the run a minute before): the
+48 dB at the seat, the amplifier lower than the run a minute before;
+positions 2 and 3 at ear height, not 15 cm up and down): the
 head at half the weight and the finer bass detail kept, built; the ringing
 read as the level at fixed times; the level window 6 ms; ADR-0185's limits
 kept, C8 not needed; Phase 30's acceptance 2 met on average, not point by

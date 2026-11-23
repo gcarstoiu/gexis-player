@@ -15,8 +15,14 @@ the same day with the research build:
   90° file and room correction at *Full range*. The cables were the right
   way: at position 2 the right speaker read 16 cm further than at the head,
   as it should.
-- **The run:** five positions placed by eye (D3), then the check at five
-  places placed again, with the correction on. Each position had two sweeps
+- **The run:** five positions placed by eye, then the check at five
+  places placed again, with the correction on. **Positions 2 and 3 were
+  at ear height**, not 15 cm up and down as D3 has them (George, the same
+  day: the drawing showed no height, only the words). So only position 5
+  varied in height. In the bass this changes little: 15 cm is a tenth of a
+  wavelength at about 230 Hz, and a position's response holds within about
+  that. Above the bass the places spread less than D3's would, so the
+  differences found there between placings are, if anything, low. Each position had two sweeps
   per speaker and two together; one together at position 3 was repeated
   for a disturbance. The check had four of each, as it plays 3 dB lower
   (ADR-0185 C3). The player kept 91 responses, never a recording. A run
@@ -187,4 +193,6 @@ at the check's places, against each speaker's own target:
   - At 7.8-7.9 kHz, a microphone placed again by eye reads about 1 dB
     differently, so a correction there can take a place further away.
   - That point is open for the next run.
-- **The next run should be at 60 dB:** the amplifier was lower this time.
+- **The next run should be at 60 dB, with D3's heights:** the amplifier
+  was lower this time, and positions 2 and 3 were at ear height. Its check
+  plays the design kept here, so it tests D5 and C5 again at D3's places.

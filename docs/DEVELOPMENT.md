@@ -4444,7 +4444,8 @@ timing mark proven, then five positions with it. Each with a preview on
 sofapi before release.
 
 **Measured 2026-11-23** ([Finding 158](findings/158-room-measurement-five-positions-on-sofapi.md),
-George's run on the research build, 48 dB at the seat): the head's weight
+George's run on the research build, 48 dB at the seat, positions 2 and 3
+at ear height rather than 15 cm up and down): the head's weight
 kept at half, the finer bass detail kept with it; the ringing quieter with
 every design, the level at fixed times to be shown rather than the decay
 time alone; the level read in 6 ms; ADR-0185's limits kept, C8 not needed.
