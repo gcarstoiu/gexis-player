@@ -310,3 +310,38 @@ run's own loop before measuring (`Run._speakers`).
 - **The screens** are as chosen; the panel's running screen says *Speaker
   check*. The manual, FAQ, README, technical guide and API were updated
   (ca235a95). ADR-0022's inventory: both [H], confirmed by George.
+
+## Decided 2026-11-23 (George): the ringing and the dips on the screens
+
+From a canvas of mock-ups (made-up numbers), three ways each.
+- **D7 - the ringing as a small card (B),** on the result after the check:
+  *Ringing in the bass*, what is left of a note 0.2 s later in the bands
+  where the room rang most, a bar and a figure before and after, under the
+  speaker's tab. Over: one sentence (A); the decay drawn for one band at a
+  time (C).
+- **D8 - a card per dip (B),** on the correction before the check: *Dips
+  left as they are*, each dip's frequency and depth, its cause as a tag and
+  what may help. It takes the place of the dips in the closing words. Over:
+  in the closing words (A); marked on the chart with a sheet (C). The words
+  are the mock-up's, George's to change, but one: the player cannot tell
+  which surface sends the sound back, so a wall's dip says *a wall or the
+  floor* and not *the wall behind* (put to George).
+
+**How (Claude's, from C6 and C9):**
+- **The ringing:** each speaker at the head, its kept sweeps averaged as
+  waves; per third octave from 20 to 250 Hz, the level 0.2 s after the
+  arrival against the first 50 ms before the correction in that band
+  (Finding 158's reading). After is the check's head; with the check skipped,
+  the before through the corrections, marked as expected. The card shows
+  the four bands that rang most before, low to high; all bands, with the
+  levels at 0.1 and 0.3 s and the decay times, go to the log.
+- **The dips:** where the pair, its positions averaged with the head's
+  weight, lies at least 3 dB under the target at a low point from 20 to
+  250 Hz, up to three, deepest first, shown low to high. The cause: *the
+  two speakers cancel* where the speakers' power sum lies at least 6 dB over
+  the pair there at most positions; *only at some places* where the dip's
+  depth spreads by 10 dB or more between positions; *a wall or the floor*
+  where one speaker alone has it at most positions and a quarter wavelength
+  is under 1.5 m - that speaker, and the distance; none named otherwise.
+- **C7 logged** with the design: how far the joint cuts take the speakers'
+  power sum, levelled to the pair, further under the target.

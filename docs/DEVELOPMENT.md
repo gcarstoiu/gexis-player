@@ -4501,6 +4501,17 @@ weight. The level reading moved 0.9 dB with the head placed again.
   CamillaDSP `Gain` beside the delay (ADR-0187 D2, C2). In the made-up room
   only; not yet run on sofapi.
 
+**The check on its own, the ringing and the dips, decided from mock-ups**
+(George, 2026-11-23, a canvas of three ways each):
+- **The speakers aligned on their own**
+  ([ADR-0188](decisions/0188-speakers-aligned-on-their-own.md), A): a
+  *Speakers* card with its own switch and *Check the speakers*, the delay
+  and the level heard with room correction on or off; a check that moves
+  them after a measurement says the correction no longer fits exactly.
+- **The ringing as a small card** after the check (ADR-0187 D7, B).
+- **A card per dip** on the correction, its cause and what may help
+  (ADR-0187 D8, B).
+
 **Acceptance (draft):**
 
 1. The setup check finds a swapped pair, a reversed speaker, the distance's
