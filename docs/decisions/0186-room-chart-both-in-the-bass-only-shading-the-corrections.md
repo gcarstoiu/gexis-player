@@ -146,3 +146,19 @@ bar's quick chart) they are not drawn. The switch is not kept: each chart
 opens with it off, so it is no setting. Built on `ph-room-measurement`
 (Phase 37).
 
+## Amended 2026-11-23 (George): the bass on each speaker's tab
+
+ADR-0187's owed decision, taken with D4's chart resumed. Three mock-ups
+were drawn by the real chart on an invented room whose speakers differ (the
+left alone 5 dB over the target after the shared cuts, the right 3.7, the
+pair 1.1):
+- **A** each speaker alone;
+- **B** the pair in the bass pane, the same on both tabs;
+- **C** as B, with the speaker alone as a faint line.
+
+- **D5 — Each speaker's tab shows that speaker alone, in the bass too**
+  (George chose A; it keeps D4). The bass pane is the speaker as measured
+  alone with the cuts shared by both. A line under the chart says that the
+  bass is cut for both speakers together, so on its own a speaker can sit
+  well off the target there. Over: B and C, which bring the pair back into
+  the bass pane and partly reverse D4.

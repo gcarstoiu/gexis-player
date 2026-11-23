@@ -101,7 +101,7 @@ a new measurement (7 Nov); *Left* and *Right* tabs (ADR-0186 D4).
 - **D9 — A phase of its own, now:** Phase 37. Phase 34 keeps the correction
   in time.
 
-**Owed later:** the bass on each speaker's tab - cut for the pair, a speaker
+**Owed later:** *(the first decided 2026-11-23: ADR-0186 D5, each tab the speaker alone)* the bass on each speaker's tab - cut for the pair, a speaker
 alone can sit far from its target (on George's run of 19 Nov up to 8 dB over
 and 18 dB under, the pair within −3.8/+1.8 dB) - decided when ADR-0186 D4's
 chart is resumed; whether a noisy room may lengthen the run, after the logs.
@@ -256,3 +256,33 @@ position, as before D4. The run's state lists what each position sweeps
 (`sets`), and the phone's rows follow it. **The start screen says about 20
 minutes** (George, 2026-11-23, over ADR-0177's five): George's run took 28
 minutes with the check and the moves, about 22 without the together sweeps.
+
+## Decided 2026-11-23 (George): the speaker check's screens
+
+From a sheet of mock-ups (made-up numbers) showing the flow, three ways to
+show what the check found, and the screens for what can go wrong. George
+chose **A, a list of its own**. The flow and the problem screens are as
+drawn.
+- **The flow:** step 3 of 5 (microphone, level, speaker check, measuring,
+  result).
+  - At the head, after the level: one set of short whistles, with rows for
+    how far each speaker is, the wiring and the level.
+  - *Move it to position 2* and **Check here**: the left/right whistles.
+  - Then the list.
+- **The list:** *Your speakers are ready*, a ticked row for each check
+  saying what was set:
+  - the right way round;
+  - wired the same way;
+  - the further speaker's distance and the delay on the nearer;
+  - the quieter speaker's level and the cut on the louder.
+
+  **Check again** or **Measure**, which leads to the usual move back to the
+  head. Over: the results on that move screen (B); a table for each speaker
+  (C).
+- **What can go wrong:**
+  - A swap or a crossed wire shows what to fix, with **Check again**, which
+    runs the check again without starting over, or **Cancel**.
+  - A speaker more than 34 cm off offers **Check again** or **Measure
+    anyway**.
+  - A level that cannot be read is an amber row in the list: nothing is
+    matched.
