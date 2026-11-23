@@ -69,27 +69,38 @@ class Rig:
     def names(self):
         return [c[0] for c in self.calls]
 
-    async def run_to(self, step, position=None, checking=None):
+    async def run_to(self, step, position=None, checking=None, setup=None):
         run = self.control.run
         for _ in range(6000):
             s = run.state
             if s.step == step and (position is None or s.position == position) and \
-                    (checking is None or s.checking == checking) and run.waiting:
+                    (checking is None or s.checking == checking) and (setup is None or s.setup == setup) \
+                    and run.waiting:
                 return s
             if not run.running:
                 raise AssertionError(f"ended: {run.ended}")
             await asyncio.sleep(0.01)
         raise AssertionError(f"never reached {step}")
 
+    async def past_check(self):
+        """ADR-0187: the speaker check - left and right at position 2, the
+        list - then each position from the head."""
+        await self.run_to("move", 2, setup=True)
+        self.audio.position = 2
+        await self.control.tap("next")
+        await self.run_to("ready")
+        await self.control.tap("next")
+        for n in range(1, rc.POSITIONS + 1):
+            await self.run_to("move", n, setup=False)
+            self.audio.position = n
+            await self.control.tap("next")
+
     async def measure(self, keep=True, skip=False):
         await self.control.calibration(CAL, "7071234_90deg.txt")
         await self.control.start()
         await self.run_to("place")
         await self.control.tap("start")
-        for n in range(2, rc.POSITIONS + 1):
-            await self.run_to("move", n)
-            self.audio.position = n
-            await self.control.tap("next")
+        await self.past_check()
         await self.run_to("correction")
         if skip:
             await self.control.tap("check")
@@ -186,6 +197,10 @@ async def test_a_run_kept_switches_it_on():
     # ADR-0185: the speakers' timing, read in the made-up room - the same.
     assert s["measured"]["distance_cm"] == pytest.approx(0.0, abs=1.0)
     assert rig.control.summary()["measured"]["delay_ms"] == [pytest.approx(0.0, abs=0.05)] * 2
+    # ADR-0187 D2: the made-up speakers read within a fraction of a dB: the
+    # louder one turned down by it.
+    level = rig.control.summary()["measured"]["level_db"]
+    assert min(level) > -1.0 and max(level) == 0.0
 
 
 async def test_while_it_runs_the_player_is_held_and_the_equaliser_flat():
@@ -258,10 +273,7 @@ async def test_done_on_nothing_to_correct_ends_the_run():
     await rig.control.start()
     await rig.run_to("place")
     await rig.control.tap("start")
-    for n in range(2, rc.POSITIONS + 1):
-        await rig.run_to("move", n)
-        rig.audio.position = n
-        await rig.control.tap("next")
+    await rig.past_check()
     await rig.run_to("nothing")
     await rig.control.tap("done")
     await asyncio.wait_for(rig.control.run.wait(), 5)
@@ -330,10 +342,7 @@ async def test_the_pending_measurement_is_shown_before_it_is_kept():
     await rig.control.start()
     await rig.run_to("place")
     await rig.control.tap("start")
-    for n in range(2, rc.POSITIONS + 1):
-        await rig.run_to("move", n)
-        rig.audio.position = n
-        await rig.control.tap("next")
+    await rig.past_check()
     await rig.run_to("correction")
     s = rig.control.snapshot()
     assert s["pending"]["chart"]["after_kind"] == "expected" and s["pending"]["cuts"]["L"]
@@ -437,7 +446,14 @@ async def test_a_second_measure_here_is_not_kept_for_the_next_position(when):
     await rig.control.start()
     await rig.run_to("place")
     await rig.control.tap("start")
-    await rig.run_to("move", 2)
+    await rig.run_to("move", 2, setup=True)
+    rig.audio.position = 2
+    await rig.control.tap("next")
+    await rig.run_to("ready")
+    await rig.control.tap("next")
+    await rig.run_to("move", 1, setup=False)
+    await rig.control.tap("next")
+    await rig.run_to("move", 2, setup=False)
     rig.audio.position = 2
     await rig.control.tap("next")
     if when != "at_once":

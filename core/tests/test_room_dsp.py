@@ -361,15 +361,16 @@ def test_a_kept_target_designs_the_same_cuts():
 # ---- ADR-0185: the speakers' timing, and the sweeps judged by the room's noise -----
 
 
-def _timing_recording(delays=(0.008, 0.008), polarity=(1.0, 1.0), noise_db=-110.0, lead_s=0.3, drift=0.0):
+def _timing_recording(delays=(0.008, 0.008), polarity=(1.0, 1.0), noise_db=-110.0, lead_s=0.3, drift=0.0,
+                      loud=(1.0, 1.0)):
     """What the microphone hears of `timing_signal`, each speaker at its
-    delay and polarity; `drift`: the microphone's clock that much fast
-    against the DAC's (50e-6 is 50 ppm)."""
+    delay, polarity and loudness; `drift`: the microphone's clock that much
+    fast against the DAC's (50e-6 is 50 ppm)."""
     frames = rd.timing_signal(0.3)
     length = len(frames) + int((lead_s + 0.3) * rd.FS)
     out = np.zeros(length)
     for c in (0, 1):
-        out += sim.record(frames[:, c], seed=c * 100 + 1, gain=polarity[c], delay_s=delays[c], lead_s=lead_s,
+        out += sim.record(frames[:, c], seed=c * 100 + 1, gain=polarity[c] * loud[c], delay_s=delays[c], lead_s=lead_s,
                           length=length, noise_db=noise_db if c == 0 else -300.0, noise_seed=11)
     if drift:
         t = np.arange(length)
@@ -400,6 +401,21 @@ def test_the_clocks_drifting_apart_is_taken_off():
 def test_a_speaker_with_plus_and_minus_swapped_reads_opposite():
     t = rd.timing(_timing_recording((0.008, 0.0081), polarity=(1.0, -1.0)))
     assert t is not None and not t.same_polarity and t.cm == pytest.approx(3.4, abs=1.0)
+
+
+@pytest.mark.parametrize("lead", [0.3, 0.341])
+def test_how_much_louder_the_right_is_read_from_the_same_whistles(lead):
+    """ADR-0187 C2: each arrival's level over 500 Hz-4 kHz in its first
+    6 ms, the right's against the two lefts'; wherever the recording starts,
+    with the clocks drifting or a speaker wired the other way, a speaker
+    2 dB quieter reads 2 dB lower."""
+    same = rd.timing(_timing_recording((0.008, 0.0083), lead_s=lead)).right_db
+    quieter = rd.timing(_timing_recording((0.008, 0.0083), lead_s=lead, loud=(1.0, 10 ** (-2 / 20)))).right_db
+    assert quieter - same == pytest.approx(-2.0, abs=0.02)
+    drifting = rd.timing(_timing_recording((0.008, 0.0083), lead_s=lead, drift=100e-6)).right_db
+    assert drifting == pytest.approx(same, abs=0.1)
+    reversed_ = rd.timing(_timing_recording((0.008, 0.0083), lead_s=lead, polarity=(1.0, -1.0))).right_db
+    assert reversed_ == pytest.approx(same, abs=0.02)
 
 
 def test_noise_instead_of_arrivals_says_nothing():

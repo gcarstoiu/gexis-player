@@ -81,8 +81,10 @@ plays, and is back for the next PCM one. Room correction does the same.
 
 **Can the player correct my room?**
 Yes: *Settings → Audio → Room correction*. With a measurement microphone at
-your seat, the player plays sweeps through your speakers at three positions
-around your head. In the bass it cuts the peaks the room adds below 250 Hz,
+your seat, the player first checks your speakers - left and right the right
+way round, wired the same way - and delays the nearer one and turns down the
+louder one so both reach you together and equally loud; then it plays sweeps
+through them at five positions around your head. In the bass it cuts the peaks the room adds below 250 Hz,
 towards a gentle rise below about 80 Hz - only cuts: a dip stays, since more
 power does not fill it. Above the bass it evens out the room's broad bumps
 and dips by 3 dB at most, up or down, and keeps the balance your speakers

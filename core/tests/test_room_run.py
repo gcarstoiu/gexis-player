@@ -53,26 +53,50 @@ class Rig:
         self.run = Run("DAC", self.audio, CAL, Host(take, stage, loud, finish, publish), sleep=fast,
                        timeout_s=timeout_s, today=lambda: "2026-11-05", sweep_s=1.0)
 
-    async def until(self, step, position=None, checking=None, limit=60.0):
+    async def until(self, step, position=None, checking=None, limit=60.0, setup=None):
         loop = asyncio.get_running_loop()
         end = loop.time() + limit
         while loop.time() < end:
             s = self.run.state
             if (s.step == step and (position is None or s.position == position)
-                    and (checking is None or s.checking == checking) and (self.run.waiting or step not in
-                                                                         ("place", "move", "correction", "nothing", "result"))):
+                    and (checking is None or s.checking == checking) and (setup is None or s.setup == setup)
+                    and (self.run.waiting or step not in ("place", "move", "correction", "nothing", "result", "ready",
+                                                          "far", "polarity", "swapped"))):
                 return s
             if not self.run.running:
                 raise AssertionError(f"the run ended waiting for {step}: {self.ended}")
             await asyncio.sleep(0.01)
         raise AssertionError(f"no {step} {position}: at {self.run.state}")
 
-    async def measure_all(self):
+    async def started(self):
         await self.run.start()
         await self.until("place")
         self.run.tap("start")
-        for n in range(2, rc.POSITIONS + 1):
-            await self.until("move", n)
+
+    async def through_check(self):
+        """ADR-0187: the speaker check - left and right at position 2, then
+        the list - to the move back to the head."""
+        await self.until("move", 2, setup=True)
+        self.audio.position = 2
+        self.run.tap("next")
+        await self.until("ready")
+        self.audio.position = 1
+        self.run.tap("next")
+
+    async def to_move(self, n):
+        """Through the check, measuring up to the move to position `n`."""
+        await self.through_check()
+        for k in range(1, n):
+            await self.until("move", k, setup=False)
+            self.audio.position = k
+            self.run.tap("next")
+        return await self.until("move", n, setup=False)
+
+    async def measure_all(self):
+        await self.started()
+        await self.to_move(1)
+        for n in range(1, rc.POSITIONS + 1):
+            await self.until("move", n, setup=False)
             self.audio.position = n
             self.run.tap("next")
         return await self.until("correction")
@@ -175,11 +199,11 @@ async def test_the_tap_is_followed_by_a_countdown():
     await rig.run.start()
     await rig.until("place")
     rig.run.tap("start")
-    await rig.until("move", 2)
+    await rig.to_move(1)
     rig.run.tap("next")
-    await rig.until("measure", 2)
+    await rig.until("measure", 1)
     counts = [s.count for s in rig.states if s.step == "countdown"]
-    assert counts == [3, 2, 1]
+    assert counts == [3, 2, 1, 3, 2, 1], "after the check's move to 2 and the move back to the head"
     rig.run.cancel()
     await rig.run.wait()
 
@@ -189,10 +213,8 @@ async def test_each_speaker_alone_two_sweeps_each_both_added():
     each; both together are added from them, placed by their marks - not
     played."""
     rig = Rig()
-    await rig.run.start()
-    await rig.until("place")
-    rig.run.tap("start")
-    await rig.until("move", 2)
+    await rig.started()
+    await rig.to_move(2)
     sweeps = [c for c, _ in rig.audio.plays if c not in (None, "frames")]
     assert sweeps == [0, 0, 1, 1]
     before = [c for c, _ in rig.audio.plays[: -4]]
@@ -253,10 +275,8 @@ async def test_a_sweep_without_its_mark_has_both_played(monkeypatch):
     only goes up."""
     monkeypatch.setattr(rd, "mark_at", lambda recording, fs=rd.FS: None)
     rig = Rig()
-    await rig.run.start()
-    await rig.until("place")
-    rig.run.tap("start")
-    await rig.until("move", 2)
+    await rig.started()
+    await rig.to_move(2)
     sweeps = [c for c, _ in rig.audio.plays if c not in (None, "frames")]
     assert sweeps == [0, 0, 1, 1, (0, 1), (0, 1)]
     assert len(rig.run._positions[rc.BOTH]) == len(rig.run._fine) == 1 and rig.run._fine[0] is not None
@@ -471,10 +491,8 @@ async def test_a_microphone_that_stops_following_ends_it_early():
 
 async def test_a_spoiled_sweep_is_measured_again():
     rig = Rig(Audio(bursts=(2,)))
-    await rig.run.start()
-    await rig.until("place")
-    rig.run.tap("start")
-    await rig.until("move", 2)
+    await rig.started()
+    await rig.to_move(2)
     assert any(s.noise for s in rig.states if s.step == "measure"), "shown as spoiled"
     sweeps = [c for c, _ in rig.audio.plays if c not in (None, "frames")]
     assert sweeps.count(0) == 3 and sweeps.count(1) == 2
@@ -509,9 +527,9 @@ async def test_discard_keeps_nothing():
 
 async def test_cancel_at_any_step_gives_the_player_back():
     rig = Rig()
-    await rig.run.start()
-    await rig.until("place")
-    rig.run.tap("start")
+    await rig.started()
+    await rig.to_move(1)
+    rig.run.tap("next")
     await rig.until("measure", 1)
     rig.run.cancel()
     await rig.run.wait()
@@ -530,11 +548,10 @@ async def test_ten_minutes_without_a_tap_cancels_it():
 
 async def test_a_room_near_the_target_has_nothing_to_correct():
     rig = Rig(Audio(modes=(), broad=()))
-    await rig.run.start()
-    await rig.until("place")
-    rig.run.tap("start")
-    for n in range(2, rc.POSITIONS + 1):
-        await rig.until("move", n)
+    await rig.started()
+    await rig.through_check()
+    for n in range(1, rc.POSITIONS + 1):
+        await rig.until("move", n, setup=False)
         rig.audio.position = n
         rig.run.tap("next")
     await rig.until("nothing")
@@ -609,9 +626,9 @@ async def test_cancel_ends_at_once_and_the_sound_stops():
             stopped.set()
             raise
     rig.audio.play = long_sweep
-    await rig.run.start()
-    await rig.until("place")
-    rig.run.tap("start")
+    await rig.started()
+    await rig.to_move(1)
+    rig.run.tap("next")
     for _ in range(500):
         if rig.run.state.step == "measure":
             break
@@ -626,11 +643,9 @@ async def test_cancel_ends_at_once_and_the_sound_stops():
 # ---- ADR-0185: the speakers checked and aligned, fewer repeats ----------------------
 
 
-async def _to(rig, step, position=None):
-    await rig.run.start()
-    await rig.until("place")
-    rig.run.tap("start")
-    return await rig.until(step, position)
+async def _to(rig, step, position=None, setup=None):
+    await rig.started()
+    return await rig.until(step, position, setup=setup)
 
 
 async def test_the_nearer_speaker_is_delayed_so_both_arrive_together():
@@ -645,9 +660,8 @@ async def test_the_nearer_speaker_is_delayed_so_both_arrive_together():
     assert pending.distance_cm == pytest.approx(10.3, abs=1.0)
     assert pending.delay[0] == pytest.approx(0.3, abs=0.03) and pending.delay[1] == 0.0
     stages = [c[1] for c in rig.calls if isinstance(c, tuple) and c[1] is not None]
-    assert stages[0].delay == pending.delay and not any(stages[0].cuts), "from before the first sweep"
-    first_sweep = next(i for i, (c, _) in enumerate(audio.plays) if c not in (None, "frames"))
-    assert rig.calls.index(("stage", stages[0])) < len(rig.calls) and first_sweep > 0
+    assert stages[0].delay == (0.0, 0.0), "the check starts from none"
+    assert stages[-1].delay == pending.delay and not any(stages[-1].cuts), "from before the first sweep"
     rig.run.tap("check")
     for n in range(1, rc.POSITIONS + 1):
         await rig.until("move", n, checking=True)
@@ -661,16 +675,22 @@ async def test_the_nearer_speaker_is_delayed_so_both_arrive_together():
     await rig.run.wait()
 
 
-async def test_a_speaker_with_plus_and_minus_swapped_stops_the_run():
+async def test_a_speaker_wired_the_other_way_is_said_and_checked_again():
+    """ADR-0187 D1 (screens George's, 2026-11-23): + and - swapped at one
+    speaker stops the check before any sweep, says so and waits; put right,
+    *Check again* runs it again without starting over."""
     audio = Audio()
     audio.polarity = (1.0, -1.0)
     rig = Rig(audio)
-    await rig.run.start()
-    await rig.until("place")
-    rig.run.tap("start")
-    await asyncio.wait_for(rig.run._task, 30)
-    assert rig.ended[-1] == {"how": "cancelled", "why": "polarity"} and rig.kept == [None]
+    state = await _to(rig, "polarity")
+    assert state.setup and rig.run.waiting and not rig.ended
     assert not [c for c, _ in audio.plays if c not in (None, "frames")], "nothing swept"
+    audio.polarity = (1.0, 1.0)
+    rig.run.tap("again")
+    await rig.until("move", 2, setup=True)
+    assert rig.run._timing is not None and rig.run._timing.same_polarity
+    rig.run.cancel()
+    await rig.run.wait()
 
 
 async def test_speakers_far_apart_wait_for_measure_anyway():
@@ -682,24 +702,37 @@ async def test_speakers_far_apart_wait_for_measure_anyway():
     assert state.distance_cm == pytest.approx(51.5, abs=1.0) and rig.run.waiting
     assert not [c for c, _ in audio.plays if c not in (None, "frames")]
     rig.run.tap("next")
-    await rig.until("move", 2)
+    await rig.until("move", 2, setup=True)
     rig.run.cancel()
     await rig.run.wait()
 
 
 async def test_swapped_speakers_are_found_at_position_2():
     """D1: 40 cm to the left the left must be nearer; swapped, it is the
-    further, and the run stops before position 2 is swept."""
+    further: the check says so before any sweep and waits. Put right, *Check
+    again* brings the microphone back to the head and checks again."""
     audio = Audio()
     audio.delays = dict(sim.SIDES)
     audio.swapped = True
     rig = Rig(audio)
-    await _to(rig, "move", 2)
+    await _to(rig, "move", 2, setup=True)
     audio.position = 2
     rig.run.tap("next")
-    await asyncio.wait_for(rig.run._task, 30)
-    assert rig.ended[-1] == {"how": "cancelled", "why": "swapped"} and rig.kept == [None]
-    assert not [n for c, n in audio.plays if c not in (None, "frames") and n == 2], "position 2 not swept"
+    state = await rig.until("swapped")
+    assert state.setup and not rig.ended
+    assert not [c for c, _ in audio.plays if c not in (None, "frames")], "nothing swept"
+    audio.swapped = False
+    rig.run.tap("again")
+    await rig.until("move", 1, setup=True)
+    audio.position = 1
+    rig.run.tap("next")
+    await rig.until("move", 2, setup=True)
+    audio.position = 2
+    rig.run.tap("next")
+    state = await rig.until("ready")
+    assert state.sides == "right"
+    rig.run.cancel()
+    await rig.run.wait()
 
 
 async def test_speakers_the_right_way_round_go_on_at_position_2():
@@ -716,7 +749,8 @@ async def test_noise_alone_no_longer_repeats_sweeps_and_is_not_corrected():
     stand 20 dB over the room's noise, none is; the points still under 10
     dB once averaged are left uncorrected."""
     rig = Rig(Audio(noise_db=-55))
-    await _to(rig, "move", 2)
+    await rig.started()
+    await rig.to_move(2)
     sweeps = [c for c, _ in rig.audio.plays if c not in (None, "frames")]
     assert sweeps == [0, 0, 1, 1]
     assert rig.run._trust(rc.BOTH) is not None, "both added are judged by two recordings' noise"
@@ -763,13 +797,95 @@ async def test_the_distance_steps_short_sweeps_light_the_speaker_they_come_from(
                 await asyncio.sleep(0)
         return await play(signal, channel, tail_s)
     rig.audio.play = slow
-    await rig.run.start()
-    await rig.until("place")
-    rig.run.tap("start")
+    await rig.started()
+    await rig.to_move(1)
+    rig.run.tap("next")
     await rig.until("measure", 1)
     lit = [s.speaker for s in rig.states if s.step == "timing"]
     changes = [k for i, k in enumerate(lit) if i == 0 or k != lit[i - 1]]
     assert changes[:5] == [None, "L", "R", "L", None], changes
     assert rig.run.state.as_dict()["sweeps"] == room_run.SWEEPS
+    rig.run.cancel()
+    await rig.run.wait()
+
+
+# ---- ADR-0187: the speaker check (D1-D2, C1-C2; screens George's, 2026-11-23) -------
+
+
+async def test_the_louder_speaker_is_turned_down_to_match():
+    """D2, C2: the right 2 dB quieter (the made-up room's own speakers read
+    alike within a fraction of a dB): the left is turned down by the whole
+    difference on the stage before any sweep, the list says it, and the
+    measurement keeps it."""
+    base = Rig(Audio())
+    base.audio.delays = dict(sim.SIDES)
+    await base.started()
+    await base.until("move", 2, setup=True)
+    same = base.run._timing.right_db
+    base.run.cancel()
+    await base.run.wait()
+    audio = Audio()
+    audio.delays = dict(sim.SIDES)
+    audio.loudness = (1.0, 10 ** (-2 / 20))
+    rig = Rig(audio)
+    await rig.started()
+    await rig.until("move", 2, setup=True)
+    audio.position = 2
+    rig.run.tap("next")
+    state = await rig.until("ready")
+    assert state.right_db == pytest.approx(same - 2.0, abs=0.1) and state.sides == "right"
+    want = (min(0.0, state.right_db), min(0.0, -state.right_db))
+    stage = [c[1] for c in rig.calls if isinstance(c, tuple) and c[1] is not None][-1]
+    assert stage.level == pytest.approx(want) and stage.level[0] < -1.5 and stage.level[1] == 0.0
+    rig.audio.position = 1
+    rig.run.tap("next")
+    for n in range(1, rc.POSITIONS + 1):
+        await rig.until("move", n, setup=False)
+        rig.audio.position = n
+        rig.run.tap("next")
+    await rig.until("correction")
+    assert rig.run.pending.level == pytest.approx(want) and rig.run.pending.matched
+    rig.run.cancel()
+    await rig.run.wait()
+
+
+async def test_a_level_that_does_not_repeat_is_not_matched(monkeypatch):
+    """C2: two readings must agree within 0.25 dB; when none do, nothing is
+    matched and the list says the level could not be read - the timing
+    still is."""
+    real = rd.timing
+    swing = iter(range(0, 40))
+
+    def unsteady(recording, fs=rd.FS):
+        t = real(recording, fs)
+        return None if t is None else rd.Timing(t.late_s, t.same_polarity, t.alike, t.right_db + next(swing))
+    monkeypatch.setattr(rd, "timing", unsteady)
+    rig = Rig()
+    await rig.started()
+    await rig.until("move", 2, setup=True)
+    rig.audio.position = 2
+    rig.run.tap("next")
+    state = await rig.until("ready")
+    assert state.right_db is None and rig.run._match == (0.0, 0.0) and rig.run._timing is not None
+    rig.run.cancel()
+    await rig.run.wait()
+
+
+async def test_check_again_from_the_list_starts_over_at_the_head():
+    """D1: *Check again* from the list brings the microphone back to the
+    head and runs the whole check again, from no delay and no level."""
+    rig = Rig()
+    await rig.started()
+    await rig.until("move", 2, setup=True)
+    rig.audio.position = 2
+    rig.run.tap("next")
+    await rig.until("ready")
+    rig.run.tap("again")
+    await rig.until("move", 1, setup=True)
+    rig.audio.position = 1
+    rig.run.tap("next")
+    await rig.until("move", 2, setup=True)
+    resets = [c[1] for c in rig.calls if isinstance(c, tuple) and c[1] is not None and c[1].delay == (0.0, 0.0)]
+    assert len(resets) >= 2, "each check starts from none"
     rig.run.cancel()
     await rig.run.wait()

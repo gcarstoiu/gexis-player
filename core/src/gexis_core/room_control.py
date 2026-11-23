@@ -258,8 +258,10 @@ class RoomControl:
     @staticmethod
     def _aligned(m: rc.Measurement) -> dict:
         """**The speakers' timing** (ADR-0185 D2): how much further the right
-        is than the left (cm; None: not timed) and the delay on each (ms)."""
-        return {"distance_cm": m.distance_cm, "delay_ms": [round(d, 2) for d in m.delay]}
+        is than the left (cm; None: not timed) and the delay on each (ms); and
+        their level (ADR-0187 D2): the cut on each (dB)."""
+        return {"distance_cm": m.distance_cm, "delay_ms": [round(d, 2) for d in m.delay],
+                "level_db": [round(g, 1) for g in m.level]}
 
     def _held(self) -> bool:
         """A run, or putting the player back after one."""

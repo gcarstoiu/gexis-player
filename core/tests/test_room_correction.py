@@ -262,6 +262,28 @@ def test_the_chart_of_a_measurement_from_before():
     assert c["speakers"]["L"]["within"] is None
 
 
+def test_the_speakers_level_is_kept_and_played_at_either_reach_never_without():
+    """ADR-0187 D2: the louder speaker's cut is kept with the measurement and
+    played with the correction - not *without* - and counts as something to
+    correct; one kept from before has none."""
+    from dataclasses import replace
+    m = replace(measurement(), level=(-1.5, 0.0))
+    again = Measurement.from_dict(m.as_dict())
+    assert again.level == (-1.5, 0.0) and again.matched
+    older = m.as_dict()
+    del older["level"]
+    assert Measurement.from_dict(older).level == (0.0, 0.0)
+    wild = m.as_dict()
+    wild["level"] = [3.0, -50.0]
+    assert Measurement.from_dict(wild).level == (0.0, -12.0)
+    room = Room().keep("DAC", m)
+    assert room.stage("DAC").level == (-1.5, 0.0)
+    assert room.set_reach("DAC", rc.BASS).stage("DAC").level == (-1.5, 0.0)
+    assert room.set_without("DAC", True).stage("DAC").level == (0.0, 0.0)
+    flat = replace(m, speakers={k: replace(v, cuts=(), above=()) for k, v in m.speakers.items()})
+    assert not flat.nothing_to_correct and replace(flat, level=(0.0, 0.0)).nothing_to_correct
+
+
 def test_the_speakers_delay_is_kept_and_played_at_either_reach_never_without():
     """ADR-0185 D2: kept with the measurement; on the stage with the cuts,
     under *Bass* too (it is the room's geometry); *Hear it without* takes

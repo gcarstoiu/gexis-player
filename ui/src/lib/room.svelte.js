@@ -249,6 +249,52 @@ export function alignedLine(distance, delay) {
   return `The ${further} speaker is ${cm} cm further away, so the ${nearer} one plays ${ms.toFixed(ms < 1 ? 2 : 1)} ms later and both reach your seat together.`;
 }
 
+/** **The speakers' level as kept** (ADR-0187 D2): which one is turned down,
+ *  by how much, from `level_db` ([left, right], cuts); null when none. */
+export function levelLine(level) {
+  if (!level) return null;
+  const [l, r] = level;
+  if (Math.max(-l, -r) < 0.05) return null;
+  const [down, other, db] = l < r ? ['left', 'right', -l] : ['right', 'left', -r];
+  return `The ${down} speaker is turned down ${db.toFixed(1)} dB to match the ${other}.`;
+}
+
+/** **The speaker check's list** (ADR-0187; George's choice A, 2026-11-23):
+ *  a row for each thing checked, as `{ kind, name, sub }` - ok or warn -
+ *  from the run's state: `distance_cm`, `right_db` (how much louder the
+ *  right was; null: not read), `sides` ('right', 'unsure' or null). */
+export function checkRows(run) {
+  if (run?.distance_cm == null) {
+    return [{ kind: 'warn', name: "The speakers' timing could not be read",
+      sub: 'Nothing is delayed or matched. A quieter moment may help: check again.' }];
+  }
+  const rows = [];
+  if (run.sides === 'right') rows.push({ kind: 'ok', name: 'Left and right', sub: 'The right way round.' });
+  else rows.push({ kind: 'warn', name: 'Left and right not told apart',
+    sub: 'From position 2 neither sounded clearly nearer. Check that the microphone went to the left of your head.' });
+  rows.push({ kind: 'ok', name: 'Wired the same way', sub: '+ to + on both.' });
+  const cm = Math.round(Math.abs(run.distance_cm));
+  if (cm < 1) {
+    rows.push({ kind: 'ok', name: 'The same distance away', sub: 'Nothing to delay.' });
+  } else {
+    const [further, nearer] = run.distance_cm > 0 ? ['right', 'left'] : ['left', 'right'];
+    const ms = Math.abs(run.distance_cm) / 34.3;
+    rows.push({ kind: 'ok', name: `The ${further} is ${cm} cm further away`,
+      sub: `The ${nearer} plays ${ms.toFixed(ms < 1 ? 2 : 1)} ms later, so both reach your seat together.` });
+  }
+  const db = run.right_db;
+  if (db == null) {
+    rows.push({ kind: 'warn', name: 'The level could not be read',
+      sub: 'Two readings did not agree, so both play as they are. A quieter moment may help: check again.' });
+  } else if (Math.abs(db) < 0.05) {
+    rows.push({ kind: 'ok', name: 'As loud as each other', sub: 'Nothing to match.' });
+  } else {
+    rows.push({ kind: 'ok', name: `The right is ${Math.abs(db).toFixed(1)} dB ${db > 0 ? 'louder' : 'quieter'}`,
+      sub: `The ${db > 0 ? 'right' : 'left'} is turned down ${Math.abs(db).toFixed(1)} dB to match.` });
+  }
+  return rows;
+}
+
 // ---- the chart (the design's §2: one axis split at 250 Hz) ---------------------------
 
 export const FMIN = 15;

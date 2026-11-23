@@ -405,11 +405,13 @@ class RoomPlay:
     as measured, which the headroom is taken from whatever plays (ADR-0177
     item 7). No `lift`: no headroom for it (a run's check plays its sweeps
     lower instead). `delay`: each speaker's, in ms, so both arrive at the
-    seat together (ADR-0185 D2)."""
+    seat together (ADR-0185 D2); `level`: each speaker's, in dB, the louder
+    turned down to the quieter (ADR-0187 D2) - a cut, so no headroom."""
     cuts: tuple = ((), ())
     above: tuple = ((), ())
     lift: tuple | None = None
     delay: tuple = (0.0, 0.0)
+    level: tuple = (0.0, 0.0)
 
 
 def room_filter_name(channel: int, slot: int) -> str:
@@ -418,6 +420,24 @@ def room_filter_name(channel: int, slot: int) -> str:
 
 def room_delay_name(channel: int) -> str:
     return f"room_{ROOM_CHANNELS[channel]}_delay"
+
+
+def room_level_name(channel: int) -> str:
+    return f"room_{ROOM_CHANNELS[channel]}_level"
+
+
+#: The most a speaker is turned down to match the other (ADR-0187 D2): far
+#: past any pair that plays together; a reading beyond it is not a level.
+MAX_LEVEL_DB = 12.0
+
+
+def room_levels(room) -> tuple[float, float]:
+    """**Each speaker's level** (dB, ADR-0187 D2) from `room`: a
+    `RoomPlay`'s, else none; cuts only. In the pipeline always, at 0 dB when
+    unused, as the delay is."""
+    if isinstance(room, RoomPlay) and room.level:
+        return tuple(max(-MAX_LEVEL_DB, min(0.0, float(g))) for g in room.level)[:2]
+    return (0.0, 0.0)
 
 
 def room_delays(room) -> tuple[float, float]:
@@ -464,13 +484,15 @@ def room_lift(room) -> tuple | None:
     return tuple(tuple((float(f), float(g), float(q)) for f, g, q in channel) for channel in room.lift)
 
 
-def camilla_config(rate: int, fmt: str, channels: int, gains, playback: str, room=None, delays=None) -> dict:
+def camilla_config(rate: int, fmt: str, channels: int, gains, playback: str, room=None, delays=None,
+                   levels=None) -> dict:
     """**CamillaDSP's configuration for one stream**: captured from the
     loopback at the stream's own rate, format and channels (the renderer
     opened it first and set them), lowered on the headroom fader, then the
     ten bands, then room correction's filters for each speaker (`room`, as
-    `room_stage` takes it) after its delay (`delays`, ms, or `room`'s),
-    played to `playback` (the rest of the output's chain).
+    `room_stage` takes it) after its delay (`delays`, ms, or `room`'s) and
+    its level (`levels`, dB, or `room`'s), played to `playback` (the rest of
+    the output's chain).
 
     Rate adjust tunes the loopback's clock to the card's (*PCM Rate Shift*),
     which passes the samples through unchanged; `stop_on_inactive` lets the
@@ -486,9 +508,11 @@ def camilla_config(rate: int, fmt: str, channels: int, gains, playback: str, roo
                                    "parameters": {"type": "Peaking", "freq": centre, "gain": gain, "q": Q}}
     pipeline = [{"type": "Filter", "names": ["headroom"] + [filter_name(i) for i in range(len(BANDS))]}]
     delays = room_delays(room) if delays is None else tuple(delays)
+    levels = room_levels(room) if levels is None else tuple(levels)
     for channel, slots in enumerate(room_stage(room)[:min(channels, len(ROOM_CHANNELS))]):
-        names = [room_delay_name(channel)]
+        names = [room_delay_name(channel), room_level_name(channel)]
         filters[names[0]] = {"type": "Delay", "parameters": {"delay": delays[channel], "unit": "ms"}}
+        filters[names[1]] = {"type": "Gain", "parameters": {"gain": levels[channel], "scale": "dB"}}
         for slot, (freq, gain, q) in enumerate(slots):
             name = room_filter_name(channel, slot)
             filters[name] = {"type": "Biquad",

@@ -815,8 +815,12 @@ hw:Loopback,1,0 → CamillaDSP (headroom fader, ten bands, then on each speaker 
   from 45 dB and 15 dB above the noise is taken; below, *too quiet*. Once
   the noise is clearly heard, four steps that do not move the reading end
   it.
-- **The speakers timed** (ADR-0185 C1), after the level and before the
-  sweeps: one recording - so playback and capture start once, and nothing
+- **The speaker check** (ADR-0187 D1-D2, C1-C2), after the level and
+  before any measuring sweep, its own step (`setup` in the run's state):
+  at the head the speakers timed, their polarity and their level, then at
+  position 2 left and right; what it finds wrong is said with what to do
+  and the check runs again (*Check again*, from the head), and *ready*
+  lists what was found and set. **The speakers timed** (ADR-0185 C1): one recording - so playback and capture start once, and nothing
   between them varies - of a 0.5 s sweep from 500 Hz to 20 kHz on the left,
   the right, then the left again, a second apart, after a quarter of a
   second of silence (`room_dsp.timing_signal`, two channels in one `aplay`;
@@ -829,13 +833,23 @@ hw:Loopback,1,0 → CamillaDSP (headroom fader, ten bands, then on each speaker 
   is the polarity. A reading counts only if each arrival stands 20 dB over
   the rest of its slot and the left heard twice matches (0.8); two readings
   must agree within 1 cm and on the polarity, up to six, or nothing is
-  said and nothing delayed. At position 1 opposite polarity stops the run
-  (`polarity`); otherwise the nearer speaker is delayed on the stage from
-  there on, so the sweeps measure what will play, and more than 1 ms
-  (34 cm) apart *far* waits for *Measure anyway*. At position 2, 40 cm to
-  the left, the left must be 10 cm nearer than at 1 - it moves by about
-  2 × 40 cm × sin of half the speakers' angle, 21 cm at ±15° - or, 10 cm
-  the other way, the run stops (`swapped`); in between, nothing is said.
+  said and nothing delayed. **The level** (C2) comes from the same
+  recording: each arrival's power over 500 Hz-4 kHz in 6 ms from half a
+  millisecond before it (Finding 158), the right's against the mean of the
+  two lefts (`Timing.right_db`); two readings must agree within 0.25 dB
+  (`LEVEL_AGREE_DB`), or nothing is matched. At position 1 opposite
+  polarity is said (`polarity`) and waits for *Check again*; otherwise the
+  nearer speaker is delayed and the louder turned down by the whole
+  difference (D2) on the stage from there on - a CamillaDSP `Gain` after
+  each speaker's `Delay`, `room_l_level` and `room_r_level`, at 0 dB when
+  unused, a cut so no headroom, at most 12 dB (`equaliser.MAX_LEVEL_DB`) -
+  so the sweeps measure what will play, and the measurement keeps both
+  (`level`). More than 1 ms (34 cm) apart *far* waits for *Check again* or
+  *Measure anyway*. At position 2, 40 cm to the left, the left must be
+  10 cm nearer than at 1 - it moves by about 2 × 40 cm × sin of half the
+  speakers' angle, 21 cm at ±15° - or, 10 cm the other way, *swapped*
+  waits for *Check again*; in between, *ready* says left and right were
+  not told apart (`sides`). The measuring then starts at the head.
   While the three short sweeps play, the run's state names the speaker
   each comes from (`speaker`), a slot apart from when the signal starts
   (`room_mic.Audio.lead_s`).

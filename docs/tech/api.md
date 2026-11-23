@@ -106,8 +106,9 @@ ADR-0175 and ADR-0177, internal until Phase 30 closes. `GET
 `without` (*Hear it without*), the last measurement (`measured`, with its
 `range` - `bass` for one from before Phase 30 - and figures: `peaks_down`,
 `within` and `room_within`, `distance_cm` - how much further the right
-speaker is than the left, null when not timed - and `delay_ms`, each
-speaker's (ADR-0185); its `chart` - each speaker's `before`, `target`,
+speaker is than the left, null when not timed - `delay_ms`, each
+speaker's (ADR-0185), and `level_db`, each speaker's cut to match the other
+(ADR-0187 D2); its `chart` - each speaker's `before`, `target`,
 `after`, `after_bass` and its `positions` in dB about the target's level at
 250 Hz, `corrected` and `corrected_bass` - before with the corrections kept,
 and with the cuts alone, what the chart shades (ADR-0186; `both`, the pair
@@ -118,11 +119,17 @@ the bass is cut from, is kept and given but not drawn: the screens show
 `above`), the `microphone` and its `calibration` (`again` while the one kept
 stops at 2 kHz, from before Phase 30), `can_measure` with `why_not`, and a
 measurement in progress (`run`, and its `pending` correction before *Keep
-it*). A run's `step` includes `timing` (the speakers timed: at position 1,
-then at 2 for left and right) and `far` (more than `far_cm` apart, waiting
-for `next`), with `distance_cm` once timed; a run that stops by itself ends
-`cancelled` with `why` `polarity` (a speaker's + and − swapped) or `swapped`
-(left and right, or the microphone on the wrong side) - ADR-0185.
+it*). **The speaker check** (ADR-0187 D1-D2) comes first, each of its
+states with `setup` true: `timing` (at position 1 the distance, the wiring
+and the level; at 2 left and right), `move` to position 2 (`next`, *Check
+here*), `far` (more than `far_cm` apart: `again` or `next`, *Measure
+anyway*), `polarity` (a speaker's + and − swapped) and `swapped` (left and
+right, or the microphone on the wrong side), each waiting for `again`, and
+`ready` (`again` or `next`, *Measure*), with `distance_cm`, `right_db` -
+how much louder the right speaker was, null when its two readings did not
+agree - and `sides` (`right`, or `unsure` when not told apart). `again`
+from position 2 first moves the microphone back to the head (`move` 1 with
+`setup`).
 While sweeps play, `speaker` names the one playing - in `timing` too - and
 `sweeps` how many the set takes (two; the check more, ADR-0185 C3); `sets` what the position sweeps, in order (`L`, `R`; `both` too at the check's head, or where a mark was missed - ADR-0187 D4);
 `positions` is five (ADR-0187).

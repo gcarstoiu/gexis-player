@@ -9,23 +9,27 @@ it is (the design's R18), and the panel shows that it is running. The steps:
    waiting for *Start*;
 2. *level* - the quiet room listened to, then soft noise, louder in steps
    until the seat hears about 60 dB, never above the output's maximum level;
-3. *timing* - short sweeps from each speaker in one recording: how much
-   nearer one is, and whether one has + and - swapped (ADR-0185 D2, C1),
-   which stops the run; the nearer is delayed from here on, so both arrive
-   together; more than `FAR_S` apart, *far* waits for *Measure anyway*;
-   then *measure* - each speaker alone, two sweeps that agree each, at
-   position 1; both together (George, 2026-11-05: as heard) are added from
-   the two, placed by their timing marks (ADR-0187 D4, George 2026-11-23),
-   not played;
-   then *move* (waiting for *Measure here*), a 3-second *countdown*, and
-   *measure* again, to the last position - at position 2 *timing* again
-   first: 40 cm to the left the left speaker must be nearer than at 1, or
-   the speakers are swapped and the run stops (ADR-0185 D1);
-4. *correction* (or *nothing* to cut) - waiting for *Check it*;
-5. the check: *move*, *countdown* and *checking* at each position with the
+3. **the speaker check** (ADR-0187 D1-D2, C1-C2; its screens George's,
+   2026-11-23), every screen `setup`: *timing* at the head - short sweeps
+   from each speaker in one recording: how much nearer one is, whether one
+   has + and - swapped (*polarity*, waiting for *Check again*), and how
+   much louder one is; more than `FAR_S` apart, *far* waits for *Check
+   again* or *Measure anyway*; then *move* to position 2 (*Check here*)
+   and *timing* there: 40 cm to the left the left speaker must be nearer
+   (ADR-0185 D1), or *swapped* waits for *Check again*; then *ready*, the
+   list, waiting for *Check again* or *Measure*. The nearer speaker is
+   delayed and the louder turned down from there on, on the stage;
+4. *move* back to the head, then *measure* - each speaker alone, two
+   sweeps that agree each; both together (George, 2026-11-05: as heard)
+   are added from the two, placed by their timing marks (ADR-0187 D4,
+   George 2026-11-23), not played; then *move* (waiting for *Measure
+   here*), a 3-second *countdown*, and *measure* again, to the last
+   position;
+5. *correction* (or *nothing* to cut) - waiting for *Check it*;
+6. the check: *move*, *countdown* and *checking* at each position with the
    correction on - *Skip* on every one; at the head both are played too,
    and how far the pair added lies from it is logged (D4);
-6. *result* - measured, or expected when skipped - waiting for *Keep it*.
+7. *result* - measured, or expected when skipped - waiting for *Keep it*.
 
 *Cancel* ends it at any step; a step waiting for a tap for 10 minutes is
 cancelled (George, 2026-11-05). It never moves to a new position without
@@ -101,6 +105,10 @@ MAX_SWEEPS = 6
 #: about 2 x 40 cm x sin(half the angle between the speakers): 40 cm at
 #: ±30°, 21 cm at ±15°, so 10 cm is under half the least.
 TIMING_AGREE_S = 0.01 / 343.0
+#: **ADR-0187 C2**: two readings of the speakers' level agree within this,
+#: or nothing is matched; to start, until runs' logs settle it (Finding 159:
+#: two readings at one placing came within 0.15 dB).
+LEVEL_AGREE_DB = 0.25
 FAR_S = 0.001
 SIDES_S = 0.10 / 343.0
 TIMING_TAIL_S = 0.3
@@ -140,7 +148,7 @@ class _Skipped(Exception):
 @dataclass(frozen=True)
 class RunState:
     """What every screen shows of a run (the design's *State*)."""
-    step: str                       # place level timing far measure move countdown correction nothing checking result
+    step: str                       # place level timing far polarity swapped ready measure move countdown correction nothing checking result
     position: int = 1               # 1 to rc.POSITIONS
     speaker: str | None = None      # "L" / "R" / "both" while one plays
     sets: tuple[str, ...] = ()      # what this position sweeps, in order (ADR-0187 D4)
@@ -159,6 +167,12 @@ class RunState:
     #: ADR-0185: how much further the right speaker is than the left (cm,
     #: negative: the left is further), once timed at position 1.
     distance_cm: float | None = None
+    #: ADR-0187: the speaker check's screens; how much louder the right
+    #: speaker was than the left (dB; None: not read); left and right at
+    #: position 2 - "right" the right way round, "unsure" not told apart.
+    setup: bool = False
+    right_db: float | None = None
+    sides: str | None = None
 
     def as_dict(self) -> dict:
         return {"step": self.step, "position": self.position, "speaker": self.speaker, "sweep": self.sweep,
@@ -169,7 +183,8 @@ class RunState:
                 "done": list(self.done), "expected": self.expected, "too_quiet": self.too_quiet,
                 "positions": rc.POSITIONS,
                 "distance_cm": None if self.distance_cm is None else round(self.distance_cm, 1),
-                "far_cm": round(FAR_S * 343.0 * 100)}
+                "far_cm": round(FAR_S * 343.0 * 100), "setup": self.setup,
+                "right_db": None if self.right_db is None else round(self.right_db, 1), "sides": self.sides}
 
 
 def _screen(state: RunState) -> tuple:
@@ -279,6 +294,8 @@ class Run:
         #: (ms) that brings both speakers' sound to the seat together.
         self._timing = None
         self._delay = (0.0, 0.0)
+        #: ADR-0187 D2: each speaker's level (dB), the louder turned down.
+        self._match = (0.0, 0.0)
         self._waiting = False
         self._prep: asyncio.Future | None = None
         self._finishing = False
@@ -390,12 +407,9 @@ class Run:
         while not await self._level():
             self._set(replace(self.state, step="level", too_quiet=True))
             await self._wait("again")
-        await self._align()
+        await self._speakers()
         for n in range(1, rc.POSITIONS + 1):
-            if n > 1:
-                await self._move(n, checking=False)
-            if n == 2:
-                await self._sides()
+            await self._move(n, checking=False)
             await self._measure(n, checking=False)
         self._design()
         all_done = tuple(range(1, rc.POSITIONS + 1))
@@ -441,10 +455,11 @@ class Run:
                     f", {self.ended['why']}" if self.ended.get("why") else "")
         self._host.publish(None, dict(self.ended))
 
-    async def _move(self, n: int, checking: bool) -> str:
-        done = tuple(range(1, n))
+    async def _move(self, n: int, checking: bool, setup: bool = False) -> str:
+        done = () if setup else tuple(range(1, n))
         self._set(RunState("move", position=n, checking=checking, done=done, level_db=self.state.level_db,
-                           sets=_sets(n, checking), progress=_progress("move", n, checking=checking)))
+                           sets=_sets(n, checking), setup=setup,
+                           progress=0.06 if setup else _progress("move", n, checking=checking)))
         what = await self._wait("next", "skip") if checking else await self._wait("next")
         if what == "skip":
             return what
@@ -527,16 +542,18 @@ class Run:
     async def _time(self, n: int):
         """**The right's arrival against the left's** at position `n` (C1):
         one recording of short sweeps, left, right, left, taken until two
-        agree within `TIMING_AGREE_S` and on the polarity, up to
-        `MAX_SWEEPS`. The stage's own delay is taken back out, so it is the
-        room's. None when no two agree: nothing is said and nothing is
-        delayed - a reading that does not repeat is not one."""
+        agree within `TIMING_AGREE_S` and on the polarity - at the head also
+        until two read the level within `LEVEL_AGREE_DB` (ADR-0187 C2) - up
+        to `MAX_SWEEPS`. The stage's own delay and level are taken back
+        out, so they are the room's. None when no two agree on the timing:
+        nothing is said and nothing is delayed - a reading that does not
+        repeat is not one; the level alone not agreeing, it is not read."""
         dsp = self._dsp
-        self._set(RunState("timing", position=n, done=tuple(range(1, n)), level_db=self.state.level_db,
-                           progress=_progress("timing", n)))
+        self._set(RunState("timing", position=n, setup=True, level_db=self.state.level_db,
+                           progress=0.05 if n == 1 else 0.07))
         signal = dsp.timing_signal(min(1.0, self._sweep_scale()))
         found = []
-        pair = None
+        pair = level = None
         for _ in range(MAX_SWEEPS):
             lit = asyncio.ensure_future(self._light_timing())
             try:
@@ -548,23 +565,30 @@ class Run:
             if got is None:
                 continue
             for other in found:
-                if (other.same_polarity == got.same_polarity
-                        and abs(other.late_s - got.late_s) <= TIMING_AGREE_S):
+                if pair is None and (other.same_polarity == got.same_polarity
+                                     and abs(other.late_s - got.late_s) <= TIMING_AGREE_S):
                     pair = (other, got)
-                    break
+                if (level is None and other.right_db is not None and got.right_db is not None
+                        and abs(other.right_db - got.right_db) <= LEVEL_AGREE_DB):
+                    level = (other.right_db + got.right_db) / 2
             found.append(got)
-            if pair is not None:
+            if pair is not None and (level is not None or n != 1):
                 break
         if pair is None:
             logger.info("room: position %d: the speakers' timing could not be read - %d of %d readings, "
                         "none two agreeing", n, len(found), MAX_SWEEPS)
             return None
-        # The stage delays the left by `_delay[0]` and the right by `[1]`.
+        # The stage delays the left by `_delay[0]` and the right by `[1]`, and
+        # turns them down by `_match`.
         late = (pair[0].late_s + pair[1].late_s) / 2 + (self._delay[0] - self._delay[1]) / 1000
-        timing = dsp.Timing(late, pair[0].same_polarity, min(pair[0].alike, pair[1].alike))
+        if level is not None:
+            level -= self._match[1] - self._match[0]
+        timing = dsp.Timing(late, pair[0].same_polarity, min(pair[0].alike, pair[1].alike), level)
         logger.info("room: position %d: the right %+.1f cm against the left (%.1f cm between the two taken, "
-                    "%d readings), %s polarity, %.2f alike", n, timing.cm, abs(pair[0].cm - pair[1].cm),
-                    len(found), "the same" if timing.same_polarity else "opposite", timing.alike)
+                    "%d readings), %s polarity, %.2f alike; the right %s", n, timing.cm,
+                    abs(pair[0].cm - pair[1].cm), len(found), "the same" if timing.same_polarity else "opposite",
+                    timing.alike, "level not read" if level is None else f"{level:+.2f} dB against the left "
+                    f"({', '.join(f'{x.right_db:+.2f}' for x in found if x.right_db is not None)})")
         return timing
 
     async def _light_timing(self) -> None:
@@ -576,48 +600,81 @@ class Run:
             self._set(replace(self.state, speaker=channel))
             await self._sleep(self._dsp.TIMING_SLOT_S)
 
-    async def _align(self) -> None:
-        """**Position 1, before the sweeps** (D2): the speakers timed; one
-        with + and - swapped stops the run; the nearer is delayed so both
-        arrive together, on the stage from here on - the sweeps measure
-        what will play; more than `FAR_S` apart, *far* waits for *Measure
-        anyway*."""
-        timing = await self._time(1)
-        if timing is None:
-            return
-        if not timing.same_polarity:
-            raise Cancelled("polarity")
-        self._timing = timing
-        ms = abs(timing.late_s) * 1000
-        self._delay = (ms, 0.0) if timing.late_s > 0 else (0.0, ms)
-        await self._host.stage(self._play())
-        if abs(timing.late_s) > FAR_S:
-            self._set(RunState("far", position=1, level_db=self.state.level_db, progress=_progress("timing", 1)))
-            await self._wait("next")
+    async def _speakers(self) -> None:
+        """**The speaker check** (ADR-0187 D1-D2, C1-C2; the screens George
+        chose 2026-11-23): at the head the speakers timed and their level
+        read; one with + and - swapped is said (*polarity*); more than
+        `FAR_S` apart, *far*; then at position 2 left and right (*swapped*
+        when the right is the nearer). What it finds can be put right and
+        the check run again (*Check again*) before any measuring. The
+        nearer is delayed and the louder turned down on the stage from here
+        on - the sweeps measure what will play - and *ready* lists it all."""
+        at = 1
+        while True:
+            if at != 1:
+                # *Check again* with the microphone at position 2: back to
+                # the head first, where the check starts.
+                await self._move(1, checking=False, setup=True)
+                at = 1
+            self._timing, self._delay, self._match = None, (0.0, 0.0), (0.0, 0.0)
+            await self._host.stage(self._play())
+            timing = await self._time(1)
+            sides = None
+            if timing is not None:
+                if not timing.same_polarity:
+                    self._set(RunState("polarity", position=1, setup=True, level_db=self.state.level_db,
+                                       progress=0.05))
+                    await self._wait("again")
+                    continue
+                self._timing = timing
+                ms = abs(timing.late_s) * 1000
+                self._delay = (ms, 0.0) if timing.late_s > 0 else (0.0, ms)
+                if timing.right_db is not None:
+                    self._match = (min(0.0, timing.right_db), min(0.0, -timing.right_db))
+                await self._host.stage(self._play())
+                if abs(timing.late_s) > FAR_S:
+                    self._set(RunState("far", position=1, setup=True, level_db=self.state.level_db,
+                                       progress=0.05))
+                    if await self._wait("again", "next") == "again":
+                        continue
+                await self._move(2, checking=False, setup=True)
+                at = 2
+                sides = await self._sides()
+                if sides == "swapped":
+                    self._set(RunState("swapped", position=2, setup=True, level_db=self.state.level_db,
+                                       progress=0.07))
+                    await self._wait("again")
+                    continue
+            self._set(RunState("ready", position=2 if sides else 1, setup=True, level_db=self.state.level_db,
+                               right_db=None if timing is None else timing.right_db, sides=sides,
+                               progress=0.08))
+            if await self._wait("again", "next") == "next":
+                return
 
-    async def _sides(self) -> None:
+    async def _sides(self) -> str | None:
         """**Position 2, 40 cm to the left** (D1): the left must be nearer
-        than at position 1. The other way by `SIDES_S` or more, the speakers
-        are swapped - or the microphone went to the right - and the run
-        stops; less either way, nothing is said."""
-        if self._timing is None:
-            return
+        than at position 1 - "right". The other way by `SIDES_S` or more,
+        the speakers are swapped - or the microphone went to the right -
+        "swapped"; less either way, "unsure": left and right not told apart.
+        None when not timed."""
         timing = await self._time(2)
         if timing is None:
-            return
+            return None
         moved = timing.late_s - self._timing.late_s
         if moved <= -SIDES_S:
             logger.info("room: position 2: the left %.0f cm further than at position 1 - swapped", -moved * 34300)
-            raise Cancelled("swapped")
+            return "swapped"
         if moved < SIDES_S:
             logger.info("room: position 2: the left only %.0f cm nearer than at position 1 - left and right "
                         "not told apart", moved * 34300)
+            return "unsure"
+        return "right"
 
     def _play(self, cuts=((), ()), above=((), ())):
         """What the stage plays during the run: `cuts` and `above` (none
-        until the check), with the speakers' delay."""
+        until the check), with the speakers' delay and level."""
         from gexis_core import equaliser as eq
-        return eq.RoomPlay(cuts, above, None, self._delay)
+        return eq.RoomPlay(cuts, above, None, self._delay, self._match)
 
     # -- the sweeps ------------------------------------------------------------------
 
@@ -865,7 +922,8 @@ class Run:
             self._designs[channel] = d
             speakers[channel] = _speaker(d)
         self.pending = rc.Measurement(self._today(), False, speakers, range=rc.FULL, delay=self._delay,
-                                      distance_cm=None if self._timing is None else round(self._timing.cm, 1))
+                                      distance_cm=None if self._timing is None else round(self._timing.cm, 1),
+                                      level=self._match)
 
     def _trust(self, channel: str):
         """Where every position's averaged sweeps stand `TRUST_SNR_DB` over

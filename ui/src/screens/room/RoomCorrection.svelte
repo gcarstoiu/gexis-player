@@ -13,7 +13,7 @@
 <script>
   import { encode } from 'uqr';
   import { onDestroy } from 'svelte';
-  import { alignedLine, capitalised, chartSpan, correctionGroups, correctionsWho, countWord, cutFreq, cutGain, cutRows,
+  import { alignedLine, levelLine, capitalised, chartSpan, correctionGroups, correctionsWho, countWord, cutFreq, cutGain, cutRows,
     outputPhrase, outputShort, rangeWord, resultWords, room, RoomReader, setRoom, sideName, sides } from '../../lib/room.svelte.js';
   import { screen } from '../../lib/family.svelte.js';
   import RoomChart from './RoomChart.svelte';
@@ -111,7 +111,8 @@
   const span = $derived(chartSpan(chart));
   const positionsWord = $derived(countWord(measured?.positions ?? 0));
   //: ADR-0185: the speakers' timing, when the measurement has it.
-  const alignedText = $derived(alignedLine(measured?.distance_cm, measured?.delay_ms));
+  const alignedText = $derived([alignedLine(measured?.distance_cm, measured?.delay_ms), levelLine(measured?.level_db)]
+    .filter(Boolean).join(' ') || null);
   const abSub = $derived(!on ? 'Only while room correction is on.'
     : ab ? 'Now without: no correction at all. Switch back to hear it.'
       : 'Compare: no correction at all, heard at once. Stays where you put it.');

@@ -227,10 +227,11 @@ class EqEngine:
         self._gains: tuple[int, ...] = eq.FLAT
         self._room = eq.room_stage(None)
         self._delays = eq.room_delays(None)   # each speaker's, ms (ADR-0185 D2)
+        self._levels = eq.room_levels(None)   # each speaker's, dB (ADR-0187 D2)
         self._lift = None   # room correction's filters as measured, for the headroom
         self._watch: asyncio.Task | None = None
         self._stream: Stream | None = None
-        self._applied: tuple | None = None   # (gains, headroom, room, delays): what CamillaDSP has now
+        self._applied: tuple | None = None   # (gains, headroom, room, delays, levels): what CamillaDSP has now
         self._push: asyncio.Task | None = None
         self._forward: asyncio.subprocess.Process | None = None
         self._status: dict = {}
@@ -243,6 +244,7 @@ class EqEngine:
         gains = eq.gains_from(gains)
         self._room = eq.room_stage(room)
         self._delays = eq.room_delays(room)
+        self._levels = eq.room_levels(room)
         self._lift = eq.room_lift(room)
         if card is None:
             if self._card is not None or self._watch is not None:
@@ -402,8 +404,9 @@ class EqEngine:
     async def _start_stream(self, stream: Stream) -> None:
         gains = self._gains
         headroom = eq.headroom_db(gains, self._lift)
-        room, delays = self._room, self._delays
-        config = eq.camilla_config(stream.rate, stream.fmt, stream.channels, gains, outputs.EQ_OUT, room, delays)
+        room, delays, levels = self._room, self._delays, self._levels
+        config = eq.camilla_config(stream.rate, stream.fmt, stream.channels, gains, outputs.EQ_OUT, room, delays,
+                                   levels)
         to = playing_rate(self._card, stream.rate, self._takes_rate)
         if to != stream.rate:
             config["devices"].update(samplerate=to, capture_samplerate=stream.rate,
@@ -416,7 +419,7 @@ class EqEngine:
         try:
             await self._camilla.cmd("SetFaderVolume", [eq.HEADROOM_FADER, -headroom])
             await self._camilla.cmd("SetConfigJson", json.dumps(config))
-            self._applied = (gains, headroom, room, delays)
+            self._applied = (gains, headroom, room, delays, levels)
             logger.info("equaliser: %d Hz %s, %d channels, lowered %.1f dB",
                         stream.rate, stream.fmt, stream.channels, headroom)
         except (ConnectionError, RuntimeError) as exc:
@@ -459,9 +462,9 @@ class EqEngine:
     async def _pushing(self) -> None:
         while self._applied is not None and self._stream is not None and not self._stream.dsd:
             gains, headroom, room = self._gains, eq.headroom_db(self._gains, self._lift), self._room
-            delays = self._delays
-            old_gains, old_headroom, old_room, old_delays = self._applied
-            if (gains, headroom, room, delays) == (old_gains, old_headroom, old_room, old_delays):
+            delays, levels = self._delays, self._levels
+            old_gains, old_headroom, old_room, old_delays, old_levels = self._applied
+            if (gains, headroom, room, delays, levels) == self._applied:
                 return
             try:
                 if headroom > old_headroom:
@@ -479,13 +482,15 @@ class EqEngine:
                                 "parameters": {"freq": freq, "gain": gain, "q": q}}
                     if delays[channel] != old_delays[channel]:
                         changed[eq.room_delay_name(channel)] = {"parameters": {"delay": delays[channel]}}
+                    if levels[channel] != old_levels[channel]:
+                        changed[eq.room_level_name(channel)] = {"parameters": {"gain": levels[channel]}}
                 if changed:
                     await self._camilla.cmd("PatchConfig", {"filters": changed})
                 if headroom < old_headroom:
                     await self._camilla.cmd("SetFaderVolume", [eq.HEADROOM_FADER, -headroom])
                 else:
                     await self._give(headroom)
-                self._applied = (gains, headroom, room, delays)
+                self._applied = (gains, headroom, room, delays, levels)
             except (ConnectionError, RuntimeError) as exc:
                 logger.warning("equaliser: a change did not reach CamillaDSP (%s)", exc)
                 return

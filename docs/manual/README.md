@@ -1031,34 +1031,37 @@ nothing to press. On the player's screen, *Measure from your phone* (or
    the microphone hears about 60 dB, the level of a conversation, never
    above the output's *Maximum volume*. Only if it cannot reach 45 dB, turn
    the amplifier up a little and tap **Try again**.
-4. First a few short whistles, from the left, the right and the left
-   again: how much further one speaker is than the other. The nearer one
-   is then delayed by that much, so both reach your seat together, and the
-   phone says so. More than 34 cm apart, the phone says a speaker or the
-   seat looks out of place: move it and measure again, or **Measure
-   anyway**. A speaker with its + and − wires swapped stops the
-   measurement: swap them at one speaker, amplifier off, and measure again.
-   In a room too noisy for the whistles, nothing is said and nothing
-   delayed.
-5. Each speaker plays two sweeps on its own, about a minute a position;
-   each sweep follows a short whistle from the left a second before it, so
-   the player can add the two speakers up to get both together, without
-   playing them.
+4. **The speaker check**, before any measuring. At your head, a few short
+   whistles from the left, the right and the left again tell how much
+   further one speaker is than the other, whether one is wired the other
+   way round, and how much louder one is. Then the phone asks you to move
+   the microphone to the second position, about 40 cm to the left of your
+   head and a little higher, and tap **Check here**: the whistles play
+   again, and the left speaker must sound nearer there. The phone then
+   lists what it found: left and right the right way round, wired the same
+   way, the nearer speaker delayed so both reach your seat together, and
+   the louder one turned down to match the other. Something wrong is said
+   with what to do: a speaker with its + and − wires swapped (swap them at
+   one speaker, amplifier off), left and right swapped (swap the two
+   speaker cables, or the microphone went to the right), or a speaker more
+   than 34 cm further than the other (move it, or **Measure anyway**).
+   **Check again** runs the check again once it is put right, from your
+   head. In a room too noisy for the whistles, nothing is delayed or
+   matched, and the list says so.
+5. **Measure** starts at your head again. Each speaker plays two sweeps on
+   its own, about a minute a position; each sweep follows a short whistle
+   from the left a second before it, so the player can add the two
+   speakers up to get both together, without playing them.
    Then move the microphone where the phone shows - five positions: your
    head; about 40 cm to its left and a little higher; 40 cm to its right
    and a little lower; 30 cm in front; 30 cm above - step back and tap
    **Measure here**; three seconds later the sweeps play. The drawing marks
    each position's height, beside a scale; the distances are a guide:
-   placed by eye is enough. It never moves on without
-   the tap. At the second position, to the left of your head, the whistles
-   play again: the left speaker must sound nearer there. If it sounds
-   further, the speakers look swapped - left plays from the right speaker -
-   or the microphone went to the right; the measurement stops, and nothing
-   changes. A sweep spoiled by a noise (a door, a voice) is measured again;
-   the room's steady noise is no reason to, so where a sweep stands well
-   over it, two that differ were disturbed, and elsewhere the sweeps are
-   averaged instead. What stands too little over the noise is not
-   corrected.
+   placed by eye is enough. It never moves on without the tap. A sweep
+   spoiled by a noise (a door, a voice) is measured again; the room's
+   steady noise is no reason to, so where a sweep stands well over it, two
+   that differ were disturbed, and elsewhere the sweeps are averaged
+   instead. What stands too little over the noise is not corrected.
 6. The correction: the cuts in the bass, worked out from both speakers
    together - the bass of most music is the same in both, and what you hear
    is the two adding up - and the same on both speakers; above the

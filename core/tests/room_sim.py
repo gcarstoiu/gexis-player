@@ -112,6 +112,8 @@ class Audio:
         #: `swapped` plays the left channel from the right speaker.
         self.delays = {n: (0.003, 0.003) for n in range(1, 6)}
         self.polarity = (1.0, 1.0)
+        #: ADR-0187 D2: how loud each speaker plays, as a gain on its sound.
+        self.loudness = (1.0, 1.0)
         self.swapped = False
         #: How far apart the recording and the playback start, at random up
         #: to this, each time (`Audio.play` starts `arecord` and `aplay` apart).
@@ -168,7 +170,8 @@ class Audio:
             # The room's noise and a thump once, however many speakers play.
             part = record(played, seed=heard * 100 + self.position, modes=self.modes,
                           noise_db=self.noise_db if k == 0 else -300.0, burst=burst if k == 0 else None,
-                          tail_s=tail_s, gain=self.gain * self.polarity[heard], broad=self.broad,
+                          tail_s=tail_s, gain=self.gain * self.polarity[heard] * self.loudness[heard],
+                          broad=self.broad,
                           delay_s=self.delays[self.position][heard], lead_s=lead, length=length,
                           noise_seed=self.calls + 5000)
             if self.stage is not None and sweep:
@@ -179,6 +182,9 @@ class Audio:
                 f = np.fft.rfftfreq(n, 1 / rd.FS)
                 spec *= 10 ** (rd.cuts_db(cuts, np.maximum(f, 1e-3)) / 20)
                 part = np.fft.irfft(spec, n)[: len(part)]
+            if self.stage is not None and getattr(self.stage, "level", None):
+                # The stage's level on this channel (ADR-0187 D2), as a cut.
+                part = part * 10 ** (self.stage.level[c] / 20)
             if self.stage is not None and getattr(self.stage, "delay", None):
                 # The stage's delay on this channel (ADR-0185 D2).
                 shift = int(round(self.stage.delay[c] / 1000 * rd.FS))

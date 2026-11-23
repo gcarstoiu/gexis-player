@@ -15,13 +15,18 @@
   const head = $derived(run.checking ? 'Checking the room' : 'Measuring the room');
   const speaker = (k) => (k === 'L' ? 'Left speaker' : k === 'R' ? 'Right speaker' : 'Both speakers');
   const line = $derived.by(() => {
-    const at = `Position ${run.position} of ${count}`;
+    //: ADR-0187: the speaker check, before any position is measured.
+    const at = run.setup ? 'Speaker check' : `Position ${run.position} of ${count}`;
     switch (run.step) {
       case 'level': return 'Finding the level · soft noise, getting louder';
       case 'place':
       case 'move': return `${at} · Moving the microphone`;
-      case 'countdown': return `${at} · Sweeps in ${run.count}`;
-      case 'timing': return `${at} · ${run.position === 1 ? 'How far each speaker is' : 'Left and right'}`;
+      case 'countdown': return `${at} · ${run.setup ? 'Whistles' : 'Sweeps'} in ${run.count}`;
+      case 'timing': return `${at} · ${run.position === 1 ? 'Distance, wiring and level' : 'Left and right'}`;
+      case 'far':
+      case 'polarity':
+      case 'swapped':
+      case 'ready': return `${at} · On the phone`;
       case 'measure':
       case 'checking': return `${at} · ${speaker(run.speaker ?? 'L')}`;
       default: return 'Waiting for the phone';

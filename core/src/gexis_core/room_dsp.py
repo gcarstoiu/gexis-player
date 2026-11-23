@@ -872,10 +872,12 @@ def timing_signal(amplitude: float = 1.0, fs: int = FS) -> np.ndarray:
 class Timing:
     """How much later the right speaker's sound reaches the microphone than
     the left's (`late_s`: positive, the right is further), whether the two
-    have the same polarity, and how alike their arrivals are (0-1)."""
+    have the same polarity, how alike their arrivals are (0-1), and how much
+    louder the right is (`right_db`, ADR-0187 C2; None: not read)."""
     late_s: float
     same_polarity: bool
     alike: float
+    right_db: float | None = None
 
     @property
     def cm(self) -> float:
@@ -896,6 +898,25 @@ def _lag(ref, segment, reach: int) -> tuple[float, float]:
             shift = 0.5 * (y0 - y2) / den
     norm = np.sqrt(np.sum(ref ** 2) * np.sum(segment[k:k + len(ref)] ** 2))
     return k - reach + shift, float(c[k] / norm) if norm > 0 else 0.0
+
+
+#: **The speakers' level** (ADR-0187 C2, Finding 158): each arrival's power
+#: over 500 Hz-4 kHz, in 6 ms from just before it - three cycles at 500 Hz,
+#: so the direct sound weighs more than the room's; the right's against the
+#: mean of the two lefts.
+TIMING_LEVEL_BAND = (500.0, 4000.0)
+TIMING_LEVEL_WINDOW_S = (-0.0005, 0.006)
+
+
+def _level_at(ir, at: float, fs: int = FS) -> float:
+    """The power (dB) of `ir` in `TIMING_LEVEL_BAND` over
+    `TIMING_LEVEL_WINDOW_S` about the arrival at `at` (samples)."""
+    a, b = (int(round(at + w * fs)) for w in TIMING_LEVEL_WINDOW_S)
+    n = 1 << 15
+    power = np.abs(np.fft.rfft(np.asarray(ir[max(0, a):b], dtype=float), n)) ** 2
+    f = np.fft.rfftfreq(n, 1 / fs)
+    band = (f >= TIMING_LEVEL_BAND[0]) & (f <= TIMING_LEVEL_BAND[1])
+    return 10 * math.log10(max(float(np.mean(power[band])), 1e-30))
 
 
 #: **The timing mark** (ADR-0187 C4, REW's acoustic timing reference): the
@@ -1037,4 +1058,8 @@ def timing(recording, fs: int = FS) -> Timing | None:
     again, same = at(2)
     if abs(alike) < TIMING_ALIKE or same < TIMING_SAME:
         return None
-    return Timing((right - again / 2) / fs, alike > 0, abs(alike))
+    # The level (C2): each arrival where it landed - the first left's peak,
+    # the right's and the second left's a slot on by their lags.
+    lefts = (_level_at(ir, first, fs), _level_at(ir, first + 2 * slot + again, fs))
+    right_db = _level_at(ir, first + slot + right, fs) - sum(lefts) / 2
+    return Timing((right - again / 2) / fs, alike > 0, abs(alike), right_db)
