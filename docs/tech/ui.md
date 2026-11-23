@@ -311,7 +311,14 @@ the after a line of its own; *Left* and *Right* tabs only, each speaker
 alone in the bass too, with a line in the legend saying the bass is cut for
 both, ADR-0186 D4-D5) and the seat drawing;
 `RoomQuick.svelte` is the *Room* control in the volume drawer, the bar's tray
-and the phone's volume row. The summary comes from `/state`'s `room`
+and the phone's volume row. The phone's page has the *Speakers* card
+(ADR-0188: its own switch, the alignment's rows, *Check the speakers*, which
+opens the flow's *Before* for the check alone, `want`), and an amber note in
+room correction's card when `stale`; the flow takes the check alone
+through three steps to *Keep*, the dips card on the correction (ADR-0187 D8)
+and the ringing card on the result (D7, the four bands that rang most,
+`ringBands`). The panel and the bars show neither the card nor the note
+yet: their screens are to be designed (ADR-0188 C6). The summary comes from `/state`'s `room`
 (`lib/room.svelte.js`), the curves from `GET /room-correction`, read again
 whenever the summary moves. The design's colours are `--rc-*` in
 `styles/tokens.css`, recoloured for each theme by `scripts/themes.mjs`.

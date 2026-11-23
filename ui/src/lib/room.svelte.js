@@ -218,9 +218,16 @@ export function dips(speaker, freqs) {
 
 /** **The correction's tail** (the design's 1g): the dips the bass keeps,
  *  then what is done above it. */
-export function correctionTail(list, speaker) {
+export function correctionTail(list, speaker, { dipCard = false } = {}) {
   const lead = 'In the bass only cuts: ';
   let low = '';
+  //: ADR-0187 D8: with the dips in a card of their own, only what is done
+  //: above the bass.
+  if (dipCard) {
+    return speaker?.above?.length
+      ? 'Above the bass the corrections are broad and 3 dB at most, so the speaker keeps its own balance.'
+      : `Above the bass the room is already within ${halfDb(speaker?.room_within)} dB of the speaker's own balance, so it is left as it is.`;
+  }
   if (speaker?.cuts?.length) {
     if (!list.length) low = `${lead}nothing is raised, as more power does not fill a dip. `;
     else if (list.length === 1) low = `${lead}the dip at ${list[0]} Hz stays, as more power does not fill it. `;
@@ -262,25 +269,38 @@ export function levelLine(level) {
 /** **The speaker check's list** (ADR-0187; George's choice A, 2026-11-23):
  *  a row for each thing checked, as `{ kind, name, sub }` - ok or warn -
  *  from the run's state: `distance_cm`, `right_db` (how much louder the
- *  right was; null: not read), `sides` ('right', 'unsure' or null). */
-export function checkRows(run) {
+ *  right was; null: not read), `sides` ('right', 'unsure' or null).
+ *  `was`: the kept measurement's `delay_ms` and `level_db`, said against
+ *  when the check leaves it behind, its first two rows then one (ADR-0188
+ *  D2, the screen George chose 2026-11-23). */
+export function checkRows(run, was = null) {
   if (run?.distance_cm == null) {
     return [{ kind: 'warn', name: "The speakers' timing could not be read",
       sub: 'Nothing is delayed or matched. A quieter moment may help: check again.' }];
   }
   const rows = [];
-  if (run.sides === 'right') rows.push({ kind: 'ok', name: 'Left and right', sub: 'The right way round.' });
-  else rows.push({ kind: 'warn', name: 'Left and right not told apart',
-    sub: 'From position 2 neither sounded clearly nearer. Check that the microphone went to the left of your head.' });
-  rows.push({ kind: 'ok', name: 'Wired the same way', sub: '+ to + on both.' });
+  if (run.sides === 'right' && was) {
+    rows.push({ kind: 'ok', name: 'Left and right, wired the same way', sub: 'The right way round, + to + on both.' });
+  } else {
+    if (run.sides === 'right') rows.push({ kind: 'ok', name: 'Left and right', sub: 'The right way round.' });
+    else rows.push({ kind: 'warn', name: 'Left and right not told apart',
+      sub: 'From position 2 neither sounded clearly nearer. Check that the microphone went to the left of your head.' });
+    rows.push({ kind: 'ok', name: 'Wired the same way', sub: '+ to + on both.' });
+  }
   const cm = Math.round(Math.abs(run.distance_cm));
+  //: The left's delay against the right's, now and then (ms).
+  const late = run.distance_cm / 34.3;
+  const then = was?.delay_ms ? was.delay_ms[0] - was.delay_ms[1] : null;
   if (cm < 1) {
     rows.push({ kind: 'ok', name: 'The same distance away', sub: 'Nothing to delay.' });
   } else {
     const [further, nearer] = run.distance_cm > 0 ? ['right', 'left'] : ['left', 'right'];
-    const ms = Math.abs(run.distance_cm) / 34.3;
+    const ms = Math.abs(late);
+    const moved = then == null ? null : (late - then) * Math.sign(late);
     rows.push({ kind: 'ok', name: `The ${further} is ${cm} cm further away`,
-      sub: `The ${nearer} plays ${ms.toFixed(ms < 1 ? 2 : 1)} ms later, so both reach your seat together.` });
+      sub: moved == null ? `The ${nearer} plays ${ms.toFixed(ms < 1 ? 2 : 1)} ms later, so both reach your seat together.`
+        : `The ${nearer} plays ${ms.toFixed(ms < 1 ? 2 : 1)} ms later: ${Math.abs(moved) < 0.005 ? 'as'
+          : `${Math.abs(moved).toFixed(2)} ms ${moved > 0 ? 'more' : 'less'} than`} when the room was measured.` });
   }
   const db = run.right_db;
   if (db == null) {
@@ -289,10 +309,84 @@ export function checkRows(run) {
   } else if (Math.abs(db) < 0.05) {
     rows.push({ kind: 'ok', name: 'As loud as each other', sub: 'Nothing to match.' });
   } else {
-    rows.push({ kind: 'ok', name: `The right is ${Math.abs(db).toFixed(1)} dB ${db > 0 ? 'louder' : 'quieter'}`,
-      sub: `The ${db > 0 ? 'right' : 'left'} is turned down ${Math.abs(db).toFixed(1)} dB to match.` });
+    const down = db > 0 ? 'right' : 'left';
+    const cut = Math.abs(db);
+    const cutThen = was?.level_db ? -was.level_db[down === 'left' ? 0 : 1] : null;
+    const more = cutThen == null ? null : cut - cutThen;
+    rows.push({ kind: 'ok', name: `The right is ${cut.toFixed(1)} dB ${db > 0 ? 'louder' : 'quieter'}`,
+      sub: more == null ? `The ${down} is turned down ${cut.toFixed(1)} dB to match.`
+        : `The ${down} is turned down ${cut.toFixed(1)} dB: ${Math.abs(more) < 0.05 ? 'as'
+          : `${Math.abs(more).toFixed(1)} dB ${more > 0 ? 'more' : 'less'} than`} then.` });
   }
   return rows;
+}
+
+/** **The Speakers card** (ADR-0188 D1, the room page George chose
+ *  2026-11-23): its line and its ticked rows, from the alignment kept
+ *  (`speakers`: on, day, distance_cm, delay_ms, right_db, sides); one row
+ *  each for the wiring, the distance and the level. */
+export function speakersLine(a) {
+  if (!a) return 'Not checked yet.';
+  if (!a.on) return `Checked ${a.day}. Off: both play as they are.`;
+  if (a.distance_cm == null) return `Checked ${a.day}.`;
+  return `Checked ${a.day}. Both reach your seat together${a.right_db == null ? '' : ' and equally loud'}.`;
+}
+export function speakersRows(a) {
+  if (!a) return [];
+  const rows = [];
+  if (a.sides === 'right') rows.push({ kind: 'ok', text: 'Left and right the right way round, wired the same way.' });
+  else if (a.sides === 'unsure') rows.push({ kind: 'warn', text: 'Left and right not told apart; wired the same way.' });
+  else rows.push({ kind: 'ok', text: 'Wired the same way.' });
+  if (a.distance_cm == null) {
+    rows.push({ kind: 'warn', text: "The speakers' timing could not be read: nothing is delayed." });
+  } else if (Math.round(Math.abs(a.distance_cm)) < 1) {
+    rows.push({ kind: 'ok', text: 'Both the same distance away: nothing to delay.' });
+  } else {
+    const [further, nearer] = a.distance_cm > 0 ? ['right', 'left'] : ['left', 'right'];
+    const ms = Math.max(...(a.delay_ms ?? [Math.abs(a.distance_cm) / 34.3]));
+    rows.push({ kind: 'ok', text: `The ${further} is ${Math.round(Math.abs(a.distance_cm))} cm further away: the ${nearer} plays ${ms.toFixed(ms < 1 ? 2 : 1)} ms later.` });
+  }
+  const db = a.right_db;
+  if (db == null) rows.push({ kind: 'warn', text: 'The level was not read: both play as they are.' });
+  else if (Math.abs(db) < 0.05) rows.push({ kind: 'ok', text: 'As loud as each other: nothing to match.' });
+  else rows.push({ kind: 'ok', text: `The right is ${Math.abs(db).toFixed(1)} dB ${db > 0 ? 'louder' : 'quieter'}: the ${db > 0 ? 'right' : 'left'} is turned down ${Math.abs(db).toFixed(1)} dB.` });
+  return rows;
+}
+
+/** **The ringing card** (ADR-0187 D7, George's choice B, 2026-11-23): the
+ *  four bands that rang most before, low to high, each `{ hz, before,
+ *  after }` - dB at 0.2 s against the first 50 ms. */
+export function ringBands(speaker, n = 4) {
+  return (speaker?.ringing ?? []).slice().sort((a, b) => b.before - a.before).slice(0, n)
+    .sort((a, b) => a.hz - b.hz);
+}
+/** A bar's length: nothing left at −50 dB, all of it at −15 dB. */
+export const ringWidth = (db) => `${Math.max(4, Math.min(100, Math.round(((db + 50) / 35) * 100)))}%`;
+export const ringDb = (db) => (db == null ? '—' : `${db < 0 ? '−' : '+'}${Math.abs(Math.round(db))} dB`);
+export const bandWord = (hz) => `${Number.isInteger(hz) ? hz : hz.toFixed(1)} Hz`;
+
+/** **A card per dip** (ADR-0187 D8, George's choice B, 2026-11-23; the
+ *  words the mock-up's): each dip the bass keeps, `{ freq, depth, tag,
+ *  tone, text }`, low to high. A wall's dip says *a wall or the floor*: the
+ *  player cannot tell which surface sends the sound back. */
+export function dipRows(dips) {
+  const whose = { L: "the left speaker's", R: "the right speaker's", both: "both speakers'" };
+  const which = { L: 'the left speaker', R: 'the right speaker', both: 'the speakers' };
+  return (dips ?? []).slice().sort((a, b) => a.freq - b.freq).map((d) => {
+    const row = { freq: freqWord(d.freq), depth: `−${Math.round(d.depth)} dB`, tag: null, tone: 'none',
+      text: 'What causes it is not clear from the measurement.' };
+    if (d.cause === 'cancel') {
+      Object.assign(row, { tag: 'The two speakers cancel', tone: 'blue',
+        text: 'Each alone has no dip here. Placing both the same distance from the wall behind them may lessen it.' });
+    } else if (d.cause === 'wall') {
+      Object.assign(row, { tag: `A wall or the floor about ${d.distance_m.toFixed(1)} m away`, tone: 'amber',
+        text: `It sends ${whose[d.speaker] ?? "the speaker's"} sound back out of step. Moving ${which[d.speaker] ?? 'the speaker'} closer to it or further from it moves the dip.` });
+    } else if (d.cause === 'local') {
+      Object.assign(row, { tag: 'Only at some places', tone: 'grey',
+        text: 'It changes from place to place around your head: moving the seat a little moves it.' });
+    }
+    return row;
+  });
 }
 
 // ---- the chart (the design's §2: one axis split at 250 Hz) ---------------------------

@@ -31,6 +31,13 @@ it is (the design's R18), and the panel shows that it is running. The steps:
    and how far the pair added lies from it is logged (D4);
 7. *result* - measured, or expected when skipped - waiting for *Keep it*.
 
+**The check on its own** (ADR-0188, George 2026-11-23) is the same run
+started for the speakers (`mode` "speakers"): steps 1-3, then *ready* waits
+for *Keep*, *Check again* or *Discard* - or, when what it found leaves the
+kept measurement behind (`stale`, C4), *Keep*, *Keep and measure* or
+*Discard*. *Keep* stores the alignment (`host.align`) and ends it; *Keep and
+measure* stores it and goes on at step 4, without checking again.
+
 *Cancel* ends it at any step; a step waiting for a tap for 10 minutes is
 cancelled (George, 2026-11-05). It never moves to a new position without
 the tap.
@@ -139,6 +146,9 @@ class _Sweep:
     fine: object
     placed: object
     noise: object
+    #: Its response from the arrival (`from_arrival`), at the head only: the
+    #: ringing is read there (ADR-0187 C6).
+    ir: object = None
 
 
 class _Skipped(Exception):
@@ -173,6 +183,10 @@ class RunState:
     setup: bool = False
     right_db: float | None = None
     sides: str | None = None
+    #: ADR-0188: "measure", or "speakers" for the check on its own; and
+    #: whether what the check found leaves the kept measurement behind.
+    mode: str = "measure"
+    stale: bool = False
 
     def as_dict(self) -> dict:
         return {"step": self.step, "position": self.position, "speaker": self.speaker, "sweep": self.sweep,
@@ -184,7 +198,8 @@ class RunState:
                 "positions": rc.POSITIONS,
                 "distance_cm": None if self.distance_cm is None else round(self.distance_cm, 1),
                 "far_cm": round(FAR_S * 343.0 * 100), "setup": self.setup,
-                "right_db": None if self.right_db is None else round(self.right_db, 1), "sides": self.sides}
+                "right_db": None if self.right_db is None else round(self.right_db, 1), "sides": self.sides,
+                "mode": self.mode, "stale": self.stale}
 
 
 def _screen(state: RunState) -> tuple:
@@ -241,6 +256,8 @@ class Host:
     finish: Callable[[rc.Measurement | None], Awaitable[None]]
     #: Every change of the run's state, for the screens.
     publish: Callable[[RunState | None, dict | None], None] = lambda state, ended: None
+    #: The speakers' alignment kept from the check on its own (ADR-0188).
+    align: Callable[[rc.Alignment], Awaitable[None]] | None = None
 
 
 class Run:
@@ -251,9 +268,17 @@ class Run:
     def __init__(self, card: str, audio, calibration: rc.Calibration, host: Host, *,
                  sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
                  timeout_s: float = TIMEOUT_S, today: Callable[[], str] | None = None,
-                 dsp=None, sweep_s: float | None = None):
+                 dsp=None, sweep_s: float | None = None, mode: str = "measure",
+                 measured: rc.Measurement | None = None):
         from gexis_core import room_dsp
         self.card = card
+        #: ADR-0188: "speakers" checks the speakers alone; `measured` is the
+        #: output's kept measurement, to tell whether the check leaves it
+        #: behind.
+        self._mode = mode
+        self._measured = measured
+        #: The speaker check's finding, as the alignment kept from it.
+        self.alignment: rc.Alignment | None = None
         self._audio = audio
         self._cal = calibration
         self._host = host
@@ -296,6 +321,10 @@ class Run:
         self._delay = (0.0, 0.0)
         #: ADR-0187 D2: each speaker's level (dB), the louder turned down.
         self._match = (0.0, 0.0)
+        #: The head's responses (ADR-0187 C6), each speaker's kept sweeps
+        #: averaged as waves: as measured, and in the check.
+        self._head: dict = {}
+        self._head_checked: dict = {}
         self._waiting = False
         self._prep: asyncio.Future | None = None
         self._finishing = False
@@ -320,7 +349,8 @@ class Run:
 
     def tap(self, what: str) -> None:
         """`start`, `next` (*Measure here*), `check` (*Check it*), `skip`,
-        `keep`, `discard`, `again` (*Try again*), `done`. **A tap is for the
+        `keep`, `discard`, `again` (*Try again*), `done`, `keep_and_measure`
+        (ADR-0188). **A tap is for the
         screen it was sent on** (the review of 1.16.1): a second *Measure
         here* that came after the run had moved on answered the next
         position's, which was then swept where the last one was."""
@@ -332,7 +362,7 @@ class Run:
         what plays); putting the player back follows, and other sources are
         let in once it has (`released`)."""
         if self.ended is None:
-            self.ended = {"how": "cancelled", "why": "cancel"}
+            self.ended = {"how": "cancelled", "why": "cancel", "mode": self._mode}
             self._host.publish(None, dict(self.ended))
         if self._task is not None and not self._task.done():
             self._task.cancel()
@@ -361,6 +391,12 @@ class Run:
             state = replace(state, aim_db=self._aim)
         if state.distance_cm is None and self._timing is not None:
             state = replace(state, distance_cm=self._timing.cm)
+        if state.mode != self._mode:
+            state = replace(state, mode=self._mode)
+        if self._mode == "speakers":
+            # The check on its own is the whole of its run: its share of
+            # the measurement's progress (to *ready*, 8 %) stretched.
+            state = replace(state, progress=min(1.0, state.progress / 0.08))
         if _screen(state) != _screen(self.state):
             self._shown += 1
         self.state = state
@@ -407,7 +443,17 @@ class Run:
         while not await self._level():
             self._set(replace(self.state, step="level", too_quiet=True))
             await self._wait("again")
-        await self._speakers()
+        what = await self._speakers()
+        if self._mode == "speakers":
+            if what == "discard":
+                return "discarded"
+            if self._host.align is not None:
+                await self._host.align(self.alignment)
+            if what == "keep":
+                return "kept"
+            # *Keep and measure* (ADR-0188 C3): on into the measurement,
+            # without checking again.
+            self._mode = "measure"
         for n in range(1, rc.POSITIONS + 1):
             await self._move(n, checking=False)
             await self._measure(n, checking=False)
@@ -439,7 +485,7 @@ class Run:
 
     async def _end(self, how: str, why: str | None = None) -> None:
         if self.ended is None:
-            self.ended = {"how": how, "why": why}
+            self.ended = {"how": how, "why": why, "mode": self._mode}
             self._host.publish(None, dict(self.ended))
         if self._finishing:
             return
@@ -602,7 +648,9 @@ class Run:
 
     async def _speakers(self) -> None:
         """**The speaker check** (ADR-0187 D1-D2, C1-C2; the screens George
-        chose 2026-11-23): at the head the speakers timed and their level
+        chose 2026-11-23); the tap that ended it: *Measure* ("next"), or on
+        its own *Keep*, *Keep and measure* ("keep_and_measure") or *Discard*
+        (ADR-0188). At the head the speakers timed and their level
         read; one with + and - swapped is said (*polarity*); more than
         `FAR_S` apart, *far*; then at position 2 left and right (*swapped*
         when the right is the nearer). What it finds can be put right and
@@ -645,11 +693,34 @@ class Run:
                                        progress=0.07))
                     await self._wait("again")
                     continue
+            self.alignment = rc.Alignment(True, self._today(), self._delay, self._match,
+                                          None if timing is None else round(timing.cm, 1),
+                                          sides if sides in ("right", "unsure") else None,
+                                          None if timing is None else timing.right_db)
+            stale = self._stale()
             self._set(RunState("ready", position=2 if sides else 1, setup=True, level_db=self.state.level_db,
                                right_db=None if timing is None else timing.right_db, sides=sides,
-                               progress=0.08))
-            if await self._wait("again", "next") == "next":
-                return
+                               progress=0.08, stale=stale))
+            if self._mode != "speakers":
+                accepted = ("again", "next")
+            elif timing is None:
+                # Nothing read, nothing to keep (ADR-0188 C3).
+                accepted = ("again", "discard")
+            elif stale:
+                accepted = ("keep", "discard", "keep_and_measure")
+            else:
+                accepted = ("again", "keep", "discard")
+            what = await self._wait(*accepted)
+            if what != "again":
+                return what
+
+    def _stale(self) -> bool:
+        """**What the check found leaves the kept measurement behind**
+        (ADR-0188 D2, C4) - the check on its own only."""
+        m = self._measured
+        if self._mode != "speakers" or m is None or m.nothing_to_cut:
+            return False
+        return rc.pair_moves_db(m.delay, m.level, self._delay, self._match) > rc.STALE_DB
 
     async def _sides(self) -> str | None:
         """**Position 2, 40 cm to the left** (D1): the left must be nearer
@@ -724,7 +795,8 @@ class Run:
             noise = self._noise_curves[key]
             snr = dsp.snr_db(curve, noise)
         on_mark = None if self._mark is None else dsp.placed(whole, self._mark)
-        return _Sweep(curve - self._calibration_curve(), snr, fine, on_mark, noise)
+        return _Sweep(curve - self._calibration_curve(), snr, fine, on_mark, noise,
+                      ir if self.state.position == 1 and channel in rc.CHANNELS else None)
 
     def _calibration_fine(self):
         if not hasattr(self, "_cal_fine"):
@@ -785,9 +857,13 @@ class Run:
         check's head plays both as well and logs how far the added pair is
         from it (C4); where a kept sweep found no mark, both are played, as
         before D4."""
+        import numpy as np
         sets = {}
         for channel in _sets(n, checking):
             sets[channel] = await self._sweep_set(n, channel, checking)
+            if n == 1 and channel in rc.CHANNELS and sets[channel].kept[0].ir is not None:
+                (self._head_checked if checking else self._head)[channel] = np.mean(
+                    [x.ir for x in sets[channel].kept], axis=0)
         added = self._added(sets["L"], sets["R"], fine=not checking)
         if added is None:
             logger.info("room: %s %d: a sweep without its mark - both played", "check" if checking else "position", n)
@@ -921,9 +997,39 @@ class Run:
             d = self._dsp.design(self._positions[channel], cuts=both.cuts, trust=self._trust(channel), head=True)
             self._designs[channel] = d
             speakers[channel] = _speaker(d)
+        found = self._dsp.dips(both, self._designs["L"], self._designs["R"], trust=self._trust(rc.BOTH))
+        logger.info("room: dips left: %s", "; ".join(
+            f"{f:.0f} Hz {depth:.1f} dB under, {cause or 'no cause named'}"
+            + (f" ({who}, {m:.2f} m)" if cause == "wall" else "") for f, depth, cause, who, m in found) or "none")
+        under, at = self._dsp.joint_under(both, self._designs["L"], self._designs["R"])
+        logger.info("room: C7: the joint cuts take the speakers' power sum at most %.1f dB further under the "
+                    "target, at %.0f Hz", -under, at)
+        for channel in rc.CHANNELS:
+            speakers[channel] = replace(speakers[channel], ringing=self._ringing(channel, checked=False))
         self.pending = rc.Measurement(self._today(), False, speakers, range=rc.FULL, delay=self._delay,
                                       distance_cm=None if self._timing is None else round(self._timing.cm, 1),
-                                      level=self._match)
+                                      level=self._match, dips=tuple(found))
+
+    def _ringing(self, channel: str, checked: bool) -> tuple:
+        """**The bass's ringing at the head** (ADR-0187 C6, D7): the bands
+        that stand clear of the response's floor, `(hz, before, after)` at
+        0.2 s; after as checked, or the before through the speaker's
+        corrections (expected). All of it logged."""
+        before = self._head.get(channel)
+        if before is None:
+            return ()
+        d = self._designs[channel]
+        after = self._head_checked.get(channel) if checked else self._dsp.through(before, list(d.cuts) + list(d.broad))
+        rows = self._dsp.ringing(before, after)
+        shown = self._dsp.RING_SHOWN
+        logger.info("room: %s ringing at the head (%s), dB at %s s against the first 50 ms; decay s: %s", channel,
+                    "checked" if checked else "expected",
+                    "/".join(f"{t:g}" for t in self._dsp.RING_AT_S),
+                    "; ".join(f"{r.hz:g} Hz {'/'.join(f'{v:.0f}' for v in r.before)}"
+                              + ("" if r.after is None else f" -> {'/'.join(f'{v:.0f}' for v in r.after)}")
+                              + f" ({r.decay:.2f}" + ("" if r.decay_after is None else f" -> {r.decay_after:.2f}")
+                              + ")" + ("" if r.clear else " under the floor") for r in rows))
+        return tuple((r.hz, r.before[shown], None if r.after is None else r.after[shown]) for r in rows if r.clear)
 
     def _trust(self, channel: str):
         """Where every position's averaged sweeps stand `TRUST_SNR_DB` over
@@ -967,7 +1073,9 @@ class Run:
             after_bass = after - self._dsp.cuts_db(d.broad, self._dsp.GRID)
             speakers[channel] = replace(self.pending.speakers[channel], after=tuple(after),
                                         after_bass=tuple(after_bass),
-                                        within=self._dsp.within_db(after, d.target))
+                                        within=self._dsp.within_db(after, d.target),
+                                        ringing=self._ringing(channel, checked=channel in self._head_checked)
+                                        or self.pending.speakers[channel].ringing)
             # Above the bass each speaker's own corrections are judged on it.
             worse += self._dsp.worse_positions(d.positions, measured, d.target, list(d.broad))
         # The bass's cuts on what they were designed from: both together.

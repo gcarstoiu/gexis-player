@@ -201,6 +201,8 @@
   --rc-pane-gap: 8px;  --rc-pane-gap-lg: 12px;  /* the gap at 250 Hz: phone / panel and bars */
   --rc-note-ground: rgba(16,26,33,0.9);         /* the label on a hatched pane */
   --rc-reach-locked-line: rgba(233,238,242,0.28); /* Full range chip on a bass-only measurement, 1.5px dashed */
+  --rc-dip-cancel: #9fb4e8;                     /* the dips card's *the two speakers cancel* tag (ADR-0187 D8) */
+  --rc-dip-cancel-fill: rgba(159,180,232,0.14); /* its ground */
   --rc-stroke-before: 2.25px;  --rc-stroke-before-lg: 2.75px;
   --rc-stroke-after: 3.25px;   --rc-stroke-after-lg: 4px;
   --rc-stroke-target: 2px;     --rc-stroke-target-lg: 2.5px;

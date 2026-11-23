@@ -591,3 +591,84 @@ def test_the_mark_leaves_the_measured_curve_as_it_was():
     inside = (rd.GRID >= 20) & (rd.GRID <= 16000)
     assert np.max(np.abs(a - b)[inside]) < 0.2
     assert rd.mark_at(marked) == pytest.approx(0.3 * rd.FS + 0.003 * rd.FS, abs=3)
+
+
+# ---- what the correction leaves (ADR-0187 C6-C9; D7-D8) ------------------------------
+
+
+def _mode_ir(f0=50.0, t60=0.8, amp=0.05, seconds=1.0):
+    """A response from its arrival (as `from_arrival` gives it): the direct
+    sound, then one mode ringing at `f0`."""
+    n = int(seconds * rd.FS)
+    pre = int(rd.PRE_S * rd.FS)
+    ir = np.zeros(n)
+    ir[pre] = 1.0
+    t = np.arange(n - pre) / rd.FS
+    ir[pre:] += amp * np.sin(2 * np.pi * f0 * t) * np.exp(-6.91 * t / t60)
+    return ir + np.random.default_rng(1).normal(0, 1e-7, n)
+
+
+def test_the_ringing_is_read_a_fifth_of_a_second_later_per_third_octave():
+    """C6, Finding 158's reading: the level at 0.2 s against the first 50 ms
+    in the band; a cut on the mode leaves less of it; the decay time read
+    from Schroeder's curve."""
+    before = _mode_ir()
+    rows = {r.hz: r for r in rd.ringing(before)}
+    assert list(rows) == list(rd.RING_BANDS)
+    fifty = rows[50.0]
+    assert fifty.clear and -14 < fifty.before[rd.RING_SHOWN] < -7, fifty   # -10.1: the band's own rise
+    assert fifty.decay == pytest.approx(0.8, abs=0.1)
+    assert fifty.after is None
+    after = rd.through(before, [rd.Cut(50.0, -10.0, 8.0)])
+    cut = {r.hz: r for r in rd.ringing(before, after)}[50.0]
+    assert cut.after[rd.RING_SHOWN] < fifty.before[rd.RING_SHOWN] - 6, "less of the note left"
+    assert not rows[200.0].clear, "nothing rings there: under the floor, not shown"
+
+
+def test_through_plays_a_response_through_the_filters():
+    ir = np.zeros(4096)
+    ir[0] = 1.0
+    out = rd.through(ir, [rd.Cut(1000.0, -6.0, 2.0)])
+    got = 20 * np.log10(np.abs(np.fft.rfft(out, 1 << 16)))
+    f = np.fft.rfftfreq(1 << 16, 1 / rd.FS)
+    assert got[np.argmin(np.abs(f - 1000))] == pytest.approx(-6.0, abs=0.1)
+    assert got[np.argmin(np.abs(f - 100))] == pytest.approx(0.0, abs=0.1)
+
+
+def _notch(f0, depth, width=1 / 12):
+    return -depth * np.exp(-0.5 * (np.log2(rd.GRID / f0) / width) ** 2)
+
+
+def _made(positions, target):
+    positions = np.asarray(positions, dtype=float)
+    before = rd.power_average(rd.head_counts_more(positions))
+    return rd.Design((), 0.0, before, np.full(len(rd.GRID), target), before, positions)
+
+
+def test_the_dips_left_are_put_down_to_their_causes():
+    """C9: in the pair but not in the speakers' power sum - the two cancel;
+    spread between positions - only some places; in one speaker alone,
+    under 1.5 m a quarter wavelength - a wall or the floor near it."""
+    flat = np.zeros(len(rd.GRID))
+    spread = [16.0, 4.0, 4.0, 4.0, 4.0]
+    pair = [6 + _notch(65, 12) + _notch(110, 7) + _notch(150, d) for d in spread]
+    left = [flat] * 5
+    right = [_notch(110, 8)] * 5
+    found = rd.dips(_made(pair, 6.0), _made(left, 0.0), _made(right, 0.0))
+    by = {round(f / 5) * 5: (depth, cause, who, m) for f, depth, cause, who, m in found}
+    assert set(by) == {65, 110, 150} and found[0][0] == pytest.approx(65, rel=0.03), "deepest first"
+    assert by[65][1:3] == ("cancel", None) and by[65][0] == pytest.approx(12, abs=0.5)
+    assert by[110][1:3] == ("wall", "R") and by[110][3] == pytest.approx(343 / (4 * 110), rel=0.03)
+    assert by[150][1] == "local"
+    nothing = rd.dips(_made([6 + flat] * 5, 6.0), _made(left, 0.0), _made(left, 0.0))
+    assert nothing == []
+
+
+def test_a_joint_cut_against_the_speakers_alone_is_logged():
+    """C7: how much further under the target the pair's cuts take the
+    speakers' power sum, levelled to the pair."""
+    flat = np.zeros(len(rd.GRID))
+    pair = _made([6 + flat - _notch(46, 6, 1 / 6)] * 5, 6.0)
+    pair = rd.Design((rd.Cut(46.0, -6.0, 5.0),), 0.0, pair.before, pair.target, pair.after, pair.positions)
+    under, at = rd.joint_under(pair, _made([flat] * 5, 0.0), _made([flat] * 5, 0.0))
+    assert under < -4 and 40 < at < 52

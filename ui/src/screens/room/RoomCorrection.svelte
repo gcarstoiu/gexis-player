@@ -13,8 +13,9 @@
 <script>
   import { encode } from 'uqr';
   import { onDestroy } from 'svelte';
-  import { alignedLine, levelLine, capitalised, chartSpan, correctionGroups, correctionsWho, countWord, cutFreq, cutGain, cutRows,
-    outputPhrase, outputShort, rangeWord, resultWords, room, RoomReader, setRoom, sideName, sides } from '../../lib/room.svelte.js';
+  import { capitalised, chartSpan, correctionGroups, correctionsWho, countWord, cutFreq, cutGain, cutRows,
+    outputPhrase, outputShort, rangeWord, resultWords, room, RoomReader, setRoom, sideName, sides, speakersLine,
+    speakersRows } from '../../lib/room.svelte.js';
   import { screen } from '../../lib/family.svelte.js';
   import RoomChart from './RoomChart.svelte';
   import RoomFlow from './RoomFlow.svelte';
@@ -27,6 +28,9 @@
   //: On the phone's Before, the microphone and its file are looked for
   //: every two seconds: plugging it in moves nothing else.
   let view = $state(null);   // phone: 'page' | 'flow'
+  //: What the flow's Before starts: the measurement, or the speaker check
+  //: on its own (ADR-0188).
+  let want = $state('measure');
   const summary = $derived($room);
   const full = $derived(reader.full);
   $effect(() => {
@@ -50,16 +54,25 @@
   let wantOn = $state(null);
   let wantAb = $state(null);
   let wantReach = $state(null);
+  let wantSpk = $state(null);
   const on = $derived(wantOn ?? !!full?.on);
-  const ab = $derived((wantAb ?? !!full?.without) && on);
+  //: ADR-0188: the speakers' alignment, its own switch (null: never checked).
+  const spk = $derived(full?.speakers ?? null);
+  const spkOn = $derived(wantSpk ?? !!spk?.on);
+  const ab = $derived((wantAb ?? !!full?.without) && (on || spkOn));
   const reach = $derived(wantReach ?? full?.reach ?? 'full');
   $effect(() => {
     if (wantOn !== null && !!full?.on === wantOn) wantOn = null;
     if (wantAb !== null && !!full?.without === wantAb) wantAb = null;
     if (wantReach !== null && full?.reach === wantReach) wantReach = null;
+    if (wantSpk !== null && !!full?.speakers?.on === wantSpk) wantSpk = null;
   });
   const dsd = $derived(!!full?.dsd);
-  const abLive = $derived(on && !!measured && !dsd);
+  //: Hear it without takes out room correction and the alignment both.
+  const abLive = $derived(((on && !!measured) || spkOn) && !dsd);
+  //: ADR-0188 D2: checked since the room was measured, and moved enough
+  //: that the bass's cuts can miss.
+  const stale = $derived(!!full?.stale);
   //: How far the measurement was made: one from before Phase 30 covers the
   //: bass only, and holds the reach at Bass until the room is measured again.
   const range = $derived(measured?.range ?? 'full');
@@ -70,6 +83,7 @@
     error = null;
     if (key === 'on') wantOn = value;
     else if (key === 'reach') wantReach = value;
+    else if (key === 'speakers') wantSpk = value;
     else wantAb = value;
     try {
       reader.full = await setRoom({ [key]: value });
@@ -79,9 +93,16 @@
       wantOn = null;
       wantAb = null;
       wantReach = null;
+      wantSpk = null;
     }
   }
   const toggleOn = () => measured && change('on', !on);
+  const toggleSpk = () => spk && change('speakers', !spkOn);
+  //: The flow, for a measurement or for the speaker check alone.
+  function openFlow(what) {
+    want = what;
+    view = 'flow';
+  }
   const toggleAb = () => abLive && change('without', !ab);
   //: The Reaches chips (the design's 1a): a tap is heard at once. Full range
   //: on a bass-only measurement asks for the room measured again - Before on
@@ -110,16 +131,17 @@
   const resultLine = $derived(words[1]);
   const span = $derived(chartSpan(chart));
   const positionsWord = $derived(countWord(measured?.positions ?? 0));
-  //: ADR-0185: the speakers' timing, when the measurement has it.
-  const alignedText = $derived([alignedLine(measured?.distance_cm, measured?.delay_ms), levelLine(measured?.level_db)]
-    .filter(Boolean).join(' ') || null);
-  const abSub = $derived(!on ? 'Only while room correction is on.'
-    : ab ? 'Now without: no correction at all. Switch back to hear it.'
-      : 'Compare: no correction at all, heard at once. Stays where you put it.');
-  const abShort = $derived(!on ? 'Only while room correction is on.' : ab ? 'Now without: no correction at all' : 'Compare, heard at once');
+  //: ADR-0188: Hear it without takes out the alignment too (the room
+  //: page George chose, 2026-11-23).
+  const abSub = $derived(!on && !spkOn ? 'Only while room correction or the speakers are on.'
+    : ab ? 'Now without: no room correction and no alignment. Switch back to hear them.'
+      : 'Compare: no room correction and no alignment, heard at once.');
+  const abShort = $derived(!on && !spkOn ? 'Only while room correction or the speakers are on.'
+    : ab ? 'Now without: no correction, no alignment' : 'Compare, heard at once');
   const againLabel = $derived(bassOnly ? 'Measure again for the full range' : 'Measure again');
   const powerNote = $derived(on ? `For ${outputPhrase(full?.output)}. Each output keeps its own.`
-    : 'Off: the correction is taken out. With the equaliser also off, the sound is untouched, bit-perfect.');
+    : spkOn && spk?.plays ? 'Off: the correction is taken out. The speakers stay aligned.'
+      : 'Off: the correction is taken out. With the equaliser also off, the sound is untouched, bit-perfect.');
 
   //: The sheet's code: the player's page for a phone, opened at Room correction.
   function qrPath(text) {
@@ -215,7 +237,7 @@
 {/snippet}
 
 {#if phone && view === 'flow' && full}
-  <RoomFlow {full} {flat} onback={() => onback?.()} onpage={() => (view = 'page')} />
+  <RoomFlow {full} {flat} {want} onback={() => onback?.()} onpage={() => { view = 'page'; want = 'measure'; }} />
 {:else}
   <div class="room room--{surface}" class:room--flat={flat} data-dpad-layer>
     {#if bar}
@@ -251,19 +273,46 @@
               </span>
               {@render sw(on && !!measured, false)}
             </button>
-            <div class="powercard__rule"></div>
+            {#if stale}
+              <!-- ADR-0188 D2: the speakers checked since this was measured. -->
+              <div class="stale"><span class="stale__mark">!</span>
+                <span>The speakers were checked after this was measured: in the bass it no longer fits exactly. Measure again.</span></div>
+            {:else}
+              <div class="powercard__rule"></div>
+            {/if}
             <span class="label label--phone">Reaches</span>
             {@render reaches('phone')}
             {#if bassOnly}
               <div class="reach__note">This measurement covers the bass only. Measure again to reach the full range.</div>
             {/if}
           </div>
+          <!-- ADR-0188 D1 (George's A, 2026-11-23): the speakers' alignment,
+               its own switch, heard with room correction on or off. -->
+          <div class="card powercard">
+            <button type="button" class="power" class:is-dim={!spk} aria-pressed={spkOn} onclick={toggleSpk} disabled={!spk}>
+              <span class="power__text">
+                <span class="power__title">Speakers</span>
+                <span class="power__note">{speakersLine(spk)}</span>
+              </span>
+              {@render sw(spkOn, false)}
+            </button>
+            {#if spk}
+              <div class="powercard__rule"></div>
+              {#each speakersRows(spk) as r (r.text)}
+                <div class="srow">
+                  <span class="srow__mark srow__mark--{r.kind}" aria-hidden="true">{#if r.kind === 'ok'}<span class="srow__tick"></span>{:else}!{/if}</span>
+                  <span class="srow__text">{r.text}</span>
+                </div>
+              {/each}
+            {/if}
+            <button type="button" class="checkbtn" onclick={() => openFlow('speakers')}>Check the speakers</button>
+            <div class="reach__note reach__note--quiet">About two minutes with the microphone: at your head, then 40 cm to its left. Works with room correction on or off.</div>
+          </div>
           {@render abCard('phone')}
           <div class="card measuredcard">
             <div class="power__text">
               <div class="power__title">Measured</div>
               <div class="power__note">{measured?.year} · {positionsWord} positions · {rangeWord(range)}</div>
-              {#if alignedText}<div class="power__note">{alignedText}</div>{/if}
             </div>
             {#if notChecked}<span class="flag">Not checked</span>{/if}
           </div>
@@ -275,7 +324,7 @@
             </div>
             <RoomChart surface="phone" freqs={chart?.freqs ?? []} {speaker} {kind} {span} {reach} {range} />
           </div>
-          <button type="button" class="again" class:is-lit={bassOnly} onclick={() => (view = 'flow')}>{againLabel}</button>
+          <button type="button" class="again" class:is-lit={bassOnly || stale} onclick={() => openFlow('measure')}>{againLabel}</button>
           {#if error}<div class="error" role="status">{error}</div>{/if}
         </div>
       </div>
@@ -820,6 +869,86 @@
     line-height: 1.45;
     color: var(--c-ink-78);
     text-wrap: pretty;
+  }
+  .reach__note--quiet {
+    font-size: 13.5px;
+    color: var(--ink-quiet);
+  }
+  .power.is-dim .power__title {
+    opacity: 0.6;
+  }
+  /* ADR-0188: the Speakers card's rows and button (George's A, 2026-11-23). */
+  .srow {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .srow__mark {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    position: relative;
+    border-radius: 50%;
+    box-sizing: border-box;
+  }
+  .srow__mark--ok {
+    background: var(--c-lms-16);
+  }
+  .srow__mark--warn {
+    background: var(--c-warn-16);
+    color: var(--rc-without);
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 14px;
+    line-height: 24px;
+    text-align: center;
+  }
+  .srow__tick {
+    position: absolute;
+    left: 8.5px;
+    top: 5px;
+    width: 5px;
+    height: 10px;
+    border-right: 2.5px solid var(--accent-lms);
+    border-bottom: 2.5px solid var(--accent-lms);
+    transform: rotate(45deg);
+  }
+  .srow__text {
+    font-size: 15px;
+    line-height: 1.4;
+    color: var(--c-ink-78);
+    text-wrap: pretty;
+  }
+  .checkbtn {
+    height: 50px;
+    border-radius: var(--r-15);
+    box-sizing: border-box;
+    font: inherit;
+    font-size: 16px;
+    font-weight: 700;
+    color: inherit;
+    background: var(--ink-fill);
+    border: 1px solid var(--c-ink-14);
+  }
+  .checkbtn:active {
+    transform: scale(0.97);
+  }
+  .stale {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 10px 12px;
+    border-radius: var(--r-md);
+    background: var(--rc-without-fill);
+    border: 1px solid var(--c-warn-40);
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--c-ink-78);
+    text-wrap: pretty;
+  }
+  .stale__mark {
+    color: var(--rc-without);
+    font-weight: 800;
   }
   .power__text {
     flex: 1;

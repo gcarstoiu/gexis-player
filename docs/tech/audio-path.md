@@ -844,8 +844,22 @@ hw:Loopback,1,0 → CamillaDSP (headroom fader, ten bands, then on each speaker 
   each speaker's `Delay`, `room_l_level` and `room_r_level`, at 0 dB when
   unused, a cut so no headroom, at most 12 dB (`equaliser.MAX_LEVEL_DB`) -
   so the sweeps measure what will play, and the measurement keeps both
-  (`level`). More than 1 ms (34 cm) apart *far* waits for *Check again* or
-  *Measure anyway*. At position 2, 40 cm to the left, the left must be
+  (`level`). **The alignment on its own** (ADR-0188): kept per output
+  beside the measurement (`speakers`: on, the date, each speaker's delay
+  and level, the distance, left and right, the level as read), its own
+  switch; the stage plays its delay and level whenever it is on, room
+  correction on or off - the stage is in the path for it when it has
+  something to delay or turn down - and *Hear it without* sets both to
+  nothing. A kept measurement keeps its check as the alignment, switched
+  on; one stored before keeps its delay and level as the alignment,
+  switched as room correction was. The check also runs alone (a run with
+  `mode` `speakers`: the level, then this check, ending on *Keep*). **When
+  the correction no longer fits** (ADR-0188 C4, `room_correction.pair_moves_db`):
+  the change in the delay between the speakers and in their levels against
+  the measurement's, as the most a pair adding in phase would move from
+  20 to 250 Hz; over 1 dB (`STALE_DB`) the check says so and the page
+  keeps a note until the room is measured again. More than 1 ms (34 cm)
+  apart *far* waits for *Check again* or *Measure anyway*. At position 2, 40 cm to the left, the left must be
   10 cm nearer than at 1 - it moves by about 2 × 40 cm × sin of half the
   speakers' angle, 21 cm at ±15° - or, 10 cm the other way, *swapped*
   waits for *Check again*; in between, *ready* says left and right were
@@ -942,11 +956,33 @@ hw:Loopback,1,0 → CamillaDSP (headroom fader, ten bands, then on each speaker 
   position more than 1 dB further from the target at any cut's frequency
   with both speakers playing, or at a broad correction's with its own
   speaker (read at 1/3 octave), is named.
+- **The ringing** (ADR-0187 C6-D7, `room_dsp.ringing`): each speaker's
+  kept sweeps at the head averaged as waves, in third octaves from 20 to
+  250 Hz (a Gaussian a sixth of an octave each side, zero phase); the
+  level 0.1, 0.2 and 0.3 s after the arrival, over ±10 ms, against the
+  first 50 ms before the correction in that band (Finding 158), and the
+  decay time from Schroeder's curve - all logged. Shown at 0.2 s where the
+  before stands 6 dB over the response's own floor (0.55-0.8 s); after is
+  the check's head, or with the check skipped the before through the
+  corrections (`room_dsp.through`).
+- **The dips** (ADR-0187 C9-D8, `room_dsp.dips`): low points of the pair,
+  positions averaged with the head's weight, 3 dB or more under the
+  target from 20 to 250 Hz, three at most, a sixth of an octave apart. The
+  cause: `cancel` where the speakers' power sum stands 6 dB over the pair
+  at most positions; `local` where the dip's depth spreads 10 dB or more
+  between positions; `wall` where one speaker alone (or both) has a notch
+  there at most positions - 3 dB under its level a third of an octave
+  either side - and a quarter wavelength is under 1.5 m, its `distance_m`.
+- **The joint cuts against each speaker** (ADR-0187 C7,
+  `room_dsp.joint_under`), logged: how much further under the target the
+  cuts take the speakers' power sum, levelled to the pair by the median
+  difference, where it was within 6 dB.
 
 The state is kept in the settings database (`_room_correction`): for each
-output `on`, `without`, `reach` (`bass` or `full`) and the last measurement
+output `on`, `without`, `reach` (`bass` or `full`), the last measurement
 (its `range`, `bass_from` - `both` - its cuts and broad corrections, its curves to a hundredth of a
-decibel); and each microphone's calibration by its serial, the last given in
+decibel, each speaker's `ringing` and the `dips`) and the speakers'
+alignment (`speakers`, ADR-0188); and each microphone's calibration by its serial, the last given in
 use - the whole file; one kept to 2 kHz before Phase 30 is asked for again
 (`calibration.again`). A measurement from before Phase 30 has no `range`: it
 is the bass's, curves to 500 Hz, and holds its output at `bass`. `/state`

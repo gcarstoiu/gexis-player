@@ -393,13 +393,14 @@
         "x-gexis-stability": "internal",
         "x-gexis-adr": [
           "ADR-0175",
-          "ADR-0177"
+          "ADR-0177",
+          "ADR-0188"
         ],
         "tags": [
           "Room correction"
         ],
         "summary": "Room correction for the output in use",
-        "description": "Whether room correction is on for the output in use, how far it reaches (`reach`: the bass alone, or the full range) and whether *Hear it without* is set (every correction at 0 dB, to compare), the last measurement with its chart (each speaker's average before, its positions, the target and the after, measured or expected, from 15 Hz to 20 kHz - to 500 Hz for a measurement kept before ADR-0177, which reaches the bass only), the measurement microphone and its calibration, whether a measurement can start, and a measurement in progress with what it has worked out so far. Each output keeps its own. The summary of it is `room` on `/state`. Off with the equaliser also off, the output is bit-perfect.",
+        "description": "Whether room correction is on for the output in use, how far it reaches (`reach`: the bass alone, or the full range) and whether *Hear it without* is set (every correction at 0 dB, to compare), the last measurement with its chart (each speaker's average before, its positions, the target and the after, measured or expected, from 15 Hz to 20 kHz - to 500 Hz for a measurement kept before ADR-0177, which reaches the bass only), the speakers' alignment (ADR-0188: its own switch, its delay and level heard with room correction on or off) and whether a check since the last measurement left the bass's cuts behind (`stale`), the measurement microphone and its calibration, whether a measurement can start, and a measurement in progress with what it has worked out so far. Each output keeps its own. The summary of it is `room` on `/state`. Off with the equaliser also off, the output is bit-perfect.",
         "responses": {
           "200": {
             "description": "Room correction.",
@@ -438,13 +439,14 @@
         "x-gexis-stability": "internal",
         "x-gexis-adr": [
           "ADR-0175",
-          "ADR-0177"
+          "ADR-0177",
+          "ADR-0188"
         ],
         "tags": [
           "Room correction"
         ],
-        "summary": "Switch room correction, choose how far it reaches, or Hear it without",
-        "description": "For the output in use: `on` switches it (with the equaliser off, the output is reopened - a moment of silence); `reach` is `bass` (the cuts below 250 Hz alone) or `full` (the broad corrections above it too), heard at once and kept; `without` sets every correction to 0 dB to compare, heard at once, and is kept like `on`. Only after a measurement; `reach` and `without` only while on, `full` only from a measurement made to 20 kHz; none while the room is being measured.",
+        "summary": "Switch room correction or the speakers' alignment, its reach, Hear it without",
+        "description": "For the output in use: `on` switches it (with the equaliser off, the output is reopened - a moment of silence); `reach` is `bass` (the cuts below 250 Hz alone) or `full` (the broad corrections above it too), heard at once and kept; `speakers` switches the speakers' alignment, once checked (ADR-0188: the delay and level heard whatever room correction does); `without` sets every correction to 0 dB and the alignment to nothing, to compare, heard at once, and is kept like `on`. Only after a measurement; `reach` only while on, `without` only while room correction or the alignment is on, `full` only from a measurement made to 20 kHz; none while the room is being measured.",
         "requestBody": {
           "required": true,
           "content": {
@@ -553,13 +555,14 @@
         "operationId": "room_correction_run",
         "x-gexis-stability": "internal",
         "x-gexis-adr": [
-          "ADR-0175"
+          "ADR-0175",
+          "ADR-0188"
         ],
         "tags": [
           "Room correction"
         ],
-        "summary": "Measure the room, or answer a measurement's step",
-        "description": "`measure` begins a measurement on the output in use: what plays stops and nothing else can play until it ends. Then the phone's buttons: `start` (the microphone placed), `next` (*Measure here*, at each new position), `check` (*Check it*), `skip` (the check), `keep` (*Keep it*: stored and switched on), `discard`, `again` (*Try again*, after too quiet), `cancel` (at any step), and `done` once its end has been shown. A step waiting for a button for 10 minutes is cancelled. The steps are `room.run` on `/state`.",
+        "summary": "Measure the room, check the speakers alone, or answer a step",
+        "description": "`measure` begins a measurement on the output in use, `speakers` the speaker check alone (ADR-0188): what plays stops and nothing else can play until it ends. Then the phone's buttons: `start` (the microphone placed), `next` (*Measure here*, at each new position), `check` (*Check it*), `skip` (the check), `keep` (*Keep it*: stored and switched on; after the check alone, the alignment kept), `keep_and_measure` (after a check alone that leaves the measurement behind: the alignment kept, then on into a measurement), `discard`, `again` (*Try again*, after too quiet), `cancel` (at any step), and `done` once its end has been shown. A step waiting for a button for 10 minutes is cancelled. The steps are `room.run` on `/state`.",
         "requestBody": {
           "required": true,
           "content": {
@@ -15340,11 +15343,11 @@
               "object",
               "null"
             ],
-            "description": "The last measurement: `date`, `day`, `checked` (false when its check was skipped), `range` (`full`, or `bass` for one kept before ADR-0177); in full also `year`, `positions`, `peaks_down`, `within` and `room_within` (the design's *within N dB of the speaker's own balance*, after and before, the larger of the two speakers, null for a bass-only measurement), `nothing_to_cut`, `nothing_above` and `worse`."
+            "description": "The last measurement: `date`, `day`, `checked` (false when its check was skipped), `range` (`full`, or `bass` for one kept before ADR-0177); in full also `year`, `positions`, `peaks_down`, `within` and `room_within` (the design's *within N dB of the speaker's own balance*, after and before, the larger of the two speakers, null for a bass-only measurement), `nothing_to_cut`, `nothing_above`, `worse` and `dips` (ADR-0187 D8: each dip the bass keeps, `freq`, `depth` under the target, `cause` - cancel, local, wall or null - `speaker` and `distance_m` for a wall)."
           },
           "row": {
             "type": "string",
-            "description": "The Settings row's state: *Not measured yet*, *Full range \u00b7 measured 3 November*, *Bass \u00b7 measured 3 November*, *Bass \u00b7 measured for the bass only* (a measurement kept before ADR-0177), *Without \u00b7 comparing, no correction*, *Off*."
+            "description": "The Settings row's state: *Not measured yet*, *Full range \u00b7 measured 3 November*, *Bass \u00b7 measured 3 November*, *Bass \u00b7 measured for the bass only* (a measurement kept before ADR-0177), *Without \u00b7 comparing, no correction*, *Off*, *Off \u00b7 speakers aligned*, *Speakers aligned* (ADR-0188: the alignment alone plays)."
           },
           "dsd": {
             "type": "boolean",
@@ -15355,14 +15358,14 @@
               "object",
               "null"
             ],
-            "description": "A measurement in progress: `step` (place, level, timing, far, polarity, swapped, ready, measure, move, countdown, correction, nothing, checking, result; `setup` true through the speaker check - timing, far, polarity, swapped, ready and its moves - with `right_db`, how much louder the right speaker was, and `sides`, right or unsure), `position` from 1 to `positions` (how many the run measures, 5), `speaker` L, R or both (the two together) - in `timing` too, the speaker each short sweep comes from - `sweep` and `sweeps` (the one playing and how many its set takes: 2, the check more), `sets` (what the position sweeps, in order: L and R; both too at the check's head, or where a timing mark was missed - otherwise both are added from the two), `noise`, `level_db`, `aim_db`, `count`, `checking`, `progress` 0-1, `done`, `expected`, `too_quiet`."
+            "description": "A measurement in progress: `step` (place, level, timing, far, polarity, swapped, ready, measure, move, countdown, correction, nothing, checking, result; `setup` true through the speaker check - timing, far, polarity, swapped, ready and its moves - with `right_db`, how much louder the right speaker was, and `sides`, right or unsure), `position` from 1 to `positions` (how many the run measures, 5), `speaker` L, R or both (the two together) - in `timing` too, the speaker each short sweep comes from - `sweep` and `sweeps` (the one playing and how many its set takes: 2, the check more), `sets` (what the position sweeps, in order: L and R; both too at the check's head, or where a timing mark was missed - otherwise both are added from the two), `noise`, `level_db`, `aim_db`, `count`, `checking`, `progress` 0-1, `done`, `expected`, `too_quiet`; `mode` (`measure`, or `speakers` for the speaker check alone, which ends at `ready`) and `stale` (at `ready`, the check alone leaves the kept measurement behind)."
           },
           "ended": {
             "type": [
               "object",
               "null"
             ],
-            "description": "How the last measurement ended (`how`: kept, discarded, done, cancelled, failed), until `done`."
+            "description": "How the last run ended (`how`: kept, discarded, done, cancelled, failed; `mode`: measure or speakers), until `done`."
           },
           "microphone": {
             "type": "object",
@@ -15390,7 +15393,7 @@
               "object",
               "null"
             ],
-            "description": "Over the measurement's grid (1/24 octave from 15 Hz, to 20 kHz; to 500 Hz for one kept before ADR-0177): `freqs`, `limit` (250), `range`, `after_kind` (measured or expected), and for L and R `before`, `target` (the bass's rise joined at the limit to the speaker's own slope), `after` (every correction), `after_bass` (the cuts alone, for `reach` bass), `positions`, `cuts`, `above`, `peaks_down`, `within`, `room_within` - dB relative to the target's level at the limit; `both`, the two speakers together as heard, the same with no corrections and `after` empty until the check measures it."
+            "description": "Over the measurement's grid (1/24 octave from 15 Hz, to 20 kHz; to 500 Hz for one kept before ADR-0177): `freqs`, `limit` (250), `range`, `after_kind` (measured or expected), and for L and R `before`, `target` (the bass's rise joined at the limit to the speaker's own slope), `after` (every correction), `after_bass` (the cuts alone, for `reach` bass), `positions`, `cuts`, `above`, `peaks_down`, `within`, `room_within` - dB relative to the target's level at the limit - and `ringing` (ADR-0187 D7: per third octave at the head, `hz`, `before` and `after`, dB 0.2 s after the arrival against the first 50 ms before the correction; `after` measured or, with `after_kind` expected, the before through the corrections); `dips`, as `measured` has them; `both`, the two speakers together as heard, the same with no corrections and `after` empty until the check measures it."
           },
           "cuts": {
             "type": "object",
@@ -15417,6 +15420,17 @@
               "null"
             ],
             "description": "What a measurement would stop: `source` by name, and `dsd`."
+          },
+          "speakers": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "The speakers' alignment (ADR-0188), null until checked: `on`, `date` and `day` checked, `plays` (something delayed or turned down), `distance_cm` (how much further the right speaker is than the left; null: not timed), `delay_ms` and `level_db` (each speaker's), `sides` (right, unsure or null) and `right_db` (how much louder the right was; null: not read)."
+          },
+          "stale": {
+            "type": "boolean",
+            "description": "The speakers were checked after the last measurement and moved enough that its bass's cuts can miss (ADR-0188 D2): measure again."
           }
         }
       },
@@ -15438,6 +15452,10 @@
               "full"
             ],
             "description": "How far it reaches (ADR-0177): the bass alone, or the full range."
+          },
+          "speakers": {
+            "type": "boolean",
+            "description": "The speakers' alignment on or off (ADR-0188)."
           }
         }
       },
@@ -15467,11 +15485,13 @@
             "type": "string",
             "enum": [
               "measure",
+              "speakers",
               "start",
               "next",
               "check",
               "skip",
               "keep",
+              "keep_and_measure",
               "discard",
               "again",
               "cancel",

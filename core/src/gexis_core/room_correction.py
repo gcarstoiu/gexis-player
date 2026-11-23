@@ -99,6 +99,50 @@ def _dicts(filters) -> list[dict]:
     return [{"freq": round(f, 1), "gain": round(g, 1), "q": round(q, 2)} for f, g, q in filters]
 
 
+def _rings(ringing) -> list[dict]:
+    return [{"hz": round(hz, 1), "before": round(b, 1), "after": None if a is None else round(a, 1)}
+            for hz, b, a in ringing]
+
+
+#: **What a dip is put down to** (ADR-0187 D8, C9): the two speakers
+#: cancelling, only some places, a wall or the floor near one speaker (or
+#: both); none named.
+DIP_CAUSES = ("cancel", "local", "wall", None)
+
+
+def _dip(value) -> tuple:
+    """A dip as kept: `(freq, depth, cause, speaker, distance_m)`."""
+    freq, depth = _floats([value["freq"], value["depth"]])
+    cause = value.get("cause")
+    speaker = value.get("speaker")
+    distance = value.get("distance_m")
+    if cause not in DIP_CAUSES or speaker not in (None, "L", "R", BOTH):
+        raise TypeError
+    return (freq, depth, cause, speaker, None if distance is None else _floats([distance])[0])
+
+
+def _aligned(delay) -> bool:
+    return max(delay) >= ALIGN_MIN_MS
+
+
+def _matched(level) -> bool:
+    return min(level) <= -LEVEL_MIN_DB
+
+
+def _delay(value) -> tuple[float, float]:
+    delay = tuple(max(0.0, min(MAX_DELAY_MS, float(d))) for d in value or (0.0, 0.0))
+    if len(delay) != 2:
+        raise TypeError
+    return delay
+
+
+def _level(value) -> tuple[float, float]:
+    level = tuple(max(-eq.MAX_LEVEL_DB, min(0.0, float(g))) for g in value or (0.0, 0.0))
+    if len(level) != 2:
+        raise TypeError
+    return level
+
+
 @dataclass(frozen=True)
 class Speaker:
     """One speaker's part of a measurement: its cuts in the bass, its broad
@@ -115,6 +159,11 @@ class Speaker:
     after_bass: tuple[float, ...] = ()
     within: float | None = None
     room_within: float | None = None
+    #: **The bass's ringing** (ADR-0187 D7, C6): per third octave, the
+    #: level 0.2 s after the arrival at the head (dB, against the first
+    #: 50 ms before the correction) - `(hz, before, after)`, after None when
+    #: not read.
+    ringing: tuple[tuple[float, float, float | None], ...] = ()
 
     def as_dict(self) -> dict:
         out = {"cuts": _dicts(self.cuts),
@@ -128,6 +177,8 @@ class Speaker:
             out["within"] = self.within
         if self.room_within is not None:
             out["room_within"] = self.room_within
+        if self.ringing:
+            out["ringing"] = _rings(self.ringing)
         return out
 
     @classmethod
@@ -140,10 +191,18 @@ class Speaker:
         after_bass = _floats(value.get("after_bass") or [], n if value.get("after_bass") else None)
         positions = tuple(_floats(p, n) for p in value.get("positions") or [])
         within, room_within = value.get("within"), value.get("room_within")
+        ringing = []
+        for r in value.get("ringing") or []:
+            try:
+                hz, was = _floats([r["hz"], r["before"]])
+                now = None if r.get("after") is None else _floats([r["after"]])[0]
+            except (KeyError, TypeError):
+                continue
+            ringing.append((hz, was, now))
         return cls(tuple(_filters(value.get("cuts"), False)[:eq.ROOM_SLOTS]), before, target, after, positions,
                    tuple(_filters(value.get("above"), True)[:eq.ABOVE_SLOTS]), after_bass,
                    None if within is None else _floats([within])[0],
-                   None if room_within is None else _floats([room_within])[0])
+                   None if room_within is None else _floats([room_within])[0], tuple(ringing))
 
     def peaks_down(self) -> float:
         """*Peaks down by up to N dB*: the most taken off below the limit."""
@@ -179,13 +238,19 @@ class Measurement:
     #: both are as loud at the seat; (0, 0) for one kept from before, or not
     #: read.
     level: tuple[float, float] = (0.0, 0.0)
+    #: **The dips the correction leaves** (ADR-0187 D8, C9), deepest first:
+    #: `(freq, depth under the target, cause, speaker, distance_m)`.
+    dips: tuple[tuple, ...] = ()
 
     def as_dict(self) -> dict:
-        return {"date": self.date, "checked": self.checked, "positions": self.positions, "range": self.range,
-                "bass_from": self.bass_from, "worse": [list(w) for w in self.worse],
-                "delay": [round(d, 4) for d in self.delay], "distance_cm": self.distance_cm,
-                "level": [round(g, 2) for g in self.level],
-                "speakers": {k: v.as_dict() for k, v in self.speakers.items()}}
+        out = {"date": self.date, "checked": self.checked, "positions": self.positions, "range": self.range,
+               "bass_from": self.bass_from, "worse": [list(w) for w in self.worse],
+               "delay": [round(d, 4) for d in self.delay], "distance_cm": self.distance_cm,
+               "level": [round(g, 2) for g in self.level],
+               "speakers": {k: v.as_dict() for k, v in self.speakers.items()}}
+        if self.dips:
+            out["dips"] = dips_shown(self.dips)
+        return out
 
     @classmethod
     def from_dict(cls, value) -> Measurement:
@@ -197,17 +262,19 @@ class Measurement:
             speakers[BOTH] = Speaker.from_dict(value["speakers"][BOTH])
         worse = tuple((int(n), float(db)) for n, db in value.get("worse") or [])
         made = value.get("range", BASS)
-        delay = tuple(max(0.0, min(MAX_DELAY_MS, float(d))) for d in value.get("delay") or (0.0, 0.0))
-        if len(delay) != 2:
-            raise TypeError
+        delay = _delay(value.get("delay"))
         distance = value.get("distance_cm")
-        level = tuple(max(-eq.MAX_LEVEL_DB, min(0.0, float(g))) for g in value.get("level") or (0.0, 0.0))
-        if len(level) != 2:
-            raise TypeError
+        level = _level(value.get("level"))
+        dips = []
+        for d in value.get("dips") or []:
+            try:
+                dips.append(_dip(d))
+            except (KeyError, TypeError, AttributeError):
+                continue
         return cls(date, bool(value.get("checked", False)), speakers,
                    int(value.get("positions", POSITIONS)), worse, made if made in REACHES else BASS,
                    BOTH if value.get("bass_from") == BOTH else EACH, delay,
-                   None if distance is None else float(distance), level)
+                   None if distance is None else float(distance), level, tuple(dips))
 
     def cuts(self, channel: str) -> tuple[tuple[float, float, float], ...]:
         s = self.speakers.get(channel)
@@ -229,12 +296,12 @@ class Measurement:
     def aligned(self) -> bool:
         """**A speaker delayed** (ADR-0185 D2) by more than the timing can
         tell from none (1 cm)."""
-        return max(self.delay) >= ALIGN_MIN_MS
+        return _aligned(self.delay)
 
     @property
     def matched(self) -> bool:
         """**A speaker turned down** (ADR-0187 D2) to match the other."""
-        return min(self.level) <= -LEVEL_MIN_DB
+        return _matched(self.level)
 
     @property
     def nothing_to_correct(self) -> bool:
@@ -254,19 +321,111 @@ class Measurement:
         return max(got) if got else None
 
 
+def dips_shown(dips) -> list[dict]:
+    return [{"freq": round(f, 1), "depth": round(d, 1), "cause": c, "speaker": k,
+             "distance_m": None if m is None else round(m, 2)} for f, d, c, k, m in dips]
+
+
+#: **When room correction no longer fits** (ADR-0188 C4): a pair adding in
+#: phase would move by more than this somewhere in the bass - the check's
+#: own guard for a place worse than before (`room_dsp.WORSE_DB`).
+STALE_DB = 1.0
+
+
+def pair_moves_db(was_delay, was_level, delay, level) -> float:
+    """**How far the two speakers' sum moves** (ADR-0188 C4) when their
+    delay and level change from `was_*` to these: the most, from 20 Hz to
+    the bass limit, that a pair adding in phase rises or falls (dB)."""
+    late = ((delay[0] - delay[1]) - (was_delay[0] - was_delay[1])) / 1000
+    gain = 10 ** (((level[1] - level[0]) - (was_level[1] - was_level[0])) / 20)
+    worst = 0.0
+    for f in grid(int(GRID_STEPS * math.log2(LIMIT / GRID_LO)) + 1):
+        if f < 20:
+            continue
+        phase = 2 * math.pi * f * late
+        size = math.hypot(1 + gain * math.cos(phase), gain * math.sin(phase)) / 2
+        worst = max(worst, abs(20 * math.log10(max(size, 1e-6))))
+    return worst
+
+
+@dataclass(frozen=True)
+class Alignment:
+    """**The speakers' alignment, on its own** (ADR-0188): whether it plays,
+    when it was checked, the delay on each speaker (ms; the nearer one's)
+    and the level (dB; the louder one's cut), how much further the right is
+    than the left (cm; None: not timed), what the check found of left and
+    right ("right"; "unsure": not told apart; None: not checked) and how
+    much louder the right was than the left (dB; None: not read)."""
+    on: bool = True
+    date: str = ""
+    delay: tuple[float, float] = (0.0, 0.0)
+    level: tuple[float, float] = (0.0, 0.0)
+    distance_cm: float | None = None
+    sides: str | None = None
+    right_db: float | None = None
+
+    @property
+    def plays(self) -> bool:
+        """Something to delay or turn down."""
+        return _aligned(self.delay) or _matched(self.level)
+
+    def as_dict(self) -> dict:
+        return {"on": self.on, "date": self.date, "delay": [round(d, 4) for d in self.delay],
+                "level": [round(g, 2) for g in self.level], "distance_cm": self.distance_cm, "sides": self.sides,
+                "right_db": None if self.right_db is None else round(self.right_db, 2)}
+
+    @classmethod
+    def from_dict(cls, value) -> Alignment:
+        date = value.get("date") or ""
+        if not isinstance(date, str):
+            raise TypeError
+        distance = value.get("distance_cm")
+        sides = value.get("sides")
+        right = value.get("right_db")
+        return cls(bool(value.get("on", False)), date, _delay(value.get("delay")), _level(value.get("level")),
+                   None if distance is None else _floats([distance])[0],
+                   sides if sides in ("right", "unsure") else None,
+                   None if right is None else _floats([right])[0])
+
+    @classmethod
+    def of(cls, m: Measurement, on: bool = True) -> Alignment:
+        """What a measurement was made with (ADR-0188 C1); the level as read
+        only where one was turned down."""
+        return cls(on, m.date, m.delay, m.level, m.distance_cm, None,
+                   m.level[0] - m.level[1] if m.matched else None)
+
+
 @dataclass(frozen=True)
 class OutputRoom:
     """What one output keeps: on, *Hear it without* (saved, George
-    2026-11-04), how far it reaches (saved, the design), and its last
-    measurement."""
+    2026-11-04), how far it reaches (saved, the design), its last
+    measurement, and the speakers' alignment (ADR-0188)."""
     on: bool = False
     without: bool = False
     measured: Measurement | None = None
     reach: str = FULL
+    speakers: Alignment | None = None
+
+    @property
+    def aligning(self) -> bool:
+        """The alignment switched on (ADR-0188 D1)."""
+        return self.speakers is not None and self.speakers.on
+
+    @property
+    def stale(self) -> bool:
+        """**Room correction no longer fits exactly** (ADR-0188 D2, C4): the
+        alignment kept moves the speakers' sum in the bass by more than
+        `STALE_DB` against what the room was measured with. Only where
+        there are cuts in the bass."""
+        m, a = self.measured, self.speakers
+        if m is None or a is None or m.nothing_to_cut:
+            return False
+        return pair_moves_db(m.delay, m.level, a.delay, a.level) > STALE_DB
 
     def as_dict(self) -> dict:
         return {"on": self.on, "without": self.without, "reach": self.reach,
-                "measured": self.measured.as_dict() if self.measured else None}
+                "measured": self.measured.as_dict() if self.measured else None,
+                "speakers": self.speakers.as_dict() if self.speakers else None}
 
 
 @dataclass(frozen=True)
@@ -413,12 +572,28 @@ class Room:
         return self._with(card, replace(here, on=bool(on)))
 
     def set_without(self, card: str, without: bool) -> Room:
-        """*Hear it without* (George, 2026-11-04): saved; only while on
-        (the design: inert while off)."""
+        """*Hear it without* (George, 2026-11-04): saved; only while room
+        correction or the speakers' alignment is on (ADR-0188 C2)."""
         here = self.output(card)
-        if not here.on:
-            raise RoomError("Only while room correction is on.")
+        if not here.on and not here.aligning:
+            raise RoomError("Only while room correction or the speakers' alignment is on.")
         return self._with(card, replace(here, without=bool(without)))
+
+    def set_speakers(self, card: str, on: bool) -> Room:
+        """**The speakers' alignment on or off** (ADR-0188 D1); *Hear it
+        without* goes with the last of the two switched off."""
+        here = self.output(card)
+        if here.speakers is None:
+            raise RoomError("Check the speakers first.")
+        here = replace(here, speakers=replace(here.speakers, on=bool(on)))
+        if not here.on and not here.aligning:
+            here = replace(here, without=False)
+        return self._with(card, here)
+
+    def keep_speakers(self, card: str, alignment: Alignment) -> Room:
+        """*Keep* after the check on its own (ADR-0188 D1): the alignment
+        replaces the last and plays; room correction stays as measured."""
+        return self._with(card, replace(self.output(card), speakers=replace(alignment, on=True)))
 
     def set_reach(self, card: str, reach: str) -> Room:
         """**How far it reaches** (ADR-0177): saved, heard at once; only
@@ -433,13 +608,15 @@ class Room:
             raise RoomError("This measurement covers the bass only. Measure again to reach the full range.")
         return self._with(card, replace(here, reach=reach))
 
-    def keep(self, card: str, measurement: Measurement) -> Room:
+    def keep(self, card: str, measurement: Measurement, alignment: Alignment | None = None) -> Room:
         """*Keep it*: the new measurement replaces the old one, and the
         correction is switched on, compared from the start again, reaching as
         far as it was made (George, 2026-11-07: a new one starts at the full
-        range)."""
+        range). Its check is kept as the speakers' alignment, switched on
+        (ADR-0188 C1): the sweeps were made with it."""
         return self._with(card, OutputRoom(on=not measurement.nothing_to_correct, without=False,
-                                           measured=measurement, reach=measurement.range))
+                                           measured=measurement, reach=measurement.range,
+                                           speakers=replace(alignment or Alignment.of(measurement), on=True)))
 
     def with_calibration(self, cal: Calibration) -> Room:
         microphones = dict(self.microphones)
@@ -450,23 +627,26 @@ class Room:
 
     def stage(self, card: str) -> eq.RoomPlay | None:
         """What the stage plays on `card` (`equaliser.room_stage`'s
-        argument): None when off or never measured - every slot idle; else
-        the cuts and the broad corrections, the broad ones at 0 dB under
-        *Bass* and all at 0 dB while *Hear it without* is set, with every
-        filter as measured for the headroom (ADR-0177 items 6-7)."""
+        argument): None when room correction is off or never measured and
+        the speakers' alignment is off - every slot idle; else the cuts and
+        the broad corrections, the broad ones at 0 dB under *Bass* and all
+        at 0 dB while *Hear it without* is set, with every filter as
+        measured for the headroom (ADR-0177 items 6-7); and the alignment's
+        delay and level while it is on (ADR-0188 C2), whatever room
+        correction does, none *without*."""
         here = self.output(card)
-        if not here.on or here.measured is None:
+        room = here.on and here.measured is not None
+        if not room and not (here.aligning and here.speakers.plays):
             return None
-        m = here.measured
 
         def at(filters, play: bool):
             return tuple((f, g if play else 0.0, q) for f, g, q in filters)
-        cuts = tuple(at(m.cuts(c), not here.without) for c in CHANNELS)
-        above = tuple(at(m.above(c), not here.without and here.reach == FULL) for c in CHANNELS)
-        # The speakers' delay (ADR-0185 D2) and level (ADR-0187 D2) at either
-        # reach; neither *without*.
-        return eq.RoomPlay(cuts, above, self.lift(card), (0.0, 0.0) if here.without else m.delay,
-                           (0.0, 0.0) if here.without else m.level)
+        m = here.measured if room else None
+        cuts = tuple(at(m.cuts(c), not here.without) if m else () for c in CHANNELS)
+        above = tuple(at(m.above(c), not here.without and here.reach == FULL) if m else () for c in CHANNELS)
+        a = here.speakers if (here.aligning and not here.without) else None
+        return eq.RoomPlay(cuts, above, self.lift(card), a.delay if a else (0.0, 0.0),
+                           a.level if a else (0.0, 0.0))
 
     def lift(self, card: str) -> tuple | None:
         """Room correction's filters on `card` as measured, for the headroom
@@ -478,9 +658,11 @@ class Room:
 
     def in_path(self, card: str) -> bool:
         """Whether room correction needs the stage on `card`: on, *Without*
-        included (the stage stays in the path with the cuts at 0 dB)."""
+        included (the stage stays in the path with the cuts at 0 dB); or the
+        speakers' alignment on with something to delay or turn down
+        (ADR-0188 C2)."""
         here = self.output(card)
-        return here.on and here.measured is not None
+        return (here.on and here.measured is not None) or (here.aligning and here.speakers.plays)
 
     # -- stored as settings --
 
@@ -511,7 +693,20 @@ class Room:
                 reach = item.get("reach", FULL)
                 if reach not in REACHES or measured is None or measured.range != FULL:
                     reach = BASS if (measured is not None and measured.range != FULL) else FULL
-                outputs[str(k)] = OutputRoom(on, on and bool(item.get("without", False)), measured, reach)
+                speakers = None
+                if isinstance(item.get("speakers"), dict):
+                    try:
+                        speakers = Alignment.from_dict(item["speakers"])
+                    except (KeyError, TypeError, ValueError, AttributeError):
+                        speakers = None
+                elif "speakers" not in item and measured is not None and (measured.aligned or measured.matched):
+                    # ADR-0188 C1: a measurement kept from before brings its
+                    # delay and level across, switched as room correction
+                    # was - nothing heard changes.
+                    speakers = Alignment.of(measured, on=on)
+                aligning = speakers is not None and speakers.on
+                outputs[str(k)] = OutputRoom(on, (on or aligning) and bool(item.get("without", False)), measured,
+                                             reach, speakers)
             except AttributeError:
                 continue
         microphones = {}
@@ -567,6 +762,8 @@ def chart(measurement: Measurement | None, expected: bool | None = None) -> dict
             "corrected_bass": _round(tuple(b + c for b, c in zip(s.before, cuts))),
             "cuts": shown(s.cuts), "above": shown(measurement.above(k)),
             "peaks_down": round(s.peaks_down()), "within": s.within, "room_within": s.room_within,
+            "ringing": _rings(s.ringing),
         }
+    out["dips"] = dips_shown(measurement.dips)
     out["after_kind"] = "measured" if (measurement.checked if expected is None else not expected) else "expected"
     return out

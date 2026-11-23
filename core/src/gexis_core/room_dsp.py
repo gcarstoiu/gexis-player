@@ -340,11 +340,11 @@ class Cut:
         return {"freq": round(self.freq, 1), "gain": round(self.gain, 1), "q": round(self.q, 2)}
 
 
-def peaking_db(freq: float, gain: float, q: float, f, fs: int = FS) -> np.ndarray:
-    """One Peaking filter's response in dB at `f` (RBJ cookbook)."""
+def peaking_h(freq: float, gain: float, q: float, f, fs: int = FS) -> np.ndarray:
+    """One Peaking filter's complex response at `f` (RBJ cookbook)."""
     f = np.asarray(f, dtype=float)
     if not gain:
-        return np.zeros_like(f)
+        return np.ones_like(f, dtype=complex)
     a = 10 ** (gain / 40)
     w0 = 2 * math.pi * freq / fs
     alpha = math.sin(w0) / (2 * q)
@@ -352,8 +352,26 @@ def peaking_db(freq: float, gain: float, q: float, f, fs: int = FS) -> np.ndarra
     b0, b1, b2 = 1 + alpha * a, -2 * c, 1 - alpha * a
     a0, a1, a2 = 1 + alpha / a, -2 * c, 1 - alpha / a
     z = np.exp(-1j * 2 * np.pi * f / fs)
-    h = (b0 + b1 * z + b2 * z * z) / (a0 + a1 * z + a2 * z * z)
-    return 20 * np.log10(np.abs(h))
+    return (b0 + b1 * z + b2 * z * z) / (a0 + a1 * z + a2 * z * z)
+
+
+def peaking_db(freq: float, gain: float, q: float, f, fs: int = FS) -> np.ndarray:
+    """One Peaking filter's response in dB at `f` (RBJ cookbook)."""
+    if not gain:
+        return np.zeros_like(np.asarray(f, dtype=float))
+    return 20 * np.log10(np.abs(peaking_h(freq, gain, q, f, fs)))
+
+
+def through(ir, filters, fs: int = FS) -> np.ndarray:
+    """`ir` played through `filters` (each with `freq`, `gain`, `q`): what
+    the correction would make of it, the expected after (ADR-0187 C6)."""
+    ir = np.asarray(ir, dtype=float)
+    n = 1 << int(math.ceil(math.log2(len(ir) * 2)))
+    f = np.fft.rfftfreq(n, 1 / fs)
+    h = np.ones(len(f), dtype=complex)
+    for x in filters:
+        h *= peaking_h(x.freq, x.gain, x.q, f, fs)
+    return np.fft.irfft(np.fft.rfft(ir, n) * h, n)[:len(ir)]
 
 
 def cuts_db(cuts, f, fs: int = FS) -> np.ndarray:
@@ -817,6 +835,196 @@ def worse_positions(before_positions, after_positions, target, filters, grid=GRI
         if worst > WORSE_DB:
             found.append((n, round(worst, 1)))
     return found
+
+
+# ---- what the correction leaves: the ringing and the dips (ADR-0187 C6-C9) -------
+
+#: **The ringing's bands** (C6): the third octaves from 20 to 250 Hz.
+RING_BANDS = (20.0, 25.0, 31.5, 40.0, 50.0, 63.0, 80.0, 100.0, 125.0, 160.0, 200.0, 250.0)
+#: When it is read, after the arrival: 0.2 s shown (D7, George 2026-11-23:
+#: *what is left of a note 0.2 s later*), 0.1 and 0.3 s logged; each over
+#: ±10 ms, against the first 50 ms before the correction in that band
+#: (Finding 158's reading).
+RING_AT_S = (0.1, 0.2, 0.3)
+RING_SHOWN = 1
+RING_SPAN_S = 0.01
+RING_REF_S = 0.05
+#: The response's own floor, read before its window's fade; a band whose
+#: reading at 0.2 s before is not this far over it is not shown.
+RING_TAIL_S = (0.55, 0.8)
+RING_OVER_TAIL_DB = 6.0
+
+
+def band_of(ir, fc: float, fs: int = FS) -> np.ndarray:
+    """`ir` in the third octave round `fc`: a Gaussian on the log axis, its
+    width a sixth of an octave each side, zero phase."""
+    ir = np.asarray(ir, dtype=float)
+    n = 1 << int(math.ceil(math.log2(len(ir) * 2)))
+    f = np.fft.rfftfreq(n, 1 / fs)
+    with np.errstate(divide="ignore"):
+        x = np.log2(np.maximum(f, 1e-9) / fc) * 3
+    return np.fft.irfft(np.fft.rfft(ir, n) * np.exp(-0.5 * (x / 0.5) ** 2), n)[:len(ir)]
+
+
+def _energy_db(e, at: float, span: float, ref: float, fs: int = FS) -> float:
+    lo = int((PRE_S + at - span) * fs)
+    hi = int((PRE_S + at + span) * fs)
+    return 10 * math.log10(max(float(np.mean(e[max(0, lo):max(lo + 1, hi)])), 1e-30) / ref)
+
+
+def decay_s(ir, fc: float, fs: int = FS) -> float:
+    """**A band's decay time** (for the log, C6): from the slope of
+    Schroeder's curve between -5 and -25 dB, the curve ending where the
+    envelope first falls to 5 dB over the floor; NaN where the band stands
+    less than 35 dB over it."""
+    e = band_of(ir, fc, fs) ** 2
+    lo, hi = (int(t * fs) for t in RING_TAIL_S)
+    tail = float(np.mean(e[lo:hi]))
+    win = max(1, int(fs / fc * 2))
+    env = np.convolve(e, np.ones(win) / win, mode="same")
+    pre = int(PRE_S * fs)
+    k0 = pre + int(np.argmax(env[pre:pre + int(0.2 * fs)]))
+    if 10 * math.log10(max(env[k0], 1e-30) / max(tail, 1e-30)) < 35:
+        return float("nan")
+    meets = np.nonzero(env[k0:] <= tail * 10 ** 0.5)[0]
+    end = k0 + (int(meets[0]) if len(meets) else len(env) - k0)
+    seg = np.maximum(e[k0:end] - tail, 0)
+    if len(seg) < 2 or seg.sum() <= 0:
+        return float("nan")
+    edc = np.cumsum(seg[::-1])[::-1]
+    edc_db = 10 * np.log10(np.maximum(edc / edc[0], 1e-30))
+    t = np.arange(len(edc)) / fs
+    a, b = int(np.argmax(edc_db <= -5)), int(np.argmax(edc_db <= -25))
+    if b <= a + 1:
+        return float("nan")
+    slope_db = np.polyfit(t[a:b], edc_db[a:b], 1)[0]
+    return float(-60 / slope_db) if slope_db < 0 else float("nan")
+
+
+@dataclass(frozen=True)
+class Ring:
+    """One band's ringing (C6): the levels at `RING_AT_S` before and after
+    (dB against the before's first 50 ms; after None when not read), the
+    decay times, and whether the before stands clear of its floor (shown)."""
+    hz: float
+    before: tuple[float, ...]
+    after: tuple[float, ...] | None
+    decay: float
+    decay_after: float | None
+    clear: bool
+
+
+def ringing(before, after=None, fs: int = FS) -> list[Ring]:
+    """**The bass's ringing at the head** (ADR-0187 C6, D7): each band of
+    `RING_BANDS`, `before` and `after` being one speaker's responses there
+    (`from_arrival`), the after with the correction on - measured, or the
+    before through it (`through`)."""
+    out = []
+    lo, hi = (int(t * fs) for t in RING_TAIL_S)
+    for fc in RING_BANDS:
+        e = band_of(before, fc, fs) ** 2
+        pre = int(PRE_S * fs)
+        ref = max(float(np.mean(e[pre:pre + int(RING_REF_S * fs)])), 1e-30)
+        levels = tuple(_energy_db(e, t, RING_SPAN_S, ref, fs) for t in RING_AT_S)
+        floor = 10 * math.log10(max(float(np.mean(e[lo:hi])), 1e-30) / ref)
+        later = decay_after = None
+        if after is not None:
+            ea = band_of(after, fc, fs) ** 2
+            later = tuple(_energy_db(ea, t, RING_SPAN_S, ref, fs) for t in RING_AT_S)
+            decay_after = decay_s(after, fc, fs)
+        out.append(Ring(fc, levels, later, decay_s(before, fc, fs), decay_after,
+                        levels[RING_SHOWN] >= floor + RING_OVER_TAIL_DB))
+    return out
+
+
+#: **The dips the correction leaves** (D8, C9): low points of the pair,
+#: its positions averaged with the head's weight, at least this far under
+#: the target from 20 Hz to the limit; up to three, a sixth of an octave
+#: apart at least.
+DIP_MIN_DB = 3.0
+MAX_DIPS = 3
+DIP_APART = 1 / 6
+#: *The two speakers cancel*: their power sum this far over the pair, at
+#: most positions.
+CANCEL_DB = 6.0
+#: *Only at some places*: the dip's depth spreads this far between
+#: positions.
+LOCAL_SPREAD_DB = 10.0
+#: *A wall or the floor*: a speaker alone has the dip at most positions -
+#: this far under its level a third of an octave either side - and a
+#: quarter wavelength is no longer than this.
+WALL_NOTCH_DB = 3.0
+WALL_MAX_M = 1.5
+
+
+def _notched(curve, i: int, grid) -> bool:
+    """A notch in one position's curve at grid point `i`: within a step of
+    it, `WALL_NOTCH_DB` under the curve a third of an octave either side."""
+    steps = int(round(STEPS_PER_OCTAVE / 3))
+    if i - steps < 0 or i + steps >= len(curve):
+        return False
+    low = float(np.min(curve[max(0, i - 1):i + 2]))
+    return low <= (float(curve[i - steps]) + float(curve[i + steps])) / 2 - WALL_NOTCH_DB
+
+
+def dips(pair: Design, left: Design, right: Design, grid=GRID, trust=None) -> list[tuple]:
+    """**The dips left, with their causes** (ADR-0187 D8, C9), deepest
+    first: `(freq, depth, cause, speaker, distance_m)` - `cause` one of
+    "cancel" (the pair, not each speaker: the two cancel), "local" (the
+    depth differs a lot between positions), "wall" (one speaker alone, or
+    both: `speaker` "L", "R" or "both", `distance_m` a quarter wavelength),
+    or None."""
+    grid = np.asarray(grid, dtype=float)
+    gap = np.asarray(pair.before) - np.asarray(pair.target)
+    inside = _fit_range(grid) & _trusted(grid, trust)
+    lows = [i for i in range(1, len(grid) - 1)
+            if inside[i] and gap[i] <= -DIP_MIN_DB and gap[i] <= gap[i - 1] and gap[i] <= gap[i + 1]]
+    lows.sort(key=lambda i: gap[i])
+    chosen = []
+    for i in lows:
+        if all(abs(math.log2(grid[i] / grid[j])) > DIP_APART for j in chosen):
+            chosen.append(i)
+        if len(chosen) == MAX_DIPS:
+            break
+    p_abs = np.asarray(pair.positions) + pair.offset
+    power_sum = 10 * np.log10(10 ** ((np.asarray(left.positions) + left.offset) / 10)
+                              + 10 ** ((np.asarray(right.positions) + right.offset) / 10))
+    out = []
+    for i in chosen:
+        f = float(grid[i])
+        most = len(p_abs) / 2
+        cause = speaker = distance = None
+        if np.sum(power_sum[:, i] - p_abs[:, i] >= CANCEL_DB) > most:
+            cause = "cancel"
+        else:
+            depth = np.asarray(pair.positions)[:, i] - np.asarray(pair.target)[i]
+            if float(np.max(depth) - np.min(depth)) >= LOCAL_SPREAD_DB:
+                cause = "local"
+            elif SPEED_OF_SOUND / (4 * f) <= WALL_MAX_M:
+                has = [k for k, d in (("L", left), ("R", right))
+                       if sum(_notched(np.asarray(c), i, grid) for c in d.positions) > most]
+                if has:
+                    cause, distance = "wall", SPEED_OF_SOUND / (4 * f)
+                    speaker = has[0] if len(has) == 1 else "both"
+        out.append((f, float(-gap[i]), cause, speaker, distance))
+    return out
+
+
+def joint_under(pair: Design, left: Design, right: Design, grid=GRID) -> tuple[float, float]:
+    """**A joint cut against the speakers alone** (ADR-0187 C7, logged):
+    how much further under the target the pair's cuts take the speakers'
+    power sum - what bass that differs between the channels meets - levelled
+    to the pair, where it was within 6 dB of the target; `(dB, Hz)`."""
+    grid = np.asarray(grid, dtype=float)
+    inside = _fit_range(grid)
+    power_sum = 10 * np.log10(10 ** ((np.asarray(left.before) + left.offset) / 10)
+                              + 10 ** ((np.asarray(right.before) + right.offset) / 10))
+    both = np.asarray(pair.before) + pair.offset
+    delta = float(np.median((both - power_sum)[inside]))
+    base = power_sum + delta - (np.asarray(pair.target) + pair.offset)
+    extra = np.minimum(0, base + cuts_db(pair.cuts, grid)) - np.minimum(0, base)
+    k = int(np.argmin(np.where(inside & (base > -6), extra, 0)))
+    return float(extra[k]), float(grid[k])
 
 
 # ---- the speakers' timing (ADR-0185 C1) ----------------------------------------------

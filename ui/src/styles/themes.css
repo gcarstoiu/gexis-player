@@ -86,6 +86,8 @@
   --rc-pane: rgba(251,250,246,0.34);
   --rc-note-ground: rgba(242,239,232,0.9);
   --rc-reach-locked-line: rgba(20,20,20,0.308);
+  --rc-dip-cancel: #5f35b3;
+  --rc-dip-cancel-fill: rgba(95,53,179,0.14);
   --accent-radio: #0d6475;
   --favourite: #a8205f;
   --radio-rule: linear-gradient(90deg,#0d6475,rgba(13,100,117,0.275));
@@ -394,6 +396,8 @@
   --rc-pane: rgba(246,243,234,0.34);
   --rc-note-ground: rgba(236,232,220,0.9);
   --rc-reach-locked-line: rgba(27,36,30,0.308);
+  --rc-dip-cancel: #2f5578;
+  --rc-dip-cancel-fill: rgba(47,85,120,0.14);
   --accent-radio: #1b5f6b;
   --favourite: #93284f;
   --radio-rule: linear-gradient(90deg,#1b5f6b,rgba(27,95,107,0.275));
@@ -692,6 +696,8 @@
   --rc-pane: rgba(33,17,15,0.34);
   --rc-note-ground: rgba(21,10,11,0.9);
   --rc-reach-locked-line: rgba(242,224,210,0.28);
+  --rc-dip-cancel: #a9b9f2;
+  --rc-dip-cancel-fill: rgba(169,185,242,0.14);
   --accent-radio: #8ccfc7;
   --favourite: #e7a3d4;
   --radio-rule: linear-gradient(90deg,#8ccfc7,rgba(140,207,199,0.25));
@@ -960,6 +966,8 @@
   --rc-pane: rgba(17,26,48,0.34);
   --rc-note-ground: rgba(9,14,29,0.9);
   --rc-reach-locked-line: rgba(230,236,247,0.28);
+  --rc-dip-cancel: #b9a3ff;
+  --rc-dip-cancel-fill: rgba(185,163,255,0.14);
   --accent-radio: #62dbd6;
   --favourite: #f2a7e8;
   --radio-rule: linear-gradient(90deg,#62dbd6,rgba(98,219,214,0.25));
@@ -1238,6 +1246,8 @@
   --rc-pane: rgba(27,30,33,0.34);
   --rc-note-ground: rgba(17,19,21,0.9);
   --rc-reach-locked-line: rgba(231,233,228,0.28);
+  --rc-dip-cancel: #f27ad9;
+  --rc-dip-cancel-fill: rgba(242,122,217,0.14);
   --accent-radio: #8fb4ff;
   --favourite: #ff6f7d;
   --radio-rule: linear-gradient(90deg,#8fb4ff,rgba(143,180,255,0.25));
@@ -1538,6 +1548,8 @@
   --rc-pane: rgba(13,21,28,0.34);
   --rc-note-ground: rgba(16,26,33,0.9);
   --rc-reach-locked-line: rgba(233,238,242,0.28);
+  --rc-dip-cancel: #9fb4e8;
+  --rc-dip-cancel-fill: rgba(159,180,232,0.14);
   --accent-radio: #8fc4d8;
   --favourite: #e8a0b4;
   --radio-rule: linear-gradient(90deg,#8fc4d8,rgba(143,196,216,0.25));

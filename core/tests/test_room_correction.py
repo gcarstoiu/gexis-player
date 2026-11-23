@@ -79,8 +79,113 @@ def test_nothing_to_cut_in_the_bass_is_still_on_for_above_it():
 
 def test_without_only_while_on():
     room = Room().keep("DAC", measurement()).set_on("DAC", False)
+    assert room.set_without("DAC", True).output("DAC").without, "the speakers' alignment still on (ADR-0188)"
+    room = room.set_speakers("DAC", False)
     with pytest.raises(RoomError, match="Only while"):
         room.set_without("DAC", True)
+
+
+def aligned(delay=(0.0, 0.6), level=(-1.5, 0.0), **kw):
+    """A measurement made with the speakers aligned (ADR-0187 D1-D2)."""
+    from dataclasses import replace
+    return replace(measurement(**kw), delay=delay, level=level, distance_cm=-20.6)
+
+
+def test_a_kept_measurement_keeps_its_check_as_the_alignment():
+    """ADR-0188 C1: keeping a measurement keeps the delay and level it was
+    made with as the speakers' alignment, switched on."""
+    room = Room().keep("DAC", aligned())
+    a = room.output("DAC").speakers
+    assert a.on and a.delay == (0.0, 0.6) and a.level == (-1.5, 0.0) and a.distance_cm == -20.6
+    assert a.date == "2026-11-05" and a.plays and a.right_db == -1.5, "the level as it was read"
+    assert not room.output("DAC").stale, "it fits what it was measured with"
+
+
+def test_the_alignment_plays_with_room_correction_off():
+    """ADR-0188 D1, C2: its delay and level whatever room correction does;
+    *Hear it without* takes out both; off, nothing is in the path."""
+    room = Room().keep("DAC", aligned()).set_on("DAC", False)
+    play = room.stage("DAC")
+    assert play.cuts == ((), ()) and play.above == ((), ()) and play.lift is None, "no room correction"
+    assert play.delay == (0.0, 0.6) and play.level == (-1.5, 0.0)
+    assert room.in_path("DAC")
+    without = room.set_without("DAC", True)
+    assert without.stage("DAC").delay == (0.0, 0.0) and without.stage("DAC").level == (0.0, 0.0)
+    assert without.in_path("DAC"), "Without keeps the stage in the path"
+    off = without.set_speakers("DAC", False)
+    assert off.stage("DAC") is None and not off.in_path("DAC")
+    assert not off.output("DAC").without, "Without goes with the last switched off"
+    both = Room().keep("DAC", aligned()).set_speakers("DAC", False)
+    assert both.stage("DAC").delay == (0.0, 0.0) and both.stage("DAC").cuts[0], "room correction alone"
+    with pytest.raises(RoomError, match="Check the speakers first"):
+        Room().set_speakers("DAC", True)
+
+
+def test_the_check_on_its_own_keeps_room_correction_as_it_was():
+    """ADR-0188 D1: *Keep* replaces the alignment and switches it on; the
+    measurement stays."""
+    room = Room().keep("DAC", aligned()).set_speakers("DAC", False)
+    new = rc.Alignment(False, "2026-11-24", (0.0, 0.62), (-1.6, 0.0), -21.0, "right")
+    kept = room.keep_speakers("DAC", new)
+    here = kept.output("DAC")
+    assert here.speakers.on and here.speakers.date == "2026-11-24" and here.speakers.sides == "right"
+    assert here.measured == room.output("DAC").measured and here.on
+    assert kept.stage("DAC").delay == (0.0, 0.62)
+    assert not here.stale, "0.02 ms and 0.1 dB: the correction still fits"
+
+
+def test_a_check_that_moves_the_speakers_says_the_correction_no_longer_fits():
+    """ADR-0188 D2, C4: more than 1 dB anywhere in the bass for a pair
+    adding in phase - about 0.6 ms or 2 dB alone."""
+    room = Room().keep("DAC", aligned())
+    stale = lambda delay, level: room.keep_speakers(  # noqa: E731
+        "DAC", rc.Alignment(True, "2026-11-24", delay, level)).output("DAC").stale
+    assert not stale((0.0, 0.6), (-1.5, 0.0))
+    assert not stale((0.0, 0.9), (-1.5, 0.0)), "0.3 ms more"
+    assert stale((0.0, 1.4), (-1.5, 0.0)), "0.8 ms more"
+    assert stale((0.4, 0.0), (-1.5, 0.0)), "the other way round: 1 ms"
+    assert stale((0.0, 0.6), (0.0, -1.5)), "the other speaker turned down: 3 dB"
+    assert not stale((0.0, 0.6), (-2.5, 0.0)), "1 dB more"
+    assert rc.pair_moves_db((0, 0), (0, 0), (0.62, 0), (0, 0)) > rc.STALE_DB > \
+        rc.pair_moves_db((0, 0), (0, 0), (0.58, 0), (0, 0))
+    nothing = Room().keep("DAC", aligned(cuts=())).keep_speakers("DAC", rc.Alignment(True, "x", (0.0, 3.0)))
+    assert not nothing.output("DAC").stale, "no cuts in the bass, nothing to miss"
+
+
+def test_a_measurement_from_before_brings_its_alignment_across():
+    """ADR-0188 C1: stored before, its delay and level become the alignment,
+    switched as room correction was - nothing heard changes."""
+    for on in (True, False):
+        stored = Room().keep("DAC", aligned()).set_on("DAC", on).to_settings()
+        del stored["outputs"]["DAC"]["speakers"]
+        room = Room.from_settings(stored)
+        a = room.output("DAC").speakers
+        assert a.on is on and a.delay == (0.0, 0.6) and a.level == (-1.5, 0.0)
+        assert room.stage("DAC") == Room().keep("DAC", aligned()).set_on("DAC", on).set_speakers(
+            "DAC", on).stage("DAC")
+    stored = Room().keep("DAC", measurement()).to_settings()
+    del stored["outputs"]["DAC"]["speakers"]
+    assert Room.from_settings(stored).output("DAC").speakers is None, "nothing aligned, nothing brought"
+    stored = Room().keep("DAC", aligned()).set_speakers("DAC", False).to_settings()
+    assert Room.from_settings(stored).output("DAC").speakers.on is False, "kept as switched"
+
+
+def test_the_ringing_and_the_dips_are_kept_and_charted():
+    """ADR-0187 D7-D8: each speaker's ringing, the measurement's dips."""
+    from dataclasses import replace
+    m = measurement()
+    m = replace(m, speakers={k: replace(v, ringing=((50.0, -19.04, -45.2), (63.0, -28.0, None)))
+                             for k, v in m.speakers.items()},
+                dips=((65.0, 9.04, "cancel", None, None), (110.0, 7.0, "wall", "R", 0.78)))
+    again = Measurement.from_dict(m.as_dict())
+    assert again.speakers["L"].ringing == ((50.0, -19.0, -45.2), (63.0, -28.0, None))
+    assert again.dips == ((65.0, 9.0, "cancel", None, None), (110.0, 7.0, "wall", "R", 0.78))
+    chart = rc.chart(again)
+    assert chart["speakers"]["R"]["ringing"][0] == {"hz": 50.0, "before": -19.0, "after": -45.2}
+    assert chart["dips"][1] == {"freq": 110.0, "depth": 7.0, "cause": "wall", "speaker": "R", "distance_m": 0.78}
+    stored = m.as_dict()
+    stored["dips"].append({"freq": 80, "depth": 4, "cause": "ghost"})
+    assert len(Measurement.from_dict(stored).dips) == 2, "a bad one dropped"
 
 
 def test_the_stage_gets_the_corrections_or_nothing():

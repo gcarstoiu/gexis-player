@@ -10,15 +10,18 @@
   2026-11-05): the 90° file from miniDSP's page, chosen here.
 -->
 <script>
-  import { alignedLine, BOTH, capitalised, chartSpan, checkRows, correctionGroups, correctionsHeading, correctionsWho,
-    correctionTail, cutFreq, countWord, cutGain, dips, giveCalibration, levelLine, MOVES, outputShort, POSITIONS,
-    resultWords, runRoom, sideName, sides, worseLine } from '../../lib/room.svelte.js';
+  import { alignedLine, bandWord, BOTH, capitalised, chartSpan, checkRows, correctionGroups, correctionsHeading,
+    correctionsWho, correctionTail, cutFreq, countWord, cutGain, dipRows, dips, giveCalibration, levelLine, MOVES,
+    outputShort, POSITIONS, resultWords, ringBands, ringDb, ringWidth, runRoom, sideName, sides,
+    worseLine } from '../../lib/room.svelte.js';
   import RoomChart from './RoomChart.svelte';
   import RoomSeat from './RoomSeat.svelte';
 
   //: `full`: GET /room-correction; `onback`: to Settings · Audio; `onpage`:
-  //: to the page (after Keep it, or Back from Before once measured).
-  let { full, onback, onpage, flat = false } = $props();
+  //: to the page (after Keep it, or Back from Before once measured);
+  //: `want`: what Before starts - the measurement, or the speaker check on
+  //: its own (ADR-0188).
+  let { full, onback, onpage, flat = false, want = 'measure' } = $props();
 
   const MINIDSP = 'https://www.minidsp.com/products/acoustic-measurement/umik-1';
   const run = $derived(full?.run ?? null);
@@ -60,6 +63,12 @@
   const checking = $derived(!!run?.checking);
   //: ADR-0187: the speaker check's screens, before any measuring.
   const setup = $derived(!!run?.setup);
+  //: ADR-0188: the speaker check on its own - three steps, ending on
+  //: Keep; `stale`: what it found leaves the kept measurement behind.
+  const alone = $derived(run ? run.mode === 'speakers' : ended ? ended.mode === 'speakers' : want === 'speakers');
+  const stale = $derived(!!run?.stale);
+  const unread = $derived(screenName === 'ready' && run?.distance_cm == null);
+  const kept = $derived(full?.measured ?? null);
   const pending = $derived(full?.pending ?? null);
   const speaker = $derived(pending?.chart?.speakers?.[ch] ?? null);
   const freqs = $derived(pending?.chart?.freqs ?? []);
@@ -177,11 +186,13 @@
       out.push({ kind: 'warn', name: 'An update is installing', sub: 'Measure once it has finished.' });
     } else {
       // George, 2026-11-23: about 20 minutes, the check and the moves
-      // included (Finding 159's run, without the together sweeps).
+      // included (Finding 159's run, without the together sweeps); the
+      // check alone about two (ADR-0188 D1).
+      const long = alone ? 'About two minutes' : 'About 20 minutes';
       out.push({ kind: 'wait', name: 'A quiet room',
-        sub: playing?.dsd ? 'About 20 minutes. DSD is playing: it stops when you start.'
-          : playing?.source ? `About 20 minutes. ${playing.source} is playing: it stops when you start.`
-            : 'About 20 minutes, music stops' });
+        sub: playing?.dsd ? `${long}. DSD is playing: it stops when you start.`
+          : playing?.source ? `${long}. ${playing.source} is playing: it stops when you start.`
+            : `${long}, music stops` });
     }
     return out;
   });
@@ -199,7 +210,7 @@
   const farHead = $derived.by(() => {
     const d = run?.distance_cm ?? 0;
     return [`The ${d > 0 ? 'right' : 'left'} speaker is ${Math.round(Math.abs(d))} cm further away`,
-      `The correction delays the ${d > 0 ? 'left' : 'right'} one so both reach your seat together. But more than ${run?.far_cm ?? 34} cm usually means a speaker or the seat is out of place: move it and check again, or measure anyway.`];
+      `The correction delays the ${d > 0 ? 'left' : 'right'} one so both reach your seat together. But more than ${run?.far_cm ?? 34} cm usually means a speaker or the seat is out of place: move it and check again, or ${alone ? 'carry on' : 'measure anyway'}.`];
   });
   //: ADR-0187 D1 (the screens George chose, 2026-11-23): what the speaker
   //: check found wrong, and what to do - the check runs again from there.
@@ -219,7 +230,9 @@
   const amber = $derived(tooQuiet || ['far', 'polarity', 'swapped'].includes(screenName));
   const head = $derived.by(() => {
     switch (screenName) {
-      case 'before': return ['Correct what your room adds to the sound', "The player plays sweeps through your speakers and listens with a measurement microphone at your seat. It cuts the peaks your room adds to the bass, and above the bass evens out the room's broad bumps and dips by 3 dB at most, so your speakers keep their own balance."];
+      case 'before': return alone
+        ? ['Check your speakers', "Short whistles from each speaker, heard with the microphone at your head and then to its left: how far each is, whether they are wired the same way and how loud each is. The nearer is delayed and the louder turned down, with room correction on or off."]
+        : ['Correct what your room adds to the sound', "The player plays sweeps through your speakers and listens with a measurement microphone at your seat. It cuts the peaks your room adds to the bass, and above the bass evens out the room's broad bumps and dips by 3 dB at most, so your speakers keep their own balance."];
       case 'place': return ['Put the microphone where your head is', ''];
       case 'level': return tooQuiet
         ? [`Only ${run.level_db ?? '—'} dB at the seat`, "At the player's maximum level. Turn the amplifier up a little and try again."]
@@ -236,11 +249,12 @@
       case 'nothing': return ['Nothing to correct', ''];
       case 'checking': return [`Checking at position ${n}`, ''];
       case 'result': return resultPair;
-      case 'cancelled': return ['Measuring cancelled', 'Nothing changed: the output is as it was. Music can play again.'];
+      case 'cancelled': return [alone ? 'Check cancelled' : 'Measuring cancelled', 'Nothing changed: the output is as it was. Music can play again.'];
       default: return ['', ''];
     }
   });
-  const crumb = $derived({
+  const crumb = $derived(alone && ['place', 'level', 'timing', 'far', 'polarity', 'swapped', 'ready', 'move'].includes(screenName)
+    ? (screenName === 'place' ? 'Step 1 of 3' : screenName === 'level' ? 'Step 2 of 3' : 'Step 3 of 3') : {
     before: `Settings · Audio · ${outputShort(full?.output)}`, cancelled: `Settings · Audio · ${outputShort(full?.output)}`,
     place: 'Step 1 of 5', level: 'Step 2 of 5', timing: 'Step 3 of 5', far: 'Step 3 of 5', polarity: 'Step 3 of 5',
     swapped: 'Step 3 of 5', ready: 'Step 3 of 5',
@@ -250,7 +264,11 @@
   }[screenName] ?? '');
   const tail = $derived.by(() => {
     if (screenName === 'place') return { text: `Music stops now, on every source.${full?.screen ? " The player's screen shows that it is measuring." : ''}`, ink: 'quiet' };
-    if (screenName === 'correction') return { text: correctionTail(dips(speaker, freqs), speaker), ink: 'quiet' };
+    if (screenName === 'correction') {
+      // ADR-0187 D8: the dips in a card of their own, when the player
+      // names them; the closing words then say only what is done above.
+      return { text: correctionTail(dips(speaker, freqs), speaker, { dipCard: dipCard.length > 0 }), ink: 'quiet' };
+    }
     if (screenName === 'nothing') return { text: 'Your room is already near the target, in the bass and above it, so there is nothing worth correcting. Room correction stays off.', ink: 'body' };
     if (screenName === 'result' && !run?.expected) return worse ? null : { text: 'No position is worse than before.', ink: 'ink' };
     if (screenName === 'result') return { text: 'The check was skipped: this is what the correction should do. Measure again to check it.', ink: 'body' };
@@ -275,15 +293,25 @@
   const foot = $derived.by(() => {
     const cancel = ['Cancel', () => send('cancel')];
     switch (screenName) {
-      case 'before': return [null, null, ['Measure', () => send('measure'), !full?.can_measure]];
+      case 'before': return [null, null, alone ? ['Check the speakers', () => send('speakers'), !full?.can_measure]
+        : ['Measure', () => send('measure'), !full?.can_measure]];
       case 'place': return [cancel, null, ['Start', () => send('start')]];
       case 'level': return [cancel, null, tooQuiet ? ['Try again', () => send('again')] : null];
       case 'timing':
       case 'measure': return [cancel, null, null];
-      case 'far': return [['Check again', () => send('again')], null, ['Measure anyway', () => send('next')]];
+      case 'far': return [['Check again', () => send('again')], null, [alone ? 'Carry on' : 'Measure anyway', () => send('next')]];
       case 'polarity':
       case 'swapped': return [cancel, null, ['Check again', () => send('again')]];
-      case 'ready': return [['Check again', () => send('again')], null, ['Measure', () => send('next')]];
+      case 'ready':
+        // ADR-0188: on its own the list ends on Keep; when it leaves the
+        // measurement behind, Keep or Keep and measure; nothing read,
+        // nothing to keep.
+        if (!alone) return [['Check again', () => send('again')], null, ['Measure', () => send('next')]];
+        if (unread) return [['Discard', () => finish('discard')], null, ['Check again', () => send('again')]];
+        if (stale) return [['Discard', () => finish('discard')], ['Keep', () => finish('keep'), false, true],
+          ['Keep and measure', () => send('keep_and_measure')]];
+        return [['Discard', () => finish('discard')], ['Check again', () => send('again'), false, true],
+          ['Keep', () => finish('keep')]];
       case 'move': return counting ? [cancel, checking ? ['Skip', () => send('skip'), false, true] : null, null]
         : [cancel, checking ? ['Skip', () => send('skip'), false, true] : null,
           [setup ? 'Check here' : 'Measure here', () => send('next')]];
@@ -299,6 +327,12 @@
   //: does: the page went back to it at its next change (the review of 1.16.1).
   const back = () => (screenName === 'cancelled' ? doneAndLeave(!!full?.measured)
     : full?.measured ? onpage?.() : onback?.());
+
+  //: ADR-0187 D7-D8 (George's choices B and B, 2026-11-23): the ringing
+  //: for the speaker shown, on the result; the dips the bass keeps, on the
+  //: correction.
+  const rings = $derived(ringBands(speaker));
+  const dipCard = $derived(dipRows(pending?.dips));
 
   //: A row while a position is measured (R16-R18): what the position
   //: sweeps, as the player says - each speaker; both too at the check's
@@ -340,7 +374,7 @@
         <button class="back" type="button" aria-label="Back" data-dpad-back onclick={back}><span></span></button>
       {/if}
       <div class="top__text">
-        <div class="title">{inRun ? 'Measure the room' : 'Room correction'}</div>
+        <div class="title">{inRun ? (alone ? 'Check the speakers' : 'Measure the room') : 'Room correction'}</div>
         <div class="crumb">{crumb}</div>
       </div>
     </div>
@@ -398,10 +432,12 @@
           {/each}
           <input class="file" type="file" accept=".txt,text/plain" bind:this={fileInput} onchange={pick} />
         </div>
-        <div class="card power is-dim">
-          <div class="power__text"><div class="power__title">Room correction</div><div class="power__note">Measure first</div></div>
-          <span class="switch"><span></span></span>
-        </div>
+        {#if !alone}
+          <div class="card power is-dim">
+            <div class="power__text"><div class="power__title">Room correction</div><div class="power__note">Measure first</div></div>
+            <span class="switch"><span></span></span>
+          </div>
+        {/if}
       {/if}
 
       {#if screenName === 'level'}
@@ -460,7 +496,7 @@
 
       {#if screenName === 'ready'}
         <div class="card speakers">
-          {#each checkRows(run) as r, i (r.name)}
+          {#each checkRows(run, alone && stale ? kept : null) as r, i (r.name)}
             <div class="check" class:check--rule={i > 0}>
               {@render mark(r.kind)}
               <div class="check__text">
@@ -470,7 +506,21 @@
             </div>
           {/each}
         </div>
-        <div class="after">Moved a speaker or a cable? Check again before measuring.</div>
+        {#if !alone}
+          <div class="after">Moved a speaker or a cable? Check again before measuring.</div>
+        {:else if stale}
+          <!-- ADR-0188 D2: the check leaves the kept measurement behind. -->
+          <div class="worse worse--stale" role="status">
+            <span class="worse__mark">!</span>
+            <span class="worse__text">
+              <span class="worse__title">Room correction no longer fits exactly</span>
+              <span>It was measured on {kept?.day} with the speakers as they were then. In the bass the two now add up differently, so its cuts can miss. Measure again for it to fit.</span>
+            </span>
+          </div>
+        {:else if !unread}
+          <div class="after">Keep it, and this output plays with the delay and the level from now on, room correction on or off.{kept ? ' Room correction stays as it was measured.' : ''}</div>
+          <div class="note">Moved a speaker or a cable? Check again first.</div>
+        {/if}
       {/if}
 
       {#if aligned && screenName === 'measure'}
@@ -544,6 +594,46 @@
         </div>
       {/if}
 
+      {#if screenName === 'correction' && dipCard.length}
+        <div class="card dipcard">
+          <div class="dipcard__head">
+            <span class="dipcard__title">Dips left as they are</span>
+            <span class="dipcard__lead">In the bass only cuts: more power does not fill a dip. What causes each, and what may help:</span>
+          </div>
+          {#each dipCard as d (d.freq)}
+            <div class="dip">
+              <div class="dip__top"><span class="dip__f">{d.freq}</span><span class="dip__db">{d.depth}</span></div>
+              {#if d.tag}<span class="dip__tag dip__tag--{d.tone}">{d.tag}</span>{/if}
+              <span class="dip__text">{d.text}</span>
+            </div>
+          {/each}
+        </div>
+      {/if}
+
+      {#if screenName === 'result' && rings.length}
+        <!-- ADR-0187 D7: what is left of a note 0.2 s later, before and after. -->
+        <div class="card ringcard">
+          <div class="ringcard__head">
+            <span class="ringcard__title">Ringing in the bass</span>
+            <span class="ringcard__lead">What is left of a note 0.2 s later. Shorter is cleaner.</span>
+          </div>
+          {#each rings as r (r.hz)}
+            <div class="band">
+              <span class="band__hz">{bandWord(r.hz)}</span>
+              <span class="band__bars">
+                <span class="band__bar band__bar--before" style="width:{ringWidth(r.before)}"></span>
+                {#if r.after != null}<span class="band__bar band__bar--after" style="width:{ringWidth(r.after)}"></span>{/if}
+              </span>
+              <span class="band__db">{ringDb(r.before)}<br />{ringDb(r.after)}</span>
+            </div>
+          {/each}
+          <div class="ringcard__key">
+            <span class="key"><span class="key__swatch key__swatch--before"></span>Before</span>
+            <span class="key"><span class="key__swatch key__swatch--after"></span>{run?.expected ? 'After, expected' : 'After, measured'}</span>
+          </div>
+        </div>
+      {/if}
+
       {#if worse}
         <div class="worse" role="status"><span class="worse__mark">!</span><span>{worse}</span></div>
       {/if}
@@ -558,7 +648,7 @@
     </div>
 
     {#if foot[0] || foot[1] || foot[2]}
-      <div class="foot">
+      <div class="foot" class:foot--tight={!!(foot[0] && foot[1] && foot[2])}>
         {#if foot[0]}<button type="button" class="btn btn--quiet" onclick={foot[0][1]} disabled={sending}>{foot[0][0]}</button>{/if}
         {#if foot[1]}<button type="button" class="btn btn--second" class:btn--fit={foot[1][3]} onclick={foot[1][1]} disabled={sending}>{foot[1][0]}</button>{/if}
         {#if foot[2]}<button type="button" class="btn btn--primary" class:is-dim={foot[2][2]} disabled={foot[2][2] || sending}
@@ -1181,6 +1271,151 @@
     line-height: 1.4;
     text-wrap: pretty;
   }
+  .worse--stale {
+    background: var(--rc-without-fill);
+  }
+  .worse__text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 14px;
+    color: var(--c-ink-78);
+  }
+  .worse__title {
+    font-size: 16.5px;
+    font-weight: 700;
+    color: var(--rc-without);
+  }
+  /* ADR-0187 D8: a card per dip (George's B, 2026-11-23). */
+  .dipcard__head,
+  .ringcard__head {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .dipcard__head {
+    padding: 14px 16px 4px;
+  }
+  .dipcard__title,
+  .ringcard__title {
+    font-size: 17px;
+    font-weight: 700;
+  }
+  .dipcard__lead,
+  .ringcard__lead {
+    font-size: 14px;
+    line-height: 1.4;
+    color: var(--ink-quiet);
+    text-wrap: pretty;
+  }
+  .dip {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px 16px;
+  }
+  .dip + .dip {
+    border-top: 1px solid var(--c-ink-08);
+  }
+  .dip__top {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    font-family: var(--font-mono);
+  }
+  .dip__f {
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .dip__db {
+    font-size: 13px;
+    color: var(--ink-quiet);
+  }
+  .dip__tag {
+    align-self: flex-start;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    border-radius: var(--r-pill);
+    padding: 3px 10px;
+  }
+  .dip__tag--blue {
+    background: var(--rc-dip-cancel-fill);
+    color: var(--rc-dip-cancel);
+  }
+  .dip__tag--amber {
+    background: var(--rc-without-fill);
+    color: var(--rc-without);
+  }
+  .dip__tag--grey {
+    background: var(--c-ink-08);
+    color: var(--c-ink-78);
+  }
+  .dip__text {
+    font-size: 14.5px;
+    line-height: 1.45;
+    color: var(--c-ink-78);
+    text-wrap: pretty;
+  }
+  /* ADR-0187 D7: the ringing as a small card (George's B, 2026-11-23). */
+  .ringcard {
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .band {
+    display: grid;
+    grid-template-columns: 58px minmax(0, 1fr) 70px;
+    gap: 10px;
+    align-items: center;
+  }
+  .band__hz {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--c-ink-78);
+  }
+  .band__bars {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .band__bar {
+    height: 9px;
+    border-radius: var(--r-pill);
+  }
+  .band__bar--before,
+  .key__swatch--before {
+    background: var(--rc-before);
+  }
+  .band__bar--after,
+  .key__swatch--after {
+    background: var(--rc-after);
+  }
+  .band__db {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    line-height: 1.35;
+    text-align: right;
+    color: var(--ink-quiet);
+    font-variant-numeric: tabular-nums;
+  }
+  .ringcard__key {
+    display: flex;
+    gap: 16px;
+  }
+  .key {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13px;
+    color: var(--c-ink-78);
+  }
+  .key__swatch {
+    width: 18px;
+    height: 9px;
+    border-radius: var(--r-pill);
+  }
   .worse__mark {
     width: 22px;
     height: 22px;
@@ -1285,6 +1520,9 @@
     background: var(--accent-lms);
     color: var(--ink-on-accent);
     border: 0;
+  }
+  .foot--tight .btn {
+    padding: 0 14px;
   }
   .btn.is-dim {
     opacity: 0.4;

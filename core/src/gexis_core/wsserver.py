@@ -2301,13 +2301,15 @@ class StateServer:
         return await self._room_call(lambda: self._room.calibration(body["text"], body.get("name")))
 
     async def _handle_room_run(self, request: web.Request) -> web.Response:
-        """`measure` begins a run; the rest are the phone's buttons in it."""
+        """`measure` begins a run, `speakers` the speaker check on its own
+        (ADR-0188); the rest are the phone's buttons in it."""
         body = await self._json_body(request)
         if body is None or not isinstance(body.get("action"), str):
             return web.json_response({"error": 'body must be {"action": ...}'}, status=400)
         action = body["action"]
-        if action == "measure":
-            return await self._page_gives_way(lambda: self._room_call(self._room.start))
+        if action in ("measure", "speakers"):
+            # `speakers`: the speaker check on its own (ADR-0188).
+            return await self._page_gives_way(lambda: self._room_call(lambda: self._room.start(action)))
         return await self._room_call(lambda: self._room.tap(action))
 
     async def _handle_idle_request(self, request: web.Request) -> web.Response:

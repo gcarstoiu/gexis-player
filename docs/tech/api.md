@@ -108,14 +108,23 @@ ADR-0175 and ADR-0177, internal until Phase 30 closes. `GET
 `within` and `room_within`, `distance_cm` - how much further the right
 speaker is than the left, null when not timed - `delay_ms`, each
 speaker's (ADR-0185), and `level_db`, each speaker's cut to match the other
-(ADR-0187 D2); its `chart` - each speaker's `before`, `target`,
+(ADR-0187 D2) - what it was measured with - and `dips`, each dip the bass
+keeps with its cause (ADR-0187 D8: `cancel`, `local`, `wall` with its
+`speaker` and `distance_m`, or null)); `speakers`, the speakers' alignment
+(ADR-0188: `on`, `day`, `plays`, `distance_cm`, `delay_ms`, `level_db`,
+`sides` and `right_db`; null until checked) - its delay and level play with
+room correction on or off - and `stale`, true when a check since the
+measurement moved them enough that the bass's cuts can miss; its `chart` - each speaker's `before`, `target`,
 `after`, `after_bass` and its `positions` in dB about the target's level at
 250 Hz, `corrected` and `corrected_bass` - before with the corrections kept,
 and with the cuts alone, what the chart shades (ADR-0186; `both`, the pair
 the bass is cut from, is kept and given but not drawn: the screens show
 *Left* and *Right* only, D4-D5) - `cuts` and
 `above`, `freqs` on the measurement's grid (to 20 kHz, or
-500 Hz), `after_kind` measured or expected - and each speaker's `cuts` and
+500 Hz), `after_kind` measured or expected, each speaker's `ringing`
+(ADR-0187 D7: per third octave at the head, dB 0.2 s after the arrival
+against the first 50 ms, `before` and `after`) and `dips` - and each
+speaker's `cuts` and
 `above`), the `microphone` and its `calibration` (`again` while the one kept
 stops at 2 kHz, from before Phase 30), `can_measure` with `why_not`, and a
 measurement in progress (`run`, and its `pending` correction before *Keep
@@ -129,16 +138,23 @@ right, or the microphone on the wrong side), each waiting for `again`, and
 how much louder the right speaker was, null when its two readings did not
 agree - and `sides` (`right`, or `unsure` when not told apart). `again`
 from position 2 first moves the microphone back to the head (`move` 1 with
-`setup`).
+`setup`). **The check alone** (ADR-0188) is a run with `mode` `speakers`:
+the same steps to `ready`, which then waits for `keep` (the alignment
+kept, switched on), `again` or `discard` - or, when `stale`, `keep`,
+`keep_and_measure` (kept, then on into a measurement, `mode` `measure`) or
+`discard`; nothing read, `again` or `discard`. `ended` carries the `mode`.
 While sweeps play, `speaker` names the one playing - in `timing` too - and
 `sweeps` how many the set takes (two; the check more, ADR-0185 C3); `sets` what the position sweeps, in order (`L`, `R`; `both` too at the check's head, or where a mark was missed - ADR-0187 D4);
 `positions` is five (ADR-0187).
 `/state` carries the summary as `room`. `PUT /room-correction` with
-`on`, `reach` or `without`;
+`on`, `reach`, `speakers` (the alignment's switch) or `without` (room
+correction's filters at 0 dB and the alignment at nothing; while either is
+on);
 `POST /room-correction/calibration {text, name}` gives the 90° file from
 miniDSP (checked, kept by its serial); `POST /room-correction/run {action}`
-begins a measurement (`measure`) and answers its steps (`start`, `next`,
-`check`, `skip`, `keep`, `discard`, `again`, `cancel`, `done`). A refusal is
+begins a measurement (`measure`) or the check alone (`speakers`) and answers
+its steps (`start`, `next`, `check`, `skip`, `keep`, `keep_and_measure`,
+`discard`, `again`, `cancel`, `done`). A refusal is
 a 400 with the sentence to show (*Plug in the UMIK-1.*).
 
 ## Groups

@@ -125,7 +125,7 @@ async def test_a_whole_run_kept():
     await asyncio.wait_for(rig.run._task, 5)
     kept = rig.kept[-1]
     assert kept.checked and kept.date == "2026-11-05" and kept.worse == () and kept.range == rc.FULL
-    assert rig.ended[-1] == {"how": "kept", "why": None} and len({str(e) for e in rig.ended}) == 1
+    assert rig.ended[-1] == {"how": "kept", "why": None, "mode": "measure"} and len({str(e) for e in rig.ended}) == 1
     s = kept.speakers["L"]
     fit = (rd.GRID >= 20) & (rd.GRID <= 250)
     assert np.max((np.array(s.after) - np.array(s.target))[fit]) < 3, "measured after, down near the target"
@@ -533,7 +533,7 @@ async def test_cancel_at_any_step_gives_the_player_back():
     await rig.until("measure", 1)
     rig.run.cancel()
     await rig.run.wait()
-    assert rig.kept == [None] and rig.ended[0] == rig.ended[-1] == {"how": "cancelled", "why": "cancel"}
+    assert rig.kept == [None] and rig.ended[0] == rig.ended[-1] == {"how": "cancelled", "why": "cancel", "mode": "measure"}
     assert rig.calls[-1] == "finish"
 
 
@@ -542,7 +542,7 @@ async def test_ten_minutes_without_a_tap_cancels_it():
     await rig.run.start()
     await rig.until("place")
     await asyncio.wait_for(rig.run._task, 5)
-    assert rig.ended[-1] == {"how": "cancelled", "why": "timeout"} and rig.kept == [None]
+    assert rig.ended[-1] == {"how": "cancelled", "why": "timeout", "mode": "measure"} and rig.kept == [None]
     assert room_run.TIMEOUT_S == 600
 
 
@@ -634,7 +634,7 @@ async def test_cancel_ends_at_once_and_the_sound_stops():
             break
         await asyncio.sleep(0.01)
     rig.run.cancel()
-    assert rig.run.ended == {"how": "cancelled", "why": "cancel"} and rig.ended, "shown at once"
+    assert rig.run.ended == {"how": "cancelled", "why": "cancel", "mode": "measure"} and rig.ended, "shown at once"
     await asyncio.wait_for(stopped.wait(), 1)
     await rig.run.wait()
     assert rig.run.released and rig.calls[-1] == "finish"

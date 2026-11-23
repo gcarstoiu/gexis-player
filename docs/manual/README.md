@@ -952,7 +952,7 @@ Plexamp first* until Plexamp is claimed.
 | Maximum volume | The loudest the player will go, on any input. At 80, 100 % on every control means that level. Hidden with Volume on *Fixed*. |
 | Volume curve | How the slider's travel maps to loudness. *Cubic* (half travel is −15.5 dB) is the usual shape; *Linear* puts half travel at −30 dB. |
 | Equaliser | Opens the equaliser, for the output in use; the row says what it uses (*Rock*, *Custom*) or *Off*. See below. |
-| Room correction | Opens room correction, for the output in use; the row says *Full range · measured 3 November* (or *Bass*), *Without*, *Off* or *Not measured yet*. See below. |
+| Room correction | Opens room correction, for the output in use; the row says *Full range · measured 3 November* (or *Bass*), *Without*, *Off*, *Speakers aligned* (the speakers' delay and level alone) or *Not measured yet*. See below. |
 
 #### The equaliser
 
@@ -1072,6 +1072,11 @@ nothing to press. On the player's screen, *Measure from your phone* (or
    expected after, for each speaker. A peak is cut,
    and a broad correction made, unless most positions would end further
    from the target; where the positions disagree, less is corrected.
+   Under the corrections, **Dips left as they are** lists the dips the
+   bass keeps, deepest three at most, each with what likely causes it and
+   what may help: *the two speakers cancel* (each alone has no dip there),
+   *a wall or the floor* about so far from one speaker (the player cannot
+   tell which surface), or *only at some places* around your head.
    **Check it** measures the five positions again with the
    correction on, a tap at each again, showing each speaker as measuring
    does; at your head both also play together, to compare with the two
@@ -1079,17 +1084,33 @@ nothing to press. On the player's screen, *Measure from your phone* (or
    little lower to leave room for what the correction raises, it takes more
    sweeps to make up for it. **Skip** keeps it as worked out, marked *Not
    checked*. If a position ends further from the target than before, the
-   result says which.
-7. **Keep it** switches room correction on, at the full range; **Discard**
+   result says which. **Ringing in the bass** shows, for the speaker
+   shown, what is left of a note 0.2 s later in the four bands where the
+   room rang most at your head, before and after - expected when the check
+   was skipped.
+7. **Keep it** switches room correction on, at the full range, and keeps
+   the speaker check as the speakers' alignment, switched on; **Discard**
    leaves the output as it was. **Cancel**, at any step, leaves it as it was
    too, and so does ten minutes without a tap. A room already near the
    target, in the bass and above it, with both speakers the same distance
    away, has nothing to correct, and room correction stays off.
 
+**Checking the speakers on their own.** On the phone's page, **Speakers**
+has its own switch and **Check the speakers**: about two minutes - the
+microphone at your head, the level, then step 4's check, at your head and
+40 cm to its left. **Keep** plays the delay and the level from then on,
+with room correction on or off, and leaves room correction as it was
+measured; **Check again** or **Discard**. If a speaker moved enough since
+the room was measured that the cuts in the bass can miss - the two speakers
+add up differently there - the check says room correction no longer fits
+exactly: **Keep**, **Keep and measure** (straight on to step 5, without
+checking again) or **Discard**. Kept, room correction's card says so, and
+**Measure again** is lit, until the room is measured again.
+
 On its page:
 
-- **On or off.** Off, the correction is taken out; with the equaliser also
-  off, the sound is untouched, bit-perfect. With the equaliser off,
+- **On or off.** Off, the correction is taken out; with the equaliser and
+  the speakers' alignment also off, the sound is untouched, bit-perfect. With the equaliser off,
   switching it on or off reopens the output, so what is playing stops.
 - **Reaches**: **Bass** (up to 250 Hz) or **Full range** (15 Hz to 20 kHz),
   a tap heard at once, so the two compare by the choice itself. A
@@ -1097,12 +1118,14 @@ On its page:
   only: *Full range* asks for **Measure again for the full range**. *Full
   range* is marked **Limited testing**: so far it has been tried in one
   room. Problem reports help.
-- **Hear it without** (*A/B*): no correction at all, to compare, heard at
-  once, and amber while set. It stays where you put it, after a restart
+- **Speakers**, on the phone's page: when they were checked, a ticked row
+  for the wiring, how much further one is and how much later the nearer
+  plays, and how much the louder is turned down; its own switch, heard at
+  once with room correction on or off.
+- **Hear it without** (*A/B*): no room correction and no alignment, to
+  compare, heard at once, and amber while set. It stays where you put it, after a restart
   too, until switched back.
-- **Measured** says when, at how many positions and how far, and - for a
-  measurement that timed the speakers - how much further one is and how
-  much later the nearer one plays, at either reach.
+- **Measured** says when, at how many positions and how far.
 - **The level stays the same** across the three: the broad corrections may
   raise by up to 3 dB, so the player lowers the music that much before them,
   and the volume gives it back - except near the top of the volume and with

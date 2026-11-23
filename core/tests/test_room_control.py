@@ -80,7 +80,7 @@ class Rig:
             if not run.running:
                 raise AssertionError(f"ended: {run.ended}")
             await asyncio.sleep(0.01)
-        raise AssertionError(f"never reached {step}")
+        raise AssertionError(f"never reached {step}: {run.state}")
 
     async def past_check(self):
         """ADR-0187: the speaker check - left and right at position 2, the
@@ -115,6 +115,111 @@ class Rig:
         await self.run_to("result")
         await self.control.tap("keep" if keep else "discard")
         await asyncio.wait_for(self.control.run.wait(), 10)
+
+
+async def check_alone(rig, tap="keep", louder=1.0):
+    """ADR-0188: the speaker check on its own, to its list, then `tap`."""
+    await rig.control.calibration(CAL, "7071234_90deg.txt")
+    rig.audio.position = 1
+    rig.audio.loudness = (louder, 1.0)
+    await rig.control.start("speakers")
+    await rig.run_to("place")
+    await rig.control.tap("start")
+    await rig.run_to("move", 2, setup=True)
+    rig.audio.position = 2
+    await rig.control.tap("next")
+    state = await rig.run_to("ready")
+    if tap:
+        await rig.control.tap(tap)
+    return state
+
+
+async def test_the_speakers_checked_on_their_own():
+    """ADR-0188 D1, C3: the check alone - three steps, its list, *Keep* -
+    stores the alignment, switched on, and heard after the run with room
+    correction never measured."""
+    rig = Rig()
+    rig.audio.delays = {n: (0.0080, 0.0086) for n in range(1, 6)}
+    rig.audio.delays[2] = (0.0074, 0.0092)
+    state = await check_alone(rig, louder=10 ** (1.5 / 20))
+    assert state.mode == "speakers" and state.setup and not state.stale
+    assert rig.summaries and any(x["run"] and x["run"]["mode"] == "speakers" for x in rig.summaries if x)
+    await asyncio.wait_for(rig.control.run.wait(), 10)
+    assert rig.control.run.ended["how"] == "kept"
+    s = rig.control.snapshot()
+    a = s["speakers"]
+    assert a["on"] and a["sides"] == "right" and a["date"] == "2026-11-05" and a["right_db"] < -1.0
+    assert a["delay_ms"][0] == pytest.approx(0.6, abs=0.03) and a["delay_ms"][1] == 0.0
+    assert a["level_db"][0] < -1.0 and a["level_db"][1] == 0.0, "the louder left turned down"
+    assert s["measured"] is None and s["row"] == "Speakers aligned" and not s["stale"]
+    play = rig.control.stage(DAC.card)
+    assert play.delay[0] == pytest.approx(0.6, abs=0.03) and play.cuts == ((), ())
+    assert rig.control.in_path(DAC.card)
+
+
+async def test_discard_and_nothing_read():
+    """ADR-0188 C3: *Discard* keeps nothing; nothing read, no *Keep*."""
+    rig = Rig()
+    await check_alone(rig, tap="discard")
+    await asyncio.wait_for(rig.control.run.wait(), 10)
+    assert rig.control.run.ended["how"] == "discarded" and rig.control.snapshot()["speakers"] is None
+
+
+async def test_a_check_that_leaves_the_correction_behind_and_keep_and_measure():
+    """ADR-0188 D2, C3-C4: a speaker moved since the room was measured -
+    *Keep*, *Keep and measure* or *Discard*; *Keep and measure* stores the
+    alignment and goes on into the measurement, not checking again."""
+    rig = Rig()
+    await rig.measure()
+    kept = rig.control.state().output(DAC.card).measured
+    rig.audio.delays = {n: (0.0080, 0.0088) for n in range(1, 6)}
+    rig.audio.delays[2] = (0.0074, 0.0094)
+    state = await check_alone(rig, tap=None)
+    assert state.stale and state.mode == "speakers"
+    await rig.control.tap("again")
+    await asyncio.sleep(0.05)
+    assert rig.control.run.state.step == "ready", "no Check again here: the screen's three buttons"
+    await rig.control.tap("keep_and_measure")
+    await rig.run_to("move", 1, setup=False)
+    assert rig.control.run.state.mode == "measure"
+    here = rig.control.state().output(DAC.card)
+    assert here.speakers.delay[0] == pytest.approx(0.8, abs=0.05) and here.stale
+    assert here.measured == kept, "room correction as it was until measured again"
+    for n in range(1, rc.POSITIONS + 1):
+        await rig.run_to("move", n, setup=False)
+        rig.audio.position = n
+        await rig.control.tap("next")
+    await rig.run_to("correction")
+    await rig.control.tap("check")
+    await rig.run_to("move", 1, checking=True)
+    await rig.control.tap("skip")
+    await rig.run_to("result")
+    await rig.control.tap("keep")
+    await asyncio.wait_for(rig.control.run.wait(), 10)
+    here = rig.control.state().output(DAC.card)
+    assert not here.stale and here.measured.delay == here.speakers.delay
+
+
+@pytest.mark.parametrize("skip", [False, True])
+async def test_the_ringing_and_the_dips_come_with_the_measurement(skip):
+    """ADR-0187 D7-D8: each speaker's ringing at the head, after measured -
+    or expected when the check was skipped - and the dips with their
+    causes, kept and charted."""
+    rig = Rig()
+    await rig.measure(skip=skip)
+    s = rig.control.snapshot()
+    rings = s["chart"]["speakers"]["L"]["ringing"]
+    assert rings and all(r["after"] is not None for r in rings), "the made-up room's modes ring"
+    assert {r["hz"] for r in rings} <= set(rc_dsp().RING_BANDS)
+    assert s["chart"]["after_kind"] == ("expected" if skip else "measured")
+    assert isinstance(s["measured"]["dips"], list) and s["chart"]["dips"] == s["measured"]["dips"]
+    for d in s["measured"]["dips"]:
+        assert d["depth"] >= 3 and d["cause"] in ("cancel", "local", "wall", None)
+
+
+def rc_dsp():
+    from gexis_core import room_dsp
+    return room_dsp
 
 
 def test_the_day_as_the_screens_say_it():
@@ -215,13 +320,13 @@ async def test_while_it_runs_the_player_is_held_and_the_equaliser_flat():
     with pytest.raises(RoomError, match="Not while"):
         await rig.control.update({"on": False})
     await rig.control.tap("cancel")
-    assert rig.control.summary()["ended"] == {"how": "cancelled", "why": "cancel"}, "shown at once"
+    assert rig.control.summary()["ended"] == {"how": "cancelled", "why": "cancel", "mode": "measure"}, "shown at once"
     assert rig.control.summary()["run"] is None
     await rig.control.run.wait()
     assert rig.control.frozen() is None and not rig.control.in_path("sndrpihifiberry")
     assert ("reopen", "room correction measured") in rig.calls, "the stage taken out again"
     assert rig.names()[-1] == "release"
-    assert rig.control.summary()["ended"] == {"how": "cancelled", "why": "cancel"}
+    assert rig.control.summary()["ended"] == {"how": "cancelled", "why": "cancel", "mode": "measure"}
     await rig.control.tap("done")
     assert rig.control.summary()["ended"] is None
 
@@ -292,11 +397,14 @@ async def test_off_and_on_and_without():
     assert rig.names() == ["sync"], "compared at once, no reopening"
     assert rig.control.stage("sndrpihifiberry").cuts[0][0][1] == 0.0
     s = await rig.control.update({"on": False})
+    assert not s["on"] and s["without"], "the speakers' alignment still on (ADR-0188)"
+    assert s["row"] == "Without · comparing, no correction"
+    s = await rig.control.update({"speakers": False})
     assert not s["on"] and not s["without"] and s["row"] == "Off"
     assert rig.names()[-1] == "reopen", "the equaliser off: the stage leaves the path"
     with pytest.raises(RoomError, match="Only while"):
         await rig.control.update({"without": True})
-    await rig.control.update({"on": True})
+    await rig.control.update({"on": True, "speakers": True})
     assert rig.control.snapshot()["row"] == "Full range · measured 5 November"
 
 

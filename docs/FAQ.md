@@ -51,8 +51,9 @@ volume is set in the DAC's own hardware, not by changing the samples. Three
 exceptions: over HDMI the sound is not bit-perfect; with *Settings → Audio →
 Volume* on *Software* it is not bit-perfect below 100 %; and Plexamp lowers its
 volume inside its own software, so below 100 in the Plexamp app it is not
-bit-perfect either. With the equaliser or room correction on, the sound is
-changed on purpose, so it is not bit-perfect; with both off, it is as before.
+bit-perfect either. With the equaliser, room correction or the speakers'
+alignment on, the sound is changed on purpose, so it is not bit-perfect;
+with all of them off, it is as before.
 
 **Is there an equaliser?**
 Yes: *Settings → Audio → Equaliser*, and from the volume drawer, the bar's
@@ -90,6 +91,10 @@ power does not fill it. Above the bass it evens out the room's broad bumps
 and dips by 3 dB at most, up or down, and keeps the balance your speakers
 have. *Bass* or *Full range* chooses how far it reaches, heard at once;
 each output keeps its own, and *Hear it without* compares with none at all.
+The speaker check also runs on its own, in about two minutes (*Check the
+speakers*): the delay and the level it sets have their own switch and play
+with room correction on or off. After a measurement, the result shows how
+the bass's ringing changed and explains the dips it leaves.
 
 **What does *Limited testing* beside Full range mean?**
 Room correction above the bass has so far been tried in one room. It is

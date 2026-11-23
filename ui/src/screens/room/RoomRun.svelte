@@ -12,7 +12,10 @@
   //: An older core says nothing: five.
   const count = $derived(run.positions ?? 5);
 
-  const head = $derived(run.checking ? 'Checking the room' : 'Measuring the room');
+  //: ADR-0188: the speaker check on its own - no positions to follow.
+  const alone = $derived(run.mode === 'speakers');
+  const head = $derived(alone ? 'Checking the speakers'
+    : run.checking ? 'Checking the room' : 'Measuring the room');
   const speaker = (k) => (k === 'L' ? 'Left speaker' : k === 'R' ? 'Right speaker' : 'Both speakers');
   const line = $derived.by(() => {
     //: ADR-0187: the speaker check, before any position is measured.
@@ -55,7 +58,7 @@
       <div class="right">
         <div class="line">{line}</div>
         <div class="bar"><div class="bar__fill" style="width:{pct}"></div></div>
-        <div class="follow">{@render phoneGlyph(22)}<span>The sweeps rise to a high whistle. Follow it on the phone.</span></div>
+        <div class="follow">{@render phoneGlyph(22)}<span>{alone ? 'Short whistles from each speaker.' : 'The sweeps rise to a high whistle.'} Follow it on the phone.</span></div>
       </div>
     </div>
   {:else}
@@ -66,14 +69,16 @@
       <div class="block">
         <div class="line">{line}</div>
         <div class="bar"><div class="bar__fill" style="width:{pct}"></div></div>
-        <div class="track">
-          {#each track as t (t.n)}
-            <span class="pos pos--{t.state}"><span class="pos__seg"></span>{t.n}</span>
-          {/each}
-        </div>
+        {#if !alone}
+          <div class="track">
+            {#each track as t (t.n)}
+              <span class="pos pos--{t.state}"><span class="pos__seg"></span>{t.n}</span>
+            {/each}
+          </div>
+        {/if}
       </div>
       <div class="notes">
-        <span>The sweeps rise from a low rumble to a high whistle.</span>
+        <span>{alone ? 'Short whistles from each speaker, a few seconds at a time.' : 'The sweeps rise from a low rumble to a high whistle.'}</span>
         <span class="follow">{@render phoneGlyph(24)}<span>Follow it on the phone. Sources can play again when it ends.</span></span>
       </div>
     </div>

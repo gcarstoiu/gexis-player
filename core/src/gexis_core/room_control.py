@@ -14,13 +14,17 @@ of silence, C7) and only the cuts when it is on; *Hear it without* only
 ever changes the cuts.
 
 **A run** (`room_run.Run`) takes the stage for itself while it measures:
-the equaliser flat, the cuts none or those being checked.
+the equaliser flat, the cuts none or those being checked. **The speakers'
+alignment** (ADR-0188) is kept beside the measurement, with its own switch:
+its delay and level play whatever room correction does, and the check can
+be run on its own (`start("speakers")`).
 """
 from __future__ import annotations
 
 import asyncio
 import datetime
 import logging
+from dataclasses import replace
 from typing import Awaitable, Callable
 
 from gexis_core import room_correction as rc
@@ -175,13 +179,15 @@ class RoomControl:
 
     def _row(self, here: rc.OutputRoom) -> str:
         """The Settings row's state (design/source/29 R01-R04, worded as
-        design/source/30 draws it: the reach, or Without)."""
-        if here.measured is None or here.measured.nothing_to_correct:
-            return "Not measured yet"
-        if not here.on:
-            return "Off"
-        if here.without:
+        design/source/30 draws it: the reach, or Without; ADR-0188 C2: the
+        alignment when only it plays)."""
+        aligned = here.aligning and here.speakers.plays
+        if here.without and (here.on or here.aligning):
             return "Without · comparing, no correction"
+        if here.measured is None or here.measured.nothing_to_correct:
+            return "Speakers aligned" if aligned else "Not measured yet"
+        if not here.on:
+            return "Off · speakers aligned" if aligned else "Off"
         if here.measured.range != rc.FULL:
             return "Bass · measured for the bass only"
         return f"{'Bass' if here.reach == rc.BASS else 'Full range'} · measured {day(here.measured.date)}"
@@ -206,7 +212,9 @@ class RoomControl:
                 "date": measured.date, "day": day(measured.date), "checked": measured.checked,
                 "range": measured.range, **self._aligned(measured)},
             "row": self._row(here),
-            "dsd": bool(here.on and self._dsd()),
+            "speakers": self._speakers(here),
+            "stale": here.stale,
+            "dsd": bool((here.on or here.aligning) and self._dsd()),
             "run": run.state.as_dict() if self.running() else None,
             "ended": self._ended,
         }
@@ -247,13 +255,26 @@ class RoomControl:
         return out
 
     @staticmethod
+    def _speakers(here: rc.OutputRoom) -> dict | None:
+        """**The speakers' alignment** (ADR-0188): on, when checked, the
+        distance's difference (cm) and each speaker's delay (ms) and level
+        (dB), and what the check found of left and right; None when never
+        checked."""
+        a = here.speakers
+        if a is None:
+            return None
+        return {"on": a.on, "date": a.date, "day": day(a.date), "plays": a.plays, "distance_cm": a.distance_cm,
+                "delay_ms": [round(d, 2) for d in a.delay], "level_db": [round(g, 1) for g in a.level],
+                "sides": a.sides, "right_db": None if a.right_db is None else round(a.right_db, 1)}
+
+    @staticmethod
     def _figures(m: rc.Measurement) -> dict:
         """The result's figures (the design's §2): *Peaks down by up to N
         dB*, *within N dB of the speaker's own balance* after and the room's
         own, the positions worse than before, and how far it was made."""
         return {"peaks_down": round(m.peaks_down()), "within": m.within(), "room_within": m.within(room=True),
                 "nothing_to_cut": m.nothing_to_cut, "nothing_above": m.nothing_above, "range": m.range,
-                "worse": [list(w) for w in m.worse], **RoomControl._aligned(m)}
+                "worse": [list(w) for w in m.worse], "dips": rc.dips_shown(m.dips), **RoomControl._aligned(m)}
 
     @staticmethod
     def _aligned(m: rc.Measurement) -> dict:
@@ -292,13 +313,14 @@ class RoomControl:
         return output.card
 
     async def update(self, changes: dict) -> dict:
-        """`on`, `without` and `reach` (ADR-0177), for the output in use."""
+        """`on`, `without` and `reach` (ADR-0177), and `speakers` - the
+        alignment's switch (ADR-0188) - for the output in use."""
         if not isinstance(changes, dict) or not changes:
             raise RoomError("Nothing to change.")
-        unknown = set(changes) - {"on", "without", "reach"}
+        unknown = set(changes) - {"on", "without", "reach", "speakers"}
         if unknown:
             raise RoomError(f"Unknown: {', '.join(sorted(unknown))}.")
-        for key in ("on", "without"):
+        for key in ("on", "without", "speakers"):
             if key in changes and not isinstance(changes[key], bool):
                 raise RoomError(f"{key.capitalize()} is true or false.")
         if "reach" in changes and changes["reach"] not in rc.REACHES:
@@ -311,9 +333,11 @@ class RoomControl:
             new = old
             if "on" in changes:
                 new = new.set_on(card, changes["on"])
-                if not changes["on"]:
-                    here = new.output(card)
-                    new = new._with(card, rc.OutputRoom(False, False, here.measured, here.reach))
+                here = new.output(card)
+                if not changes["on"] and not here.aligning:
+                    new = new._with(card, replace(here, without=False))
+            if "speakers" in changes:
+                new = new.set_speakers(card, changes["speakers"])
             if "without" in changes:
                 new = new.set_without(card, changes["without"])
             if "reach" in changes:
@@ -344,8 +368,12 @@ class RoomControl:
 
     # -- a run -----------------------------------------------------------------------
 
-    async def start(self) -> dict:
+    async def start(self, mode: str = "measure") -> dict:
+        """A run: the measurement, or (`mode` "speakers") the speaker check
+        on its own (ADR-0188)."""
         from gexis_core.room_run import Host, Run
+        if mode not in ("measure", "speakers"):
+            raise RoomError(f"Unknown: {mode}.")
         async with self._lock:
             mic_state = self._microphone()
             ok, why = self._can_measure(mic_state)
@@ -366,8 +394,9 @@ class RoomControl:
             self._run_card = card
             self._run_stage = None
             host = Host(take=self._run_take, stage=self._run_stage_to, loud=self._run_loud,
-                        finish=self._run_finish, publish=self._run_published)
-            self.run = Run(card, audio, cal, host, today=self._today, **self._run_options)
+                        finish=self._run_finish, publish=self._run_published, align=self._run_align)
+            self.run = Run(card, audio, cal, host, today=self._today, mode=mode,
+                           measured=self.state().output(card).measured, **self._run_options)
             self._path_before = self._eq_on(card) or self.state().in_path(card)
         if hasattr(audio, "prepare"):
             await audio.prepare()
@@ -387,7 +416,7 @@ class RoomControl:
         if not self.running():
             raise RoomError("The room is not being measured.")
         # `done` while it runs: *Nothing to correct*'s button, which ends it.
-        if what not in ("start", "next", "check", "skip", "keep", "discard", "again", "done"):
+        if what not in ("start", "next", "check", "skip", "keep", "discard", "again", "done", "keep_and_measure"):
             raise RoomError(f"Unknown: {what}.")
         self.run.tap(what)
         await asyncio.sleep(0)
@@ -409,11 +438,21 @@ class RoomControl:
     async def _run_loud(self) -> None:
         await self._loud()
 
+    async def _run_align(self, alignment) -> None:
+        """*Keep* after the check on its own (ADR-0188): the alignment
+        stored at once - *Keep and measure* goes on measuring with it - and
+        heard once the run has put the stage back."""
+        async with self._lock:
+            self._store.set(rc.KEY, self.state().keep_speakers(self._run_card, alignment).to_settings())
+        self._changed()
+        logger.info("room: kept the speakers' alignment for %s", self._run_card)
+
     async def _run_finish(self, measurement) -> None:
         card = self._run_card
         if measurement is not None:
             async with self._lock:
-                self._store.set(rc.KEY, self.state().keep(card, measurement).to_settings())
+                self._store.set(rc.KEY, self.state().keep(card, measurement,
+                                                          getattr(self.run, "alignment", None)).to_settings())
             self._changed()
             logger.info("room: kept the measurement for %s", card)
         try:
