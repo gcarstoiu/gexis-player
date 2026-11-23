@@ -10,8 +10,8 @@
   2026-11-05): the 90° file from miniDSP's page, chosen here.
 -->
 <script>
-  import { alignedLine, BOTH, chartSpan, correctionGroups, correctionsHeading, correctionsWho, correctionTail, cutFreq,
-    cutGain, dips, giveCalibration, MOVES, outputShort, POSITIONS, resultWords, runRoom, sideName, sides,
+  import { alignedLine, BOTH, capitalised, chartSpan, correctionGroups, correctionsHeading, correctionsWho, correctionTail, cutFreq,
+    countWord, cutGain, dips, giveCalibration, MOVES, outputShort, POSITIONS, resultWords, runRoom, sideName, sides,
     worseLine } from '../../lib/room.svelte.js';
   import RoomChart from './RoomChart.svelte';
   import RoomSeat from './RoomSeat.svelte';
@@ -286,11 +286,15 @@
     const doneK = SWEPT.indexOf(now) > SWEPT.indexOf(k);
     const nowK = now === k;
     const noise = nowK && run?.noise;
+    //: How many the set takes: two, the check more for playing lower
+    //: (ADR-0185 C3; George, 2026-11-23: it said *sweep 3 of 2*).
+    const many = run?.sweeps || 2;
+    const words = capitalised(countWord(many));
     return {
       name: { L: 'Left speaker', R: 'Right speaker', both: 'Both speakers' }[k],
       kind: doneK ? 'ok' : nowK ? (noise ? 'warn' : 'playing') : 'wait',
-      sub: doneK ? 'Two sweeps, they agree' : nowK ? (noise ? 'A noise spoiled this sweep. Measuring it again.' : `Playing · sweep ${run.sweep || 1} of 2`)
-        : k === BOTH ? 'Two sweeps together, after the right' : 'Two sweeps, after the left',
+      sub: doneK ? `${words} sweeps, they agree` : nowK ? (noise ? 'A noise spoiled this sweep. Measuring it again.' : `Playing · sweep ${run.sweep || 1} of ${many}`)
+        : k === BOTH ? `${words} sweeps together, after the right` : `${words} sweeps, after the left`,
       amber: noise,
     };
   }
@@ -389,7 +393,7 @@
 
       {#if showSeat}
         <RoomSeat active={screenName === 'place' ? 1 : n} done={screenName === 'place' ? [] : done}
-                  playing={screenName === 'measure' || screenName === 'checking' ? run?.speaker : null}
+                  playing={['timing', 'measure', 'checking'].includes(screenName) ? run?.speaker : null}
                   arrow={screenName === 'move' && n > 1} />
       {/if}
 

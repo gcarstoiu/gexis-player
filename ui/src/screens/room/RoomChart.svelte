@@ -8,7 +8,10 @@
   each position, the target (dotted, the bass's rise joined to the speaker's
   own slope), before (the positions' average) and after - measured solid,
   expected dashed. The lines differ by weight and dash as well as colour, so
-  it reads without colour. **The shading is the corrections'** (George,
+  it reads without colour. **Each position's curve is behind a switch in
+  the legend, off by default** (George, 2026-11-23: with all of them the
+  charts were too busy); without a legend (the bar) they are not drawn.
+  **The shading is the corrections'** (George,
   2026-11-19, ADR-0186 D2): before against before with them, whatever the
   check measured - the after is a line of its own. *Both*'s, above the bass,
   is the two speakers' corrections together, as the core estimates it (C3).
@@ -40,6 +43,7 @@
   const TICKS = [100, 1000, 10000, 20, 50, 200, 500, 2000, 5000, 30];
 
   let width = $state(340);
+  let eachPosition = $state(false);
   let heights = $state([160, 160]);
 
   const bassOnly = $derived(range !== 'full');
@@ -95,7 +99,7 @@
     return {
       cut: corrected ? fill(freqs, speaker.before, corrected, p, w, h, Math.min(curvesTo, afterTo)) : '',
       raise: corrected ? fill(freqs, corrected, speaker.before, p, w, h, Math.min(curvesTo, afterTo)) : '',
-      pos: (speaker.positions ?? []).map((c) => line(c)).join(''),
+      pos: eachPosition ? (speaker.positions ?? []).map((c) => line(c)).join('') : '',
       target: line(speaker.target),
       before: line(speaker.before),
       after: after ? line(after, Math.min(curvesTo, afterTo)) : '',
@@ -166,7 +170,10 @@
   {#if legend}
     <div class="legend">
       <span class="key">{@render sample('before')}{surface === 'phone' ? `Before, average of ${count}` : 'Before'}</span>
-      <span class="key">{@render sample('pos')}Each position</span>
+      <button type="button" class="key key--switch" class:is-on={eachPosition} aria-pressed={eachPosition}
+              onclick={() => (eachPosition = !eachPosition)}>
+        <span class="switch" aria-hidden="true"><span></span></span>{@render sample('pos')}Each position
+      </button>
       <span class="key">{@render sample('target')}Target</span>
       {#if shown === 'measured'}<span class="key">{@render sample('after')}After, measured</span>{/if}
       {#if shown === 'expected'}<span class="key">{@render sample('after')}After, expected</span>{/if}
@@ -420,6 +427,49 @@
   }
   .sample {
     flex-shrink: 0;
+  }
+  .key--switch {
+    font: inherit;
+    color: inherit;
+    background: transparent;
+    border: 1px solid var(--ink-line);
+    border-radius: 999px;
+    padding: 4px 10px 4px 5px;
+    min-height: 30px;
+    cursor: pointer;
+  }
+  .key--switch.is-on {
+    border-color: var(--c-lms-60);
+    background: var(--c-lms-20);
+  }
+  .key--switch:not(.is-on) .sample {
+    opacity: 0.45;
+  }
+  .switch {
+    position: relative;
+    flex-shrink: 0;
+    width: 26px;
+    height: 16px;
+    border-radius: 8px;
+    background: var(--c-ink-22);
+    transition: background 0.15s;
+  }
+  .switch span {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--ink);
+    transition: transform 0.15s;
+  }
+  .is-on .switch {
+    background: var(--accent-lms);
+  }
+  .is-on .switch span {
+    transform: translateX(10px);
+    background: var(--ink-on-accent);
   }
   .swatch--cut {
     fill: color-mix(in srgb, var(--rc-before) 40%, transparent);
