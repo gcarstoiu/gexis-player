@@ -64,11 +64,10 @@ a list with *Check again* / *Measure*, a swap or crossed wire waiting for
 *Check again*, the louder speaker turned down by a CamillaDSP `Gain`
 (ADR-0187 D1-D2, C1-C2, as built; ca235a95; ADR-0022 [H] for both, confirmed).
 Tested in the made-up room only.
-**sofapi** runs research build 2 (installed 13:19, Phase 37 before the
-together sweeps went, with the keeper - it keeps each run's responses in
-`/var/lib/gexis/room-research`, empty now). **Next:** a preview of the
-branch on sofapi for George to try the speaker check and a run (his
-go-ahead); the manual's room picture retaken; Phase 37's acceptance 5.
+**sofapi** runs the branch's preview (run 45219939975, core, player and
+UI 1.18.2+git29.ca235a9), installed 2026-11-23 19:26 at George's word over
+research build 2; its room correction kept (today's, no level stored).
+**Next:** George tries the speaker check and a run on it; the manual's room picture retaken; Phase 37's acceptance 5.
 **Before Phase 37 closes** (George, 2026-11-21; acceptance 5): the level at
 the seat against a meter, and the equaliser's and multiroom's measurements
 through the amplifiers - George present for each.
@@ -106,8 +105,8 @@ a group, the plugin off and on, Roon Bridge's own update.
 
 **sofapi runs hot** (2026-11-21): 78 °C with no page; a Home Assistant page with one camera was closed for the heat twice (Finding 157). ADR-0176 P8 kept as it is; George is bringing the temperature down.
 
-**The players** (2026-11-23): **sofapi** on Phase 37's research build 2
-(core 1.18.2+git25.520b018, 1.18.2 with Phase 37's branch;
+**The players** (2026-11-23): **sofapi** on Phase 37's preview
+(core 1.18.2+git29.ca235a9, 1.18.2 with Phase 37's branch;
 go-librespot 0.10.7-4, Shairport Sync 5.6.3-1), room correction on, a USB
 isolator on its DAC's cable, in no group since the group test of 21 Nov. On 23 Nov its DAC fell
 silent after the install while sofapi showed the stream running; a USB
