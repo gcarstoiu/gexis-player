@@ -109,7 +109,11 @@ ADR-0175 and ADR-0177, internal until Phase 30 closes. `GET
 speaker is than the left, null when not timed - and `delay_ms`, each
 speaker's (ADR-0185); its `chart` - each speaker's `before`, `target`,
 `after`, `after_bass` and its `positions` in dB about the target's level at
-250 Hz, `cuts` and `above`, `freqs` on the measurement's grid (to 20 kHz, or
+250 Hz, `corrected` and `corrected_bass` - before with the corrections kept,
+and with the cuts alone, what the chart shades (ADR-0186; for `both`, above
+the bass, the two speakers' corrections together, estimated, and its
+expected after the same) - `cuts` and
+`above`, `freqs` on the measurement's grid (to 20 kHz, or
 500 Hz), `after_kind` measured or expected - and each speaker's `cuts` and
 `above`), the `microphone` and its `calibration` (`again` while the one kept
 stops at 2 kHz, from before Phase 30), `can_measure` with `why_not`, and a

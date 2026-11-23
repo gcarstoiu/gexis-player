@@ -306,7 +306,8 @@ measurement, from *Before* to *Keep it*, showing the run the core holds
 covers the panel and the bars while it runs, display only;
 `RoomChart.svelte` and `RoomSeat.svelte` are the chart (its two panes side by
 side on the panel and the bars, one under the other at full width on the
-phone, ADR-0185 D4) and the seat drawing;
+phone, ADR-0185 D4; the shading between before and the core's `corrected`,
+the after a line of its own, ADR-0186) and the seat drawing;
 `RoomQuick.svelte` is the *Room* control in the volume drawer, the bar's tray
 and the phone's volume row. The summary comes from `/state`'s `room`
 (`lib/room.svelte.js`), the curves from `GET /room-correction`, read again

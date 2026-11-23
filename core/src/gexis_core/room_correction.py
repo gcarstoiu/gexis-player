@@ -11,6 +11,7 @@ plays (`stage`) and what the screens draw (`summary`, `chart`).
 """
 from __future__ import annotations
 
+import functools
 import math
 import re
 from dataclasses import dataclass, field, replace
@@ -512,23 +513,67 @@ def shown(filters) -> list[dict]:
     return [{"freq": round(f), "gain": round(g, 1)} for f, g, _ in filters]
 
 
+#: The rate the corrections are designed at (`room_dsp.FS`).
+DESIGN_FS = 48000
+
+
+@functools.lru_cache(maxsize=16)
+def _filters_db(filters: tuple, n: int) -> tuple[float, ...]:
+    """**What `filters` (freq, gain, q) do together** at the first `n` grid
+    points, in dB, as designed (ADR-0186 C1)."""
+    return tuple(sum(eq.band_db(f0, g, f, DESIGN_FS, q) for f0, g, q in filters) for f in grid(n))
+
+
+def _together_db(measurement: Measurement, n: int) -> tuple[float, ...]:
+    """**What the two speakers' broad corrections do together** (ADR-0186
+    C3), an estimate: their power gains, each weighted by how loud that
+    speaker is there (its own before, on its own target's level). How the
+    two add at a point depends on their phase, which nothing kept holds;
+    over the positions' average it comes close to adding their power.
+    Exact where the two corrections are the same."""
+    ears = [measurement.speakers.get(c) for c in CHANNELS]
+    if any(s is None or len(s.before) != n for s in ears):
+        return (0.0,) * n
+    gains = [_filters_db(tuple(measurement.above(c)), n) for c in CHANNELS]
+    out = []
+    for (bl, br), (gl, gr) in zip(zip(ears[0].before, ears[1].before), zip(*gains)):
+        wl, wr = 10 ** (bl / 10), 10 ** (br / 10)
+        out.append(10 * math.log10((wl * 10 ** (gl / 10) + wr * 10 ** (gr / 10)) / (wl + wr)))
+    return tuple(out)
+
+
 def chart(measurement: Measurement | None, expected: bool | None = None) -> dict | None:
     """**What the chart draws** (the design's §2), for each speaker, on the
     whole grid the measurement has (to 20 kHz, or to 500 Hz for one kept
     before Phase 30): before, each position, the target, after - measured,
     or expected when the check was skipped - with everything and with the
-    bass's cuts alone (`after_bass`, for *Bass*), and the corrections."""
+    bass's cuts alone (`after_bass`, for *Bass*), and the corrections.
+    **What the shading draws** (ADR-0186 D2): before with the corrections
+    kept (`corrected`; `corrected_bass` with the cuts alone) - exact, the
+    filters being the same on every position; for *Both*, above the bass,
+    the two speakers' corrections together, estimated (C3), and its
+    expected after that curve (C4)."""
     if measurement is None:
         return None
     first = next(iter(measurement.speakers.values()), None)
     n = len(first.before) if first else 0
     out = {"freqs": grid(n), "limit": int(LIMIT), "range": measurement.range, "speakers": {}}
+    measured = measurement.checked if expected is None else not expected
     for k, s in measurement.speakers.items():
+        cuts = _filters_db(tuple(s.cuts), len(s.before))
+        broad = (_together_db(measurement, len(s.before)) if k == BOTH
+                 else _filters_db(tuple(measurement.above(k)), len(s.before)))
+        corrected = tuple(b + c + a for b, c, a in zip(s.before, cuts, broad))
+        corrected_bass = tuple(b + c for b, c in zip(s.before, cuts))
+        after, after_bass = s.after, s.after_bass or s.after
+        if k == BOTH and not measured:
+            after, after_bass = corrected, corrected_bass
         out["speakers"][k] = {
-            "before": _round(s.before), "target": _round(s.target), "after": _round(s.after),
-            "after_bass": _round(s.after_bass or s.after), "positions": [_round(p) for p in s.positions],
+            "before": _round(s.before), "target": _round(s.target), "after": _round(after),
+            "after_bass": _round(after_bass), "positions": [_round(p) for p in s.positions],
+            "corrected": _round(corrected), "corrected_bass": _round(corrected_bass),
             "cuts": shown(s.cuts), "above": shown(measurement.above(k)),
             "peaks_down": round(s.peaks_down()), "within": s.within, "room_within": s.room_within,
         }
-    out["after_kind"] = "measured" if (measurement.checked if expected is None else not expected) else "expected"
+    out["after_kind"] = "measured" if measured else "expected"
     return out
