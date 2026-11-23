@@ -134,3 +134,16 @@ not yet on a player:
   sweeps at position 1 for its 6, none is repeated, and the noisiest points
   are left uncorrected.
 
+## Measured (2026-11-23, Finding 158)
+
+George's run at five positions, 48 dB at the seat (12 dB short of the aim):
+- **C3/C4, the limits stay:** where judged, undisturbed sweeps were
+  0.1-0.5 dB apart (the check's four, 0.1-0.3 dB); the one disturbance, 1.8
+  dB at 33 Hz, was caught and repeated. `AGREE_DB` 1.5 dB and the 20 dB
+  stay; 59-72 of 88 bass points were judged in the run, 49-67 in the check.
+  `MAX_SWEEPS` and the 8 s sweep stay.
+- **C1:** the timing readings repeated exactly (two within 0 cm at both
+  positions). The first sweep of a playback loses part of its first tens of
+  milliseconds (500-630 Hz read 0.4-1.4 dB low, once 8.7 dB); the timing is
+  read above that and is not moved, the level (ADR-0187 C2) by 0.1-0.15 dB.
+

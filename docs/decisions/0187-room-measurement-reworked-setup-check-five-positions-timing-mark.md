@@ -15,6 +15,9 @@ D4 (the joint sweep, once D4 here is proven). **Builds on:**
 **Relates to:** Phase 34 (the correction in time), which keeps its own
 question. *Phase 34 closed 2026-11-21 without being built (George, on
 [Finding 155](../findings/155-room-correction-in-time-what-research-shows.md)).*
+**Measured:** [Finding 158](../findings/158-room-measurement-five-positions-on-sofapi.md)
+(2026-11-23, George's run on the research build): D5 kept at half, C5 kept
+with it; see *Measured* below.
 
 ## Context
 
@@ -164,3 +167,34 @@ chart is resumed; whether a noisy room may lengthen the run, after the logs.
   after D5's trial.
 - Not covered: each speaker's actual distance (it would need a reference the
   player does not have); boosts (D6); the correction in time (Phase 34).
+
+## Measured (2026-11-23, Finding 158)
+
+George's run on the research build: five positions and their check, 48 dB at
+the seat (12 dB short of the aim). Each change judged at the check's places,
+placed again by eye.
+- **D5 kept at half:** the head counts as much as the other four together,
+  in the power average and in the positions' vote. At the check's head: 0.50
+  to 0.40 dB rms over the target, its highest point 2.2 to 1.8 dB; every
+  other place closer; none more than 0.5 dB further under, within
+  `WORSE_DB`. Applied above the bass too: there it halves the head's worst
+  point (1.5 to 0.7 dB at one correction).
+- **C5 kept with D5:** with the head's weight, the finer detail leaves no
+  place worse on the fine curves and lowers the head's highest point to
+  1.3 dB. At 1/6 octave the two are within 0.04 dB. The 50 Hz ringing is
+  shorter at all five places and under Fazenda's threshold at each - today's
+  design leaves it over at two. Alone, without the head's weight, it changed
+  almost nothing.
+- **C6:** what rings is 17-30 dB quieter at 200 ms in the 50 Hz band, but a
+  band's decay time can lengthen where a cut takes out its strongest mode.
+  The level at fixed times is logged beside the decay time; D7 is decided
+  on both.
+- **C7:** design D takes bass played by one speaker 4.5 dB under the target
+  at 46 Hz (today's 3.3 dB). Logged, no cap.
+- **C2:** the window is 6 ms (three cycles at 500 Hz): the right 0.60 and
+  0.55 dB under the left at the head, the two readings 0.05 dB apart. 3 ms
+  read 0.2 dB, 20 ms 1.8 dB. The playback's first tens of milliseconds are
+  partly lost, so the timing signal is led by 0.25 s of silence.
+- **C8 not needed:** the only bass left uncorrected for noise, in the
+  design from both speakers, lay at 20-21 Hz, under the target.
+

@@ -3771,6 +3771,8 @@ sweeps' agreement at 60 dB. Measured 2026-11-21
 the stage's cost, the cuts read back from the live CamillaDSP (all matching),
 and the A/B - bit-exact with the filters at 0 dB, level-matched (not
 bit-exact) where a *Full range* correction boosts.
+Two sweeps' agreement measured 2026-11-23 at 48 dB, the noisier case:
+0.1-0.5 dB where judged ([Finding 158](findings/158-room-measurement-five-positions-on-sofapi.md)).
 
 **Started 2026-11-03** (George), on `ph-room-correction`;
 [ADR-0175](decisions/0175-room-correction-for-the-bass.md) accepted the same
@@ -3853,6 +3855,12 @@ testing*. Left: George's run at the full range; acceptance 2 as a finding
 from a run checked at Full range. The stage's cost at 44.1/96/192 kHz:
 [Finding 156](findings/156-room-correction-stage-cost-bit-exact-and-read-back.md)
 (2026-11-21). Phase 34 next for room correction.
+Acceptance 2 measured 2026-11-23 on a five-position run checked at Full
+range ([Finding 158](findings/158-room-measurement-five-positions-on-sofapi.md)):
+each speaker's average closer (rms 1.57 to 0.77 and 1.47 to 0.84 dB), every
+place closer in rms; not every place point by point, at 906 Hz for the head
+and at 7.8-7.9 kHz where a placement by eye moves the reading by about
+1 dB - carried into Phase 37.
 
 **Added 2026-10-20** (George, splitting room correction in two). After the
 bass (Phase 29, `ph-room-correction`): correction above the Schroeder
@@ -4434,6 +4442,25 @@ stays Phase 34 (closed 2026-11-21 without being built, Finding 155).
 in the bass, the head's weight, the ringing - then the setup check, then the
 timing mark proven, then five positions with it. Each with a preview on
 sofapi before release.
+
+**Measured 2026-11-23** ([Finding 158](findings/158-room-measurement-five-positions-on-sofapi.md),
+George's run on the research build, 48 dB at the seat): the head's weight
+kept at half, the finer bass detail kept with it; the ringing quieter with
+every design, the level at fixed times to be shown rather than the decay
+time alone; the level read in 6 ms; ADR-0185's limits kept, C8 not needed.
+Above the bass, every place closer on average, but at 7.8-7.9 kHz a
+microphone placed again by eye reads about 1 dB differently: open for the
+next run, at 60 dB.
+
+**George's notes from the run** (2026-11-23), for the build:
+- the distance step's short sweeps light the speaker they come from, as the
+  measuring sweeps do;
+- the check said *sweep 3 of 2* and *4 of 2*: it takes four (ADR-0185 C3,
+  3 dB lower), so the count says four;
+- the drawing of where the microphone goes is redone for five positions
+  with height - three mock-ups first, George choosing;
+- each position's curve on the charts behind a switch, off by default: with
+  all of them the charts are too busy.
 
 **Acceptance (draft):**
 
