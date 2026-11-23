@@ -64,10 +64,24 @@ a list with *Check again* / *Measure*, a swap or crossed wire waiting for
 *Check again*, the louder speaker turned down by a CamillaDSP `Gain`
 (ADR-0187 D1-D2, C1-C2, as built; ca235a95; ADR-0022 [H] for both, confirmed).
 Tested in the made-up room only.
+**Decided from a canvas of mock-ups and built the same evening** (George:
+A, B, B): **the speakers aligned on their own**
+([ADR-0188](docs/decisions/0188-speakers-aligned-on-their-own.md): a
+*Speakers* card with its own switch, its delay and level heard with room
+correction on or off, *Check the speakers* running the check alone - *Keep*,
+or after a measurement it leaves behind *Keep and measure* - and an amber
+note on room correction's card until measured again); **the ringing** as a
+small card after the check and **a card per dip** on the correction
+(ADR-0187 D7-D8; C6, C7 and C9 computed and logged); `ph-room-measurement`
+d71d7110. The canvas (private, George's) also holds the panel's and the bar's
+screens for the switch (ADR-0188 C6), not built until George has seen them.
+**Owed to George:** the dips' wording (a wall's dip says *a wall or the
+floor*: the surface cannot be told), ADR-0022's entries (the switch [R],
+the stale guard [H]), and the preview's install.
 **sofapi** runs the branch's preview (run 45219939975, core, player and
 UI 1.18.2+git29.ca235a9), installed 2026-11-23 19:26 at George's word over
 research build 2; its room correction kept (today's, no level stored).
-**Next:** George tries the speaker check and a run on it; the manual's room picture retaken; Phase 37's acceptance 5.
+**Next:** George's answers above; George tries the speaker check and a run on the preview; the manual's room picture retaken; Phase 37's acceptance 5.
 **Before Phase 37 closes** (George, 2026-11-21; acceptance 5): the level at
 the seat against a meter, and the equaliser's and multiroom's measurements
 through the amplifiers - George present for each.

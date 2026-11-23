@@ -4512,6 +4512,10 @@ weight. The level reading moved 0.9 dB with the head placed again.
 - **A card per dip** on the correction, its cause and what may help
   (ADR-0187 D8, B).
 
+Built the same day (`ph-room-measurement` d71d7110; tested in the made-up
+room); the panel's and the bars' screens for the switch drawn for George
+(ADR-0188 C6).
+
 **Acceptance (draft):**
 
 1. The setup check finds a swapped pair, a reversed speaker, the distance's

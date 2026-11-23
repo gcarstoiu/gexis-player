@@ -345,3 +345,13 @@ From a canvas of mock-ups (made-up numbers), three ways each.
   is under 1.5 m - that speaker, and the distance; none named otherwise.
 - **C7 logged** with the design: how far the joint cuts take the speakers'
   power sum, levelled to the pair, further under the target.
+
+**As built (2026-11-23, `ph-room-measurement` d71d7110):** `room_dsp.ringing`,
+`through`, `dips` and `joint_under`; the measurement keeps each speaker's
+`ringing` and the `dips`, the chart gives both. The ringing card shows the
+four bands that rang most before, bars from -50 dB (none) to -15 dB (full);
+the dips card replaces the dips in the closing words, which then say only
+what is done above the bass. A dip with no cause named says its cause is
+not clear from the measurement. Checked on a made-up response: a mode at
+50 Hz with a 0.8 s decay reads -10 dB at 0.2 s (0.79 s decay read); a
+10 dB cut on it leaves -30 dB (0.49 s).

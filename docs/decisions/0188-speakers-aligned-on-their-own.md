@@ -89,3 +89,24 @@ sheet of mock-ups (made-up numbers) how it should sit on the room page.
   output ([R]); C4's guard ([H]).
 - Not covered: the panel's and the bars' screens (C6); the alignment for an
   output that plays to more than two speakers.
+
+## As built (2026-11-23, `ph-room-measurement` d71d7110)
+
+- **The store** (`room_correction.Alignment`, `OutputRoom.speakers`): on,
+  the date, each speaker's delay and level, the distance, left and right,
+  and the level as read; `Room.set_speakers`, `keep_speakers`, and `keep`
+  taking the run's alignment. Stored before: brought across once when read,
+  switched as room correction was.
+- **Stale** (`OutputRoom.stale`, `pair_moves_db`, `STALE_DB` 1 dB): only
+  where the measurement has cuts in the bass.
+- **The run** (`room_run.Run(mode="speakers", measured=...)`): *ready*
+  takes `keep`, `again` or `discard`; stale, `keep`, `keep_and_measure` or
+  `discard`; nothing read, `again` or `discard`. *Keep* stores the alignment
+  through `Host.align` at once; the run's progress is the check's own.
+- **The routes:** `POST /room-correction/run {action: "speakers"}`, `PUT
+  /room-correction {speakers}`; `GET` gives `speakers` and `stale`; the
+  Settings row says *Speakers aligned* or *Off · speakers aligned*.
+- **The phone** as drawn, without the mock-up's *New* badge and lit border,
+  which marked the change on the sheet; the check opens on *Before* with
+  *Check the speakers*, its steps 1-3 of 3; *far* offers *Carry on*. The
+  panel's running screen says *Checking the speakers*, without positions.
