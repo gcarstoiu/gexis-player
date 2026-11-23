@@ -704,3 +704,14 @@ Confirmed by George, 2026-11-14, [Finding 148](../findings/148-plugins-port-bloc
 | Setting | Mark | Notes |
 |---|---|---|
 | Name repair after a clash | [H] | When avahi announces the player as `<name>-2`, the player asks for its own name every 2 min, five times, then once every 30 min (`mdns-name.sh`) |
+
+### Appended 2026-11-23 — room measurement reworked
+
+Confirmed by George, 2026-11-23, [ADR-0187](0187-room-measurement-reworked-setup-check-five-positions-timing-mark.md) and [Finding 158](../findings/158-room-measurement-five-positions-on-sofapi.md):
+
+| Setting | Mark | Notes |
+|---|---|---|
+| Positions | [H] | Five, around the head: the head; 40 cm left and 15 cm up; 40 cm right and 15 cm down; 30 cm in front; 30 cm above (replacing three; a measurement keeps its own number) |
+| The head's weight | [H] | The head counts as much as the other four together, in the bass and above it |
+
+The chart's *Each position* switch is not kept (ADR-0186, amended 2026-11-23), so it is no setting.
