@@ -185,7 +185,7 @@
 
   // ---- each screen's words -------------------------------------------------------
 
-  const moveText = (k) => `${k === 1 ? 'Back where your head was' : MOVES[k]}, at the same height, still pointing at the ceiling. Step back, then tap Measure here.`;
+  const moveText = (k) => `${k === 1 ? 'Back where your head was, at its height' : MOVES[k]}, still pointing at the ceiling. Step back, then tap Measure here.`;
   //: The correction for the speaker shown (Both: the left's list says so).
   const groups = $derived(correctionGroups(ch, speaker));
   const counts = $derived(ch === BOTH ? correctionGroups('L', pending?.chart?.speakers?.L) : groups);
