@@ -818,8 +818,10 @@ hw:Loopback,1,0 → CamillaDSP (headroom fader, ten bands, then on each speaker 
 - **The speakers timed** (ADR-0185 C1), after the level and before the
   sweeps: one recording - so playback and capture start once, and nothing
   between them varies - of a 0.5 s sweep from 500 Hz to 20 kHz on the left,
-  the right, then the left again, a second apart (`room_dsp.timing_signal`,
-  two channels in one `aplay`). Deconvolved with the one sweep, the three
+  the right, then the left again, a second apart, after a quarter of a
+  second of silence (`room_dsp.timing_signal`, two channels in one `aplay`;
+  a playback's first tens of milliseconds are partly lost while the chain
+  starts, Finding 158). Deconvolved with the one sweep, the three
   arrivals sit a slot apart; the right's is lined up with the first left's
   by cross-correlation over the first 2.5 ms, to a fraction of a sample,
   and half the second left's lag - the DAC's and the microphone's clocks
@@ -842,7 +844,13 @@ hw:Loopback,1,0 → CamillaDSP (headroom fader, ten bands, then on each speaker 
   gave it, at the level found; the room's response is the recording's
   spectrum over the sweep's, windowed to a second from the arrival, the
   calibration file subtracted, smoothed to 1/6 octave on a 1/24-octave grid
-  from 15 Hz to 20 kHz (`room_dsp.py`, numpy). **Repeats** (ADR-0185 C3):
+  from 15 Hz to 20 kHz (`room_dsp.py`, numpy). **Each sweep after a timing
+  mark** (ADR-0187 C4): in the same playback, the timing step's short sweep
+  on the left a second before it (`room_dsp.marked`); deconvolved with the
+  sweep where it plays, the mark's trace lands seconds before the arrival,
+  outside the window, and the mark's own arrival is read for each sweep
+  (`room_dsp.mark_at`), so the left's and the right's responses at a
+  position share one reference. **Repeats** (ADR-0185 C3):
   the quiet room, listened to for 3 s, is the noise every sweep is judged
   by - turned into the noise a sweep's curve holds (`room_dsp.noise_curve`:
   noise of its spectrum, as long as the recording, through the same

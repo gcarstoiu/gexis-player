@@ -531,7 +531,7 @@ class Run:
         """**The short sweeps light the speaker they come from** (George,
         2026-11-23, as the measuring sweeps do): the left, the right, the
         left again, a slot each, from when the signal starts."""
-        await self._sleep(getattr(self._audio, "lead_s", 0.0))
+        await self._sleep(getattr(self._audio, "lead_s", 0.0) + self._dsp.TIMING_LEAD_S)
         for channel in ("L", "R", "L"):
             self._set(replace(self.state, speaker=channel))
             await self._sleep(self._dsp.TIMING_SLOT_S)

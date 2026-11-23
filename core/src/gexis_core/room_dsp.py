@@ -844,16 +844,23 @@ TIMING_CLEAR = 10.0
 SPEED_OF_SOUND = 343.0
 
 
+#: **Silence before the first short sweep** (ADR-0187 C2, Finding 158): a
+#: playback's first tens of milliseconds are partly lost while the chain
+#: starts, which took up to 8.7 dB off the first left's lowest third octave.
+TIMING_LEAD_S = 0.25
+
+
 def timing_signal(amplitude: float = 1.0, fs: int = FS) -> np.ndarray:
     """**One recording for both speakers' timing** (ADR-0185 C1): a short
-    sweep on the left, the right, then the left again, a slot apart, as
-    (samples, 2) frames - one playback and one capture, so nothing starts
-    apart between them."""
+    sweep on the left, the right, then the left again, a slot apart, after
+    `TIMING_LEAD_S` of silence, as (samples, 2) frames - one playback and
+    one capture, so nothing starts apart between them."""
     sweep = log_sweep(fs, TIMING_LO, TIMING_HI, TIMING_S) * amplitude
     slot = int(TIMING_SLOT_S * fs)
-    frames = np.zeros((3 * slot, 2))
+    lead = int(TIMING_LEAD_S * fs)
+    frames = np.zeros((lead + 3 * slot, 2))
     for k, channel in enumerate((0, 1, 0)):
-        frames[k * slot:k * slot + len(sweep), channel] = sweep
+        frames[lead + k * slot:lead + k * slot + len(sweep), channel] = sweep
     return frames
 
 
