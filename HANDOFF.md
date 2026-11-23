@@ -52,10 +52,11 @@ updated; the manual's room picture still to be retaken. Also built: the
 timing mark before every sweep (C4) and the distance step's lead of silence.
 **`ph37-research-2`** = the branch + the keeper with each sweep's mark, for
 D4's proof (`~/projects/scratch/ph37/d4/d4.py <run>.json`; checked on a
-made-up run). **Waiting on George**: which of three drawings of the five
-positions with height (mock-ups in `~/projects/scratch/ph37/mock/`);
-ADR-0022's [H] entries for five positions and the head's weight; his go to
-install research build 2 on sofapi, then a run at 60 dB. Then the setup
+made-up run). George chose drawing C
+(2026-11-23), built; ADR-0022's [H] entries confirmed and appended. **Research
+build 2** (preview run 45171855527): George's go given 2026-11-23 to
+install it on sofapi once built and idle; then his run at 60 dB with D3's
+heights. Then the setup
 check, its screens designed first. **Do not update sofapi** otherwise: it
 still runs the first research build.
 **Before Phase 37 closes** (George, 2026-11-21; acceptance 5): the level at

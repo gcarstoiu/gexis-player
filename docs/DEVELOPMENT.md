@@ -4459,12 +4459,13 @@ next run, at 60 dB.
 - the check said *sweep 3 of 2* and *4 of 2*: it takes four (ADR-0185 C3,
   3 dB lower), so the count says four;
 - the drawing of where the microphone goes is redone for five positions
-  with height - three mock-ups first, George choosing;
+  with height - three mock-ups first; George chose C (2026-11-23): the
+  view from above, each position's height on it, a height scale beside;
 - each position's curve on the charts behind a switch, off by default: with
   all of them the charts are too busy.
 
 **Built on `ph-room-measurement`** (2026-11-23): five positions, the head's
-weight and the finer bass detail, George's notes 1, 2 and 4, the timing mark
+weight and the finer bass detail, George's four notes (the drawing as C), the timing mark
 before every sweep (C4) and the distance step's lead of silence (C2). **D4's
 proof** runs on a second research build (`ph37-research-2`: that branch with
 the keeper, each sweep's mark kept); in the made-up room the pair added by
