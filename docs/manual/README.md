@@ -1012,8 +1012,8 @@ yet.
 
 **Measuring is done from the phone**, which you hold at the seat while you
 move the microphone; the player's screen shows that it is measuring, with
-nothing to press. On the player's screen, *Measure from your phone* (or
-*Measure again*) shows a code that opens this page on a phone.
+nothing to press. On the player's screen, *Measure or check, from your
+phone* (or *Measure again*) shows a code that opens this page on a phone.
 
 1. *Settings → Audio → Room correction* lists what is needed: the
    microphone, its calibration and a quiet room - about 20 minutes, the
@@ -1121,7 +1121,10 @@ On its page:
 - **Speakers**, on the phone's page: when they were checked, a ticked row
   for the wiring, how much further one is and how much later the nearer
   plays, and how much the louder is turned down; its own switch, heard at
-  once with room correction on or off.
+  once with room correction on or off. On the player's screen the switch
+  sits beside room correction's, with the delay and the cut under its
+  name; a correction the speakers have moved away from is said in the last
+  measurement's card, and *Measure again* is lit.
 - **Hear it without** (*A/B*): no room correction and no alignment, to
   compare, heard at once, and amber while set. It stays where you put it, after a restart
   too, until switched back.

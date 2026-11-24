@@ -353,6 +353,19 @@ export function speakersRows(a) {
   return rows;
 }
 
+/** **The alignment in a few characters** (ADR-0188 C6, the panel and the
+ *  bar George chose 2026-11-24): the nearer speaker's delay and the louder's
+ *  cut, *0.36 ms · −1.5 dB*. */
+export function speakersShort(a) {
+  if (!a) return '';
+  const parts = [];
+  const ms = Math.max(...(a.delay_ms ?? [0]));
+  const db = -Math.min(...(a.level_db ?? [0]));
+  if (ms >= 0.005) parts.push(`${ms.toFixed(2)} ms`);
+  if (db >= 0.05) parts.push(`−${db.toFixed(1)} dB`);
+  return parts.join(' · ') || 'Nothing to align';
+}
+
 /** **The ringing card** (ADR-0187 D7, George's choice B, 2026-11-23): the
  *  four bands that rang most before, low to high, each `{ hz, before,
  *  after }` - dB at 0.2 s against the first 50 ms. */

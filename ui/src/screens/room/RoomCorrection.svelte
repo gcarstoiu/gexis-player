@@ -15,7 +15,7 @@
   import { onDestroy } from 'svelte';
   import { capitalised, chartSpan, correctionGroups, correctionsWho, countWord, cutFreq, cutGain, cutRows,
     outputPhrase, outputShort, rangeWord, resultWords, room, RoomReader, setRoom, sideName, sides, speakersLine,
-    speakersRows } from '../../lib/room.svelte.js';
+    speakersRows, speakersShort } from '../../lib/room.svelte.js';
   import { screen } from '../../lib/family.svelte.js';
   import RoomChart from './RoomChart.svelte';
   import RoomFlow from './RoomFlow.svelte';
@@ -137,7 +137,15 @@
     : ab ? 'Now without: no room correction and no alignment. Switch back to hear them.'
       : 'Compare: no room correction and no alignment, heard at once.');
   const abShort = $derived(!on && !spkOn ? 'Only while room correction or the speakers are on.'
-    : ab ? 'Now without: no correction, no alignment' : 'Compare, heard at once');
+    : ab ? 'Now without: no correction, no alignment' : wideBar ? 'No correction, no alignment' : 'Takes out both');
+  //: ADR-0188 C6 (the panel and the bar George chose, 2026-11-24): the two
+  //: switches side by side, each named, with what it does under the name.
+  const corrSub = $derived(!measured ? 'Measure first' : on ? (reach === 'bass' || bassOnly ? 'Bass' : 'Full range')
+    : spkOn && spk?.plays ? 'Taken out' : 'Bit-perfect');
+  const spkSub = $derived(!spk ? 'Check from your phone' : spkOn ? speakersShort(spk) : 'As they are');
+  //: The panel's and the bar's button: the phone measures and checks.
+  const phoneLabel = $derived(stale ? 'Measure again, from your phone' : bassOnly ? againLabel
+    : 'Measure or check, from your phone');
   const againLabel = $derived(bassOnly ? 'Measure again for the full range' : 'Measure again');
   const powerNote = $derived(on ? `For ${outputPhrase(full?.output)}. Each output keeps its own.`
     : spkOn && spk?.plays ? 'Off: the correction is taken out. The speakers stay aligned.'
@@ -214,9 +222,9 @@
   </div>
 {/snippet}
 
-{#snippet corrections(size)}
+{#snippet corrections(size, shown = 2)}
   <span class="who who--{size}">{cutsWho}</span>
-  {#each groups as g, i (g.name)}
+  {#each groups.slice(0, shown) as g, i (g.name)}
     <div class="group group--{size}" class:group--first={i === 0}>
       <span class="group__name">{g.name}</span><span class="rule"></span><span class="group__kind">{g.kind}</span>
     </div>
@@ -342,8 +350,19 @@
           <div class="side__rest"></div>
           <button type="button" class="powerbtn powerbtn--bar" class:is-dim={!measured} aria-pressed={on}
                   onclick={toggleOn} disabled={!measured}>
-            <span class="powerbtn__state" class:is-on={on && measured}>{!measured ? 'Off' : on ? 'On' : 'Off'}</span>
+            <span class="powerbtn__text">
+              <span class="powerbtn__name">Correction</span>
+              <span class="powerbtn__state" class:is-on={on && measured}>{!measured ? 'Off' : on ? 'On' : 'Off'}</span>
+            </span>
             {@render sw(on && !!measured, false)}
+          </button>
+          <button type="button" class="powerbtn powerbtn--bar" class:is-dim={!spk} aria-pressed={spkOn}
+                  onclick={toggleSpk} disabled={!spk}>
+            <span class="powerbtn__text">
+              <span class="powerbtn__name">Speakers</span>
+              <span class="powerbtn__state" class:is-on={spkOn}>{spkOn ? 'On' : 'Off'}</span>
+            </span>
+            {@render sw(spkOn, false)}
           </button>
         </div>
         <div class="mid" class:mid--narrow={!wideBar}>
@@ -352,13 +371,21 @@
           <div class="mcard">
             <span class="mcard__text">
               <span class="mcard__title">{measured ? measured.year : 'Not measured yet'}</span>
-              <span class="mcard__sub">{measured ? `${capitalised(positionsWord)} positions · ${rangeWord(range)}` : 'Measure from your phone'}</span>
+              {#if stale}
+                <span class="mcard__sub mcard__sub--amber">{wideBar ? 'Speakers checked since: measure again' : 'Checked since: measure again'}</span>
+              {:else}
+                <span class="mcard__sub">{measured ? `${capitalised(positionsWord)} positions · ${rangeWord(range)}` : 'Measure from your phone'}</span>
+              {/if}
+              {#if spkOn && spk?.plays}
+                <!-- P3's figures, on a line of their own: the bar's width. -->
+                <span class="mcard__sub">Speakers: {speakersShort(spk).replace(' · ', ', ')}</span>
+              {/if}
             </span>
             {#if notChecked}<span class="flag flag--bar">Not checked</span>{/if}
           </div>
           <div class="spacer"></div>
-          <button type="button" class="againbtn againbtn--bar" class:is-lit={!measured || bassOnly} onclick={() => (sheet = true)}>
-            {@render phoneGlyph()}{!measured ? 'Measure from your phone' : bassOnly && wideBar ? againLabel : 'Measure again'}
+          <button type="button" class="againbtn againbtn--bar" class:is-lit={!measured || bassOnly || stale} onclick={() => (sheet = true)}>
+            {@render phoneGlyph()}{wideBar ? phoneLabel : stale || bassOnly ? 'Measure again' : 'Measure or check'}
           </button>
         </div>
         <div class="right" class:right--narrow={!wideBar}>
@@ -392,8 +419,18 @@
           {#if dsd}
             <div class="dsdpill"><span class="dsd__tag">DSD</span><span>Plays untouched. Room correction stands aside.</span></div>
           {/if}
-          <button type="button" class="powerbtn" class:is-dim={!measured} aria-pressed={on} onclick={toggleOn} disabled={!measured}>
-            <span class="powerbtn__state" class:is-on={on && measured}>{!measured ? 'Measure first' : on ? 'On' : 'Off · bit-perfect'}</span>
+          <button type="button" class="powerbtn powerbtn--two" class:is-dim={!spk} aria-pressed={spkOn} onclick={toggleSpk} disabled={!spk}>
+            <span class="powerbtn__text">
+              <span class="powerbtn__state" class:is-on={spkOn}>Speakers · {!spk ? 'not checked' : spkOn ? 'on' : 'off'}</span>
+              <span class="powerbtn__sub">{spkSub}</span>
+            </span>
+            {@render sw(spkOn, false)}
+          </button>
+          <button type="button" class="powerbtn powerbtn--two" class:is-dim={!measured} aria-pressed={on} onclick={toggleOn} disabled={!measured}>
+            <span class="powerbtn__text">
+              <span class="powerbtn__state" class:is-on={on && measured}>Correction · {!measured ? 'off' : on ? 'on' : 'off'}</span>
+              <span class="powerbtn__sub">{corrSub}</span>
+            </span>
             {@render sw(on && !!measured, false)}
           </button>
         </div>
@@ -413,13 +450,18 @@
                   <span class="lcard__text"><span class="lcard__date">{measured.year}</span><span class="lcard__pos">{capitalised(positionsWord)} positions · {rangeWord(range)}</span></span>
                   {#if notChecked}<span class="flag flag--panel">Not checked</span>{/if}
                 </div>
-                {@render corrections('panel')}
+                {#if stale}
+                  <div class="stale"><span class="stale__mark">!</span>
+                    <span>The speakers were checked after this was measured: in the bass it no longer fits exactly. Measure again.</span></div>
+                {/if}
+                <!-- With the stale note, the bass's cuts alone (P2 as drawn). -->
+                {@render corrections('panel', stale ? 1 : 2)}
               {:else}
                 <div class="lcard__never">Not measured yet</div>
               {/if}
             </div>
-            <button type="button" class="againbtn" class:is-lit={!measured || bassOnly} onclick={() => (sheet = true)}>
-              {@render phoneGlyph()}{measured ? againLabel : 'Measure from your phone'}
+            <button type="button" class="againbtn" class:is-lit={!measured || bassOnly || stale} onclick={() => (sheet = true)}>
+              {@render phoneGlyph()}{phoneLabel}
             </button>
           </div>
           <div class="card chartpanel" class:is-dim={!!measured && (dsd || !on)}>
@@ -448,7 +490,7 @@
 
     {#if sheet}
       <div class="scrim" role="presentation" onclick={() => (sheet = false)}></div>
-      <div class="sheet" class:sheet--bar={bar} role="dialog" aria-label="Measure from your phone"
+      <div class="sheet" class:sheet--bar={bar} role="dialog" aria-label="From your phone"
            ondpadback={(event) => { event.preventDefault(); sheet = false; }}>
         {#if qr}
           <svg class="qr" viewBox="0 0 {qr.extent} {qr.extent}" shape-rendering="crispEdges"
@@ -460,8 +502,8 @@
           <div class="qr qr--empty"></div>
         {/if}
         <div class="sheet__text">
-          <div class="sheet__title">Measure from your phone</div>
-          <div class="sheet__note">You hold the phone at the seat while you move the microphone. Scan this, or open the player's page and go to Settings · Audio · Room correction.</div>
+          <div class="sheet__title">From your phone</div>
+          <div class="sheet__note">You hold the phone at the seat while you move the microphone, to measure the room or check the speakers. Scan this, or open the player's page and go to Settings · Audio · Room correction.</div>
           {#if bar}
             <div class="sheet__row">
               <span class="sheet__addr">{full?.address?.shown ?? ''}</span>
@@ -715,6 +757,30 @@
   }
   .powerbtn__state.is-on {
     color: var(--accent-lms);
+  }
+  /* ADR-0188 C6: two named switches (the panel and the bar George chose). */
+  .powerbtn__text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+  .powerbtn__sub,
+  .powerbtn__name {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    white-space: nowrap;
+    color: var(--ink-muted);
+  }
+  .powerbtn__name {
+    font-size: 11.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .mcard__sub.mcard__sub--amber {
+    color: var(--rc-without);
   }
   .is-dim {
     opacity: 0.5;
@@ -1041,7 +1107,7 @@
     margin-top: 0;
   }
   .ab--bar .ab__sub {
-    font-size: 16px;
+    font-size: 14px;
     margin-top: 3px;
     white-space: nowrap;
     overflow: hidden;
