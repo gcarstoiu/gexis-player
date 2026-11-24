@@ -81,7 +81,7 @@ installed. **sofapi** ran it from 2026-11-24 06:43 (core, player and UI
 1.18.2+git30.d71d711, run 45262635911, at George's word): its
 measurement's 0.23 ms delay came across as the speakers' alignment,
 switched on, no level. **George ran *Check the speakers* on its own** the
-same day (14:35, kept): the left 0.17 ms later, the right turned down
+same day (14:35, kept): the left delayed 0.17 ms and turned down
 1.8 dB, 5.8 cm; not stale.
 **The panel and the bar built as drawn** (2026-11-24, 3d65d70e: the two
 switches named side by side, the stale note in the last measurement's card,
