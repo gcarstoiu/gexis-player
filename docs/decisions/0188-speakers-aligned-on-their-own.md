@@ -75,7 +75,12 @@ sheet of mock-ups (made-up numbers) how it should sit on the room page.
   2026-11-23).
 - **C6 — The panel and the bars** show the alignment once their screens
   are designed; until then they keep today's room page, with *Hear it
-  without* live when either is on.
+  without* live when either is on. *Decided 2026-11-24 (George, from
+  mock-ups P1-P3, as drawn):* the panel's header carries a *Speakers*
+  switch beside room correction's, its delay and level under the label;
+  the bar stacks the two switches in its side column; on both the stale
+  note goes in the last measurement's card, and *Measure again* becomes
+  *Measure or check, from your phone*.
 
 ## Consequences
 
@@ -85,8 +90,9 @@ sheet of mock-ups (made-up numbers) how it should sit on the room page.
   `measure` as *Keep and measure*.
 - The manual's room correction section, the FAQ, the README and the
   technical guide (`audio-path.md`, `api.md`, `ui.md`) follow.
-- ADR-0022's inventory, after George confirms: the alignment's switch per
-  output ([R]); C4's guard ([H]).
+- ADR-0022's inventory: the alignment's switch per output ([R]); C4's
+  guard, the ringing shown and the dips explained ([H]) - confirmed by
+  George 2026-11-24.
 - Not covered: the panel's and the bars' screens (C6); the alignment for an
   output that plays to more than two speakers.
 

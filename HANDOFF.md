@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-11-23 (on R2D2).
+Last updated: 2026-11-24 (on R2D2).
 
 ## Start here
 
@@ -75,13 +75,13 @@ small card after the check and **a card per dip** on the correction
 (ADR-0187 D7-D8; C6, C7 and C9 computed and logged); `ph-room-measurement`
 d71d7110. The canvas (private, George's) also holds the panel's and the bar's
 screens for the switch (ADR-0188 C6), not built until George has seen them.
-**Owed to George:** the dips' wording (a wall's dip says *a wall or the
-floor*: the surface cannot be told), ADR-0022's entries (the switch [R],
-the stale guard [H]), and the preview's install.
-**sofapi** runs the branch's preview (run 45219939975, core, player and
-UI 1.18.2+git29.ca235a9), installed 2026-11-23 19:26 at George's word over
-research build 2; its room correction kept (today's, no level stored).
-**Next:** George's answers above; George tries the speaker check and a run on the preview; the manual's room picture retaken; Phase 37's acceptance 5.
+**George's answers (2026-11-24):** the dips' wording as built; ADR-0022's
+four entries appended; the panel and bar to be built as drawn; the preview
+installed. **sofapi** runs it (core, player and UI 1.18.2+git30.d71d711,
+run 45262635911, installed 2026-11-24 06:43 at George's word, the core
+restarted): its measurement's 0.23 ms delay came across as the speakers'
+alignment, switched on; no level stored (`right_db` none).
+**Next:** the panel's and the bar's screens built as drawn; George tries the speaker check and a run on the preview; the manual's room picture retaken; Phase 37's acceptance 5.
 **Before Phase 37 closes** (George, 2026-11-21; acceptance 5): the level at
 the seat against a meter, and the equaliser's and multiroom's measurements
 through the amplifiers - George present for each.
@@ -119,8 +119,8 @@ a group, the plugin off and on, Roon Bridge's own update.
 
 **sofapi runs hot** (2026-11-21): 78 °C with no page; a Home Assistant page with one camera was closed for the heat twice (Finding 157). ADR-0176 P8 kept as it is; George is bringing the temperature down.
 
-**The players** (2026-11-23): **sofapi** on Phase 37's preview
-(core 1.18.2+git29.ca235a9, 1.18.2 with Phase 37's branch;
+**The players** (2026-11-24): **sofapi** on Phase 37's preview
+(core 1.18.2+git30.d71d711, 1.18.2 with Phase 37's branch;
 go-librespot 0.10.7-4, Shairport Sync 5.6.3-1), room correction on, a USB
 isolator on its DAC's cable, in no group since the group test of 21 Nov. On 23 Nov its DAC fell
 silent after the install while sofapi showed the stream running; a USB

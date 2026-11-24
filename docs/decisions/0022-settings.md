@@ -724,3 +724,14 @@ Confirmed by George, 2026-11-23, [ADR-0187](0187-room-measurement-reworked-setup
 |---|---|---|
 | Level match between the speakers | [H] | Always, in full: the louder turned down by the whole measured difference, no warning; nothing matched unless two readings agree within 0.25 dB; at most 12 dB |
 | The speaker check | [H] | Always before measuring, no skip: distance, wiring and level at the head, left and right at position 2 |
+
+### Appended 2026-11-24 — the speakers aligned on their own, the ringing and the dips
+
+Confirmed by George, 2026-11-24, [ADR-0188](0188-speakers-aligned-on-their-own.md) and [ADR-0187](0187-room-measurement-reworked-setup-check-five-positions-timing-mark.md) D7-D8:
+
+| Setting | Mark | Notes |
+|---|---|---|
+| Speakers (the alignment) | [R] | On or off, kept per output; its delay and level play with room correction on or off; *Hear it without* takes it out too |
+| When room correction no longer fits | [H] | A check after a measurement that would move the speakers' sum by more than 1 dB from 20 to 250 Hz says so; switching the alignment off is not warned about |
+| The ringing shown | [H] | At 0.2 s, in the four third octaves that rang most before, per speaker |
+| The dips explained | [H] | 3 dB or more under the target, three at most, a sixth of an octave apart |

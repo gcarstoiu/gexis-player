@@ -323,9 +323,9 @@ From a canvas of mock-ups (made-up numbers), three ways each.
   left as they are*, each dip's frequency and depth, its cause as a tag and
   what may help. It takes the place of the dips in the closing words. Over:
   in the closing words (A); marked on the chart with a sheet (C). The words
-  are the mock-up's, George's to change, but one: the player cannot tell
-  which surface sends the sound back, so a wall's dip says *a wall or the
-  floor* and not *the wall behind* (put to George).
+  are the mock-up's but one: the player cannot tell which surface sends
+  the sound back, so a wall's dip says *a wall or the floor* and not *the
+  wall behind* (George kept that, 2026-11-24).
 
 **How (Claude's, from C6 and C9):**
 - **The ringing:** each speaker at the head, its kept sweeps averaged as
