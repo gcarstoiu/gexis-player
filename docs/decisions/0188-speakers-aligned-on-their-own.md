@@ -116,3 +116,12 @@ sheet of mock-ups (made-up numbers) how it should sit on the room page.
   which marked the change on the sheet; the check opens on *Before* with
   *Check the speakers*, its steps 1-3 of 3; *far* offers *Carry on*. The
   panel's running screen says *Checking the speakers*, without positions.
+- **The panel and the bars** (C6, P1-P3, 2026-11-24, 3d65d70e): the panel's header
+  two named switches, *Speakers* with its delay and cut under the name
+  (`speakersShort`), *Correction* with its reach; the stale note in the last
+  measurement's card, with the bass's cuts alone beside it as drawn; the
+  bar's side column the two switches stacked, the alignment's figures on a
+  line of their own in its measurement card (the bar's width). On a bar
+  narrower than 1500 px the words are shorter: *Takes out both*, *Checked
+  since: measure again*, *Measure or check*. The sheet to the phone says
+  *From your phone*: to measure the room or check the speakers.

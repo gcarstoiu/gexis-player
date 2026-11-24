@@ -81,7 +81,10 @@ installed. **sofapi** runs it (core, player and UI 1.18.2+git30.d71d711,
 run 45262635911, installed 2026-11-24 06:43 at George's word, the core
 restarted): its measurement's 0.23 ms delay came across as the speakers'
 alignment, switched on; no level stored (`right_db` none).
-**Next:** the panel's and the bar's screens built as drawn; George tries the speaker check and a run on the preview; the manual's room picture retaken; Phase 37's acceptance 5.
+**The panel and the bar built as drawn** (2026-11-24, 3d65d70e: the two
+switches named side by side, the stale note in the last measurement's card,
+*Measure or check, from your phone*); its preview builds on GitHub, not
+installed. **Next:** George tries the speaker check and a run on the preview; the manual's room picture retaken; Phase 37's acceptance 5.
 **Before Phase 37 closes** (George, 2026-11-21; acceptance 5): the level at
 the seat against a meter, and the equaliser's and multiroom's measurements
 through the amplifiers - George present for each.
