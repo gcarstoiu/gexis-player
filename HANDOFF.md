@@ -77,14 +77,19 @@ d71d7110. The canvas (private, George's) also holds the panel's and the bar's
 screens for the switch (ADR-0188 C6), not built until George has seen them.
 **George's answers (2026-11-24):** the dips' wording as built; ADR-0022's
 four entries appended; the panel and bar to be built as drawn; the preview
-installed. **sofapi** runs it (core, player and UI 1.18.2+git30.d71d711,
-run 45262635911, installed 2026-11-24 06:43 at George's word, the core
-restarted): its measurement's 0.23 ms delay came across as the speakers'
-alignment, switched on; no level stored (`right_db` none).
+installed. **sofapi** ran it from 2026-11-24 06:43 (core, player and UI
+1.18.2+git30.d71d711, run 45262635911, at George's word): its
+measurement's 0.23 ms delay came across as the speakers' alignment,
+switched on, no level. **George ran *Check the speakers* on its own** the
+same day (14:35, kept): the left 0.17 ms later, the right turned down
+1.8 dB, 5.8 cm; not stale.
 **The panel and the bar built as drawn** (2026-11-24, 3d65d70e: the two
 switches named side by side, the stale note in the last measurement's card,
-*Measure or check, from your phone*); its preview builds on GitHub, not
-installed. **Next:** George tries the speaker check and a run on the preview; the manual's room picture retaken; Phase 37's acceptance 5.
+*Measure or check, from your phone*); **installed on sofapi** 2026-11-24
+16:41 at George's word (player and UI 1.18.2+git31.3d65d70, run
+45335936759; the core unchanged at git30, restarted). **Next:** a full run
+on it at about 60 dB at the seat, the DAC's filter now *Sharp roll-off*;
+the manual's room picture retaken; Phase 37's acceptance 5.
 **Before Phase 37 closes** (George, 2026-11-21; acceptance 5): the level at
 the seat against a meter, and the equaliser's and multiroom's measurements
 through the amplifiers - George present for each.
@@ -123,7 +128,7 @@ a group, the plugin off and on, Roon Bridge's own update.
 **sofapi runs hot** (2026-11-21): 78 °C with no page; a Home Assistant page with one camera was closed for the heat twice (Finding 157). ADR-0176 P8 kept as it is; George is bringing the temperature down.
 
 **The players** (2026-11-24): **sofapi** on Phase 37's preview
-(core 1.18.2+git30.d71d711, 1.18.2 with Phase 37's branch;
+(core 1.18.2+git30.d71d711, player and UI git31.3d65d70, 1.18.2 with Phase 37's branch;
 go-librespot 0.10.7-4, Shairport Sync 5.6.3-1), room correction on, a USB
 isolator on its DAC's cable, in no group since the group test of 21 Nov. On 23 Nov its DAC fell
 silent after the install while sofapi showed the stream running; a USB
