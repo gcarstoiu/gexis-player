@@ -101,13 +101,14 @@ target at a filter's frequency, which one not logged. Its log lines in
 played at its head; ADR-0187 amended - the check lower only where its sweeps
 lack room, the filter behind a worse place logged - and the ticks centred,
 built on `ph-room-measurement` 01b0c582 (core tests pass; ticks checked in a
-mocked render). **Owed to George, one at a time:** whether
-the check changes the correction (B: a correction above the bass taken out
-where the check shows the head's area, weighted as the design, further from
-the target with it); then whether a run short of 60 dB stops to ask for the
-amplifier turned up. Mock-ups with George (private canvases): the
-positions' drawing D-G, and the room page A-C with a history H1-H3 (George
-asked for measurements kept and any one restorable). **Next:** a finding
+mocked render). **George decided (2026-11-25):** the check takes out what makes it worse
+(ADR-0187 D9, built 9f9db7ac), the positions drawn one move at a time (D10,
+F; built 583c0dbc), the room page as three steps with a history to go back
+to (ADR-0189, B and H2; being built). **sofapi** on the preview from
+2026-11-25 13:22 (core, player and UI 1.18.2+git32.01b0c58, run
+45611495208, at George's word; core restarted, no warnings) - 9f9db7ac and
+583c0dbc not yet on it. **Owed to George:** whether a run short of 60 dB
+stops to ask for the amplifier turned up. **Next:** a finding
 for the run; a preview with the changes, at George's word; the manual's
 room picture; Phase 37's acceptance 5.
 **Before Phase 37 closes** (George, 2026-11-21; acceptance 5): the level at
