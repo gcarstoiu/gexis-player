@@ -110,8 +110,10 @@ tests pass, checked in mocked renders of B1-B4 and H2a-d). **sofapi** on the pre
 45642482277, at George's word; idle first, dry run, core restarted, no
 warnings; the 25 Nov measurement seeded as the history's first entry, the
 served UI the new page). **George decided (2026-11-25):** a run short of
-60 dB stops and asks (ADR-0187 D12, C14) - being built. **Next:** D12; a
-finding for the run; the manual's room picture; Phase 37's acceptance 5.
+60 dB stops and asks (ADR-0187 D12, C14) - built 24f4d1ca (3686 core
+tests pass; the screen checked in a mocked render), not yet on sofapi.
+**Next:** a finding for the run; D12 on sofapi at George's word; the
+manual's room picture; Phase 37's acceptance 5.
 **Before Phase 37 closes** (George, 2026-11-21; acceptance 5): the level at
 the seat against a meter, and the equaliser's and multiroom's measurements
 through the amplifiers - George present for each.
