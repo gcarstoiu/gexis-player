@@ -1111,6 +1111,25 @@ exactly: **Keep**, **Keep and measure** (straight on to step 5, without
 checking again) or **Discard**. Kept, room correction's card says so, and
 **Measure again** is lit, until the room is measured again.
 
+**On the phone the page is three steps** on one line, each marked done,
+next or to do again, the next one lit - even before anything is measured:
+**Playing now** first, saying what is heard, with **Hear it without**; then
+**1 Speakers** (the alignment's switch, its rows, **Check the speakers**),
+**2 Room** (room correction's switch, how far it reaches, its corrections,
+**Measure the room** or **Measure again**) and **3 Checked** (the chart, the
+ringing and the dips). When a later speaker check leaves the correction
+behind, step 2 turns amber with **Measure again** at its top.
+
+**Earlier**, under the steps, keeps every measurement and every speaker
+check, newest first: when, how close it came, any position further from the
+target. A measurement opens in place with its chart, drawn from its own
+check, and **Go back to this one**: its correction plays at once, the one it
+replaces moving into *Earlier*, nothing lost. The speakers' alignment it was
+measured with comes back with it; if that differs from today's, you choose -
+its own, if the speakers are back where they stood, or today's, and room
+correction then says it no longer fits exactly until the room is measured
+again. A factory reset clears *Earlier* with the rest.
+
 On its page:
 
 - **On or off.** Off, the correction is taken out; with the equaliser and

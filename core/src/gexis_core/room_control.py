@@ -67,7 +67,8 @@ class RoomControl:
                  publish: Callable[[dict], None] = lambda summary: None,
                  changed: Callable[[], None] = lambda: None,
                  today: Callable[[], str] | None = None,
-                 run_options: dict | None = None):
+                 run_options: dict | None = None,
+                 history=None):
         from gexis_core import room_mic
         self._store = store
         self._output = output
@@ -98,7 +99,11 @@ class RoomControl:
         self._run_card: str | None = None
         self._ended: dict | None = None
         self._ended_run = None       # the run whose end that is
+        #: ADR-0189: every measurement and speaker check kept (`room_history`);
+        #: None keeps none (the tests that do not ask for it).
+        self._history = history
         self._redesign_kept()
+        self._seed_history()
 
     def _redesign_kept(self) -> None:
         """**Measurements kept from before ADR-0175's amendment** (George,
@@ -126,6 +131,26 @@ class RoomControl:
                 logger.info("room correction: %d kept measurement(s) redesigned from both speakers", done)
         except Exception:
             logger.exception("room correction: a kept measurement could not be redesigned")
+
+    def _seed_history(self) -> None:
+        """**A measurement kept before the history began** (ADR-0189 C2) is
+        its first entry, once; a failure never stops the start."""
+        if self._history is None:
+            return
+        try:
+            room = self.state()
+            seeded = 0
+            for card, here in room.outputs.items():
+                if here.measured is not None and here.entry is None:
+                    entry = self._history.seed(card, here.measured)
+                    if entry:
+                        room = room._with(card, replace(here, entry=entry))
+                        seeded += 1
+            if seeded:
+                self._store.set(rc.KEY, room.to_settings())
+                logger.info("room history: %d kept measurement(s) entered", seeded)
+        except Exception:
+            logger.exception("room history: a kept measurement could not be entered")
 
     # -- reading ------------------------------------------------------------------
 
@@ -244,6 +269,7 @@ class RoomControl:
                                    positions=measured.positions)
             out["cuts"] = {k: rc.shown(measured.cuts(k)) for k in rc.CHANNELS}
             out["above"] = {k: rc.shown(measured.above(k)) for k in rc.CHANNELS}
+        out["history"] = self._history_rows(output.card, here)
         pending = getattr(self.run, "pending", None) if self.run is not None else None
         if pending is not None and self.running():
             out["pending"] = {
@@ -253,6 +279,71 @@ class RoomControl:
                 "cuts": {k: rc.shown(pending.cuts(k)) for k in rc.CHANNELS},
                 "above": {k: rc.shown(pending.above(k)) for k in rc.CHANNELS}}
         return out
+
+    def _history_rows(self, card: str, here: rc.OutputRoom) -> list[dict]:
+        """**The history** (ADR-0189 D2), newest first: each entry's
+        summary - when, what, how close it came, the positions further, the
+        alignment it was made with, and whether it plays now (`playing`: the
+        measurement in use; `aligned`: the speaker check whose alignment
+        plays). `differs`: going back would leave today's alignment behind
+        (C3, the stale guard)."""
+        if self._history is None:
+            return []
+        today = here.speakers
+        rows = []
+        for e in self._history.entries(card):
+            a = e.alignment
+            row = {"id": e.id, "kind": e.kind, "date": e.date, "day": day(e.date), "year": day(e.date, year=True),
+                   "time": e.time,
+                   "delay_ms": None if a is None else [round(d, 2) for d in a.delay],
+                   "level_db": None if a is None else [round(g, 1) for g in a.level],
+                   "distance_cm": None if a is None else a.distance_cm}
+            m = e.measurement
+            if e.kind == "room" and m is not None:
+                row.update(playing=e.id == here.entry, checked=m.checked, within=m.within(), positions=m.positions,
+                           worse=[n for n, _ in m.worse], range=m.range, peaks_down=round(m.peaks_down()),
+                           differs=bool(today is not None and not m.nothing_to_cut
+                                        and rc.pair_moves_db(m.delay, m.level, today.delay, today.level)
+                                        > rc.STALE_DB))
+            else:
+                row.update(aligned=e.id == here.speakers_entry)
+            rows.append(row)
+        return rows
+
+    def history_entry(self, entry_id: str) -> dict:
+        """**One measurement opened** (ADR-0189 D2, H2b): its chart as its
+        check measured it, its figures, its corrections."""
+        output = self._output()
+        if output is None or self._history is None:
+            raise RoomError("No history here.")
+        e = self._history.get(output.card, entry_id)
+        if e is None or e.measurement is None:
+            raise RoomError("No such measurement.")
+        m = e.measurement
+        return {"id": e.id, "chart": rc.chart(m), **self._figures(m), "checked": m.checked,
+                "cuts": {k: rc.shown(m.cuts(k)) for k in rc.CHANNELS},
+                "above": {k: rc.shown(m.above(k)) for k in rc.CHANNELS}}
+
+    async def restore(self, entry_id: str, alignment: str = "its") -> dict:
+        """**Going back to a measurement** (ADR-0189 C3): its correction
+        plays; `alignment` "its" brings back the alignment it was measured
+        with, "today" keeps today's (the stale note then says so)."""
+        if alignment not in ("its", "today"):
+            raise RoomError("The alignment is its or today.")
+        if self._history is None:
+            raise RoomError("No history here.")
+        async with self._lock:
+            if self._held():
+                raise RoomError("Not while the room is being measured.")
+            card = self._card()
+            e = self._history.get(card, entry_id)
+            if e is None or e.measurement is None:
+                raise RoomError("No such measurement.")
+            old = self.state()
+            new = old.go_back(card, e.measurement, e.id, its=alignment == "its")
+            await self._commit(old, new, card)
+        logger.info("room: went back to %s for %s (%s alignment)", entry_id, card, alignment)
+        return self.snapshot()
 
     @staticmethod
     def _speakers(here: rc.OutputRoom) -> dict | None:
@@ -446,7 +537,8 @@ class RoomControl:
         stored at once - *Keep and measure* goes on measuring with it - and
         heard once the run has put the stage back."""
         async with self._lock:
-            self._store.set(rc.KEY, self.state().keep_speakers(self._run_card, alignment).to_settings())
+            entry = self._history.add_speakers(self._run_card, alignment) if self._history is not None else None
+            self._store.set(rc.KEY, self.state().keep_speakers(self._run_card, alignment, entry).to_settings())
         self._changed()
         logger.info("room: kept the speakers' alignment for %s", self._run_card)
 
@@ -454,8 +546,10 @@ class RoomControl:
         card = self._run_card
         if measurement is not None:
             async with self._lock:
-                self._store.set(rc.KEY, self.state().keep(card, measurement,
-                                                          getattr(self.run, "alignment", None)).to_settings())
+                alignment = getattr(self.run, "alignment", None)
+                entry = (self._history.add_measurement(card, measurement, alignment)
+                         if self._history is not None else None)
+                self._store.set(rc.KEY, self.state().keep(card, measurement, alignment, entry).to_settings())
             self._changed()
             logger.info("room: kept the measurement for %s", card)
         try:

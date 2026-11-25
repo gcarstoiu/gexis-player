@@ -156,7 +156,17 @@ miniDSP (checked, kept by its serial); `POST /room-correction/run {action}`
 begins a measurement (`measure`) or the check alone (`speakers`) and answers
 its steps (`start`, `next`, `check`, `skip`, `keep`, `keep_and_measure`,
 `discard`, `again`, `cancel`, `done`). A refusal is
-a 400 with the sentence to show (*Plug in the UMIK-1.*).
+a 400 with the sentence to show (*Plug in the UMIK-1.*). `history` (ADR-0189): every measurement and speaker check kept for the
+output, newest first - `id`, `kind` (`room` or `speakers`), `date`, `day`,
+`time` (null when kept before the history began), the alignment it was made
+with (`delay_ms`, `level_db`, `distance_cm`), and for a measurement
+`checked`, `within`, `worse` (positions), `positions`, `range`,
+`peaks_down`, `playing` (the one in use) and `differs` (its alignment far
+enough from today's to leave the bass behind); for a speaker check
+`aligned` (its alignment plays). `GET /room-correction/history/{id}` gives
+one measurement's `chart`, figures and corrections; `POST
+/room-correction/restore {id, alignment}` goes back to it, `alignment`
+`its` (the one it was measured with) or `today`.
 
 ## Groups
 

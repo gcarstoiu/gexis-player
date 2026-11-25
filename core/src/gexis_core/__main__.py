@@ -107,6 +107,7 @@ from gexis_core import announce, backups, bluealsa_volume, components, outputs, 
 from gexis_core import plugin_catalogue
 from gexis_core import eq_control
 from gexis_core import room_control as room_control_module
+from gexis_core import room_history
 from gexis_core import room_correction
 from gexis_core import group as group_module
 from gexis_core import multiroom as multiroom_module
@@ -5109,6 +5110,8 @@ async def main() -> None:
         address=lambda: f"{device_name.hostname()}.local:{config.state_port}",
         publish=state_store.set_room,
         changed=state_store.bump_settings_revision,
+        # ADR-0189: every measurement and speaker check kept, to go back to.
+        history=room_history.History(),
     )
     asyncio.ensure_future(equaliser.sync())
     asyncio.ensure_future(_room_volume_after_restart())

@@ -1001,7 +1001,14 @@ use - the whole file; one kept to 2 kHz before Phase 30 is asked for again
 (`calibration.again`). A measurement from before Phase 30 has no `range`: it
 is the bass's, curves to 500 Hz, and holds its output at `bass`. `/state`
 carries a summary as `room`; the curves and a measurement in progress are
-`GET /room-correction` ([api.md](api.md)).
+`GET /room-correction` ([api.md](api.md)). **The history** (ADR-0189,
+`room_history`): every measurement kept (whole, its check's curves
+included, with the alignment it was made with) and every speaker check
+kept on its own, a JSON file each under `/var/lib/gexis/room-history/<card>/`,
+named by time and kind; the settings keep which one plays (`entry`,
+`speakers_entry`). A measurement kept before the history began is entered
+once at start. Going back writes the settings only; a factory reset removes
+the folder.
 
 ## Multiroom: a group of players
 

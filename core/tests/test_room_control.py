@@ -34,7 +34,7 @@ class Store:
 
 
 class Rig:
-    def __init__(self, mic="found", store=None):
+    def __init__(self, mic="found", store=None, history=None):
         self.store = store or Store()
         self.calls = []
         self.eq = False
@@ -64,7 +64,7 @@ class Rig:
             take=hook("take"), release=hook("release"), loud=hook("loud"), quiet=hook("quiet"),
             eq_on=lambda card: self.eq, grouped=lambda: self.grouped, find_mic=find,
             audio=lambda mic, cal: self.audio, publish=self.summaries.append, today=lambda: "2026-11-05",
-            run_options={"sleep": fast, "sweep_s": 1.0})
+            run_options={"sleep": fast, "sweep_s": 1.0}, history=history)
 
     def names(self):
         return [c[0] for c in self.calls]
@@ -660,3 +660,67 @@ async def test_a_redesign_that_fails_never_stops_the_start(monkeypatch):
     monkeypatch.setattr(room_run, "redesign", broken)
     again = Rig(store=rig.store)
     assert again.control.state().output(DAC.card).measured.bass_from == rc.EACH
+
+
+# ---- ADR-0189: the history ------------------------------------------------------------
+
+def _clock():
+    import datetime
+    at = [datetime.datetime(2026, 11, 25, 11, 0)]
+
+    def now():
+        at[0] += datetime.timedelta(minutes=7)
+        return at[0]
+    return now
+
+
+async def test_every_measurement_is_kept_and_one_can_be_gone_back_to(tmp_path):
+    """ADR-0189 D2, C2-C3: each measurement kept is an entry, newest first,
+    the one playing marked; going back plays the older one's correction,
+    the switches as they were, and marks it."""
+    from gexis_core.room_history import History
+    rig = Rig(history=History(tmp_path, now=_clock()))
+    await rig.measure()
+    first = rig.control.state().output(DAC.card)
+    await rig.measure()
+    rows = rig.control.snapshot()["history"]
+    assert [r["kind"] for r in rows] == ["room", "room"] and rows[0]["id"] > rows[1]["id"]
+    assert [r["playing"] for r in rows] == [True, False]
+    assert rows[1]["time"] and rows[1]["checked"] is True and rows[1]["differs"] is False
+    opened = rig.control.history_entry(rows[1]["id"])
+    assert opened["chart"] is not None and opened["checked"] is True
+    await rig.control.restore(rows[1]["id"], "its")
+    here = rig.control.state().output(DAC.card)
+    assert here.entry == rows[1]["id"] and here.measured.as_dict() == first.measured.as_dict()
+    assert here.on and here.aligning and not here.stale
+    assert [r["playing"] for r in rig.control.snapshot()["history"]] == [False, True]
+    with pytest.raises(RoomError):
+        await rig.control.restore("../../etc/passwd", "its")
+    with pytest.raises(RoomError):
+        await rig.control.restore(rows[0]["id"], "neither")
+
+
+async def test_a_speaker_check_on_its_own_is_kept_and_marked_while_it_plays(tmp_path):
+    """ADR-0189 C2, C4: the check alone is an entry of its own, with its
+    delay and level; its alignment marked while it plays."""
+    from gexis_core.room_history import History
+    rig = Rig(history=History(tmp_path, now=_clock()))
+    await rig.measure()
+    await check_alone(rig, louder=1.5)
+    await asyncio.wait_for(rig.control.run.wait(), 10)
+    rows = rig.control.snapshot()["history"]
+    assert [r["kind"] for r in rows] == ["speakers", "room"]
+    assert rows[0]["aligned"] is True and rows[0]["level_db"] is not None
+
+
+async def test_a_measurement_kept_before_the_history_is_its_first_entry(tmp_path):
+    """ADR-0189 C2: once, dated by the measurement, its time unknown."""
+    from gexis_core.room_history import History
+    rig = Rig()
+    await rig.measure()
+    again = Rig(store=rig.store, history=History(tmp_path, now=_clock()))
+    rows = again.control.snapshot()["history"]
+    assert len(rows) == 1 and rows[0]["playing"] and rows[0]["time"] is None
+    assert rows[0]["date"] == rig.control.state().output(DAC.card).measured.date
+    third = Rig(store=again.store, history=History(tmp_path, now=_clock()))
+    assert len(third.control.snapshot()["history"]) == 1, "never twice"

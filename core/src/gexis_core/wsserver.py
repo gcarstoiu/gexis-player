@@ -2312,6 +2312,22 @@ class StateServer:
             return await self._page_gives_way(lambda: self._room_call(lambda: self._room.start(action)))
         return await self._room_call(lambda: self._room.tap(action))
 
+    async def _handle_room_history(self, request: web.Request) -> web.Response:
+        """One measurement in the history, opened (ADR-0189 D2)."""
+        entry_id = request.match_info["id"]
+
+        async def opened():
+            return self._room.history_entry(entry_id)
+        return await self._room_call(opened)
+
+    async def _handle_room_restore(self, request: web.Request) -> web.Response:
+        """Going back to a measurement in the history (ADR-0189 C3):
+        `{"id": ..., "alignment": "its" | "today"}`."""
+        body = await self._json_body(request)
+        if body is None or not isinstance(body.get("id"), str):
+            return web.json_response({"error": 'body must be {"id": ..., "alignment": ...}'}, status=400)
+        return await self._room_call(lambda: self._room.restore(body["id"], body.get("alignment", "its")))
+
     async def _handle_idle_request(self, request: web.Request) -> web.Response:
         """**ADR-0101: the phone's idle-screen toggle.** Attention first, as a
         touch on the panel is (George: "Timers would restart from that
@@ -4146,6 +4162,8 @@ class StateServer:
         app.router.add_put("/room-correction", self._handle_room_set)
         app.router.add_post("/room-correction/calibration", self._handle_room_calibration)
         app.router.add_post("/room-correction/run", self._handle_room_run)
+        app.router.add_get("/room-correction/history/{id}", self._handle_room_history)
+        app.router.add_post("/room-correction/restore", self._handle_room_restore)
         app.router.add_post("/peppy/{action}", self._handle_peppy)
         app.router.add_get("/settings", self._handle_settings)
         app.router.add_get("/notices/{name}", self._handle_notice)

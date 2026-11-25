@@ -29,6 +29,8 @@ REMOVED = (
     "var/lib/gexis-core/settings.db", "var/lib/gexis-core/settings.db-wal", "var/lib/gexis-core/settings.db-shm",
     "var/lib/gexis-core/enrichment.db", "var/lib/gexis-core/enrichment.db-wal", "var/lib/gexis-core/enrichment.db-shm",
     "var/cache/gexis-core",
+    # Room correction's history of measurements (ADR-0189), as the settings.
+    "var/lib/gexis/room-history",
     # The page Home Assistant kept loaded: its address can carry a token
     # (ADR-0176 K1; the review of 1.16.1).
     "var/lib/gexis-core/page-preload.json",

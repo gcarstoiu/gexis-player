@@ -421,3 +421,18 @@ def test_the_speakers_delay_is_kept_and_played_at_either_reach_never_without():
     assert room.stage("DAC").delay == (0.0, 0.42)
     assert room.set_reach("DAC", rc.BASS).stage("DAC").delay == (0.0, 0.42)
     assert room.set_without("DAC", True).stage("DAC").delay == (0.0, 0.0)
+
+
+def test_going_back_brings_its_alignment_or_keeps_todays_with_the_stale_note():
+    """ADR-0189 C3: its alignment comes back with it, switched as today's;
+    or today's stays, and the correction no longer fits exactly."""
+    then = rc.Measurement("2026-11-12", True, {"L": speaker(), "R": speaker()}, delay=(0.95, 0.0))
+    now = rc.Measurement("2026-11-21", True, {"L": speaker(), "R": speaker()}, delay=(0.17, 0.0))
+    room = rc.Room().keep("AUDIO", now, entry="20261121-100000-room")
+    its = room.go_back("AUDIO", then, "20261112-201500-room", its=True).output("AUDIO")
+    assert its.measured is then and its.entry == "20261112-201500-room"
+    assert its.speakers.delay == (0.95, 0.0) and its.speakers.on and its.on and not its.stale
+    today = room.go_back("AUDIO", then, "20261112-201500-room", its=False).output("AUDIO")
+    assert today.speakers.delay == (0.17, 0.0) and today.stale
+    back = rc.Room.from_settings(room.go_back("AUDIO", then, "20261112-201500-room", its=False).to_settings())
+    assert back.output("AUDIO").entry == "20261112-201500-room"

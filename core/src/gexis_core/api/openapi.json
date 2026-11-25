@@ -8547,6 +8547,140 @@
           "ADR-0169"
         ]
       }
+    },
+    "/room-correction/history/{id}": {
+      "get": {
+        "operationId": "room_correction_history_entry",
+        "x-gexis-stability": "internal",
+        "x-gexis-adr": [
+          "ADR-0189"
+        ],
+        "tags": [
+          "Room correction"
+        ],
+        "summary": "One measurement in the history, opened",
+        "description": "A measurement from `history` in `GET /room-correction`, by its `id`: its `chart` as its own check measured it, its figures (`peaks_down`, `within`, `worse`, `taken`, `dips`) and its corrections (`cuts`, `above`).",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{8}-\\d{6}-(room|speakers)(-\\d+)?$"
+            },
+            "example": "20261125-114257-room"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The measurement.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A request room correction refuses, with the sentence to show: no microphone, no calibration, in a group, an update installing, not being measured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Room correction is not wired up (a core without it): `room correction is not wired up`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/room-correction/restore": {
+      "post": {
+        "operationId": "room_correction_restore",
+        "x-gexis-stability": "internal",
+        "x-gexis-adr": [
+          "ADR-0189"
+        ],
+        "tags": [
+          "Room correction"
+        ],
+        "summary": "Go back to a measurement in the history",
+        "description": "Its correction plays at once in place of the one kept, the switches as they were (ADR-0189 C3). `alignment` `its` brings back the speakers' alignment it was measured with, `today` keeps today's - room correction then says it no longer fits exactly (`stale`) when the two are far enough apart. Not while a run measures.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "id"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "alignment": {
+                    "type": "string",
+                    "enum": [
+                      "its",
+                      "today"
+                    ],
+                    "default": "its"
+                  }
+                }
+              },
+              "example": {
+                "id": "20261112-201500-room",
+                "alignment": "its"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done; the page's state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoomCorrection"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A request room correction refuses, with the sentence to show: no microphone, no calibration, in a group, an update installing, not being measured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Room correction is not wired up (a core without it): `room correction is not wired up`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {

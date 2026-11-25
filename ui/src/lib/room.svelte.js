@@ -31,6 +31,28 @@ export const setRoom = (changes) => call('PUT', '/room-correction', changes);
 export const giveCalibration = (text, name) => call('POST', '/room-correction/calibration', { text, name });
 /** `measure` begins a run; then the phone's buttons. */
 export const runRoom = (action) => call('POST', '/room-correction/run', { action });
+/** ADR-0189: one measurement in the history, opened. */
+export const roomEntry = (id) => call('GET', `/room-correction/history/${encodeURIComponent(id)}`);
+/** ADR-0189 C3: going back to it, with `its` alignment or `today`'s. */
+export const restoreRoom = (id, alignment) => call('POST', '/room-correction/restore', { id, alignment });
+
+/** **An entry in *Earlier*** (ADR-0189 D2, H2a-b): what it was, as its row
+ *  and its opened card say it. */
+export function entryWhat(e) {
+  if (e.kind === 'speakers') return 'Speakers checked on their own';
+  return e.checked ? `Room measured · checked at ${countWord(e.positions ?? POSITIONS)} positions` : 'Room measured · not checked';
+}
+export function entryTags(e) {
+  if (e.kind === 'speakers') return [{ text: speakersShort({ delay_ms: e.delay_ms, level_db: e.level_db }), tone: 'blue' }];
+  const tags = [];
+  if (e.within != null) tags.push({ text: `${e.checked ? 'Within' : 'Expected within'} ${halfDb(e.within)} dB`, tone: e.checked ? 'lms' : '' });
+  if (e.checked) {
+    if (!e.worse?.length) tags.push({ text: 'None worse', tone: '' });
+    else tags.push({ text: e.worse.length === 1 ? `${e.worse[0]} further` : `${e.worse.join(', ')} further`, tone: 'amb' });
+  }
+  if (e.differs) tags.push({ text: `Speakers ${speakersShort({ delay_ms: e.delay_ms, level_db: e.level_db })}`, tone: 'blue' });
+  return tags;
+}
 
 /** **The full picture, kept fresh**: read now, and again whenever the
  *  summary changes (a step, a switch) - and, while `poll` says so, every

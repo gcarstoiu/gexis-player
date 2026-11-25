@@ -108,8 +108,9 @@
     if (toPage) onpage?.();
     else onback?.();
   }
-  //: How a run that has ended takes this page: kept, to the page; discarded
-  //: or nothing to cut, back to Audio; cancelled, its own screen. An end
+  //: How a run that has ended takes this page: kept, discarded or nothing to
+  //: cut, to the page (ADR-0189 C1: there never measured too); cancelled,
+  //: its own screen. An end
   //: this page did not see happen (the page opened after it) is cleared
   //: quietly, and Before shows.
   let sawRun = $state(false);
@@ -123,7 +124,7 @@
     handled = how;
     if (how !== 'kept' && how !== 'discarded' && how !== 'done') return;
     if (!sawRun) sayDone();
-    else doneAndLeave(how === 'kept');
+    else doneAndLeave(true);
   });
 
   async function pick(event) {
@@ -326,8 +327,8 @@
   });
   //: Back from *Measuring cancelled* says the end has been shown, as Done
   //: does: the page went back to it at its next change (the review of 1.16.1).
-  const back = () => (screenName === 'cancelled' ? doneAndLeave(!!full?.measured)
-    : full?.measured ? onpage?.() : onback?.());
+  //: ADR-0189 C1: the page is there never measured too, so back is to it.
+  const back = () => (screenName === 'cancelled' ? doneAndLeave(true) : onpage?.());
 
   //: ADR-0187 D7-D8 (George's choices B and B, 2026-11-23): the ringing
   //: for the speaker shown, on the result; the dips the bass keeps, on the

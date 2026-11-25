@@ -96,6 +96,11 @@ speakers*): the delay and the level it sets have their own switch and play
 with room correction on or off. After a measurement, the result shows how
 the bass's ringing changed and explains the dips it leaves.
 
+**Can I go back to an earlier room measurement?**
+Yes. On the phone, *Earlier* under the room page's three steps keeps every
+measurement and speaker check; open one and **Go back to this one**. The one
+playing is kept too, so you can come back to it.
+
 **What does *Limited testing* beside Full range mean?**
 Room correction above the bass has so far been tried in one room. It is
 designed to change little - 3 dB at most, broad - and the check after a

@@ -422,6 +422,11 @@ class OutputRoom:
     measured: Measurement | None = None
     reach: str = FULL
     speakers: Alignment | None = None
+    #: **ADR-0189 C2**: the history's entry of the measurement playing, and
+    #: of the speaker check on its own whose alignment plays (None: the
+    #: alignment is the measurement's, or kept before the history).
+    entry: str | None = None
+    speakers_entry: str | None = None
 
     @property
     def aligning(self) -> bool:
@@ -442,7 +447,8 @@ class OutputRoom:
     def as_dict(self) -> dict:
         return {"on": self.on, "without": self.without, "reach": self.reach,
                 "measured": self.measured.as_dict() if self.measured else None,
-                "speakers": self.speakers.as_dict() if self.speakers else None}
+                "speakers": self.speakers.as_dict() if self.speakers else None,
+                "entry": self.entry, "speakers_entry": self.speakers_entry}
 
 
 @dataclass(frozen=True)
@@ -607,10 +613,12 @@ class Room:
             here = replace(here, without=False)
         return self._with(card, here)
 
-    def keep_speakers(self, card: str, alignment: Alignment) -> Room:
+    def keep_speakers(self, card: str, alignment: Alignment, entry: str | None = None) -> Room:
         """*Keep* after the check on its own (ADR-0188 D1): the alignment
-        replaces the last and plays; room correction stays as measured."""
-        return self._with(card, replace(self.output(card), speakers=replace(alignment, on=True)))
+        replaces the last and plays; room correction stays as measured.
+        `entry`: its place in the history (ADR-0189)."""
+        return self._with(card, replace(self.output(card), speakers=replace(alignment, on=True),
+                                        speakers_entry=entry))
 
     def set_reach(self, card: str, reach: str) -> Room:
         """**How far it reaches** (ADR-0177): saved, heard at once; only
@@ -625,15 +633,35 @@ class Room:
             raise RoomError("This measurement covers the bass only. Measure again to reach the full range.")
         return self._with(card, replace(here, reach=reach))
 
-    def keep(self, card: str, measurement: Measurement, alignment: Alignment | None = None) -> Room:
+    def keep(self, card: str, measurement: Measurement, alignment: Alignment | None = None,
+             entry: str | None = None) -> Room:
         """*Keep it*: the new measurement replaces the old one, and the
         correction is switched on, compared from the start again, reaching as
         far as it was made (George, 2026-11-07: a new one starts at the full
         range). Its check is kept as the speakers' alignment, switched on
-        (ADR-0188 C1): the sweeps were made with it."""
+        (ADR-0188 C1): the sweeps were made with it. `entry`: its place in
+        the history (ADR-0189)."""
         return self._with(card, OutputRoom(on=not measurement.nothing_to_correct, without=False,
                                            measured=measurement, reach=measurement.range,
-                                           speakers=replace(alignment or Alignment.of(measurement), on=True)))
+                                           speakers=replace(alignment or Alignment.of(measurement), on=True),
+                                           entry=entry))
+
+    def go_back(self, card: str, measurement: Measurement, entry: str, its: bool) -> Room:
+        """**Going back to a measurement in the history** (ADR-0189 C3): its
+        correction plays in place of the one kept, the switches as they
+        were (H2c: *unchanged*), the reach held to what it was made for;
+        `its`: the alignment it was measured with comes back too, switched
+        as today's is - else today's stays, and with it the stale note."""
+        here = self.output(card)
+        on = here.on and not measurement.nothing_to_correct
+        reach = here.reach if measurement.range == FULL else BASS
+        speakers, speakers_entry = here.speakers, here.speakers_entry
+        if its:
+            speakers = Alignment.of(measurement, on=here.speakers.on if here.speakers else True)
+            speakers_entry = None
+        aligning = speakers is not None and speakers.on
+        return self._with(card, OutputRoom(on, here.without and (on or aligning), measurement, reach, speakers,
+                                           entry, speakers_entry))
 
     def with_calibration(self, cal: Calibration) -> Room:
         microphones = dict(self.microphones)
@@ -722,8 +750,11 @@ class Room:
                     # was - nothing heard changes.
                     speakers = Alignment.of(measured, on=on)
                 aligning = speakers is not None and speakers.on
+                entry, speakers_entry = item.get("entry"), item.get("speakers_entry")
                 outputs[str(k)] = OutputRoom(on, (on or aligning) and bool(item.get("without", False)), measured,
-                                             reach, speakers)
+                                             reach, speakers,
+                                             entry if isinstance(entry, str) and measured is not None else None,
+                                             speakers_entry if isinstance(speakers_entry, str) else None)
             except AttributeError:
                 continue
         microphones = {}

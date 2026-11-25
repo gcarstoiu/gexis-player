@@ -314,10 +314,17 @@ from the side, the move across the floor then the height played in turn by
 SVG animation on the *move* screens, still elsewhere and with reduced
 motion);
 `RoomQuick.svelte` is the *Room* control in the volume drawer, the bar's tray
-and the phone's volume row. The phone's page has the *Speakers* card
-(ADR-0188: its own switch, the alignment's rows, *Check the speakers*, which
-opens the flow's *Before* for the check alone, `want`), and an amber note in
-room correction's card when `stale`; the flow takes the check alone
+and the phone's volume row. The phone's page is three steps on one rail
+(ADR-0189 D1, George's B): *Playing now* (pills for what is heard, *Hear it
+without*), then 1 *Speakers* (ADR-0188: its own switch, the alignment's rows,
+*Check the speakers*, which opens the flow's *Before* for the check alone,
+`want`), 2 *Room* (the switch, the reach, the corrections, amber with
+*Measure again* when `stale`) and 3 *Checked* (the chart, and `RoomLeft`'s
+ringing and dips cards, shared with the flow's screens); it shows never
+measured too (C1), the flow's back returning to it. Under the steps,
+*Earlier* (D2, H2): `history` less the entry playing, a measurement opening
+in place with its chart (`roomEntry`) and a dialog before going back
+(`restoreRoom`, asking which alignment when `differs`). The flow takes the check alone
 through three steps to *Keep*, the dips card on the correction (ADR-0187 D8)
 and the ringing card on the result (D7, the four bands that rang most,
 `ringBands`). The panel's header and the bar's side column carry the two

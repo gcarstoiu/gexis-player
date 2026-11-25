@@ -14,11 +14,12 @@
   import { encode } from 'uqr';
   import { onDestroy } from 'svelte';
   import { capitalised, chartSpan, correctionGroups, correctionsWho, countWord, cutFreq, cutGain, cutRows,
-    outputPhrase, outputShort, rangeWord, resultWords, room, RoomReader, setRoom, sideName, sides, speakersLine,
-    speakersRows, speakersShort } from '../../lib/room.svelte.js';
+    entryTags, entryWhat, outputPhrase, outputShort, rangeWord, restoreRoom, resultWords, room, roomEntry, RoomReader,
+    setRoom, sideName, sides, speakersLine, speakersRows, speakersShort, takenLine, worseLine } from '../../lib/room.svelte.js';
   import { screen } from '../../lib/family.svelte.js';
   import RoomChart from './RoomChart.svelte';
   import RoomFlow from './RoomFlow.svelte';
+  import RoomLeft from './RoomLeft.svelte';
 
   let { surface = 'panel', onback, onhome = null, flat = false } = $props();
 
@@ -39,12 +40,12 @@
   onDestroy(() => reader.stop());
 
   const measured = $derived(full?.measured ?? null);
-  //: The phone opens on Before when never measured, and on the flow while a
-  //: run goes on or its end is still to be shown.
+  //: The phone opens on the page, never measured too (ADR-0189 C1), and on
+  //: the flow while a run goes on or its end is still to be shown.
   $effect(() => {
     if (!phone || !full) return;
     if (full.run || (full.ended && ['cancelled', 'failed'].includes(full.ended.how))) view = 'flow';
-    else if (view === null) view = measured ? 'page' : 'flow';
+    else if (view === null) view = 'page';
   });
 
   let error = $state(null);
@@ -151,6 +152,83 @@
     : spkOn && spk?.plays ? 'Off: the correction is taken out. The speakers stay aligned.'
       : 'Off: the correction is taken out. With the equaliser also off, the sound is untouched, bit-perfect.');
 
+  // ---- ADR-0189 (George's B and H2, 2026-11-25): the three steps, Earlier ----
+  //: *18 Nov* from *18 November*.
+  const short = (d) => (d ? d.replace(/^(\d+) (\w{3})\w*/, '$1 $2') : '');
+  //: Each step: done, now (the next one, lit), amb (to do again) or todo.
+  const step1 = $derived(spk ? 'done' : 'now');
+  const step2 = $derived(!measured ? (spk ? 'now' : 'todo') : stale ? 'amb' : 'done');
+  const step3 = $derived(measured && !notChecked ? 'done' : 'todo');
+  const spkNote = $derived(!spk ? 'Not checked yet' : measured ? speakersShort(spk)
+    : spkOn ? 'Both reach your seat together and equally loud.' : 'Off: both play as they are.');
+  //: *Playing now*: what is heard, in pills.
+  const playingPills = $derived.by(() => {
+    const pills = [];
+    const corr = on && !!measured;
+    const aligned = spkOn && !!spk?.plays;
+    const roomEntries = (full?.history ?? []).filter((e) => e.kind === 'room').length;
+    if (corr) {
+      pills.push(stale ? { text: 'Room correction · no longer fits in the bass', tone: 'amb' }
+        : { text: `Room correction · ${roomEntries > 1 ? short(measured.day) : reach === 'bass' || bassOnly ? 'bass' : 'full range'}`, tone: 'lms' });
+    }
+    if (aligned) pills.push({ text: corr ? 'Speakers aligned' : `Speakers aligned · ${speakersShort(spk)}`, tone: 'lms' });
+    if (!corr && aligned) pills.push({ text: 'No room correction', tone: '' });
+    if (!corr && !aligned) pills.push({ text: full?.eq_on ? 'No room correction' : 'Untouched · bit-perfect', tone: '' });
+    return pills;
+  });
+  const worseNote = $derived(measured && !notChecked && measured.worse?.length ? worseLine(measured.worse) : '');
+  const takenNote = $derived(measured ? takenLine(measured.taken) : '');
+  const history = $derived(full?.history ?? []);
+  const earlier = $derived(history.filter((e) => !e.playing && !e.aligned));
+  let opened = $state(null);
+  let openedFull = $state(null);
+  let openedCh = $state('L');
+  let asking = $state(null);
+  let choice = $state('its');
+  let going = $state(false);
+  //: The cuts' grid as drawn: *−11.0*, *+2.5*, the unit in its heading.
+  const gainNum = (g) => `${g > 0 ? '+' : '−'}${Math.abs(g).toFixed(1)}`;
+  const entryAlign = (e) => speakersShort({ delay_ms: e.delay_ms, level_db: e.level_db });
+  async function openEntry(e) {
+    opened = e.id;
+    openedFull = null;
+    try {
+      openedFull = await roomEntry(e.id);
+    } catch (err) {
+      error = err.message;
+      opened = null;
+    }
+  }
+  const closeEntry = () => { opened = null; openedFull = null; };
+  function askBack(e) {
+    asking = e;
+    choice = 'its';
+  }
+  async function goBack() {
+    if (!asking) return;
+    going = true;
+    error = null;
+    try {
+      // Close to today's, its alignment comes back with it (C3).
+      reader.full = await restoreRoom(asking.id, asking.differs ? choice : 'its');
+      asking = null;
+      closeEntry();
+    } catch (err) {
+      error = err.message;
+      asking = null;
+    } finally {
+      going = false;
+    }
+  }
+  //: *On 12 November the right speaker stood 33 cm further away than the left.*
+  function movedWords(e) {
+    const d = e.distance_cm;
+    if (d == null || Math.round(Math.abs(d)) < 1) return '';
+    return ` On ${e.day} the ${d > 0 ? 'right' : 'left'} speaker stood ${Math.round(Math.abs(d))} cm further away than the ${d > 0 ? 'left' : 'right'}.`;
+  }
+  const unchangedWords = $derived(`${reach === 'full' && !bassOnly ? 'full range' : 'the bass'}, ${on && spkOn ? 'both switches on'
+    : !on && !spkOn ? 'both switches off' : `room correction ${on ? 'on' : 'off'}, the speakers ${spkOn ? 'on' : 'off'}`}`);
+
   //: The sheet's code: the player's page for a phone, opened at Room correction.
   function qrPath(text) {
     const { data, size } = encode(text, { ecc: 'M' });
@@ -240,6 +318,10 @@
   {/each}
 {/snippet}
 
+{#snippet num(state, n)}
+  <span class="num num--{state}">{#if state === 'done'}<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-6.5" /></svg>{:else if state === 'amb'}!{:else}{n}{/if}</span>
+{/snippet}
+
 {#snippet phoneGlyph()}
   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2.5"></rect><path d="M11 18.5h2"></path></svg>
 {/snippet}
@@ -263,6 +345,8 @@
         {#if reader.error}<p class="none">{reader.error}</p>{/if}
       </div>
     {:else if phone}
+      <!-- ADR-0189 (George's B and H2, 2026-11-25): Playing now, then the
+           three steps on one rail, then Earlier. -->
       <div class="frame">
         <div class="top top--phone">
           <button class="back" type="button" aria-label="Back" data-dpad-back onclick={() => onback?.()}><span></span></button>
@@ -271,71 +355,229 @@
             <div class="crumb">Settings · Audio · {outputShort(full.output)}</div>
           </div>
         </div>
-        <div class="scroll">
+        <div class="scroll scroll--steps">
           {@render dsdBanner('phone')}
-          <div class="card powercard">
-            <button type="button" class="power" aria-pressed={on} onclick={toggleOn}>
-              <span class="power__text">
-                <span class="power__title">Room correction</span>
-                <span class="power__note">{powerNote}</span>
-              </span>
-              {@render sw(on && !!measured, false)}
+          <div class="playing">
+            <span class="label label--phone">Playing now</span>
+            <div class="pills">
+              {#each playingPills as pl (pl.text)}<span class="pill pill--{pl.tone}">{pl.text}</span>{/each}
+            </div>
+            <button type="button" class="abrow" class:is-off={!abLive} aria-pressed={ab} onclick={toggleAb} disabled={!abLive}>
+              <span class="tag">A/B</span>
+              <span class="abrow__text"><span class="abrow__title">Hear it without</span><span class="abrow__sub">{abSub}</span></span>
+              {@render sw(ab, true)}
             </button>
-            {#if stale}
-              <!-- ADR-0188 D2: the speakers checked since this was measured. -->
-              <div class="stale"><span class="stale__mark">!</span>
-                <span>The speakers were checked after this was measured: in the bass it no longer fits exactly. Measure again.</span></div>
-            {:else}
-              <div class="powercard__rule"></div>
-            {/if}
-            <span class="label label--phone">Reaches</span>
-            {@render reaches('phone')}
-            {#if bassOnly}
-              <div class="reach__note">This measurement covers the bass only. Measure again to reach the full range.</div>
-            {/if}
           </div>
-          <!-- ADR-0188 D1 (George's A, 2026-11-23): the speakers' alignment,
-               its own switch, heard with room correction on or off. -->
-          <div class="card powercard">
-            <button type="button" class="power" class:is-dim={!spk} aria-pressed={spkOn} onclick={toggleSpk} disabled={!spk}>
-              <span class="power__text">
-                <span class="power__title">Speakers</span>
-                <span class="power__note">{speakersLine(spk)}</span>
-              </span>
-              {@render sw(spkOn, false)}
-            </button>
-            {#if spk}
-              <div class="powercard__rule"></div>
-              {#each speakersRows(spk) as r (r.text)}
-                <div class="srow">
-                  <span class="srow__mark srow__mark--{r.kind}" aria-hidden="true">{#if r.kind === 'ok'}<svg class="srow__tick" viewBox="0 0 24 24"><path d="M7.8 12.3l2.9 2.9 5.5-6.2" /></svg>{:else}!{/if}</span>
-                  <span class="srow__text">{r.text}</span>
+          {#if !measured && !spk}
+            <div class="lead">Three steps, each with the UMIK-1 at your seat. Measuring the room does all three in about 20 minutes.</div>
+          {/if}
+
+          <div class="steps">
+            <!-- 1 · Speakers -->
+            <div class="step">
+              <div class="rail">{@render num(step1, 1)}<span class="line" class:is-done={step1 === 'done'}></span></div>
+              <div class="stepbody">
+                <div class="stephead"><span class="steph">Speakers</span>
+                  <span class="pill pill--lms">{spk ? `Checked ${stale ? 'again ' : ''}${short(spk.day)}` : 'Start here'}</span></div>
+                <div class="card stepcard" class:is-lit={step1 === 'now'}>
+                  {#if !spk}
+                    <div class="note">How far each speaker is, whether they are wired the same way and how loud each is. The nearer is delayed and the louder turned down.</div>
+                  {/if}
+                  <button type="button" class="srow2" aria-pressed={spkOn} onclick={toggleSpk} disabled={!spk}>
+                    <span class="grow"><span class="h">Align the speakers</span>
+                      <span class="note" class:mono={!!measured && !!spk}>{spkNote}</span></span>
+                    {@render sw(spkOn, false)}
+                  </button>
+                  {#if spk}
+                    <div class="hr"></div>
+                    {#each speakersRows(spk) as r (r.text)}
+                      <div class="item">
+                        <span class="mk mk--{r.kind}" aria-hidden="true">{#if r.kind === 'ok'}<svg viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-6.5" /></svg>{:else}!{/if}</span>
+                        <span class="item__t">{r.text}</span>
+                      </div>
+                    {/each}
+                    <button type="button" class="btn2" onclick={() => openFlow('speakers')}>Check the speakers</button>
+                  {:else}
+                    <button type="button" class="btn" onclick={() => openFlow('speakers')}>Check the speakers</button>
+                    <div class="btnsub">About two minutes: at your head, then 40 cm to its left.</div>
+                  {/if}
+                </div>
+              </div>
+            </div>
+
+            <!-- 2 · Room -->
+            <div class="step">
+              <div class="rail">{@render num(step2, 2)}<span class="line" class:is-done={step2 === 'done'}></span></div>
+              <div class="stepbody">
+                <div class="stephead"><span class="steph" class:is-amber={stale}>Room</span>
+                  <span class="pill pill--{!measured ? (spk ? 'lms' : '') : stale ? 'amb' : 'lms'}">{!measured ? (spk ? 'Next' : 'Not measured') : stale ? 'Measure again' : `Measured ${short(measured.day)}`}</span></div>
+                <div class="card stepcard" class:is-lit={step2 === 'now'} class:is-amber={stale}>
+                  {#if stale}
+                    <div class="stale"><span>Measured {measured.day}, before the speakers moved: in the bass the correction no longer fits exactly.</span></div>
+                    <button type="button" class="btn btn--amber" onclick={() => openFlow('measure')}>Measure again</button>
+                    <div class="btnsub">About 20 minutes, the speakers and the check included.</div>
+                    <div class="hr"></div>
+                  {:else if !measured}
+                    <div class="note">Five positions around your head. It cuts the peaks your room adds to the bass, and above the bass evens out its broad bumps and dips by 3 dB at most.</div>
+                  {/if}
+                  <button type="button" class="srow2" aria-pressed={on} onclick={toggleOn} disabled={!measured}>
+                    <span class="grow"><span class="h">Room correction</span>
+                      <span class="note">{measured ? `${capitalised(positionsWord)} positions · ${rangeWord(range)}` : 'Measure first'}</span></span>
+                    {@render sw(on && !!measured, false)}
+                  </button>
+                  {#if measured}<span class="label label--phone">Reaches</span>{/if}
+                  {@render reaches('phone')}
+                  {#if bassOnly}
+                    <div class="reach__note">This measurement covers the bass only. Measure again to reach the full range.</div>
+                  {/if}
+                  {#if measured}
+                    <div class="hr"></div>
+                    {#each groups as g, i (g.name)}
+                      <div class="grp" class:grp--first={i === 0}><span class="grp__n">{i === 1 ? `Above, ${sideName(ch).toLowerCase()}` : g.name}</span><span class="grp__r"></span><span class="grp__k">{i === 0 ? 'narrow cuts' : 'broad'}</span></div>
+                      {#if g.rows.length}
+                        <div class="cuts">
+                          {#each g.rows as c, j (j)}
+                            <div class="cut2"><span class="cut2__f">{cutFreq(c)}</span><span class="cut2__g" class:is-up={c.gain > 0}>{gainNum(c.gain)}</span></div>
+                          {/each}
+                        </div>
+                      {:else}
+                        <div class="note">{g.empty}</div>
+                      {/if}
+                    {/each}
+                    {#if !stale}<button type="button" class="btn2" onclick={() => openFlow('measure')}>{againLabel}</button>{/if}
+                  {:else}
+                    <button type="button" class={spk ? 'btn' : 'btn2'} onclick={() => openFlow('measure')}>Measure the room</button>
+                    <div class="btnsub">{spk ? 'About 20 minutes. The speakers are checked again first, then step 3 follows.' : 'About 20 minutes. Steps 1 and 3 are part of it.'}</div>
+                  {/if}
+                </div>
+              </div>
+            </div>
+
+            <!-- 3 · Checked -->
+            <div class="step">
+              <div class="rail">{@render num(step3, 3)}{#if earlier.length}<span class="line"></span>{/if}</div>
+              <div class="stepbody">
+                <div class="stephead"><span class="steph">Checked</span>
+                  <span class="pill pill--{!measured ? '' : stale ? '' : notChecked ? 'amb' : 'lms'}">{!measured ? 'After step 2' : stale ? `${short(measured.day)}, before the move` : notChecked ? 'Not checked' : `All ${positionsWord} positions`}</span></div>
+                {#if !measured}
+                  <div class="stepempty">The correction measured again at each position: the chart of before and after, how long the bass rings, and the dips a cut cannot fill.</div>
+                {:else}
+                  {#if worseNote}<div class="note">{worseNote}</div>{/if}
+                  {#if takenNote}<div class="note">{takenNote}</div>{/if}
+                  {@render segs('phone')}
+                  <div class="card chartcard" class:is-dim={dsd || !on}>
+                    <div class="chartcard__head">
+                      <div class="chartcard__title">{resultHead}</div>
+                      <div class="chartcard__line">{resultLine}</div>
+                    </div>
+                    <RoomChart surface="phone" freqs={chart?.freqs ?? []} {speaker} {kind} {span} {reach} {range} />
+                  </div>
+                  <RoomLeft show="ringing" {speaker} expected={notChecked} />
+                  <RoomLeft show="dips" dips={measured.dips} />
+                {/if}
+              </div>
+            </div>
+          </div>
+
+          {#if earlier.length}
+            <!-- ADR-0189 D2 (H2): Earlier, the steps' timeline. -->
+            <div class="tl">
+              <div class="tli">
+                <div class="tlr"><span class="tl__arrow" aria-hidden="true">▼</span><span class="tll"></span></div>
+                <div class="tlb"><span class="label label--phone">Earlier</span>
+                  <span class="note">Every measurement and speaker check, newest first. Tap one to see it.</span></div>
+              </div>
+              {#each earlier as e, i (e.id)}
+                {@const last = i === earlier.length - 1}
+                <div class="tli">
+                  <div class="tlr"><span class="tln tln--{e.kind === 'room' ? 'room' : 'spk'}" class:tln--big={opened === e.id}></span>{#if !last}<span class="tll" class:is-lit={opened === e.id}></span>{/if}</div>
+                  <div class="tlb">
+                    {#if opened === e.id}
+                      <div class="tlb__top"><span class="ewhen grow">{e.day}{#if e.time}<span class="ewhen__t">{e.time}</span>{/if}</span>
+                        <button type="button" class="link" onclick={closeEntry}>Close</button></div>
+                      <div class="card stepcard is-lit">
+                        <div class="etags">
+                          <span class="mini">Room measured · {rangeWord(e.range)}</span>
+                          {#if e.checked}<span class="mini mini--lms">Checked · within {e.within} dB</span>{/if}
+                          {#if e.worse?.length}<span class="mini mini--amb">{e.worse.length === 1 ? `Position ${e.worse[0]}` : `Positions ${e.worse.join(', ')}`} further</span>{/if}
+                        </div>
+                        <div class="note">Peaks down by up to {e.peaks_down} dB. Speakers as measured <span class="mono">{entryAlign(e)}</span>, {e.differs ? "not today's" : "close to today's"}.</div>
+                        {#if openedFull?.id === e.id}
+                          <div class="segs segs--phone segs--small" role="group" aria-label="Speaker">
+                            {#each sides() as k (k)}
+                              <button type="button" class="segbtn" class:is-sel={openedCh === k} aria-pressed={openedCh === k} onclick={() => (openedCh = k)}>{sideName(k)}</button>
+                            {/each}
+                          </div>
+                          <RoomChart surface="phone" freqs={openedFull.chart?.freqs ?? []} speaker={openedFull.chart?.speakers?.[openedCh] ?? null}
+                                     kind={openedFull.chart?.after_kind ?? 'measured'} span={chartSpan(openedFull.chart)} reach="full" range={e.range} />
+                          <div class="note">Drawn from the sweeps its check kept.</div>
+                          <RoomLeft show="ringing" speaker={openedFull.chart?.speakers?.[openedCh] ?? null} expected={!e.checked} />
+                          <RoomLeft show="dips" dips={openedFull.dips} />
+                        {:else}
+                          <div class="note">Reading it…</div>
+                        {/if}
+                        <button type="button" class="btn" onclick={() => askBack(e)}>Go back to this one</button>
+                      </div>
+                    {:else if e.kind === 'room'}
+                      <button type="button" class="entry" onclick={() => openEntry(e)}>
+                        <span class="ewhen">{e.day}{#if e.time}<span class="ewhen__t">{e.time}</span>{/if}</span>
+                        <span class="ewhat" class:is-amber={!e.checked}>{entryWhat(e)}</span>
+                        <span class="etags">{#each entryTags(e) as tg (tg.text)}<span class="mini mini--{tg.tone}">{tg.text}</span>{/each}</span>
+                      </button>
+                    {:else}
+                      <span class="ewhen">{e.day}{#if e.time}<span class="ewhen__t">{e.time}</span>{/if}</span>
+                      <span class="ewhat">{entryWhat(e)}</span>
+                      <span class="etags">{#each entryTags(e) as tg (tg.text)}<span class="mini mini--{tg.tone}">{tg.text}</span>{/each}</span>
+                    {/if}
+                  </div>
                 </div>
               {/each}
-            {/if}
-            <button type="button" class="checkbtn" onclick={() => openFlow('speakers')}>Check the speakers</button>
-            <div class="reach__note reach__note--quiet">About two minutes with the microphone: at your head, then 40 cm to its left. Works with room correction on or off.</div>
-          </div>
-          {@render abCard('phone')}
-          <div class="card measuredcard">
-            <div class="power__text">
-              <div class="power__title">Measured</div>
-              <div class="power__note">{measured?.year} · {positionsWord} positions · {rangeWord(range)}</div>
             </div>
-            {#if notChecked}<span class="flag">Not checked</span>{/if}
-          </div>
-          {@render segs('phone')}
-          <div class="card chartcard" class:is-dim={dsd || !on}>
-            <div class="chartcard__head">
-              <div class="chartcard__title">{resultHead}</div>
-              <div class="chartcard__line">{resultLine}</div>
+            <div class="tlkey">
+              <span class="tlkey__k"><span class="tln tln--room"></span>Room measured</span>
+              <span class="tlkey__k"><span class="tln tln--spk"></span>Speakers on their own</span>
             </div>
-            <RoomChart surface="phone" freqs={chart?.freqs ?? []} {speaker} {kind} {span} {reach} {range} />
-          </div>
-          <button type="button" class="again" class:is-lit={bassOnly || stale} onclick={() => openFlow('measure')}>{againLabel}</button>
+          {/if}
           {#if error}<div class="error" role="status">{error}</div>{/if}
         </div>
       </div>
+      {#if asking}
+        <!-- ADR-0189 C3 (H2c, H2d): what going back changes, asked first. -->
+        <div class="scrim" aria-hidden="true" onclick={() => (asking = null)}></div>
+        <div class="dialog" role="dialog" aria-modal="true" aria-label={`Go back to ${asking.day}`}>
+          <div>
+            <div class="h h--big">Go back to {asking.day}?</div>
+            <div class="note">Room measured{asking.time ? ` at ${asking.time}` : ''} · {asking.checked ? `checked · within ${asking.within} dB` : 'not checked'}</div>
+          </div>
+          <div class="hr"></div>
+          <div class="item"><span class="mk mk--ok" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-6.5" /></svg></span>
+            <span class="item__t"><b>Its correction plays at once,</b> in place of {measured ? `${measured.day}'s` : 'none'}.</span></div>
+          {#if asking.differs}
+            <div class="item"><span class="mk mk--warn" aria-hidden="true">!</span>
+              <span class="item__t"><b>Its speakers' alignment differs from today's:</b> <span class="mono">{entryAlign(asking)}</span> against <span class="mono">{speakersShort(spk)}</span>.{movedWords(asking)}</span></div>
+            <span class="label label--phone">Which alignment?</span>
+            <button type="button" class="choice" class:is-sel={choice === 'its'} aria-pressed={choice === 'its'} onclick={() => (choice = 'its')}>
+              <span class="choice__head"><span class="radio" class:is-on={choice === 'its'}></span><b>{asking.day}'s, with its correction</b></span>
+              <span class="choice__sub">As it was measured. Right if the speakers are back where they stood then.</span>
+            </button>
+            <button type="button" class="choice" class:is-sel={choice === 'today'} aria-pressed={choice === 'today'} onclick={() => (choice = 'today')}>
+              <span class="choice__head"><span class="radio" class:is-on={choice === 'today'}></span><b>Today's</b></span>
+              <span class="choice__sub">The speakers stay as checked on {spk?.day}. In the bass its correction no longer fits exactly: the amber note shows on Room until you measure again.</span>
+            </button>
+          {:else}
+            <div class="item"><span class="mk mk--ok" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-6.5" /></svg></span>
+              <span class="item__t"><b>The speakers' alignment it was measured with comes back:</b> <span class="mono">{entryAlign(asking)}</span>.{#if spk}{' '}Close to today's <span class="mono">{speakersShort(spk)}</span>, so the bass still fits.{/if}</span></div>
+            <div class="item"><span class="mk mk--todo" aria-hidden="true"></span><span class="item__t">Unchanged: {unchangedWords}.</span></div>
+            {#if measured}
+              <div class="item"><span class="mk mk--todo" aria-hidden="true"></span><span class="item__t">{measured.day} moves down into Earlier, to come back to.</span></div>
+            {/if}
+          {/if}
+          <div class="dialog__row">
+            <button type="button" class="btn2" onclick={() => (asking = null)}>Cancel</button>
+            <button type="button" class="btn btn--go" onclick={goBack} disabled={going}>Go back</button>
+          </div>
+        </div>
+      {/if}
     {:else if bar}
       <div class="frame frame--bar">
         <div class="side">
@@ -1815,5 +2057,592 @@
     color: var(--rc-without);
     font-size: 17px;
     z-index: 7;
+  }
+
+  /* ---- ADR-0189 (George's B and H2, 2026-11-25): the phone's page as three
+     steps, and Earlier - as drawn, in the UI's tokens. ---- */
+  .scroll--steps {
+    gap: 14px;
+  }
+  .playing {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 16px;
+    border-radius: var(--r-15);
+    background: var(--bg-panel);
+    border: 1px solid var(--ink-line);
+  }
+  .pills,
+  .etags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .pill {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    min-height: 26px;
+    padding: 0 10px;
+    border-radius: var(--r-pill);
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    padding-top: 3px;
+    padding-bottom: 3px;
+    line-height: 1.35;
+    box-sizing: border-box;
+    background: var(--c-ink-08);
+    color: var(--c-ink-78);
+  }
+  .pill--lms {
+    background: var(--c-lms-16);
+    color: var(--accent-lms);
+  }
+  .pill--amb {
+    background: var(--rc-without-fill);
+    color: var(--rc-without);
+  }
+  .abrow {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: none;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    width: 100%;
+  }
+  .abrow.is-off {
+    opacity: 0.45;
+  }
+  .abrow__text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .abrow__title {
+    font-size: 16px;
+    font-weight: 650;
+  }
+  .abrow__sub,
+  .note {
+    font-size: 14px;
+    line-height: 1.42;
+    color: var(--ink-quiet);
+  }
+  .lead {
+    font-size: 15px;
+    line-height: 1.45;
+    color: var(--ink-body);
+    padding: 2px 2px 0;
+  }
+  .steps {
+    display: flex;
+    flex-direction: column;
+  }
+  .step,
+  .tli {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    column-gap: 12px;
+  }
+  .rail,
+  .tlr {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .num {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 15px;
+    border: 1.5px solid var(--c-ink-30);
+    color: var(--c-ink-70);
+    flex-shrink: 0;
+    box-sizing: border-box;
+  }
+  .num svg,
+  .mk svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .num--done {
+    background: var(--c-lms-16);
+    border-color: transparent;
+    color: var(--accent-lms);
+  }
+  .num--now {
+    background: var(--accent-lms);
+    border-color: var(--accent-lms);
+    color: var(--ink-on-accent);
+  }
+  .num--amb {
+    background: var(--c-warn-16);
+    border-color: var(--c-warn-50);
+    color: var(--rc-without);
+    font-weight: 800;
+  }
+  .line,
+  .tll {
+    flex: 1;
+    width: 2px;
+    background: var(--c-ink-14);
+    margin: 6px 0;
+    min-height: 24px;
+  }
+  .line.is-done,
+  .tll.is-lit {
+    background: var(--c-lms-50);
+  }
+  .stepbody {
+    padding-bottom: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+  }
+  .stephead {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    padding-top: 4px;
+  }
+  .steph,
+  .h {
+    font-size: 18px;
+    font-weight: 650;
+    line-height: 1.25;
+  }
+  .steph.is-amber {
+    color: var(--rc-without);
+  }
+  .h--big {
+    font-size: 22px;
+    font-weight: 750;
+  }
+  .stepcard {
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .stepcard.is-lit {
+    border-color: var(--c-lms-55);
+    background: var(--c-lms-07);
+  }
+  .stepcard.is-amber {
+    border-color: var(--c-warn-50);
+    background: var(--rc-without-fill);
+  }
+  .srow2 {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: none;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    width: 100%;
+  }
+  .srow2:disabled .switch {
+    opacity: 0.4;
+  }
+  .grow {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .mono {
+    font-family: var(--font-mono);
+    font-size: 13px;
+  }
+  .hr {
+    height: 1px;
+    background: var(--ink-line);
+    flex-shrink: 0;
+  }
+  .item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .item__t {
+    font-size: 15px;
+    line-height: 1.42;
+    color: var(--ink-body);
+    padding-top: 2px;
+  }
+  .item__t b {
+    color: var(--ink);
+    font-weight: 700;
+  }
+  .mk {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    font-weight: 800;
+  }
+  .mk svg {
+    width: 16px;
+    height: 16px;
+  }
+  .mk--ok {
+    background: var(--c-lms-16);
+    color: var(--accent-lms);
+  }
+  .mk--warn {
+    background: var(--c-warn-16);
+    color: var(--rc-without);
+  }
+  .mk--todo {
+    border: 1.5px dashed var(--c-ink-38);
+  }
+  .btn,
+  .btn2 {
+    width: 100%;
+    font: inherit;
+    border-radius: var(--r-15);
+    cursor: pointer;
+  }
+  .btn {
+    height: 54px;
+    font-size: 17px;
+    font-weight: 750;
+    border: 0;
+    background: var(--accent-lms);
+    color: var(--ink-on-accent);
+  }
+  .btn--amber {
+    background: var(--rc-without);
+  }
+  .btn2 {
+    height: 50px;
+    font-size: 16px;
+    font-weight: 700;
+    background: var(--ink-fill);
+    border: 1px solid var(--c-ink-14);
+    color: var(--ink);
+  }
+  .btnsub {
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--ink-quiet);
+    text-align: center;
+    margin-top: -4px;
+  }
+  .grp {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 6px;
+  }
+  .grp--first {
+    margin-top: 0;
+  }
+  .grp__n {
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .grp__r {
+    flex: 1;
+    height: 1px;
+    background: var(--ink-line);
+  }
+  .grp__k {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--ink-quiet);
+  }
+  .cuts {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .cut2 {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    padding: 7px 9px;
+    border-radius: var(--r-md);
+    background: var(--c-ink-05);
+  }
+  .cut2__f {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--c-ink-70);
+  }
+  .cut2__g {
+    font-family: var(--font-mono);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--rc-before);
+  }
+  .cut2__g.is-up {
+    color: var(--accent-lms);
+  }
+  .stepempty {
+    border: 1.5px dashed var(--c-ink-20);
+    border-radius: var(--r-15);
+    padding: 18px;
+    text-align: center;
+    color: var(--ink-quiet);
+    font-size: 14px;
+    line-height: 1.45;
+  }
+  .segs--small .segbtn {
+    height: 36px;
+    padding: 0 14px;
+  }
+  .tl {
+    display: flex;
+    flex-direction: column;
+  }
+  .tl__arrow {
+    font-size: 10px;
+    color: var(--ink-quiet);
+    margin-top: 2px;
+  }
+  .tll {
+    margin: 4px 0;
+    min-height: 18px;
+  }
+  .tln {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    box-sizing: border-box;
+    margin-top: 4px;
+    flex-shrink: 0;
+    display: inline-block;
+  }
+  .tln--room {
+    background: var(--c-ink-55);
+  }
+  .tln--spk {
+    width: 12px;
+    height: 12px;
+    margin-top: 6px;
+    border: 2px solid var(--rc-dip-cancel);
+    background: var(--bg-base);
+  }
+  .tln--big {
+    width: 22px;
+    height: 22px;
+    margin-top: 1px;
+    border: 4px solid var(--c-lms-35);
+    background: var(--accent-lms);
+  }
+  .tlb {
+    padding-bottom: 16px;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .tlb__top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .entry {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background: none;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    width: 100%;
+    cursor: pointer;
+  }
+  .ewhen {
+    font-size: 15.5px;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+  .ewhen__t {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-quiet);
+    margin-left: 6px;
+  }
+  .ewhat {
+    font-size: 13.5px;
+    line-height: 1.42;
+    color: var(--c-ink-70);
+  }
+  .ewhat.is-amber {
+    color: var(--rc-without);
+  }
+  .etags {
+    margin-top: 3px;
+  }
+  .mini {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.03em;
+    min-height: 22px;
+    padding: 0 8px;
+    border-radius: var(--r-7);
+    display: inline-flex;
+    align-items: center;
+    box-sizing: border-box;
+    background: var(--ink-fill);
+    color: var(--c-ink-78);
+    white-space: nowrap;
+  }
+  .mini--lms {
+    background: var(--c-lms-14);
+    color: var(--accent-lms);
+  }
+  .mini--amb {
+    background: var(--rc-without-fill);
+    color: var(--rc-without);
+  }
+  .mini--blue {
+    background: var(--rc-dip-cancel-fill);
+    color: var(--rc-dip-cancel);
+  }
+  .link {
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--c-ink-70);
+    background: none;
+    border: 0;
+    padding: 6px 0;
+    cursor: pointer;
+  }
+  .tlkey {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    padding: 0 4px;
+    font-size: 13px;
+    color: var(--c-ink-70);
+  }
+  .tlkey__k {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .tlkey__k .tln {
+    margin-top: 0;
+  }
+  /* Absolute in the page, as the scrim: a transformed ancestor makes fixed
+     follow it, not the screen. */
+  .dialog {
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 6;
+    max-height: calc(100% - 32px);
+    overflow-y: auto;
+    background: var(--bg-panel);
+    border-radius: var(--r-xl);
+    border: 1px solid var(--c-ink-12);
+    padding: 20px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    box-sizing: border-box;
+  }
+  .dialog__row {
+    display: flex;
+    gap: 10px;
+  }
+  .dialog__row .btn2 {
+    flex: 1;
+  }
+  .btn--go {
+    flex: 1.4;
+    height: 50px;
+  }
+  .choice {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 13px 14px;
+    border-radius: var(--r-14);
+    border: 1px solid var(--c-ink-14);
+    background: var(--c-ink-05);
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .choice.is-sel {
+    border-color: var(--c-lms-55);
+    background: var(--c-lms-10);
+  }
+  .choice__head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+  }
+  .choice.is-sel b {
+    color: var(--accent-lms);
+  }
+  .choice__sub {
+    font-size: 13.5px;
+    line-height: 1.4;
+    color: var(--c-ink-70);
+  }
+  .radio {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid var(--c-ink-40);
+    box-sizing: border-box;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .radio.is-on {
+    border-color: var(--accent-lms);
+  }
+  .radio.is-on::after {
+    content: '';
+    position: absolute;
+    left: 3px;
+    top: 3px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--accent-lms);
   }
 </style>
