@@ -67,3 +67,25 @@ speaker check alone cannot be started from it.
   (`audio-path.md`, `api.md`, `ui.md`) follow.
 - ADR-0022's inventory: to be proposed once built (the history kept whole,
   going back).
+- ADR-0175's *Discard* and *nothing to cut*, back to Audio, now return to the
+  room page (C1).
+
+## As built (2026-11-25, `ph-room-measurement` 3e74271d)
+
+- **The history** (`room_history.History`): a JSON file per entry under
+  `/var/lib/gexis/room-history/<card>/`, named `YYYYMMDD-HHMMSS-room` or
+  `-speakers` (a second in the same second gets `-2`), written atomically;
+  a file that does not read is passed over, a write that fails is logged
+  and the measurement kept all the same. `OutputRoom.entry` and
+  `speakers_entry` say which plays. A factory reset removes the folder.
+- **Going back** (`Room.go_back`): the switches as they were, the reach held
+  to the bass for a bass-only measurement, *Hear it without* kept while
+  something plays; `its` brings `Alignment.of(measurement)`, switched as
+  today's. The route takes only an id the history wrote (checked against
+  its pattern).
+- **The phone** as drawn (B1-B4, H2a-d), in the UI's tokens: the ringing and
+  dips cards are `RoomLeft`, shared with the flow; the cuts' grid writes
+  the gain without its unit, as drawn; a long *Playing now* pill wraps.
+  Departures: the dialog's sentence on a moved speaker says *than the
+  left* (or right); a measurement's row counts its own positions. The flow's
+  back, and its end after *Discard*, return to the page (C1).
