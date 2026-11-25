@@ -735,3 +735,16 @@ Confirmed by George, 2026-11-24, [ADR-0188](0188-speakers-aligned-on-their-own.m
 | When room correction no longer fits | [H] | A check after a measurement that would move the speakers' sum by more than 1 dB from 20 to 250 Hz says so; switching the alignment off is not warned about |
 | The ringing shown | [H] | At 0.2 s, in the four third octaves that rang most before, per speaker |
 | The dips explained | [H] | 3 dB or more under the target, three at most, a sixth of an octave apart |
+
+### Appended 2026-11-25 — the check's take-out, the level asked, the room's history
+
+Confirmed by George, 2026-11-25, [ADR-0187](0187-room-measurement-reworked-setup-check-five-positions-timing-mark.md) (amended 2026-11-25; D10-D12) and [ADR-0189](0189-room-page-three-steps-history.md):
+
+| Setting | Mark | Notes |
+|---|---|---|
+| Room history | [H] | Every measurement and speaker check kept per output, each its own file; no limit, none deleted (a factory reset clears it) |
+| Going back to a measurement | [R] | *Go back to this one* in *Earlier*: its correction plays again, with its alignment when close to today's, otherwise the choice of its alignment or today's |
+| What the check takes out | [H] | A broad correction above the bass that leaves the five positions further from the target at its frequency, the head counting half, compared to 0.1 dB; the bass's cuts not judged |
+| The check's level | [H] | Lower than the run's only by what the sweeps lack in room for the corrections' raise |
+| The positions' drawing | [H] | The moves in turn on a loop; still, side by side, with the phone set to reduce motion |
+| A level short of the aim | [H] | More than 1.5 dB under 60 dB: the run stops before any sweep, *Try again* or *Carry on anyway* (from 45 dB and 15 dB over the noise; under that *Try again* only); the speaker check on its own too |
