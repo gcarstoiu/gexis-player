@@ -18,6 +18,20 @@ def speaker(cuts=((42.0, -4.0, 8.6), (86.0, -8.0, 5.7)), above=ABOVE):
                    after=flat, positions=(flat,) * 5, above=above, after_bass=flat, within=1.0, room_within=3.5)
 
 
+def test_the_checks_are_kept_and_bad_ones_never_lose_the_measurement():
+    """ADR-0187, 2026-11-25: each position's check kept; a stored one that
+    does not read is dropped alone."""
+    from dataclasses import replace
+    checks = tuple(tuple(float(i) for _ in range(N)) for i in range(5))
+    m = rc.Measurement("2026-11-25", True, {"L": replace(speaker(), checks=checks), "R": speaker()})
+    stored = m.as_dict()
+    assert rc.Measurement.from_dict(stored).speakers["L"].checks == checks
+    assert rc.Measurement.from_dict(stored).speakers["R"].checks == ()
+    stored["speakers"]["L"]["checks"] = [[1.0, 2.0]]
+    again = rc.Measurement.from_dict(stored)
+    assert again.speakers["L"].checks == () and again.speakers["L"].cuts == m.speakers["L"].cuts
+
+
 def test_both_speakers_are_kept_and_an_older_measurement_reads_without():
     flat = tuple([0.0] * N)
     both = rc.Speaker(before=flat, target=flat, positions=(flat,) * 3)

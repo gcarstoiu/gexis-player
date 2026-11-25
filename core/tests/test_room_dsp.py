@@ -284,6 +284,8 @@ def test_a_worse_position_is_found():
     worse[2][i - 2:i + 3] -= 6
     found = rd.worse_positions(d.positions, worse, d.target, d.cuts)
     assert [n for n, _ in found] == [3]
+    # ADR-0187, 2026-11-25: the log names the filter that did it.
+    assert rd.worse_where(d.positions, worse, d.target, d.cuts) == [(3, found[0][1], d.cuts[0].freq)]
 
 
 def test_the_cut_dict_is_rounded_for_the_store():

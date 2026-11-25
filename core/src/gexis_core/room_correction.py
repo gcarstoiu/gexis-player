@@ -164,6 +164,10 @@ class Speaker:
     #: 50 ms before the correction) - `(hz, before, after)`, after None when
     #: not read.
     ringing: tuple[tuple[float, float, float | None], ...] = ()
+    #: **The check at each position** (ADR-0187, 2026-11-25, George:
+    #: always kept): the curve measured with the correction on, as
+    #: `positions`; empty when the check was skipped or not kept.
+    checks: tuple[tuple[float, ...], ...] = ()
 
     def as_dict(self) -> dict:
         out = {"cuts": _dicts(self.cuts),
@@ -179,6 +183,8 @@ class Speaker:
             out["room_within"] = self.room_within
         if self.ringing:
             out["ringing"] = _rings(self.ringing)
+        if self.checks:
+            out["checks"] = [_round(p) for p in self.checks]
         return out
 
     @classmethod
@@ -191,6 +197,10 @@ class Speaker:
         after_bass = _floats(value.get("after_bass") or [], n if value.get("after_bass") else None)
         positions = tuple(_floats(p, n) for p in value.get("positions") or [])
         within, room_within = value.get("within"), value.get("room_within")
+        try:
+            checks = tuple(_floats(c, n) for c in value.get("checks") or [])
+        except TypeError:
+            checks = ()     # what the check found is kept to show; never loses the measurement
         ringing = []
         for r in value.get("ringing") or []:
             try:
@@ -202,7 +212,7 @@ class Speaker:
         return cls(tuple(_filters(value.get("cuts"), False)[:eq.ROOM_SLOTS]), before, target, after, positions,
                    tuple(_filters(value.get("above"), True)[:eq.ABOVE_SLOTS]), after_bass,
                    None if within is None else _floats([within])[0],
-                   None if room_within is None else _floats([room_within])[0], tuple(ringing))
+                   None if room_within is None else _floats([room_within])[0], tuple(ringing), checks)
 
     def peaks_down(self) -> float:
         """*Peaks down by up to N dB*: the most taken off below the limit."""

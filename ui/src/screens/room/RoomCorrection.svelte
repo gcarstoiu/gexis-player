@@ -308,7 +308,7 @@
               <div class="powercard__rule"></div>
               {#each speakersRows(spk) as r (r.text)}
                 <div class="srow">
-                  <span class="srow__mark srow__mark--{r.kind}" aria-hidden="true">{#if r.kind === 'ok'}<span class="srow__tick"></span>{:else}!{/if}</span>
+                  <span class="srow__mark srow__mark--{r.kind}" aria-hidden="true">{#if r.kind === 'ok'}<svg class="srow__tick" viewBox="0 0 24 24"><path d="M7.8 12.3l2.9 2.9 5.5-6.2" /></svg>{:else}!{/if}</span>
                   <span class="srow__text">{r.text}</span>
                 </div>
               {/each}
@@ -971,13 +971,14 @@
   }
   .srow__tick {
     position: absolute;
-    left: 8.5px;
-    top: 5px;
-    width: 5px;
-    height: 10px;
-    border-right: 2.5px solid var(--accent-lms);
-    border-bottom: 2.5px solid var(--accent-lms);
-    transform: rotate(45deg);
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    fill: none;
+    stroke: var(--accent-lms);
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
   .srow__text {
     font-size: 15px;

@@ -890,8 +890,9 @@ hw:Loopback,1,0 → CamillaDSP (headroom fader, ten bands, then on each speaker 
   but averaged: the two closest and every other that agrees with both go
   into the power average, and where every position's average still stands
   under 10 dB over the noise, nothing is fitted (`trust`). The check, its
-  sweeps lower by what the corrections raise, takes that many more, up to
-  five; the run's state says how many a set takes (`sweeps`). Every
+  sweeps lower by what the corrections raise beyond the sweeps' own room
+  under their cap, takes that many more, up to five; the run's state says
+  how many a set takes (`sweeps`). Every
   comparison is logged as numbers (C4); a run's logs settled the limits
   (Finding 158). **Both together**
   (George, 2026-11-05; `both` in the chart) are **added, not played**
@@ -948,14 +949,18 @@ hw:Loopback,1,0 → CamillaDSP (headroom fader, ten bands, then on each speaker 
   than 1 dB further from the target at its frequency is made smaller.
   Nothing above 14 kHz.
 - **The check** measures the positions again through the stage with the
-  full range on - the correction a new measurement starts with - and its
-  sweeps lower by the broad corrections' highest point, since no headroom is
-  taken while a run measures (the response is the recording over what was
-  played, so its level is the room's). What *Bass* gives is the measured
-  after with the broad corrections' response taken out (`after_bass`). A
-  position more than 1 dB further from the target at any cut's frequency
-  with both speakers playing, or at a broad correction's with its own
-  speaker (read at 1/3 octave), is named.
+  full range on - the correction a new measurement starts with. No headroom
+  is taken while a run measures (the response is the recording over what
+  was played, so its level is the room's), so its sweeps play lower by the
+  broad corrections' highest point less the room they already have under
+  their cap (ADR-0187, 2026-11-25): at the run's level where they have
+  room. What *Bass* gives is the measured after with the broad corrections'
+  response taken out (`after_bass`). A position more than 1 dB further from
+  the target at any cut's frequency with both speakers playing, or at a
+  broad correction's with its own speaker (read at 1/3 octave), is named;
+  the log says which speaker or pair, at which filter's frequency. Each
+  position's checked curve is kept with the measurement (`checks`, per
+  speaker and for the pair).
 - **The ringing** (ADR-0187 C6-D7, `room_dsp.ringing`): each speaker's
   kept sweeps at the head averaged as waves, in third octaves from 20 to
   250 Hz (a Gaussian a sixth of an octave each side, zero phase); the

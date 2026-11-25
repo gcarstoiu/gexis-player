@@ -602,6 +602,8 @@ def _as_before(m, both=True, phase29=False):
     m["checked"], m["worse"] = True, [[3, 2.3]]
     m["speakers"]["L"]["cuts"] = [{"freq": 121.0, "gain": -11.1, "q": 2.1}]
     m["speakers"]["R"]["cuts"] = [{"freq": 63.0, "gain": -5.0, "q": 4.0}]
+    for sp in m["speakers"].values():
+        sp.pop("checks", None)      # kept from 2026-11-25 only
     if not both:
         del m["speakers"][rc.BOTH]
     if phase29:

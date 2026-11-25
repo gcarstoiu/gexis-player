@@ -1050,11 +1050,13 @@ class Run:
     def _cuts(self):
         """**What the check plays** (ADR-0177 item 8): the full range, the
         correction a new measurement starts with - with no headroom taken
-        for its raises; its sweeps play that much lower instead."""
+        for its raises; its sweeps play lower by what of them the room under
+        the sweeps' cap does not already take (ADR-0187, 2026-11-25)."""
         from gexis_core import equaliser as eq
         cuts = tuple(self.pending.cuts(c) for c in rc.CHANNELS)
         above = tuple(self.pending.above(c) for c in rc.CHANNELS)
-        self._check_db = eq.headroom_db(eq.FLAT, tuple(c + a for c, a in zip(cuts, above)))
+        raise_db = eq.headroom_db(eq.FLAT, tuple(c + a for c, a in zip(cuts, above)))
+        self._check_db = max(0.0, raise_db - max(0.0, self._sweep_cap - self._level_dbfs))
         return self._play(cuts, above)
 
     def _result(self, skipped: bool) -> None:
@@ -1064,6 +1066,11 @@ class Run:
             return
         speakers = {}
         worse = []
+
+        def kept(curves):
+            # ADR-0187, 2026-11-25 (George: always): each position's check kept.
+            return tuple(tuple(float(v) for v in c) for c in curves)
+
         for channel in rc.CHANNELS:
             d = self._designs[channel]
             measured = [c - d.offset for c in self._checked[channel]]
@@ -1075,17 +1082,22 @@ class Run:
                                         after_bass=tuple(after_bass),
                                         within=self._dsp.within_db(after, d.target),
                                         ringing=self._ringing(channel, checked=channel in self._head_checked)
-                                        or self.pending.speakers[channel].ringing)
+                                        or self.pending.speakers[channel].ringing,
+                                        checks=kept(measured))
             # Above the bass each speaker's own corrections are judged on it.
-            worse += self._dsp.worse_positions(d.positions, measured, d.target, list(d.broad))
+            worse += [(channel, *w) for w in self._dsp.worse_where(d.positions, measured, d.target, list(d.broad))]
         # The bass's cuts on what they were designed from: both together.
         d = self._designs[rc.BOTH]
         measured = [c - d.offset for c in self._checked[rc.BOTH]]
         after = self._dsp.power_average(measured)
-        speakers[rc.BOTH] = replace(self.pending.speakers[rc.BOTH], after=tuple(after), after_bass=tuple(after))
-        worse += self._dsp.worse_positions(d.positions, measured, d.target, list(d.cuts))
+        speakers[rc.BOTH] = replace(self.pending.speakers[rc.BOTH], after=tuple(after), after_bass=tuple(after),
+                                    checks=kept(measured))
+        worse += [(rc.BOTH, *w) for w in self._dsp.worse_where(d.positions, measured, d.target, list(d.cuts))]
+        if worse:
+            logger.info("room: further from the target than before: %s", "; ".join(
+                f"position {n}, {channel} at {hz:.0f} Hz by {db:.1f} dB" for channel, n, db, hz in worse))
         found = {}
-        for n, db in worse:
+        for _, n, db, _ in worse:
             found[n] = max(db, found.get(n, 0))
         self.pending = replace(self.pending, checked=True, speakers=speakers,
                                worse=tuple(sorted(found.items())))

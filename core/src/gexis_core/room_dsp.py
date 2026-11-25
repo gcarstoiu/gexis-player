@@ -821,19 +821,27 @@ def worse_positions(before_positions, after_positions, target, filters, grid=GRI
     `WORSE_DB`: (position, by how much), position 1 first. Empty is *No
     position is worse than before*. Above the bass the curves are read at
     1/3 octave, as the corrections were made."""
+    return [(n, db) for n, db, _ in worse_where(before_positions, after_positions, target, filters, grid)]
+
+
+def worse_where(before_positions, after_positions, target, filters, grid=GRID) -> list[tuple[int, float, float]]:
+    """`worse_positions` with the frequency of the filter that did it:
+    (position, by how much, Hz) - for the log (ADR-0187, 2026-11-25)."""
     grid = np.asarray(grid)
     found = []
     for n, (b, a) in enumerate(zip(before_positions, after_positions), start=1):
-        worst = 0.0
+        worst, where = 0.0, 0.0
         sb, sa = smooth(b), smooth(a)
         for f in filters:
             x = math.log(f.freq)
             t = float(np.interp(x, np.log(grid), target))
             bb, aa = (b, a) if f.freq <= LIMIT else (sb, sa)
-            worst = max(worst, abs(float(np.interp(x, np.log(grid), aa)) - t)
-                        - abs(float(np.interp(x, np.log(grid), bb)) - t))
+            moved = (abs(float(np.interp(x, np.log(grid), aa)) - t)
+                     - abs(float(np.interp(x, np.log(grid), bb)) - t))
+            if moved > worst:
+                worst, where = moved, f.freq
         if worst > WORSE_DB:
-            found.append((n, round(worst, 1)))
+            found.append((n, round(worst, 1), where))
     return found
 
 

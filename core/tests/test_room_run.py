@@ -135,12 +135,18 @@ async def test_a_whole_run_kept():
     assert s.within == rd.within_db(np.array(s.after), np.array(s.target)) and s.within < s.room_within
 
 
+#: A system that cannot reach the aim: its sweeps at their cap, with no room
+#: under it for the corrections' raises (ADR-0187, 2026-11-25).
+AT_ITS_CAP = 62.0
+
+
 async def test_the_check_plays_its_sweeps_lower_by_what_the_corrections_raise():
     """ADR-0177 item 7: no headroom while a run measures, so the run's level
-    stays the run's; the check's sweeps play lower by the raise instead, and
-    no sweep peaks higher through the stage than the run's."""
-    rig = Rig()
+    stays the run's; at its cap the check's sweeps play lower by the raise
+    instead, and no sweep peaks higher through the stage than the run's."""
+    rig = Rig(Audio(offset=AT_ITS_CAP))
     await rig.measure_all()
+    assert rig.run._level_dbfs == pytest.approx(rig.run._sweep_cap)
     run_peaks = list(rig.audio.peaks)
     rig.run.tap("check")
     for n in range(1, rc.POSITIONS + 1):
@@ -763,10 +769,58 @@ async def test_noise_alone_no_longer_repeats_sweeps_and_is_not_corrected():
     await rig.run.wait()
 
 
-async def test_the_check_takes_more_sweeps_for_playing_lower():
-    """C3: the check plays lower by what the corrections raise, and makes it
-    up in sweeps averaged."""
+async def test_the_check_plays_at_the_runs_level_where_the_sweeps_have_room():
+    """ADR-0187, 2026-11-25: sofapi's sweeps stood about 16 dB under their
+    cap; the check then plays as loud as the run, with as many sweeps, and
+    the corrections' raises still leave its peaks under the cap."""
     rig = Rig()
+    await rig.measure_all()
+    room = rig.run._sweep_cap - rig.run._level_dbfs
+    run_peaks = list(rig.audio.peaks)
+    rig.run.tap("check")
+    for n in range(1, rc.POSITIONS + 1):
+        await rig.until("move", n, checking=True)
+        rig.audio.position = n
+        rig.run.tap("next")
+    await rig.until("result")
+    pending = rig.run.pending
+    raise_db = eq.headroom_db(eq.FLAT, tuple(pending.cuts(c) + pending.above(c) for c in rc.CHANNELS))
+    assert 0 < raise_db < room and rig.run._check_db == 0
+    assert rig.run._sweeps_wanted(True) == room_run.SWEEPS
+    check_peaks = rig.audio.peaks[len(run_peaks):]
+    assert max(check_peaks) == pytest.approx(max(run_peaks), rel=0.01)
+    assert max(check_peaks) * 10 ** (raise_db / 20) < 10 ** (room_run.SWEEP_PEAK_DBFS / 20)
+    rig.run.cancel()
+    await rig.run.wait()
+
+
+async def test_the_checks_results_are_kept_at_every_position():
+    """ADR-0187, 2026-11-25 (George: always): each position's check, per
+    speaker and for the pair, kept with the measurement and read back."""
+    rig = Rig()
+    await rig.measure_all()
+    rig.run.tap("check")
+    for n in range(1, rc.POSITIONS + 1):
+        await rig.until("move", n, checking=True)
+        rig.audio.position = n
+        rig.run.tap("next")
+    await rig.until("result")
+    kept = rig.run.pending
+    for k in (*rc.CHANNELS, rc.BOTH):
+        s = kept.speakers[k]
+        assert len(s.checks) == rc.POSITIONS and all(len(c) == len(s.before) for c in s.checks)
+        assert np.allclose(rd.power_average(np.array(s.checks)), s.after, atol=1e-6)
+    back = rc.Measurement.from_dict(kept.as_dict())
+    assert all(np.allclose(back.speakers[k].checks, kept.speakers[k].checks, atol=0.006)
+               for k in (*rc.CHANNELS, rc.BOTH))
+    rig.run.cancel()
+    await rig.run.wait()
+
+
+async def test_the_check_takes_more_sweeps_for_playing_lower():
+    """C3: at its cap the check plays lower by what the corrections raise,
+    and makes it up in sweeps averaged."""
+    rig = Rig(Audio(offset=AT_ITS_CAP))
     await rig.measure_all()
     rig.run.tap("check")
     await rig.until("move", 1, checking=True)

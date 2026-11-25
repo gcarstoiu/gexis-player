@@ -360,7 +360,7 @@
 
 {#snippet mark(kind)}
   <span class="mark mark--{kind}" aria-hidden="true">
-    {#if kind === 'ok'}<span class="tick"></span>{/if}
+    {#if kind === 'ok'}<svg class="tick" viewBox="0 0 26 26"><path d="M8.5 13.3l3.2 3.1 5.8-6.6" /></svg>{/if}
     {#if kind === 'warn'}!{/if}
     {#if kind === 'playing'}<span class="bars"><i></i><i></i><i></i></span>{/if}
   </span>
@@ -902,15 +902,18 @@
   .mark--ok {
     background: var(--c-lms-16);
   }
+  /* George, 2026-11-25: the tick off the circle's centre - drawn centred on
+     the circle's own box. */
   .tick {
     position: absolute;
-    left: 9px;
-    top: 5px;
-    width: 6px;
-    height: 11px;
-    border-right: 2.5px solid var(--accent-lms);
-    border-bottom: 2.5px solid var(--accent-lms);
-    transform: rotate(45deg);
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    fill: none;
+    stroke: var(--accent-lms);
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
   .mark--wait {
     border: 2px dashed var(--c-ink-40);
