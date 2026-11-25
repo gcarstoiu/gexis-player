@@ -87,9 +87,29 @@ same day (14:35, kept): the left delayed 0.17 ms and turned down
 switches named side by side, the stale note in the last measurement's card,
 *Measure or check, from your phone*); **installed on sofapi** 2026-11-24
 16:41 at George's word (player and UI 1.18.2+git31.3d65d70, run
-45335936759; the core unchanged at git30, restarted). **Next:** a full run
-on it at about 60 dB at the seat, the DAC's filter now *Sharp roll-off*;
-the manual's room picture retaken; Phase 37's acceptance 5.
+45335936759; the core unchanged at git30, restarted). **George's third run** (2026-11-25, on that preview, 60 dB at the seat, the
+DAC's filter *Sharp roll-off*; kept): 22 minutes, the check 12½ of them;
+the speaker check 4.4 cm, the left 0.13 ms later and 1.6 dB down, the right
+way round; the bass's cuts as on 23 Nov (43, 46 and 57 Hz, -12 dB at 46);
+at 0.2 s the ringing at 50 Hz about 30 dB lower; above the bass within
+2.0 and 1.5 dB (from 2.5 and 3.0); the pair added against the played from
+2 to 5 kHz at most 0.8 dB (1-3 dB on 23 Nov; the level and the DAC's
+filter both changed since); positions 2-4 about 2 dB further from the
+target at a filter's frequency, which one not logged. Its log lines in
+`~/projects/scratch/ph37/run/journal-1125.txt`.
+**George (2026-11-25):** the check's results kept always, and the pair
+played at its head; ADR-0187 amended - the check lower only where its sweeps
+lack room, the filter behind a worse place logged - and the ticks centred,
+built on `ph-room-measurement` 01b0c582 (core tests pass; ticks checked in a
+mocked render). **Owed to George, one at a time:** whether
+the check changes the correction (B: a correction above the bass taken out
+where the check shows the head's area, weighted as the design, further from
+the target with it); then whether a run short of 60 dB stops to ask for the
+amplifier turned up. Mock-ups with George (private canvases): the
+positions' drawing D-G, and the room page A-C with a history H1-H3 (George
+asked for measurements kept and any one restorable). **Next:** a finding
+for the run; a preview with the changes, at George's word; the manual's
+room picture; Phase 37's acceptance 5.
 **Before Phase 37 closes** (George, 2026-11-21; acceptance 5): the level at
 the seat against a meter, and the equaliser's and multiroom's measurements
 through the amplifiers - George present for each.

@@ -355,3 +355,24 @@ what is done above the bass. A dip with no cause named says its cause is
 not clear from the measurement. Checked on a made-up response: a mode at
 50 Hz with a 0.8 s decay reads -10 dB at 0.2 s (0.79 s decay read); a
 10 dB cut on it leaves -30 dB (0.49 s).
+
+## Amended 2026-11-25: the check's results kept, its level
+
+George's third run on the preview (2026-11-25, 60 dB at the seat): the check
+took about 12½ minutes against 8 for the five positions, and found positions
+2-4 about 2 dB further from the target at a correction's frequency, without
+saying which.
+
+- **The check's results are kept** (George, 2026-11-25: always): each
+  position's curve after the correction, per speaker and for the pair, with
+  the measurement (`Speaker.checks`), so a past one's chart can be shown
+  again and any later judgement of the corrections tried on runs already
+  kept. The pair played at the check's head stays (George, the same day).
+- **The check plays lower only where it must** (Claude's; amends ADR-0185
+  C3): by the corrections' highest raise less the room the sweeps already
+  have under their cap, so as many sweeps as the measurement where there is
+  room, more only for the part it plays lower. On sofapi's run the sweeps
+  stood about 16 dB under their cap and the corrections raised 3 dB: two
+  sweeps instead of four, the same power over the noise.
+- **The log names what made a position worse:** the speaker (or the pair),
+  the filter's frequency and by how much, for every position over the guard.
