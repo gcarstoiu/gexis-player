@@ -309,7 +309,10 @@ side on the panel and the bars, one under the other at full width on the
 phone, ADR-0185 D4; the shading between before and the core's `corrected`,
 the after a line of its own; *Left* and *Right* tabs only, each speaker
 alone in the bass too, with a line in the legend saying the bass is cut for
-both, ADR-0186 D4-D5) and the seat drawing;
+both, ADR-0186 D4-D5) and the seat drawing (ADR-0187 D10: from above and
+from the side, the move across the floor then the height played in turn by
+SVG animation on the *move* screens, still elsewhere and with reduced
+motion);
 `RoomQuick.svelte` is the *Room* control in the volume drawer, the bar's tray
 and the phone's volume row. The phone's page has the *Speakers* card
 (ADR-0188: its own switch, the alignment's rows, *Check the speakers*, which

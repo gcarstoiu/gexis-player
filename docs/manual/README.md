@@ -1055,9 +1055,10 @@ phone* (or *Measure again*) shows a code that opens this page on a phone.
    Then move the microphone where the phone shows - five positions: your
    head; about 40 cm to its left and a little higher; 40 cm to its right
    and a little lower; 30 cm in front; 30 cm above - step back and tap
-   **Measure here**; three seconds later the sweeps play. The drawing marks
-   each position's height, beside a scale; the distances are a guide:
-   placed by eye is enough. It never moves on without the tap. A sweep
+   **Measure here**; three seconds later the sweeps play. The drawing shows
+   one move at a time: from above, the stand across the floor along a ruler
+   in 10 cm steps; then from the side, its height against a scale. The
+   distances are a guide: placed by eye is enough. It never moves on without the tap. A sweep
    spoiled by a noise (a door, a voice) is measured again; the room's
    steady noise is no reason to, so where a sweep stands well over it, two
    that differ were disturbed, and elsewhere the sweeps are averaged

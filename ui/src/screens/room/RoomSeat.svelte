@@ -1,93 +1,153 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <!--
-  Where the microphone goes (ADR-0175; design/source/29, *The drawing*):
-  top-down, the two speakers at the top, the seat low in the middle, a
-  dashed ring of about 50 cm round the head, and the five positions - the
-  one in use lit, the ones done ticked. Moving to a new one, a dashed arrow
-  from the head shows the way. The speaker playing is outlined. **Height**
-  (George, 2026-11-23, plan C of three mock-ups): each position off ear
-  height carries its cm (↑15, ↓15, ↑30), position 5 is a badge lifted off
-  the head, and a scale beside the drawing places every position by height.
+  Where the microphone goes (ADR-0175; ADR-0187 D10, George 2026-11-25:
+  F of four mock-ups, *one move at a time*). Two views of the seat: from
+  above - the speakers turned in, the seat, the head, the five positions,
+  those done ticked - where the stand moves across the floor along a ruler
+  in 10 cm steps; and from the side, where its height is set against a cm
+  scale. Moving to a position the two play in turn (C12), each caption lit
+  while its move plays; elsewhere, or with the phone set to reduce motion,
+  the stand stands where it goes. The speaker playing is outlined.
 -->
 <script>
-  import { HEIGHTS, PLACES } from '../../lib/room.svelte.js';
+  import { POSITION_CM, SEAT_STEPS } from '../../lib/room.svelte.js';
 
-  //: `active`: the position in use (from 1) or 0; `done`: those measured;
-  //: `playing`: 'L', 'R', 'both' or null; `arrow`: draw the way from the head to `active`.
-  let { active = 1, done = [], playing = null, arrow = false } = $props();
+  //: `active`: the position in use (from 1); `done`: those measured;
+  //: `playing`: 'L', 'R', 'both' or null; `moving`: play the two moves.
+  let { active = 1, done = [], playing = null, moving = false } = $props();
 
-  const places = $derived(PLACES.map(([x, y], i) => {
-    const n = i + 1;
-    const h = HEIGHTS[i] ?? 0;
-    return { n, x, y, on: n === active, done: done.includes(n) && n !== active, above: n === 5,
-      tag: h ? `${h > 0 ? '↑' : '↓'}${Math.abs(h)}` : '', side: n === 5 };
+  //: The drawing's scale: 1.6 px a cm from above, 2 from the side; the head
+  //: at (170, 148) from above, the ear at 92 from the side.
+  const K = 1.6;
+  const HX = 170;
+  const HY = 148;
+  const EAR = 92;
+  const r1 = (v) => Math.round(v * 10) / 10;
+  const still = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const animate = $derived(moving && !still);
+
+  const at = (k) => (k === 5 ? [HX + 14, HY - 14] : [HX + K * POSITION_CM[k][0], HY - K * POSITION_CM[k][1]]);
+  const marks = $derived([1, 2, 3, 4, 5].filter((k) => k !== active).map((k) => {
+    const [x, y] = at(k);
+    const ticked = done.includes(k);
+    return { k, x: r1(x), y: r1(y), ticked,
+      tick: ticked ? `M${r1(x - 3)} ${r1(y)}L${r1(x - 0.8)} ${r1(y + 2.4)}L${r1(x + 3.5)} ${r1(y - 2.8)}` : '' };
   }));
-  //: The scale: its levels top to bottom, and each position on it - two at
-  //: one height side by side.
-  const LEVELS = [[30, '+30', 26], [15, '+15', 46], [0, 'ear', 66], [-15, '−15', 86]];
-  const scale = $derived(places.map((p) => {
-    const h = HEIGHTS[p.n - 1] ?? 0;
-    const same = places.filter((q) => (HEIGHTS[q.n - 1] ?? 0) === h && q.n < p.n).length;
-    return { ...p, top: LEVELS.find(([cm]) => cm === h)?.[2] ?? 66, left: 44 + same * 18 };
-  }));
-  const way = $derived.by(() => {
-    if (!arrow || active < 2) return null;
-    const [x1, y1] = PLACES[0];
-    const [x2, y2] = PLACES[active - 1];
-    const dx = x2 - x1;
-    const dy = y2 - y1;
-    const len = Math.hypot(dx, dy);
-    // Straight above the head (5): its badge sits on it, no way to draw.
-    if (len < 40) return null;
-    const ux = dx / len;
-    const uy = dy / len;
-    const sx = x1 + ux * 13;
-    const sy = y1 + uy * 13;
-    const ex = x2 - ux * 19;
-    const ey = y2 - uy * 19;
-    return {
-      line: `M${sx},${sy}L${ex},${ey}`,
-      head: `M${ex + ux * 6},${ey + uy * 6}L${ex - uy * 5},${ey + ux * 5}L${ex + uy * 5},${ey - ux * 5}Z`,
-    };
+  const move = $derived.by(() => {
+    const [x, y, z] = POSITION_CM[active] ?? [0, 0, 0];
+    const tx = K * x;
+    const ty = -K * y;
+    const cm = Math.hypot(x, y);
+    let trail = '';
+    let ticks = '';
+    let label = null;
+    if (cm) {
+      const ux = tx / (K * cm);
+      const uy = ty / (K * cm);
+      trail = `M${HX} ${HY}L${r1(HX + tx)} ${r1(HY + ty)}`;
+      for (let d = 10; d < cm; d += 10) {
+        const px = HX + ux * K * d;
+        const py = HY + uy * K * d;
+        ticks += `M${r1(px - uy * 3.5)} ${r1(py + ux * 3.5)}L${r1(px + uy * 3.5)} ${r1(py - ux * 3.5)}`;
+      }
+      label = y ? { x: HX + 10, y: r1(HY + ty / 2), a: 'start', t: `${cm} cm` }
+        // Under the ruler, not over it as drawn: there it met position 5's mark.
+        : { x: r1(HX + tx / 2), y: HY + 13, a: 'middle', t: `${cm} cm` };
+    }
+    return { tx: r1(tx), ty: r1(ty), dz: -2 * z, trail, ticks, label };
   });
+  const steps = $derived(SEAT_STEPS[active] ?? SEAT_STEPS[1]);
+  const clip = `seat-stand-${Math.random().toString(36).slice(2, 8)}`;
 </script>
 
 <div class="card">
-  <div class="row">
-  <div class="box" role="img" aria-label={`Where the microphone goes: position ${active || 1} of ${PLACES.length} around your seat`}>
-    <div class="spk spk--l" class:is-playing={playing === 'L' || playing === 'both'}><span></span></div>
-    <div class="spk spk--r" class:is-playing={playing === 'R' || playing === 'both'}><span></span></div>
-    <span class="spklab spklab--l" class:is-playing={playing === 'L' || playing === 'both'}>L</span>
-    <span class="spklab spklab--r" class:is-playing={playing === 'R' || playing === 'both'}>R</span>
-    <div class="seat"><span>Your seat</span></div>
-    <div class="ring"></div>
-    {#if way}
-      <svg viewBox="0 0 340 196" class="way" aria-hidden="true">
-        <path d={way.line} class="way__line" />
-        <path d={way.head} class="way__head" />
-      </svg>
-    {/if}
-    {#each places as p (p.n)}
-      <span class="place" class:is-on={p.on} class:is-done={p.done} class:place--above={p.above}
-            style="left:{(p.x / 340) * 100}%;top:{(p.y / 196) * 100}%">{p.done ? '✓' : p.n}</span>
-      {#if p.tag}
-        <span class="tag" class:tag--side={p.side} class:is-on={p.on}
-              style="left:{((p.side ? p.x - 13 : p.x) / 340) * 100}%;top:{((p.side ? p.y - 9 : p.y + 31) / 196) * 100}%">{p.tag}</span>
+  <svg viewBox="0 0 340 196" class="view" role="img" aria-label={`From above: ${steps[0]}`}>
+    <text x="12" y="16" class="cap">{steps[0]}{#if animate}<animate attributeName="opacity" values="1;1;0.4;0.4" keyTimes="0;0.5;0.52;1" dur="5s" repeatCount="indefinite" />{/if}</text>
+    <text x="328" y="16" text-anchor="end" class="view__lab">FROM ABOVE</text>
+    <g transform="rotate(-47 64 50)" class="spk" class:is-playing={playing === 'L' || playing === 'both'}>
+      <rect x="52" y="42" width="24" height="16" rx="3" />
+      <path d="M54 58H74" />
+    </g>
+    <g transform="rotate(47 276 50)" class="spk" class:is-playing={playing === 'R' || playing === 'both'}>
+      <rect x="264" y="42" width="24" height="16" rx="3" />
+      <path d="M266 58H286" />
+    </g>
+    <text x="38" y="76" text-anchor="middle" class="spklab" class:is-playing={playing === 'L' || playing === 'both'}>L</text>
+    <text x="302" y="76" text-anchor="middle" class="spklab" class:is-playing={playing === 'R' || playing === 'both'}>R</text>
+    <path d="M72 57L160.5 139.2M268 57L179.5 139.2" class="aim" />
+    <rect x="96" y="122" width="148" height="68" rx="14" class="seat" />
+    <path d="M102 174H238" class="seat__back" />
+    <text x="170" y="185" text-anchor="middle" class="seat__lab">Your seat</text>
+    <circle cx="170" cy="148" r="13" class="head" />
+    <path d="M165 133L170 128L175 133" class="head__nose" />
+    {#each marks as m (m.k)}
+      <circle cx={m.x} cy={m.y} r="7.5" class="mark" class:is-done={m.ticked} />
+      {#if m.ticked}
+        <path d={m.tick} class="mark__tick" />
+      {:else}
+        <text x={m.x} y={m.y} text-anchor="middle" dominant-baseline="central" class="mark__n">{m.k}</text>
       {/if}
     {/each}
-  </div>
-  <div class="gauge" aria-hidden="true">
-    <span class="gauge__cap">Height</span>
-    <span class="gauge__rail"></span>
-    {#each LEVELS as [cm, label, top] (cm)}
-      <span class="gauge__lab" style="top:{top}%">{label}</span>
-      <span class="gauge__tick" style="top:{top}%"></span>
-    {/each}
-    {#each scale as d (d.n)}
-      <span class="dot" class:is-on={d.on} class:is-done={d.done} style="top:{d.top}%;left:{d.left}px">{d.n}</span>
-    {/each}
-  </div>
-  </div>
+    {#if move.trail}
+      <path d={move.trail} class="trail" />
+      <path d={move.ticks} class="trail__ticks" />
+      <text x={move.label.x} y={move.label.y} text-anchor={move.label.a} dominant-baseline="central" class="trail__lab">{move.label.t}</text>
+    {/if}
+    {#key `${active}-${animate}`}
+      <g transform={animate ? undefined : `translate(${move.tx} ${move.ty})`}>
+        {#if animate}
+          <animateTransform attributeName="transform" type="translate" values={`0 0;0 0;${move.tx} ${move.ty};${move.tx} ${move.ty}`} keyTimes="0;0.12;0.4;1" dur="5s" repeatCount="indefinite" />
+        {/if}
+        <circle cx="170" cy="148" r="18" class="mic__halo" />
+        <circle cx="170" cy="148" r="12" class="mic" />
+        <text x="170" y="148" text-anchor="middle" dominant-baseline="central" class="mic__n">{active}</text>
+      </g>
+    {/key}
+  </svg>
+  <div class="rule"></div>
+  <svg viewBox="0 0 340 176" class="view" role="img" aria-label={`From the side: ${steps[1]}`}>
+    <defs>
+      <clipPath id={clip}><rect x="150" y="0" width="40" height="148" /></clipPath>
+    </defs>
+    <text x="12" y="16" class="cap">{steps[1]}{#if animate}<animate attributeName="opacity" values="0.4;0.4;1;1" keyTimes="0;0.5;0.52;1" dur="5s" repeatCount="indefinite" />{/if}</text>
+    <text x="328" y="16" text-anchor="end" class="view__lab">FROM THE SIDE</text>
+    <path d="M20 172H320" class="floor" />
+    <path d="M60 92H232" class="ear" />
+    <circle cx="170" cy="92" r="13" class="head head--side" />
+    <path d="M182.5 88L188 92.5L182 95" class="head__nose head__nose--side" />
+    <text x="150" y="80" text-anchor="end" class="seat__lab">where your head was</text>
+    <path d="M236 26V128M236 32H246M236 42H241M236 52H241M236 62H246M236 72H241M236 82H241M236 92H246M236 102H241M236 112H241M236 122H246" class="ruler" />
+    <text x="250" y="32" dominant-baseline="central" class="ruler__lab">+30</text>
+    <text x="250" y="62" dominant-baseline="central" class="ruler__lab">+15</text>
+    <text x="250" y="92" dominant-baseline="central" class="ruler__lab is-ear">ear</text>
+    <text x="250" y="122" dominant-baseline="central" class="ruler__lab">−15</text>
+    <text x="250" y="140" dominant-baseline="central" class="ruler__lab ruler__lab--unit">cm</text>
+    <rect x="318" y="56" width="14" height="72" rx="3" class="spk-side" class:is-playing={!!playing} />
+    <path d="M318 66V118" class="spk-side__front" class:is-playing={!!playing} />
+    <text x="334" y="46" text-anchor="end" class="seat__lab">speakers</text>
+    {#if move.dz}
+      <path d={`M150 ${EAR + move.dz}H232`} class="target" />
+    {/if}
+    {#key `${active}-${animate}`}
+      <g clip-path={`url(#${clip})`}>
+        <g transform={animate ? undefined : `translate(0 ${move.dz})`}>
+          {#if animate}
+            <animateTransform attributeName="transform" type="translate" values={`0 0;0 0;0 ${move.dz};0 ${move.dz}`} keyTimes="0;0.52;0.76;1" dur="5s" repeatCount="indefinite" />
+          {/if}
+          <path d="M170 114V234" class="pole" />
+        </g>
+      </g>
+      <path d="M170 148V158" class="pole__base" />
+      <path d="M170 158L152 172M170 158L188 172M170 158V172" class="legs" />
+      <g transform={animate ? undefined : `translate(0 ${move.dz})`}>
+        {#if animate}
+          <animateTransform attributeName="transform" type="translate" values={`0 0;0 0;0 ${move.dz};0 ${move.dz}`} keyTimes="0;0.52;0.76;1" dur="5s" repeatCount="indefinite" />
+        {/if}
+        <rect x="164" y="92" width="12" height="22" rx="6" class="mic" />
+        <path d="M164 98H176" class="mic__band" />
+      </g>
+    {/key}
+  </svg>
 </div>
 
 <style>
@@ -96,232 +156,182 @@
     border-radius: var(--r-18);
     background: var(--c-white-05);
     border: 1px solid var(--ink-line);
-    padding: 12px;
-  }
-  .row {
+    padding: 10px 8px;
     display: flex;
-    gap: 4px;
+    flex-direction: column;
+    gap: 6px;
   }
-  .box {
-    position: relative;
-    flex: 1;
-    min-width: 0;
-    aspect-ratio: 340 / 196;
-    /* The places scale with the drawing, so a narrow phone keeps them apart. */
-    container-type: inline-size;
-  }
-  .tag {
-    position: absolute;
-    transform: translate(-50%, -50%);
-    font-family: var(--font-mono);
-    font-size: clamp(8px, 3.2cqw, 11px);
-    white-space: nowrap;
-    color: var(--ink-quiet);
-  }
-  .tag--side {
-    transform: translate(-100%, -50%);
-  }
-  .tag.is-on {
-    color: var(--accent-lms);
-  }
-  .gauge {
-    position: relative;
-    flex: 0 0 66px;
-  }
-  .gauge__cap {
-    position: absolute;
-    top: 3%;
-    left: 0;
-    right: 0;
-    text-align: center;
-    font-family: var(--font-mono);
-    font-size: 9px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--ink-quiet);
-  }
-  .gauge__rail {
-    position: absolute;
-    left: 27px;
-    top: 18%;
-    bottom: 6%;
-    width: 2px;
-    border-radius: var(--r-pill);
-    background: var(--c-ink-22);
-  }
-  .gauge__lab {
-    position: absolute;
-    right: calc(100% - 22px);
-    transform: translateY(-50%);
-    font-family: var(--font-mono);
-    font-size: 9px;
-    color: var(--ink-quiet);
-  }
-  .gauge__tick {
-    position: absolute;
-    left: 24px;
-    width: 8px;
-    height: 1px;
-    background: var(--c-ink-30);
-  }
-  .dot {
-    position: absolute;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    box-sizing: border-box;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 10px;
-    font-weight: 800;
-    transform: translate(-50%, -50%);
-    background: var(--c-dark-1b2a34);
-    border: 1.5px solid var(--c-ink-30);
-    color: var(--ink-body);
-  }
-  .dot.is-done {
-    background: var(--c-lms-20);
-    border-color: var(--c-lms-60);
-    color: var(--accent-lms);
-  }
-  .dot.is-on {
-    width: 20px;
-    height: 20px;
-    background: var(--accent-lms);
-    border-color: var(--accent-lms);
-    color: var(--ink-on-accent);
-    box-shadow: 0 0 0 4px var(--c-lms-20);
-  }
-  .spk {
-    position: absolute;
-    top: 5.1%;
-    width: 8.2%;
-    height: 18.4%;
-    border-radius: var(--r-5);
-    box-sizing: border-box;
-    background: var(--ink-fill);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1.5px solid var(--c-ink-30);
-  }
-  .spk span {
-    width: 52%;
-    aspect-ratio: 1;
-    border-radius: 50%;
-    border: 1.5px solid var(--c-ink-30);
+  .view {
+    width: 100%;
+    height: auto;
     display: block;
   }
-  .spk--l,
-  .spklab--l {
-    left: 11.2%;
+  .rule {
+    height: 1px;
+    background: var(--ink-line);
+    margin: 0 4px;
   }
-  .spk--r,
-  .spklab--r {
-    left: 80.6%;
+  .cap {
+    font-size: 12.5px;
+    font-weight: 800;
+    fill: var(--accent-lms);
   }
-  .spk.is-playing {
-    border-color: var(--accent-lms);
+  .view__lab {
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    letter-spacing: 1.2px;
+    fill: var(--c-ink-70);
+  }
+  .spk rect,
+  .spk-side {
+    fill: var(--ink-fill);
+    stroke: var(--c-ink-30);
+    stroke-width: 1.5;
+  }
+  .spk path,
+  .spk-side__front {
+    stroke: var(--c-ink-55);
+    stroke-width: 2.5;
+  }
+  .spk.is-playing rect,
+  .spk.is-playing path,
+  .spk-side.is-playing,
+  .spk-side__front.is-playing {
+    stroke: var(--accent-lms);
   }
   .spklab {
-    position: absolute;
-    width: 8.2%;
-    top: 25.5%;
-    text-align: center;
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 10.5px;
     font-weight: 600;
-    color: var(--ink-quiet);
+    fill: var(--c-ink-70);
   }
   .spklab.is-playing {
-    color: var(--accent-lms);
+    fill: var(--accent-lms);
+  }
+  .aim {
+    fill: none;
+    stroke: var(--c-ink-16);
+    stroke-dasharray: 3 4;
   }
   .seat {
-    position: absolute;
-    left: 26%;
-    top: 52%;
-    width: 48%;
-    height: 44%;
-    border-radius: var(--r-18);
-    background: var(--c-ink-05);
-    border: 1px solid var(--c-ink-12);
-    box-sizing: border-box;
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    padding-bottom: 4px;
+    fill: var(--c-ink-05);
+    stroke: var(--c-ink-13);
   }
-  .seat span {
-    font-size: 11px;
-    white-space: nowrap;
-    color: var(--ink-quiet);
+  .seat__back {
+    stroke: var(--c-ink-13);
   }
-  .ring {
-    position: absolute;
-    left: 34.7%;
-    top: 23%;
-    width: 30.6%;
-    aspect-ratio: 1;
-    border-radius: 50%;
-    border: 1px dashed var(--c-ink-22);
-    box-sizing: border-box;
+  .seat__lab {
+    font-size: 10.5px;
+    fill: var(--c-ink-70);
   }
-  .way {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    overflow: visible;
-    pointer-events: none;
+  .head,
+  .head__nose {
+    fill: none;
+    stroke: var(--c-ink-38);
   }
-  .way__line {
+  .head {
+    stroke-dasharray: 3 3;
+  }
+  .head--side,
+  .head__nose--side {
+    stroke: var(--c-ink-30);
+  }
+  .mark {
+    fill: var(--c-dark-1b2a34);
+    stroke: var(--c-ink-30);
+    stroke-width: 1.5;
+  }
+  .mark.is-done {
+    fill: var(--c-lms-20);
+    stroke: var(--c-lms-60);
+  }
+  .mark__n {
+    font-size: 10px;
+    font-weight: 800;
+    fill: var(--ink-body);
+  }
+  .mark__tick {
+    fill: none;
+    stroke: var(--accent-lms);
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .trail {
     fill: none;
     stroke: var(--accent-lms);
     stroke-width: 2;
     stroke-dasharray: 4 4;
     stroke-linecap: round;
   }
-  .way__head {
+  .trail__ticks {
+    fill: none;
+    stroke: var(--accent-lms);
+    stroke-width: 1.5;
+    stroke-linecap: round;
+  }
+  .trail__lab {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
     fill: var(--accent-lms);
   }
-  .place {
-    position: absolute;
-    width: clamp(16px, 7.2cqw, 26px);
-    height: clamp(16px, 7.2cqw, 26px);
-    border-radius: 50%;
-    box-sizing: border-box;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: clamp(10px, 3.9cqw, 14px);
+  .mic__halo {
+    fill: var(--c-lms-20);
+  }
+  .mic {
+    fill: var(--accent-lms);
+  }
+  .mic__n {
+    font-size: 13px;
     font-weight: 800;
-    transform: translate(-50%, -50%);
-    background: var(--c-dark-1b2a34);
-    border: 2px solid var(--c-ink-30);
-    color: var(--ink-body);
+    fill: var(--ink-on-accent);
   }
-  .place.is-done {
-    background: var(--c-lms-20);
-    border-color: var(--c-lms-60);
-    color: var(--accent-lms);
+  .mic__band {
+    stroke: var(--ink-on-accent);
+    stroke-width: 1;
   }
-  .place--above {
-    width: clamp(13px, 5.8cqw, 21px);
-    height: clamp(13px, 5.8cqw, 21px);
-    font-size: clamp(8px, 3.2cqw, 11px);
+  .floor {
+    stroke: var(--c-ink-16);
   }
-  .place.is-on {
-    width: clamp(20px, 8.8cqw, 32px);
-    height: clamp(20px, 8.8cqw, 32px);
-    background: var(--accent-lms);
-    border-color: var(--accent-lms);
-    color: var(--ink-on-accent);
-    box-shadow: 0 0 0 clamp(3px, 1.6cqw, 6px) var(--c-lms-20);
+  .ear {
+    fill: none;
+    stroke: var(--c-ink-20);
+    stroke-dasharray: 3 4;
   }
-  .place--above.is-on {
-    width: clamp(16px, 7cqw, 25px);
-    height: clamp(16px, 7cqw, 25px);
-    box-shadow: 0 0 0 clamp(2px, 1.2cqw, 4px) var(--c-lms-20);
+  .ruler {
+    fill: none;
+    stroke: var(--c-ink-45);
+  }
+  .ruler__lab {
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    fill: var(--c-ink-70);
+  }
+  .ruler__lab.is-ear {
+    fill: var(--ink);
+  }
+  .ruler__lab--unit {
+    font-size: 8.5px;
+  }
+  .target {
+    fill: none;
+    stroke: var(--accent-lms);
+    stroke-width: 1.5;
+    stroke-dasharray: 2 3;
+  }
+  .pole {
+    stroke: var(--c-ink-55);
+    stroke-width: 2.5;
+  }
+  .pole__base {
+    stroke: var(--c-ink-45);
+    stroke-width: 5;
+    stroke-linecap: round;
+  }
+  .legs {
+    fill: none;
+    stroke: var(--c-ink-45);
+    stroke-width: 1.5;
   }
 </style>

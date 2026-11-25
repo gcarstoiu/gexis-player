@@ -200,20 +200,26 @@ const COUNTS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'ei
 export const countWord = (n) => COUNTS[n] ?? String(n);
 export const capitalised = (w) => w.charAt(0).toUpperCase() + w.slice(1);
 
-/** **Where to move the microphone** (the design's R19-R20). */
+/** **Where to move the microphone**, one move at a time (ADR-0187 D10,
+ *  George 2026-11-25: F) - across the floor first, then the height. */
 export const MOVES = {
-  2: 'About 40 cm to the left of where your head was and 15 cm higher',
-  3: 'About 40 cm to the right of where your head was and 15 cm lower',
-  4: 'About 30 cm in front of where your head was, at its height',
-  5: 'About 30 cm straight above where your head was',
+  1: 'First, back where your head was; then at its height',
+  2: 'First, about 40 cm to the left of where your head was; then 15 cm higher',
+  3: 'First, about 40 cm to the right of where your head was; then 15 cm lower',
+  4: 'First, about 30 cm towards the speakers from where your head was; then at its height',
+  5: 'First, stay where your head was; then raise it about 30 cm',
 };
-//: The seat drawing's places in its 340 x 196 box (1 is the head; 5 is
-//: above it, drawn as a badge lifted off it - George, 2026-11-23, plan C).
-export const PLACES = [[170, 98], [122, 98], [218, 98], [170, 46], [151, 79]];
-//: Each position's height against the ear, in cm (ADR-0187 D3): marked on
-//: the drawing and on its scale (George, 2026-11-23: with only the words,
-//: positions 2 and 3 were placed at ear height).
-export const HEIGHTS = [0, 15, -15, 0, 30];
+//: Each position against the head, in cm (ADR-0187 D3): to the right,
+//: towards the speakers, up.
+export const POSITION_CM = { 1: [0, 0, 0], 2: [-40, 0, 15], 3: [40, 0, -15], 4: [0, 30, 0], 5: [0, 0, 30] };
+//: The drawing's two captions: the move across the floor, then the height.
+export const SEAT_STEPS = {
+  1: ['First: back where your head was', "Then: at your ears' height"],
+  2: ['First: 40 cm to the left', 'Then: 15 cm higher'],
+  3: ['First: 40 cm to the right', 'Then: 15 cm lower'],
+  4: ['First: 30 cm towards the speakers', "Then: at your ears' height"],
+  5: ['First: stay where your head was', 'Then: 30 cm higher'],
+};
 
 /** The dips the correction leaves, for the correction's tail: the lowest
  *  points below the target under the limit, two at most, low to high. */

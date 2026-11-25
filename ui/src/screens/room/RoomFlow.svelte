@@ -200,8 +200,8 @@
   // ---- each screen's words -------------------------------------------------------
 
   const moveText = (k) => (setup
-    ? `${k === 1 ? 'Back where your head was, at its height' : `${MOVES[k]}`}, still pointing at the ceiling.${k === 2 ? ' From there the left speaker should sound nearer.' : ''} Step back, then tap Check here.`
-    : `${k === 1 ? 'Back where your head was, at its height' : MOVES[k]}, still pointing at the ceiling. Step back, then tap Measure here.`);
+    ? `${MOVES[k]}, still pointing at the ceiling.${k === 2 ? ' From there the left speaker should sound nearer.' : ''} Step back, then tap Check here.`
+    : `${MOVES[k]}, still pointing at the ceiling. Step back, then tap Measure here.`);
   //: The correction for the speaker shown.
   const groups = $derived(correctionGroups(speaker));
   const resultPair = $derived(resultWords({ speaker, expectedMark: screenName === 'result' && !!run?.expected }));
@@ -459,7 +459,7 @@
       {#if showSeat}
         <RoomSeat active={screenName === 'place' ? 1 : n} done={screenName === 'place' || setup ? [] : done}
                   playing={['timing', 'measure', 'checking'].includes(screenName) ? run?.speaker : null}
-                  arrow={screenName === 'move' && n > 1} />
+                  moving={screenName === 'move'} />
       {/if}
 
       {#if screenName === 'place'}
