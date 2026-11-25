@@ -815,6 +815,47 @@ def peaks_down_db(before, after, grid=GRID) -> float:
     return float(max(0.0, np.max((np.asarray(before) - np.asarray(after))[inside])))
 
 
+#: **What the check takes out** (ADR-0187 D9, C10): a broad correction goes
+#: when taking it out brings the five positions' weighted gap from the
+#: target at its frequency down by at least this (the readings' tenth).
+TAKE_OUT_DB = 0.1
+
+
+def _weighted_gap(curves, target, freq: float, grid) -> float:
+    """The positions' gap from the target at `freq`, at 1/3 octave, the head
+    counting as much as the others together (`head_counts_more`)."""
+    x = math.log(freq)
+    t = float(np.interp(x, np.log(grid), target))
+    return float(np.mean([abs(float(np.interp(x, np.log(grid), smooth(c))) - t)
+                          for c in head_counts_more(curves)]))
+
+
+def take_out(checked, target, broad, grid=GRID) -> tuple[list, list[tuple]]:
+    """**The check takes out what makes it worse** (ADR-0187 D9, George
+    2026-11-25; C10): on one speaker's checked curves (each position, with
+    the correction on), each broad correction's response taken back out -
+    exact for filters one after another - and the weighted gap at its
+    frequency compared with and without it. The one whose removal helps
+    most goes first, then the rest again, until none left makes it worse.
+    `(kept, taken)`, taken as `(correction, gap with, gap without)`."""
+    grid = np.asarray(grid)
+    curves = np.asarray(checked, dtype=float)
+    kept, taken = list(broad), []
+    while kept:
+        best = None
+        for b in kept:
+            without = curves - cuts_db([b], grid)
+            with_db, without_db = _weighted_gap(curves, target, b.freq, grid), _weighted_gap(without, target, b.freq, grid)
+            if round(with_db - without_db, 1) >= TAKE_OUT_DB and (best is None or with_db - without_db > best[1] - best[2]):
+                best = (b, with_db, without_db)
+        if best is None:
+            break
+        curves = curves - cuts_db([best[0]], grid)
+        kept.remove(best[0])
+        taken.append((best[0], round(best[1], 2), round(best[2], 2)))
+    return kept, taken
+
+
 def worse_positions(before_positions, after_positions, target, filters, grid=GRID) -> list[tuple[int, float]]:
     """Positions the measured check finds further from the target at a cut's
     or a broad correction's frequency than they were, by more than

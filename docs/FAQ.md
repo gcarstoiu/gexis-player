@@ -99,7 +99,8 @@ the bass's ringing changed and explains the dips it leaves.
 **What does *Limited testing* beside Full range mean?**
 Room correction above the bass has so far been tried in one room. It is
 designed to change little - 3 dB at most, broad - and the check after a
-measurement says if any position ends further from the target, but it has
+measurement takes out any correction that leaves the positions further from
+the target, and says if one still ends further, but it has
 not yet met many rooms and speakers. *Bass* keeps the bass correction alone,
 and a problem report (*Settings → System*) helps.
 

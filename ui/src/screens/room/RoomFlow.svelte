@@ -13,7 +13,7 @@
   import { alignedLine, bandWord, BOTH, capitalised, chartSpan, checkRows, correctionGroups, correctionsHeading,
     correctionsWho, correctionTail, cutFreq, countWord, cutGain, dipRows, dips, giveCalibration, levelLine, MOVES,
     outputShort, POSITIONS, resultWords, ringBands, ringDb, ringWidth, runRoom, sideName, sides,
-    worseLine } from '../../lib/room.svelte.js';
+    worseLine, takenLine } from '../../lib/room.svelte.js';
   import RoomChart from './RoomChart.svelte';
   import RoomSeat from './RoomSeat.svelte';
 
@@ -206,6 +206,7 @@
   const groups = $derived(correctionGroups(speaker));
   const resultPair = $derived(resultWords({ speaker, expectedMark: screenName === 'result' && !!run?.expected }));
   const worse = $derived(screenName === 'result' && !run?.expected && pending?.worse?.length ? worseLine(pending.worse) : '');
+  const taken = $derived(screenName === 'result' && !run?.expected ? takenLine(pending?.taken) : '');
   //: ADR-0185 C2: more than 1 ms apart (`far_cm`).
   const farHead = $derived.by(() => {
     const d = run?.distance_cm ?? 0;
@@ -636,6 +637,9 @@
 
       {#if worse}
         <div class="worse" role="status"><span class="worse__mark">!</span><span>{worse}</span></div>
+      {/if}
+      {#if taken}
+        <div class="tail tail--quiet">{taken}</div>
       {/if}
 
       {#if aligned && screenName !== 'measure'}

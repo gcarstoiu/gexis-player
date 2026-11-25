@@ -157,6 +157,18 @@ export function resultWords({ speaker, range = 'full', reach = 'full', expectedM
   return [head, line];
 }
 
+/** **What the check took out** (ADR-0187 D9, George 2026-11-25): the broad
+ *  corrections that made it worse at the positions placed again; '' when none. */
+export function takenLine(taken) {
+  const and = (xs) => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} and ${xs.at(-1)}` : xs[0]);
+  const sides = ['L', 'R'].filter((k) => taken?.[k]?.length)
+    .map((k) => `on the ${sideName(k).toLowerCase()} at ${and(taken[k].map((c) => freqWord(c.freq)))}`);
+  const n = ['L', 'R'].reduce((s, k) => s + (taken?.[k]?.length ?? 0), 0);
+  if (!n) return '';
+  return `The check took out ${n === 1 ? 'one correction' : `${countWord(n)} corrections`} above the bass, ${sides.join(', ')}: `
+    + `at the positions as you placed them again, ${n === 1 ? 'it' : 'they'} took the sound further from the target.`;
+}
+
 /** The result's warning: which position the check found worse, and by how much. */
 export function worseLine(worse) {
   if (!worse?.length) return 'No position is worse than before.';

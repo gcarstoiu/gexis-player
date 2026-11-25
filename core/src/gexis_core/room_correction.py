@@ -168,6 +168,10 @@ class Speaker:
     #: always kept): the curve measured with the correction on, as
     #: `positions`; empty when the check was skipped or not kept.
     checks: tuple[tuple[float, ...], ...] = ()
+    #: **What the check took out** (ADR-0187 D9): broad corrections the
+    #: design gave that made it worse at the positions placed again, as
+    #: `above`; `checks` are without them.
+    taken: tuple[tuple[float, float, float], ...] = ()
 
     def as_dict(self) -> dict:
         out = {"cuts": _dicts(self.cuts),
@@ -185,6 +189,8 @@ class Speaker:
             out["ringing"] = _rings(self.ringing)
         if self.checks:
             out["checks"] = [_round(p) for p in self.checks]
+        if self.taken:
+            out["taken"] = _dicts(self.taken)
         return out
 
     @classmethod
@@ -212,7 +218,8 @@ class Speaker:
         return cls(tuple(_filters(value.get("cuts"), False)[:eq.ROOM_SLOTS]), before, target, after, positions,
                    tuple(_filters(value.get("above"), True)[:eq.ABOVE_SLOTS]), after_bass,
                    None if within is None else _floats([within])[0],
-                   None if room_within is None else _floats([room_within])[0], tuple(ringing), checks)
+                   None if room_within is None else _floats([room_within])[0], tuple(ringing), checks,
+                   tuple(_filters(value.get("taken"), True)[:eq.ABOVE_SLOTS]))
 
     def peaks_down(self) -> float:
         """*Peaks down by up to N dB*: the most taken off below the limit."""

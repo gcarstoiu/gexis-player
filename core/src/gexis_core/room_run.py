@@ -1074,18 +1074,30 @@ class Run:
         for channel in rc.CHANNELS:
             d = self._designs[channel]
             measured = [c - d.offset for c in self._checked[channel]]
+            # ADR-0187 D9 (George, 2026-11-25): what makes it worse at the
+            # positions placed again is taken out; the rest is what is kept,
+            # its curves those measured less what was taken (exact).
+            broad, taken = self._dsp.take_out(measured, d.target, list(d.broad))
+            if taken:
+                gone = self._dsp.cuts_db([b for b, _, _ in taken], self._dsp.GRID)
+                measured = [c - gone for c in measured]
+                logger.info("room: %s: the check took out %s", channel, "; ".join(
+                    f"{b.freq:.0f} Hz {b.gain:+.1f} dB (the positions {w:.2f} dB from the target with it, "
+                    f"{wo:.2f} without)" for b, w, wo in taken))
             after = self._dsp.power_average(measured)
             # *Bass*: the broad corrections taken out of what was measured,
             # exact for filters one after another.
-            after_bass = after - self._dsp.cuts_db(d.broad, self._dsp.GRID)
+            after_bass = after - self._dsp.cuts_db(broad, self._dsp.GRID)
             speakers[channel] = replace(self.pending.speakers[channel], after=tuple(after),
                                         after_bass=tuple(after_bass),
+                                        above=tuple((b.freq, b.gain, b.q) for b in broad),
+                                        taken=tuple((b.freq, b.gain, b.q) for b, _, _ in taken),
                                         within=self._dsp.within_db(after, d.target),
                                         ringing=self._ringing(channel, checked=channel in self._head_checked)
                                         or self.pending.speakers[channel].ringing,
                                         checks=kept(measured))
             # Above the bass each speaker's own corrections are judged on it.
-            worse += [(channel, *w) for w in self._dsp.worse_where(d.positions, measured, d.target, list(d.broad))]
+            worse += [(channel, *w) for w in self._dsp.worse_where(d.positions, measured, d.target, broad)]
         # The bass's cuts on what they were designed from: both together.
         d = self._designs[rc.BOTH]
         measured = [c - d.offset for c in self._checked[rc.BOTH]]

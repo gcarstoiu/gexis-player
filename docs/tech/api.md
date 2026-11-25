@@ -108,7 +108,8 @@ ADR-0175 and ADR-0177, internal until Phase 30 closes. `GET
 `within` and `room_within`, `distance_cm` - how much further the right
 speaker is than the left, null when not timed - `delay_ms`, each
 speaker's (ADR-0185), and `level_db`, each speaker's cut to match the other
-(ADR-0187 D2) - what it was measured with - and `dips`, each dip the bass
+(ADR-0187 D2) - what it was measured with - `taken`, per speaker the
+corrections above the bass its check took out (ADR-0187 D9) - and `dips`, each dip the bass
 keeps with its cause (ADR-0187 D8: `cancel`, `local`, `wall` with its
 `speaker` and `distance_m`, or null)); `speakers`, the speakers' alignment
 (ADR-0188: `on`, `day`, `plays`, `distance_cm`, `delay_ms`, `level_db`,

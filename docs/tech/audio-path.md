@@ -961,6 +961,15 @@ hw:Loopback,1,0 → CamillaDSP (headroom fader, ten bands, then on each speaker 
   the log says which speaker or pair, at which filter's frequency. Each
   position's checked curve is kept with the measurement (`checks`, per
   speaker and for the pair).
+- **What the check takes out** (ADR-0187 D9-C11, `room_dsp.take_out`): on
+  each speaker's checked curves, each broad correction's response taken
+  back out (exact for filters in series), the five positions' gap from the
+  target at its frequency (1/3 octave, the head as much as the other four)
+  with and without it; the one whose removal helps most goes, then the rest
+  again, while one helps by a tenth of a decibel or more. What is left plays
+  and is kept, its after, *within* and positions further worked out from
+  the same curves (`checks` without what was taken); what was taken is kept
+  as `taken` and logged. The bass's cuts are not judged so.
 - **The ringing** (ADR-0187 C6-D7, `room_dsp.ringing`): each speaker's
   kept sweeps at the head averaged as waves, in third octaves from 20 to
   250 Hz (a Gaussian a sixth of an octave each side, zero phase); the

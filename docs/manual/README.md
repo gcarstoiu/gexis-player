@@ -1080,11 +1080,14 @@ phone* (or *Measure again*) shows a code that opens this page on a phone.
    **Check it** measures the five positions again with the
    correction on, a tap at each again, showing each speaker as measuring
    does; at your head both also play together, to compare with the two
-   added up - a sweep a noise spoiled is said and made again; as it plays a
-   little lower to leave room for what the correction raises, it takes more
-   sweeps to make up for it. **Skip** keeps it as worked out, marked *Not
-   checked*. If a position ends further from the target than before, the
-   result says which. **Ringing in the bass** shows, for the speaker
+   added up - a sweep a noise spoiled is said and made again; when it has to
+   play a little lower to leave room for what the correction raises, it
+   takes more sweeps to make up for it. **Skip** keeps it as worked out,
+   marked *Not checked*. A correction above the bass that leaves the
+   positions, as you placed them again, further from the target is taken
+   out, and the result says so; your head counts as much as the other four
+   positions together. If a position still ends further from the target
+   than before, the result says which. **Ringing in the bass** shows, for the speaker
    shown, what is left of a note 0.2 s later in the four bands where the
    room rang most at your head, before and after - expected when the check
    was skipped.

@@ -674,3 +674,34 @@ def test_a_joint_cut_against_the_speakers_alone_is_logged():
     pair = rd.Design((rd.Cut(46.0, -6.0, 5.0),), 0.0, pair.before, pair.target, pair.after, pair.positions)
     under, at = rd.joint_under(pair, _made([flat] * 5, 0.0), _made([flat] * 5, 0.0))
     assert under < -4 and 40 < at < 52
+
+
+def test_the_check_takes_out_a_correction_that_makes_it_worse():
+    """ADR-0187 D9 (George, 2026-11-25), C10: on the positions as checked,
+    a broad correction that leaves them further from the target than
+    without it goes; one that brings them closer stays."""
+    grid = rd.GRID
+    target = np.zeros(len(grid))
+    helps, hurts = rd.Broad(500.0, 2.0, 1.0), rd.Broad(1600.0, 2.5, 1.0)
+    # The room: a broad dip at 500 Hz everywhere, nothing at 1.6 kHz; the
+    # check plays both corrections.
+    room = np.array([-rd.cuts_db([helps], grid) for _ in range(5)])
+    checked = room + rd.cuts_db([helps, hurts], grid)
+    kept, taken = rd.take_out(checked, target, [helps, hurts])
+    assert kept == [helps] and [b for b, _, _ in taken] == [hurts]
+    (_, with_db, without_db), = taken
+    assert with_db > 2 and without_db < 0.1
+    # Nothing to take out: the room as the design saw it.
+    assert rd.take_out(room + rd.cuts_db([helps], grid), target, [helps]) == ([helps], [])
+
+
+def test_the_head_counts_most_in_what_the_check_takes_out():
+    """C10: the weighted gap - the head as much as the other four - so a
+    correction that helps the head and hurts one other place stays."""
+    grid = rd.GRID
+    target = np.zeros(len(grid))
+    b = rd.Broad(800.0, 2.0, 1.0)
+    room = np.array([-rd.cuts_db([b], grid)] + [np.zeros(len(grid))] * 3 + [-rd.cuts_db([b], grid)])
+    checked = room + rd.cuts_db([b], grid)
+    # At 800 Hz: the head and position 5 at 0 with it, positions 2-4 at +2.
+    assert rd.take_out(checked, target, [b])[1] == []
