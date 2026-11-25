@@ -815,7 +815,7 @@ def peaks_down_db(before, after, grid=GRID) -> float:
     return float(max(0.0, np.max((np.asarray(before) - np.asarray(after))[inside])))
 
 
-#: **What the check takes out** (ADR-0187 D9, C10): a broad correction goes
+#: **What the check takes out** (ADR-0187 D11, C13): a broad correction goes
 #: when taking it out brings the five positions' weighted gap from the
 #: target at its frequency down by at least this (the readings' tenth).
 TAKE_OUT_DB = 0.1
@@ -831,8 +831,8 @@ def _weighted_gap(curves, target, freq: float, grid) -> float:
 
 
 def take_out(checked, target, broad, grid=GRID) -> tuple[list, list[tuple]]:
-    """**The check takes out what makes it worse** (ADR-0187 D9, George
-    2026-11-25; C10): on one speaker's checked curves (each position, with
+    """**The check takes out what makes it worse** (ADR-0187 D11, George
+    2026-11-25; C13): on one speaker's checked curves (each position, with
     the correction on), each broad correction's response taken back out -
     exact for filters one after another - and the weighted gap at its
     frequency compared with and without it. The one whose removal helps

@@ -168,7 +168,7 @@ class Speaker:
     #: always kept): the curve measured with the correction on, as
     #: `positions`; empty when the check was skipped or not kept.
     checks: tuple[tuple[float, ...], ...] = ()
-    #: **What the check took out** (ADR-0187 D9): broad corrections the
+    #: **What the check took out** (ADR-0187 D11): broad corrections the
     #: design gave that made it worse at the positions placed again, as
     #: `above`; `checks` are without them.
     taken: tuple[tuple[float, float, float], ...] = ()

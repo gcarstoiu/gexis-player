@@ -677,7 +677,7 @@ def test_a_joint_cut_against_the_speakers_alone_is_logged():
 
 
 def test_the_check_takes_out_a_correction_that_makes_it_worse():
-    """ADR-0187 D9 (George, 2026-11-25), C10: on the positions as checked,
+    """ADR-0187 D11 (George, 2026-11-25), C13: on the positions as checked,
     a broad correction that leaves them further from the target than
     without it goes; one that brings them closer stays."""
     grid = rd.GRID
@@ -696,7 +696,7 @@ def test_the_check_takes_out_a_correction_that_makes_it_worse():
 
 
 def test_the_head_counts_most_in_what_the_check_takes_out():
-    """C10: the weighted gap - the head as much as the other four - so a
+    """C13: the weighted gap - the head as much as the other four - so a
     correction that helps the head and hurts one other place stays."""
     grid = rd.GRID
     target = np.zeros(len(grid))

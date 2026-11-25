@@ -366,7 +366,7 @@ class RoomControl:
         return {"peaks_down": round(m.peaks_down()), "within": m.within(), "room_within": m.within(room=True),
                 "nothing_to_cut": m.nothing_to_cut, "nothing_above": m.nothing_above, "range": m.range,
                 "worse": [list(w) for w in m.worse], "dips": rc.dips_shown(m.dips),
-                # ADR-0187 D9: what the check took out, per speaker.
+                # ADR-0187 D11: what the check took out, per speaker.
                 "taken": {k: rc.shown(m.speakers[k].taken) for k in rc.CHANNELS if k in m.speakers},
                 **RoomControl._aligned(m)}
 

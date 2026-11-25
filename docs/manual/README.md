@@ -1029,8 +1029,10 @@ phone* (or *Measure again*) shows a code that opens this page on a phone.
    throughout: the sweeps rise from a low rumble to a high whistle.
 3. The player listens to the quiet room, then soft noise gets louder until
    the microphone hears about 60 dB, the level of a conversation, never
-   above the output's *Maximum volume*. Only if it cannot reach 45 dB, turn
-   the amplifier up a little and tap **Try again**.
+   above the output's *Maximum volume*. If it stops short, the phone says
+   how loud it got: turn the amplifier up a little and tap **Try again**.
+   From 45 dB, **Carry on anyway** measures at that level, with the room's
+   noise weighing more in the result; under 45 dB, **Try again** only.
 4. **The speaker check**, before any measuring. At your head, a few short
    whistles from the left, the right and the left again tell how much
    further one speaker is than the other, whether one is wired the other

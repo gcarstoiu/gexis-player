@@ -811,8 +811,10 @@ hw:Loopback,1,0 → CamillaDSP (headroom fader, ten bands, then on each speaker 
   the aim there, with the microphone following it, the sweeps are set the
   rest of the way from its last reading, until their peaks reach −1.5 dBFS
   (about −8 dBFS in the band for a sweep to 20 kHz, which has less of itself
-  there than one to 1 kHz had). Short of the aim at that, a level
-  from 45 dB and 15 dB above the noise is taken; below, *too quiet*. Once
+  there than one to 1 kHz had). Short of the aim at that by more than
+  1.5 dB, the run stops and asks (`short`, ADR-0187 D12): *Try again*, or
+  *Carry on anyway*, which takes a level from 45 dB and 15 dB above the
+  noise; below that, *too quiet*, *Try again* only. Once
   the noise is clearly heard, four steps that do not move the reading end
   it.
 - **The speaker check** (ADR-0187 D1-D2, C1-C2), after the level and
@@ -961,7 +963,7 @@ hw:Loopback,1,0 → CamillaDSP (headroom fader, ten bands, then on each speaker 
   the log says which speaker or pair, at which filter's frequency. Each
   position's checked curve is kept with the measurement (`checks`, per
   speaker and for the pair).
-- **What the check takes out** (ADR-0187 D9-C11, `room_dsp.take_out`): on
+- **What the check takes out** (ADR-0187 D11, C11 and C13, `room_dsp.take_out`): on
   each speaker's checked curves, each broad correction's response taken
   back out (exact for filters in series), the five positions' gap from the
   target at its frequency (1/3 octave, the head as much as the other four)

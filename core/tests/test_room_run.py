@@ -72,6 +72,16 @@ class Rig:
         await self.run.start()
         await self.until("place")
         self.run.tap("start")
+        # ADR-0187 D12: a level short of the aim asks; carried on.
+        end = asyncio.get_running_loop().time() + 60.0
+        while asyncio.get_running_loop().time() < end:
+            s = self.run.state
+            if s.short and self.run.waiting:
+                self.run.tap("next")
+                break
+            if s.too_quiet or s.step not in ("place", "level") or not self.run.running:
+                break
+            await asyncio.sleep(0.01)
 
     async def through_check(self):
         """ADR-0187: the speaker check - left and right at position 2, then
@@ -331,7 +341,7 @@ async def _level_only(audio):
     rig.run.tap("start")
     for _ in range(600):
         s = rig.run.state
-        if s.too_quiet or s.step != "level" and s.step != "place":
+        if s.too_quiet or s.short or s.step != "level" and s.step != "place":
             break
         await asyncio.sleep(0.01)
     return rig
@@ -410,14 +420,41 @@ async def test_a_sweep_at_its_cap_peaks_at_its_most():
     await rig.run.wait()
 
 
-async def test_short_of_the_aim_it_is_taken_from_45_db():
-    """At the sweeps' cap, a level short of the aim but over 45 dB and 15 dB
-    over the noise goes on: nobody is asked to turn the amplifier up for it."""
-    rig = await _level_only(Audio(noise_db=-70, gain=_gain_for(45)))
+async def _asked(rig):
+    for _ in range(200):
+        if rig.run.state.short and rig.run.waiting:
+            return
+        await asyncio.sleep(0.01)
+
+
+async def test_short_of_the_aim_it_stops_and_asks():
+    """ADR-0187 D12 (George, 2026-11-25): at the sweeps' cap, a level short
+    of the aim but over 45 dB and 15 dB over the noise stops before any
+    sweep; *Carry on anyway* takes it as it is."""
+    audio = Audio(noise_db=-70, gain=_gain_for(45))
+    rig = await _level_only(audio)
+    await _asked(rig)
     s = rig.run.state
-    assert not s.too_quiet, s
+    assert (s.step, s.short, s.too_quiet, rig.run.waiting) == ("level", True, False, True), s
+    assert s.as_dict()["short"] is True
     assert room_run.TAKE_MIN <= s.level_db < s.aim_db - room_run.AIM_WITHIN
+    assert all(c is None for c, _ in audio.plays), "no sweep played"
     assert rig.run._level_dbfs == rig.run._sweep_cap
+    rig.run.tap("next")
+    await rig.until("move", 2, setup=True)
+    assert rig.run._level_dbfs == rig.run._sweep_cap
+    rig.run.cancel()
+    await rig.run.wait()
+
+
+async def test_short_of_the_aim_try_again_measures_the_level_again():
+    audio = Audio(noise_db=-70, gain=_gain_for(45))
+    rig = await _level_only(audio)
+    await _asked(rig)
+    audio.gain = _gain_for(70)      # the amplifier turned up
+    rig.run.tap("again")
+    await rig.until("move", 2, setup=True)
+    assert abs(rig.run.state.level_db - 60) <= room_run.AIM_WITHIN
     rig.run.cancel()
     await rig.run.wait()
 

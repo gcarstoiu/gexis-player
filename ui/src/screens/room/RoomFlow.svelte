@@ -76,6 +76,8 @@
   //: How many positions this run measures (an older core says nothing: five).
   const count = $derived(run?.positions ?? (run ? 5 : POSITIONS));
   const tooQuiet = $derived(run?.step === 'level' && run.too_quiet);
+  //: ADR-0187 D12 (George, 2026-11-25): short of the aim, it asks.
+  const short = $derived(run?.step === 'level' && !!run.short);
 
   // ---- the buttons ---------------------------------------------------------------
 
@@ -229,7 +231,7 @@
   const checkLabel = $derived(!setup ? '' : screenName === 'ready' ? 'Speaker check · done'
     : screenName === 'timing' && n === 1 ? 'Speaker check · at your head'
       : (screenName === 'timing' || screenName === 'move') && n === 2 ? 'Speaker check · left and right' : 'Speaker check');
-  const amber = $derived(tooQuiet || ['far', 'polarity', 'swapped'].includes(screenName));
+  const amber = $derived(tooQuiet || short || ['far', 'polarity', 'swapped'].includes(screenName));
   const head = $derived.by(() => {
     switch (screenName) {
       case 'before': return alone
@@ -238,6 +240,8 @@
       case 'place': return ['Put the microphone where your head is', ''];
       case 'level': return tooQuiet
         ? [`Only ${run.level_db ?? '—'} dB at the seat`, "At the player's maximum level. Turn the amplifier up a little and try again."]
+        : short ? [`Only ${run.level_db ?? '—'} dB at the seat`,
+          `At the player's maximum level, short of the ${run.aim_db ?? 60}\u00a0dB aimed for. Turn the amplifier up a little and try again, or carry on at this level: the room's noise then weighs more in the measurement.`]
         : ['Finding the level', run.aim_db == null ? 'Listening to the room first.'
           : `Soft noise, getting louder until the microphone hears about ${run.aim_db} dB.`];
       case 'timing': return [setup ? (n === 1 ? 'Checking your speakers' : 'Left and right') : `Position ${n} of ${count}`, ''];
@@ -298,7 +302,8 @@
       case 'before': return [null, null, alone ? ['Check the speakers', () => send('speakers'), !full?.can_measure]
         : ['Measure', () => send('measure'), !full?.can_measure]];
       case 'place': return [cancel, null, ['Start', () => send('start')]];
-      case 'level': return [cancel, null, tooQuiet ? ['Try again', () => send('again')] : null];
+      case 'level': return [cancel, short ? ['Carry on anyway', () => send('next'), false, true] : null,
+        tooQuiet || short ? ['Try again', () => send('again')] : null];
       case 'timing':
       case 'measure': return [cancel, null, null];
       case 'far': return [['Check again', () => send('again')], null, [alone ? 'Carry on' : 'Measure anyway', () => send('next')]];
@@ -445,11 +450,11 @@
       {#if screenName === 'level'}
         <div class="card level">
           <div class="level__read">
-            <span class="level__db" class:is-amber={tooQuiet}>{run.level_db ?? '—'}</span>
+            <span class="level__db" class:is-amber={tooQuiet || short}>{run.level_db ?? '—'}</span>
             <span class="level__unit">dB at the seat</span>
           </div>
           <div class="track">
-            <div class="track__fill" class:is-amber={tooQuiet} style="width:{run.level_db == null ? '0%' : levelPct(run.level_db)}"></div>
+            <div class="track__fill" class:is-amber={tooQuiet || short} style="width:{run.level_db == null ? '0%' : levelPct(run.level_db)}"></div>
             <div class="track__aim" style="left:{levelPct(aim)}"></div>
           </div>
           <div class="scale"><span>{aim - 25}</span><span class="scale__aim">{aim} dB · the aim</span><span>{aim + 10}</span></div>

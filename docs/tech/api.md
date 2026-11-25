@@ -109,7 +109,7 @@ ADR-0175 and ADR-0177, internal until Phase 30 closes. `GET
 speaker is than the left, null when not timed - `delay_ms`, each
 speaker's (ADR-0185), and `level_db`, each speaker's cut to match the other
 (ADR-0187 D2) - what it was measured with - `taken`, per speaker the
-corrections above the bass its check took out (ADR-0187 D9) - and `dips`, each dip the bass
+corrections above the bass its check took out (ADR-0187 D11) - and `dips`, each dip the bass
 keeps with its cause (ADR-0187 D8: `cancel`, `local`, `wall` with its
 `speaker` and `distance_m`, or null)); `speakers`, the speakers' alignment
 (ADR-0188: `on`, `day`, `plays`, `distance_cm`, `delay_ms`, `level_db`,
@@ -129,7 +129,9 @@ speaker's `cuts` and
 `above`), the `microphone` and its `calibration` (`again` while the one kept
 stops at 2 kHz, from before Phase 30), `can_measure` with `why_not`, and a
 measurement in progress (`run`, and its `pending` correction before *Keep
-it*). **The speaker check** (ADR-0187 D1-D2) comes first, each of its
+it*). The `level` step, short of `aim_db`, sets `short` and waits for
+`again` or `next` (*Carry on anyway*, ADR-0187 D12); under 45 dB it sets
+`too_quiet` and waits for `again`. **The speaker check** (ADR-0187 D1-D2) comes first, each of its
 states with `setup` true: `timing` (at position 1 the distance, the wiring
 and the level; at 2 left and right), `move` to position 2 (`next`, *Check
 here*), `far` (more than `far_cm` apart: `again` or `next`, *Measure

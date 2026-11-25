@@ -179,7 +179,7 @@ export function resultWords({ speaker, range = 'full', reach = 'full', expectedM
   return [head, line];
 }
 
-/** **What the check took out** (ADR-0187 D9, George 2026-11-25): the broad
+/** **What the check took out** (ADR-0187 D11, George 2026-11-25): the broad
  *  corrections that made it worse at the positions placed again; '' when none. */
 export function takenLine(taken) {
   const and = (xs) => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} and ${xs.at(-1)}` : xs[0]);

@@ -9,6 +9,8 @@ it is (the design's R18), and the panel shows that it is running. The steps:
    waiting for *Start*;
 2. *level* - the quiet room listened to, then soft noise, louder in steps
    until the seat hears about 60 dB, never above the output's maximum level;
+   short of it, *short* waits for *Try again* or *Carry on anyway*, too
+   quiet to measure for *Try again* (ADR-0187 D12, George 2026-11-25);
 3. **the speaker check** (ADR-0187 D1-D2, C1-C2; its screens George's,
    2026-11-23), every screen `setup`: *timing* at the head - short sweeps
    from each speaker in one recording: how much nearer one is, whether one
@@ -67,7 +69,8 @@ TIMEOUT_S = 600
 #: room - over the 75 dB first proposed, which sofapi's run found far too
 #: loud, and the 50 a quiet room's noise gave, at which sofapi's sweeps
 #: often had to be repeated; and how close is close enough. A level that
-#: cannot reach it is still taken from 45 dB and 15 dB above the noise.
+#: cannot reach it is taken from 45 dB and 15 dB above the noise, once
+#: *Carry on anyway* is tapped (ADR-0187 D12, George 2026-11-25).
 AIM_DB = 60.0
 AIM_WITHIN = 1.5
 TAKE_MIN = 45.0
@@ -172,7 +175,8 @@ class RunState:
     progress: float = 0.0           # 0-1, as the design's §3
     done: tuple[int, ...] = ()      # the positions measured (or checked) so far
     expected: bool = False          # the result is expected, the check skipped
-    too_quiet: bool = False         # the level step could not reach the aim
+    too_quiet: bool = False         # the level step could not reach what it takes
+    short: bool = False             # short of the aim; *Carry on anyway* takes it (ADR-0187 D12)
     resumed_from: str | None = None
     #: ADR-0185: how much further the right speaker is than the left (cm,
     #: negative: the left is further), once timed at position 1.
@@ -195,6 +199,7 @@ class RunState:
                 "aim_db": None if self.aim_db is None else round(self.aim_db),
                 "count": self.count, "checking": self.checking, "progress": round(self.progress, 3),
                 "done": list(self.done), "expected": self.expected, "too_quiet": self.too_quiet,
+                "short": self.short,
                 "positions": rc.POSITIONS,
                 "distance_cm": None if self.distance_cm is None else round(self.distance_cm, 1),
                 "far_cm": round(FAR_S * 343.0 * 100), "setup": self.setup,
@@ -203,8 +208,8 @@ class RunState:
 
 
 def _screen(state: RunState) -> tuple:
-    """What a tap answers: the step, the position and *Too quiet*."""
-    return state.step, state.position, state.checking, state.too_quiet
+    """What a tap answers: the step, the position, *Too quiet* and *short*."""
+    return state.step, state.position, state.checking, state.too_quiet, state.short
 
 
 def _sets(position: int, checking: bool) -> tuple[str, ...]:
@@ -440,7 +445,18 @@ class Run:
     async def _steps(self) -> str:
         """The run's steps; how it ended: done, discarded or kept."""
         await self._wait("start")
-        while not await self._level():
+        while True:
+            got = await self._level()
+            if got == "aim":
+                break
+            if got == "short":
+                # ADR-0187 D12: short of the aim, asked - the amplifier
+                # turned up and tried again, or the level taken as it is.
+                self._set(replace(self.state, step="level", short=True))
+                if await self._wait("again", "next") == "next":
+                    logger.info("room: carried on at %.0f dB at the seat", self.state.level_db)
+                    break
+                continue
             self._set(replace(self.state, step="level", too_quiet=True))
             await self._wait("again")
         what = await self._speakers()
@@ -519,14 +535,15 @@ class Run:
     def _spl(self, recording) -> float:
         return self._dsp.band_level_db(recording) + self._audio.spl_offset(self._cal)
 
-    async def _level(self) -> bool:
+    async def _level(self) -> str:
         """**The level step** (item 4): the quiet room listened to first;
         then pink noise from `LEVEL_START_DBFS`, 3 dB a step, until the seat
         hears about the aim - only while the microphone follows, and never
         above the noise's cap; from there the sweeps go the rest of the way,
-        up to their own. A level short of the aim is taken from `TAKE_MIN`
-        and `TAKE_ABOVE_NOISE` over the noise; below that, False (*Too
-        quiet*)."""
+        up to their own. "aim" when reached; "short" when short of it but
+        from `TAKE_MIN` and `TAKE_ABOVE_NOISE` over the noise, the level set
+        should *Carry on anyway* take it (ADR-0187 D12); "quiet" below
+        that (*Too quiet*)."""
         self._set(RunState("level", progress=0.05))
         dsp = self._dsp
         import numpy as np
@@ -574,14 +591,15 @@ class Run:
                 if spl >= aim - AIM_WITHIN and unheard < LEVEL_UNHEARD_STEPS:
                     break
                 if spl >= take and unheard < LEVEL_UNHEARD_STEPS:
-                    logger.info("room: %.0f dB at the seat at %.0f dBFS, short of %.0f: taken", spl, level, aim)
-                    break
+                    logger.info("room: %.0f dB at the seat at %.0f dBFS, short of %.0f: asked", spl, level, aim)
+                    self._level_dbfs = level
+                    return "short"
                 logger.info("room: %.0f dB at the seat at %.0f dBFS: too quiet", spl, level)
-                return False
+                return "quiet"
             level += step
         self._level_dbfs = level
         logger.info("room: %.0f dB at the seat at %.0f dBFS", self.state.level_db, level)
-        return True
+        return "aim"
 
     # -- the speakers' timing (ADR-0185) -------------------------------------------
 
@@ -1074,7 +1092,7 @@ class Run:
         for channel in rc.CHANNELS:
             d = self._designs[channel]
             measured = [c - d.offset for c in self._checked[channel]]
-            # ADR-0187 D9 (George, 2026-11-25): what makes it worse at the
+            # ADR-0187 D11 (George, 2026-11-25): what makes it worse at the
             # positions placed again is taken out; the rest is what is kept,
             # its curves those measured less what was taken (exact).
             broad, taken = self._dsp.take_out(measured, d.target, list(d.broad))
