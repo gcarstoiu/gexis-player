@@ -106,13 +106,13 @@ mocked render). **George decided (2026-11-25):** the check takes out what makes 
 F; built 583c0dbc), the room page as three steps with a history to go back
 to (ADR-0189, B and H2; built 3e74271d - see its *As built*; 3685 core
 tests pass, checked in mocked renders of B1-B4 and H2a-d). **sofapi** on the preview from
-2026-11-25 17:29 (core, player and UI 1.18.2+git35.3e74271, run
-45642482277, at George's word; idle first, dry run, core restarted, no
-warnings; the 25 Nov measurement seeded as the history's first entry, the
-served UI the new page). **George decided (2026-11-25):** a run short of
+2026-11-25 18:56 (core, player and UI 1.18.2+git36.24f4d1c, run
+45668744414, at George's word; idle first, dry run, core restarted, no
+warnings): everything above and D12. The 25 Nov measurement was seeded as
+the history's first entry by the 17:29 preview (git35.3e74271). **George decided (2026-11-25):** a run short of
 60 dB stops and asks (ADR-0187 D12, C14) - built 24f4d1ca (3686 core
-tests pass; the screen checked in a mocked render), not yet on sofapi.
-**Next:** a finding for the run; D12 on sofapi at George's word; the
+tests pass; the screen checked in a mocked render). ADR-0022 appended
+(George confirmed, 2026-11-25). **Next:** a finding for the run; the
 manual's room picture; Phase 37's acceptance 5.
 **Before Phase 37 closes** (George, 2026-11-21; acceptance 5): the level at
 the seat against a meter, and the equaliser's and multiroom's measurements
