@@ -4516,6 +4516,15 @@ Built the same day (`ph-room-measurement` d71d7110; tested in the made-up
 room); the panel's and the bars' screens for the switch drawn for George
 (ADR-0188 C6).
 
+**Measured a third time 2026-11-25** (George's run on the preview, 60 dB
+at the seat, kept): the bass's cuts as before; the check found positions
+2-4 about 2 dB further from the target. **George decided the same day:**
+the check's results always kept, and the check lower only where it must
+(ADR-0187, amended; built 01b0c582); the check takes out a correction that
+makes the listening area worse (D9); the positions drawn one move at a time
+(D10, F over C); the room page as three steps with a history to go back to
+([ADR-0189](decisions/0189-room-page-three-steps-history.md), B and H2).
+
 **Acceptance (draft):**
 
 1. The setup check finds a swapped pair, a reversed speaker, the distance's

@@ -376,3 +376,33 @@ saying which.
   sweeps instead of four, the same power over the noise.
 - **The log names what made a position worse:** the speaker (or the pair),
   the filter's frequency and by how much, for every position over the guard.
+
+## Decided 2026-11-25 (George): the check takes out what makes it worse; the positions drawn one move at a time
+
+- **D9 — The check takes out a correction that makes it worse** (B). Over:
+  the check only telling (A). George asked why positions other than the
+  head should count: the five lie within 40 cm of it, where the ears and the
+  head are, and above the bass the response changes within that (Finding
+  159: corrections at 0.7-1.9 kHz following the microphone's place).
+- **D10 — The positions drawn one move at a time** (F, from four mock-ups
+  D-G): first the stand across the floor, seen from above with a 10 cm
+  ruler, then its height, seen from the side, the two in turn with the words
+  following. Replaces C (2026-11-23).
+
+**How (Claude's):**
+- **C10 — What D9 judges:** each speaker's broad corrections above the
+  bass, on that speaker's checked curves, with each correction's response
+  taken back out (exact for filters one after another, as `after_bass`). At
+  a correction's frequency, at 1/3 octave, the five positions' gap from the
+  target weighted as the design weights them (the head half, the other four
+  the rest), with it and without it. The one whose removal brings the
+  weighted gap down most goes first, then the rest again, until none left
+  takes it further (compared to a tenth of a decibel). The bass's cuts are
+  not judged so: one for both speakers, they held at every position in all
+  three of sofapi's runs. A check skipped takes out nothing.
+- **C11 — What it leaves:** the measurement keeps what is left; its after,
+  *within* and the positions further are those of what is kept, worked out
+  from the same curves; the stage plays it. The log lists what was taken
+  out and the gaps either way. The result says how many were taken out.
+- **C12 — D10 moving:** the two steps play in turn on a loop; with the
+  phone set to reduce motion they stand side by side, still.
