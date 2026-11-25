@@ -379,7 +379,7 @@ saying which.
 
 ## Decided 2026-11-25 (George): the check takes out what makes it worse; the positions drawn one move at a time
 
-- **D9 — The check takes out a correction that makes it worse** (B). Over:
+- **D11 — The check takes out a correction that makes it worse** (B). Over:
   the check only telling (A). George asked why positions other than the
   head should count: the five lie within 40 cm of it, where the ears and the
   head are, and above the bass the response changes within that (Finding
@@ -389,8 +389,11 @@ saying which.
   ruler, then its height, seen from the side, the two in turn with the words
   following. Replaces C (2026-11-23).
 
+*First written as D9 and C10 (f26ca058, and so in 9f9db7ac), numbers
+that already named D9 and C10 above; renumbered D11 and C13.*
+
 **How (Claude's):**
-- **C10 — What D9 judges:** each speaker's broad corrections above the
+- **C13 — What D11 judges:** each speaker's broad corrections above the
   bass, on that speaker's checked curves, with each correction's response
   taken back out (exact for filters one after another, as `after_bass`). At
   a correction's frequency, at 1/3 octave, the five positions' gap from the
@@ -406,3 +409,20 @@ saying which.
   out and the gaps either way. The result says how many were taken out.
 - **C12 — D10 moving:** the two steps play in turn on a loop; with the
   phone set to reduce motion they stand side by side, still.
+
+## Decided 2026-11-25 (George): a run short of 60 dB stops and asks
+
+The level step takes a level short of the aim from 45 dB and 15 dB over the
+noise (2026-11-05) without saying so; George asked why a run aiming for
+60 dB goes ahead with less.
+
+- **D12 — Short of the aim, the run stops and asks** (B, over carrying on
+  as before, A): before any sweep, the level reached and the aim, the
+  amplifier to be turned up; *Try again* or *Carry on anyway*, which takes
+  the level as before. Under 45 dB, or under 15 dB over the noise, *Try
+  again* only, as now.
+
+**How (Claude's):**
+- **C14 — Short is under the aim by more than `AIM_WITHIN`** (1.5 dB),
+  once the noise and the sweeps are at their caps. The speaker check on its
+  own asks too: its *Keep and measure* goes on at the level it found.

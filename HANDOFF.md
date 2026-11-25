@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-11-24 (on R2D2).
+Last updated: 2026-11-25 (on R2D2).
 
 ## Start here
 
@@ -102,16 +102,16 @@ played at its head; ADR-0187 amended - the check lower only where its sweeps
 lack room, the filter behind a worse place logged - and the ticks centred,
 built on `ph-room-measurement` 01b0c582 (core tests pass; ticks checked in a
 mocked render). **George decided (2026-11-25):** the check takes out what makes it worse
-(ADR-0187 D9, built 9f9db7ac), the positions drawn one move at a time (D10,
+(ADR-0187 D11 - first written D9, a clash, renumbered; built 9f9db7ac), the positions drawn one move at a time (D10,
 F; built 583c0dbc), the room page as three steps with a history to go back
 to (ADR-0189, B and H2; built 3e74271d - see its *As built*; 3685 core
 tests pass, checked in mocked renders of B1-B4 and H2a-d). **sofapi** on the preview from
-2026-11-25 13:22 (core, player and UI 1.18.2+git32.01b0c58, run
-45611495208, at George's word; core restarted, no warnings) - 9f9db7ac and
-583c0dbc and 3e74271d not yet on it. **Owed to George:** whether a run short of 60 dB
-stops to ask for the amplifier turned up. **Next:** a finding
-for the run; a preview with the changes, at George's word; the manual's
-room picture; Phase 37's acceptance 5.
+2026-11-25 17:29 (core, player and UI 1.18.2+git35.3e74271, run
+45642482277, at George's word; idle first, dry run, core restarted, no
+warnings; the 25 Nov measurement seeded as the history's first entry, the
+served UI the new page). **George decided (2026-11-25):** a run short of
+60 dB stops and asks (ADR-0187 D12, C14) - being built. **Next:** D12; a
+finding for the run; the manual's room picture; Phase 37's acceptance 5.
 **Before Phase 37 closes** (George, 2026-11-21; acceptance 5): the level at
 the seat against a meter, and the equaliser's and multiroom's measurements
 through the amplifiers - George present for each.
