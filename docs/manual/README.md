@@ -1173,7 +1173,8 @@ On its page:
   sit well off the target there, as the line under the chart says; above
   the bass each speaker is corrected on its own.
 - **The corrections**, on the panel's page: in the bass, narrow cuts; above
-  it, broad, up or down.
+  it, broad, up or down. A long list scrolls, and fades at the foot of its
+  card while there is more below.
 - **Measure again** replaces the measurement once the new one is kept.
 - **DSD** plays untouched: room correction stands aside while a DSD track
   plays natively, and is back for the next PCM track.
