@@ -358,7 +358,8 @@ not clear from the measurement. Checked on a made-up response: a mode at
 
 ## Amended 2026-11-25: the check's results kept, its level
 
-George's third run on the preview (2026-11-25, 60 dB at the seat): the check
+George's third run on the preview (2026-11-25, 60 dB at the seat;
+[Finding 160](../findings/160-room-measurement-as-shipped-at-60-db-on-sofapi.md)): the check
 took about 12½ minutes against 8 for the five positions, and found positions
 2-4 about 2 dB further from the target at a correction's frequency, without
 saying which.

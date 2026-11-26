@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-11-25 (on R2D2).
+Last updated: 2026-11-26 (on R2D2).
 
 ## Start here
 
@@ -95,7 +95,7 @@ at 0.2 s the ringing at 50 Hz about 30 dB lower; above the bass within
 2.0 and 1.5 dB (from 2.5 and 3.0); the pair added against the played from
 2 to 5 kHz at most 0.8 dB (1-3 dB on 23 Nov; the level and the DAC's
 filter both changed since); positions 2-4 about 2 dB further from the
-target at a filter's frequency, which one not logged. Its log lines in
+target at a filter's frequency, which one not logged. [Finding 160](docs/findings/160-room-measurement-as-shipped-at-60-db-on-sofapi.md). Its log lines in
 `~/projects/scratch/ph37/run/journal-1125.txt`.
 **George (2026-11-25):** the check's results kept always, and the pair
 played at its head; ADR-0187 amended - the check lower only where its sweeps
@@ -112,8 +112,8 @@ warnings): everything above and D12. The 25 Nov measurement was seeded as
 the history's first entry by the 17:29 preview (git35.3e74271). **George decided (2026-11-25):** a run short of
 60 dB stops and asks (ADR-0187 D12, C14) - built 24f4d1ca (3686 core
 tests pass; the screen checked in a mocked render). ADR-0022 appended
-(George confirmed, 2026-11-25). **Next:** a finding for the run; the
-manual's room picture; Phase 37's acceptance 5.
+(George confirmed, 2026-11-25). **Next:** the manual's room picture;
+Phase 37's acceptance 5.
 **Before Phase 37 closes** (George, 2026-11-21; acceptance 5): the level at
 the seat against a meter, and the equaliser's and multiroom's measurements
 through the amplifiers - George present for each.

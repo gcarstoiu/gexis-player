@@ -4516,22 +4516,29 @@ Built the same day (`ph-room-measurement` d71d7110; tested in the made-up
 room); the panel's and the bars' screens for the switch drawn for George
 (ADR-0188 C6).
 
-**Measured a third time 2026-11-25** (George's run on the preview, 60 dB
-at the seat, kept): the bass's cuts as before; the check found positions
-2-4 about 2 dB further from the target. **George decided the same day:**
-the check's results always kept, and the check lower only where it must
-(ADR-0187, amended; built 01b0c582); the check takes out a correction that
-makes the listening area worse (D9); the positions drawn one move at a time
-(D10, F over C); the room page as three steps with a history to go back to
-([ADR-0189](decisions/0189-room-page-three-steps-history.md), B and H2).
+**Measured a third time 2026-11-25** ([Finding 160](findings/160-room-measurement-as-shipped-at-60-db-on-sofapi.md),
+George's run on the preview, 60 dB at the seat, kept): the bass's cuts as
+before; 80-85 of 88 points judged; the check 12 min 50 s of 22 minutes;
+the check found positions 2-4 about 2 dB further from the target.
+**George decided the same day:** the check's results always kept, and the
+check lower only where it must (ADR-0187, amended; built 01b0c582); the
+check takes out a correction that makes the listening area worse (D11);
+the positions drawn one move at a time (D10, F over C); a run short of
+60 dB stops and asks (D12); the room page as three steps with a history to
+go back to ([ADR-0189](decisions/0189-room-page-three-steps-history.md), B
+and H2).
 
 **Acceptance (draft):**
 
 1. The setup check finds a swapped pair, a reversed speaker, the distance's
    and the level's difference, and the measurement starts with the delay
-   and the level set. *Built and tested in the made-up room; on sofapi
-   still to run.*
+   and the level set. *Built and tested in the made-up room. On sofapi
+   (Finding 160) the distance's and the level's difference found and set,
+   left and right found the right way round; a swapped pair and a reversed
+   speaker not yet tried there.*
 2. Five positions take about as long to sweep as three do today.
+   *Finding 160: five positions 7 min 37 s, 20 sweeps; three not timed
+   alongside.*
 3. The pair added up by the player matches the pair played together at
    every position on sofapi, as closely as two repeated sweeps agree - in
    the bass, where it is used (George, 2026-11-23). *Met, Finding 159.*
