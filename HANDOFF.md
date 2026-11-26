@@ -54,7 +54,7 @@ Both runs' responses deleted here and on sofapi; the text results stay in
 the new design + George's notes (the distance step lit, the check's *of
 4*, the chart's *Each position* switch, drawing C) + the timing mark and
 the distance step's lead + the together sweeps gone; the manual, technical
-guide and API updated; the manual's room picture still to be retaken.
+guide and API updated; the manual's room picture retaken 2026-11-26.
 **Decided from mock-ups and built the same day** (George; mock-ups in
 `~/projects/scratch/ph37/variants/sheet/`): each speaker's tab the speaker
 alone in the bass too, with a line in the legend (ADR-0186 D4-D5; `room-chart`
@@ -112,8 +112,14 @@ warnings): everything above and D12. The 25 Nov measurement was seeded as
 the history's first entry by the 17:29 preview (git35.3e74271). **George decided (2026-11-25):** a run short of
 60 dB stops and asks (ADR-0187 D12, C14) - built 24f4d1ca (3686 core
 tests pass; the screen checked in a mocked render). ADR-0022 appended
-(George confirmed, 2026-11-25). **Next:** the manual's room picture;
-Phase 37's acceptance 5.
+(George confirmed, 2026-11-25). **2026-11-26:** the panel's last
+measurement's card cut its fifth row of corrections off halfway (sofapi's
+measurement needs five); **George chose** that the list scrolls, faded at
+the card's foot while more lies below - built 59c95db2, checked in mocked
+renders at the top and scrolled to the end, not yet on sofapi. The manual's
+room picture retaken from the test suite's made-up room on the mocked panel
+(8308f580; generator `~/projects/scratch/ph37/variants/gen_manual_fixture.py`).
+**Next:** Phase 37's acceptance 5, with George; the release.
 **Before Phase 37 closes** (George, 2026-11-21; acceptance 5): the level at
 the seat against a meter, and the equaliser's and multiroom's measurements
 through the amplifiers - George present for each.
