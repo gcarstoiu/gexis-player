@@ -125,6 +125,23 @@
   const notChecked = $derived(!!measured && !measured.checked);
   //: The corrections in two groups (the design's 1g), for the speaker shown.
   const groups = $derived(correctionGroups(speaker, { range, reach }));
+  //: George, 2026-11-26: on the panel the corrections scroll when they
+  //: outgrow the card, faded at its foot while more lies below.
+  let listEl = $state(null);
+  let listMore = $state(false);
+  const listScrolled = () => {
+    listMore = !!listEl && listEl.scrollTop + listEl.clientHeight < listEl.scrollHeight - 2;
+  };
+  $effect(() => {
+    void groups;
+    void ch;
+    if (!listEl) return;
+    listEl.scrollTop = 0;
+    listScrolled();
+    const watch = new ResizeObserver(listScrolled);
+    watch.observe(listEl);
+    return () => watch.disconnect();
+  });
   const cutsWho = $derived(correctionsWho(ch, groups[0]?.rows.length ?? 0, groups[1]?.rows.length ?? 0));
   //: The speaker shown: its own numbers, not the larger of the two.
   const words = $derived(resultWords({ speaker, range, reach, expectedMark: notChecked }));
@@ -697,7 +714,9 @@
                     <span>The speakers were checked after this was measured: in the bass it no longer fits exactly. Measure again.</span></div>
                 {/if}
                 <!-- With the stale note, the bass's cuts alone (P2 as drawn). -->
-                {@render corrections('panel', stale ? 1 : 2)}
+                <div class="lcard__list" class:is-more={listMore} bind:this={listEl} onscroll={listScrolled}>
+                  {@render corrections('panel', stale ? 1 : 2)}
+                </div>
               {:else}
                 <div class="lcard__never">Not measured yet</div>
               {/if}
@@ -1680,6 +1699,20 @@
     line-height: 1.4;
     color: var(--c-ink-78);
     text-wrap: pretty;
+  }
+  .lcard__list {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+  }
+  .lcard__list.is-more {
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
   }
   .lcard__never {
     font-size: 20px;

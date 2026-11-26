@@ -330,7 +330,9 @@ and the ringing card on the result (D7, the four bands that rang most,
 `ringBands`). The panel's header and the bar's side column carry the two
 switches, named, the alignment's delay and cut under its name on the panel
 (`speakersShort`); the stale note goes in the last measurement's card, and
-the button to the phone says *Measure or check* (ADR-0188 C6, P1-P3). The summary comes from `/state`'s `room`
+the button to the phone says *Measure or check* (ADR-0188 C6, P1-P3). That
+card's corrections scroll when they outgrow it, faded at its foot while
+more lies below (George, 2026-11-26). The summary comes from `/state`'s `room`
 (`lib/room.svelte.js`), the curves from `GET /room-correction`, read again
 whenever the summary moves. The design's colours are `--rc-*` in
 `styles/tokens.css`, recoloured for each theme by `scripts/themes.mjs`.
